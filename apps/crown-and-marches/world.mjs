@@ -1029,6 +1029,11 @@ export function politicalFactions(s,f){
 export function succeedRuler(s,f){
  const a=s.society?.architecture,g=a?.governments[f];if(!g)return false;
  const old=a.people[g.ruler];if(old)old.alive=false;
+ const affected=Object.keys(a.governments).map(Number).filter(id=>a.governments[id].ruler===g.ruler&&!s.states[id]?.defunct);
+ for(const id of affected)successionForRealm(s,id,old);return true;
+}
+function successionForRealm(s,f,old){
+ const a=s.society.architecture,g=a.governments[f];
  let heir=a.people[g.heir];
  if(g.institutions.selection==='elective'||g.institutions.selection==='appointed'){
  const candidates=Object.values(a.people).filter(p=>p.alive&&p.f===f&&p.age>=18&&p.role==='lord').sort((a,b)=>b.competence-a.competence||a.id-b.id);
@@ -1036,7 +1041,7 @@ export function succeedRuler(s,f){
  if(heir.office&&a.subjects[heir.office]){const sub=a.subjects[heir.office],successor=createPerson(s,f,'lord',sub.id,24,heir.dynasty);sub.person=successor.id;}
  }
  if(!heir?.alive)heir=createPerson(s,f,'heir',null,18);
- heir.role='ruler';heir.office=crownId(f);g.ruler=heir.id;g.regent=heir.age<18?Object.values(a.people).find(p=>p.alive&&p.f===f&&p.role==='lord'&&p.age>=18)?.id??null:null;
+ heir.role='ruler';if(!heir.office?.startsWith('crown:'))heir.office=crownId(f);g.ruler=heir.id;g.regent=heir.age<18?Object.values(a.people).find(p=>p.alive&&p.f===f&&p.role==='lord'&&p.age>=18)?.id??null:null;
  const next=createPerson(s,f,'heir',null,Math.max(0,heir.age-23),heir.dynasty);g.heir=next.id;g.legitimacy=clamp(g.legitimacy*.85+(g.regent?0:.1),0,1);
  polityEvent(s,f,'succession',{old:old?.id??null,ruler:heir.id,regent:g.regent});return true;
 }
@@ -1107,3 +1112,24 @@ export function musterLevy(s,c){
  if(d.localTreasury<cost)return 'В местной казне нет средств';
  d.localTreasury-=cost;st.gold+=cost;const msg=recruit(s,c,0,{subject:sub.id});if(!msg.startsWith('Нанято')){st.gold-=cost;d.localTreasury+=cost;return msg;}st.budget.wages-=cost;polityEvent(s,c.f,'levy mustered',{district:c.id,people:60});return msg;
 }
+
+export function propertyOffer(s,f,i,kind='sale'){
+ const t=landRights(s,i),c=s.cities.find(q=>q.id===s.admin[i]);if(!t||!c||c.f!==f||t.sovereign!==f||t.controller!==f||subjectFaction(s,t.owner)!==f)return 'Нет полномочий на этой земле';
+ const crown=crownId(f),price=Math.ceil((2+territoryValue(s,i)*2+s.development[i]*6)*(t.owner.endsWith(':clergy')?1.4:1));
+ if(kind==='grant'){if(t.owner!==crown)return 'Земля не принадлежит короне';return transferTitle(s,t.key,crown,groupId(c,'peasants'),0,'grant')?'Земля пожалована общине':'Пожалование недоступно';}
+ if(t.owner===crown)return 'Корона уже собственник';
+ if(kind==='lease'){return leaseTitle(s,t.key,t.owner,crown,Math.max(1,Math.ceil(price*.2)),360)?'Аренда оформлена на год':'Аренда недоступна или нет средств';}
+ return transferTitle(s,t.key,t.owner,crown,price,'sale')?'Земля выкуплена за '+price:'Сделка недоступна или нет средств';
+}
+export function marryRulers(s,f,b){
+ const a=s.society?.architecture,g=a?.governments[f],h=a?.governments[b],p=a?.people[g?.ruler],q=a?.people[h?.ruler];
+ if(!p||!q||f===b||p.id===q.id||!p.alive||!q.alive||p.age<18||q.age<18||p.dynasty===q.dynasty||a.people[p.spouse]?.alive||a.people[q.spouse]?.alive||atWar(s,f,b)||!discoveryContact(s,f,b))return 'Брак недоступен';
+ if(g.legitimacy<.4||h.legitimacy<.4)return 'Двор не признаёт соглашение';
+ p.spouse=q.id;q.spouse=p.id;polityEvent(s,f,'dynastic marriage',{a:p.id,b:q.id,realm:b});polityEvent(s,b,'dynastic marriage',{a:q.id,b:p.id,realm:f});return 'Династический брак заключён';
+}
+export function nominateDynasticSuccessor(s,f,b){
+ const a=s.society?.architecture,g=a?.governments[f],h=a?.governments[b],p=a?.people[g?.ruler],q=a?.people[h?.ruler];
+ if(!p||!q||p.id===q.id||!p.alive||!q.alive||p.spouse!==q.id||g.institutions.selection==='elective'||g.legitimacy<.5||atWar(s,f,b))return 'Преемник не имеет признанного права';
+ const previous=g.heir;g.heir=q.id;polityEvent(s,f,'succession nomination',{previous,heir:q.id,realm:b});return 'Преемник признан; объединение казны и территории не происходит';
+}
+export function commonRuler(s,f,b){const a=s.society?.architecture;return f!==b&&a?.governments[f]?.ruler!=null&&a.governments[f].ruler===a.governments[b]?.ruler;}
