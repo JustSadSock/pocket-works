@@ -1,0 +1,63 @@
+name: CI Overhaul Observatory
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-observatory.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ci-overhaul-observatory
+  cancel-in-progress: false
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/*.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadow-full-plan
+          run-id: 45423462734
+          github-token: ${{ github.token }}
+          path: prior-plan
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadow-full-audit
+          run-id: 45423462734
+          github-token: ${{ github.token }}
+          path: prior-audit
+      - uses: actions/download-artifact@v4
+        with:
+          name: selective-retry-evidence
+          run-id: 45452997352
+          github-token: ${{ github.token }}
+          path: retry
+      - uses: actions/download-artifact@v4
+        with:
+          name: adaptive-scheduling-evidence
+          run-id: 45452915995
+          github-token: ${{ github.token }}
+          path: adaptive
+      - name: Fetch complete historical job metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci-overhaul/collect-observatory.mjs runs.json
+      - name: Generate auditable CI performance report
+        run: |
+          node scripts/ci-overhaul/observatory.mjs prior-plan/plan.json prior-audit/audit.json retry/retry-evidence/retry-audit.json runs.json adaptive/schedule.json observatory
+          cat observatory/report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-observatory-report
+          path: observatory/
+          if-no-files-found: error
+          retention-days: 14
