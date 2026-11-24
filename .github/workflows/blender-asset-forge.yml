@@ -44,9 +44,23 @@ jobs:
         run: |
           set -euo pipefail
           archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          curl -fsSLO "${BLENDER_BASE_URL}/${archive}"
-          curl -fsSLO "${BLENDER_BASE_URL}/blender-${BLENDER_VERSION}.sha256"
-          grep " ${archive}$" "blender-${BLENDER_VERSION}.sha256" | sha256sum --check --strict
+          checksum="blender-${BLENDER_VERSION}.sha256"
+          verified=false
+          # The official mirror is Blender's current direct download endpoint.
+          # Keep the exact release and require checksum verification on every source.
+          for base in "https://mirror.blender.org/release/Blender5.2" "$BLENDER_BASE_URL" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" "$checksum"
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o "$checksum" "$base/$checksum" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" "$checksum" | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          if [[ "$verified" != true ]]; then
+            echo "Unable to retrieve and verify the pinned Blender release from official mirrors." >&2
+            exit 1
+          fi
           tar -xf "${archive}"
           echo "BLENDER=$PWD/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
 
@@ -103,9 +117,23 @@ jobs:
         run: |
           set -euo pipefail
           archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          curl -fsSLO "${BLENDER_BASE_URL}/${archive}"
-          curl -fsSLO "${BLENDER_BASE_URL}/blender-${BLENDER_VERSION}.sha256"
-          grep " ${archive}$" "blender-${BLENDER_VERSION}.sha256" | sha256sum --check --strict
+          checksum="blender-${BLENDER_VERSION}.sha256"
+          verified=false
+          # The official mirror is Blender's current direct download endpoint.
+          # Keep the exact release and require checksum verification on every source.
+          for base in "https://mirror.blender.org/release/Blender5.2" "$BLENDER_BASE_URL" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" "$checksum"
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o "$checksum" "$base/$checksum" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" "$checksum" | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          if [[ "$verified" != true ]]; then
+            echo "Unable to retrieve and verify the pinned Blender release from official mirrors." >&2
+            exit 1
+          fi
           tar -xf "${archive}"
           echo "BLENDER=$PWD/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
 
