@@ -15,3 +15,27 @@
 }
 @media(orientation:portrait){.formline #program{flex:1}.maptools{top:4px;right:4px}.maptools button{min-width:44px}.maptools select{max-width:120px}}
 dialog label{display:flex;flex-direction:column;gap:4px;margin:10px 0;font-size:13px}
+
+/* Continuous field under an inset, collapsible command sheet. */
+#battle{position:relative;display:block;isolation:isolate}
+#mapwrap{position:absolute;inset:0;min-height:0;overflow:hidden;z-index:0}
+.statusbar{position:absolute;top:6px;left:8px;right:8px;z-index:2;box-shadow:0 2px 6px #263b3622;border:1px solid #78866c}
+#desk{position:absolute;left:8px;right:8px;bottom:6px;z-index:2;display:flex;flex-direction:column;gap:4px;border:1px solid #7d896d;box-shadow:0 3px 14px #263b3633;padding:6px 8px;max-height:52%;overflow:hidden}
+#planning{min-height:0;overflow:auto;overscroll-behavior:contain}
+#desk .unitline{flex-wrap:wrap}#desk .unitline>div{min-width:115px;flex:1}
+#sheet,#undo,#redo{min-width:44px}
+#mapwrap .maptools{top:calc(var(--field-top,58px) + 4px);right:calc(var(--field-right,8px) + 4px)}
+#mapwrap .scale,#mapwrap #maphint{bottom:calc(var(--field-bottom,96px) + 4px)}
+#mapwrap .scale{right:calc(var(--field-right,8px) + 4px)}
+#mapwrap #maphint{max-width:min(65%,380px);left:12px}
+@media(min-width:720px) and (orientation:landscape){
+ #desk{left:auto;right:8px;top:62px;bottom:8px;width:min(290px,35%);max-height:none;justify-content:flex-start}
+ #desk .unitline>div{flex-basis:100%}
+ #desk .actionline{margin-top:auto}
+ #planning .orders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #planning .orders button{white-space:normal}
+ #planning .formline{flex-wrap:wrap}
+ #planning .formline label{width:100%;justify-content:space-between}
+}
+@media(max-height:520px) and (orientation:landscape){#desk{top:56px}#desk .unitline button{padding:4px 6px}#desk .unitline small{font-size:10px}}
+@media(orientation:portrait){#desk .formline{flex-wrap:wrap}#desk .formline #program{flex:1}#desk .unitline button{padding:5px 7px}#desk .actionline{flex-wrap:wrap}#desk .actionline .primary{min-width:120px}}
