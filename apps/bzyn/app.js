@@ -1,5 +1,8 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {WORLD,FIXED_STEP,buildWave,rubber,launchVector,capVelocity,advanceBall,clamp,magnitude} from './physics.mjs';
 
+installMobileRuntime();
 const $=id=>document.getElementById(id);
 const canvas=$('field'),ctx=canvas.getContext('2d',{alpha:false});
 const ui={score:$('score'),wave:$('wave'),shots:$('shots'),hint:$('hint'),hintSub:$('hintSub'),badge:$('catchBadge'),flash:$('waveFlash'),fire:$('fireButton'),sound:$('soundButton'),pause:$('pauseScreen'),end:$('endScreen'),a11y:$('a11yStatus')};
@@ -496,3 +499,6 @@ function frame(now){
   raf=requestAnimationFrame(frame);
 }
 newRound();resize();raf=requestAnimationFrame(frame);
+
+createWorkshopMode({appName:'БЗЫНЬ!',version:'1.0.0',cachePrefix: 'bzyn-',storageNamespace: 'pocket-works:bzyn',onReset(){location.reload();}});
+window.addEventListener('workshopopen',()=>setPause(true));
