@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'crown-and-marches-';
-const CACHE_NAME = 'crown-and-marches-v0.1.0';
-const APP_VERSION = '0.1.0';
+const CACHE_NAME = 'crown-and-marches-v0.2.0';
+const APP_VERSION = '0.2.0';
 const RELEASE_DATE = '2026-11-24';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Кампания на процедурной карте из 24 576 клеток.","Экономика, территориальный контроль, дипломатия, армии и осады.","Тактический режим с отдельными солдатами и сохранения."];
+const RELEASE_NOTES = ["Art of War: физические столкновения, разгон конницы, оружие и снаряды.","Custom Battle: две настраиваемые армии до 3000 воинов, одинаковый seed и наблюдение за ИИ.","Рисование построений, группы, очередь команд, доктрины и точные потери по родам войск."];
 const APP_SHELL = [
   './',
   './index.html',
