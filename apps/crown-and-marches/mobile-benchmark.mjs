@@ -44,7 +44,7 @@ try{
  while(acc>=.1&&b.winner===null){const now=performance.now();battleTick(b,.1);sim.push(performance.now()-now);acc-=.1;ticks++;if(ticks>200)break;}
  const now=performance.now();atlas.battle(b,camera,[],'high');render.push(performance.now()-now);frames++;
  if(t-start<3000&&ticks<200)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame);});
- const wall=performance.now()-start;report.push({soldiers:b.soldiers.length,frames,ticks,wallMs:Math.round(wall),fps:Number((frames*1000/wall).toFixed(1)),simMedian:percentile(sim,.5),simP95:percentile(sim,.95),renderMedian:percentile(render,.5),renderP95:percentile(render,.95),frameP95:percentile(intervals,.95),casualties:b.soldiers.filter(p=>p.hp<=0).length});
+ const wall=performance.now()-start;report.push({soldiers:b.soldiers.length,frames,ticks,wallMs:Math.round(wall),fps:Number((frames*1000/wall).toFixed(1)),simMedian:percentile(sim,.5),simP95:percentile(sim,.95),renderMedian:percentile(render,.5),renderP95:percentile(render,.95),frameMean:intervals.reduce((n,q)=>n+q,0)/Math.max(1,intervals.length),frameP95:percentile(intervals,.95),frameP99:percentile(intervals,.99),simP99:percentile(sim,.99),renderP99:percentile(render,.99),casualties:b.soldiers.filter(p=>p.hp<=0).length});
  }
  c.remove();return report;
  });
