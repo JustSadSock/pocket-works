@@ -8,4 +8,4 @@ Open `/apps/contour/` from the Pocket Works launcher or serve the repository thr
 
 ## Validation
 
-Use the repository's existing registry, health and browser checks. This documentation-only change does not modify game rules, storage, runtime or deployment.
+Use the repository's existing registry, health and browser checks. The app's isolated files live in this directory; launcher metadata is declared in `app.config.json`. This documentation-only change does not modify game rules, storage, runtime or deployment.
