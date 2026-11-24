@@ -553,7 +553,7 @@ export function politicalEvent(s,a,b,kind,detail=''){
 export function activeClauses(s,a,b,kind){return (s.politics?.contracts||[]).filter(t=>t.status==='active'&&pairKey(t.a,t.b)===pairKey(a,b)&&(t.end==null||t.end>s.day)).flatMap(t=>t.clauses.filter(c=>!kind||c.kind===kind));}
 const symmetric=new Set(['alliance','defense','nonaggression','trade','truce','escort']);
 const commonEnemy=(s,a,b)=>s.states.some(st=>atWar(s,a,st.id)&&atWar(s,b,st.id));
-const militaryPartners=(s,a,b)=>a===b||!!s.politics&&commonEnemy(s,a,b)&&activeClauses(s,a,b).some(c=>['alliance','defense','guarantee','protectorate','vassal','dependent-alliance'].includes(c.kind)&&(c.against==null||atWar(s,a,c.against)&&atWar(s,b,c.against)));
+export const militaryPartners=(s,a,b)=>a===b||!!s.politics&&commonEnemy(s,a,b)&&activeClauses(s,a,b).some(c=>['alliance','defense','guarantee','protectorate','vassal','dependent-alliance'].includes(c.kind)&&(c.against==null||atWar(s,a,c.against)&&atWar(s,b,c.against)));
 const canMarch=(s,a,b)=>s.politics?politicalRight(s,a,b,'access')||militaryPartners(s,a,b):['alliance','access','vassal'].includes(s.relations[a][b]);
 const canTrade=(s,a,b)=>s.politics?politicalRight(s,a,b,'trade'):['trade','alliance','access','vassal'].includes(s.relations[a][b]);
 export function politicalRight(s,a,b,kind){if(a===b)return true;return activeClauses(s,a,b).some(c=>(symmetric.has(c.kind)||c.from===b&&c.to===a)&&(c.kind===kind||kind==='access'&&['alliance','vassal'].includes(c.kind)||kind==='trade'&&['alliance','vassal','escort'].includes(c.kind)||kind==='port'&&['alliance','access'].includes(c.kind)));}
