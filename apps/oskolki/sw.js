@@ -4,7 +4,7 @@ const APP_VERSION = "1.0.0";
 const RELEASE_DATE = "2026-10-15";
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Первый выпуск: импорт многоязычного текста и TXT-файлов, автоматическое деление на пункты.","Сборка скрытых предложений из переставляемых фрагментов и точная проверка каждого ответа.","Локальное сохранение незавершённой игры, итоги и повтор ошибок, поддержка телефона и офлайна."];
-const APP_SHELL = ["../../shared/workshop-mode.js","../../shared/workshop-mode.css",
+const APP_SHELL = ["./workshop.js","../../shared/workshop-mode.js","../../shared/workshop-mode.css",
   './', './index.html', './app.config.json', './styles.css', './app.js', './puzzle-core.js',
   './manifest.webmanifest', './icons/icon.svg',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js',

@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Space Run Co-op</title>
   <link rel="stylesheet" href="./styles.css" />
-<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#081a26"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#081a26"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
+</head>
 <body>
   <nav id="mobile-tabs"><button data-native-press data-panel="crew">Экипаж</button><button data-native-press data-panel="build">Мастерская</button></nav><div id="app" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
     <aside class="panel panel-left">
@@ -88,6 +89,7 @@
 
   
   <div id="touchDeck"><div><button data-key="KeyW">↑</button><button data-key="KeyA">←</button><button data-key="KeyS">↓</button><button data-key="KeyD">→</button></div><div><button data-key="Space">Щит</button><button data-key="KeyR">Ремонт</button><button id="touch-fire">Огонь</button><button id="touch-rotate">Поворот</button></div></div><script type="module" src="./app.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Space Run" data-app-version="0.5.0"></script></body>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Space Run" data-app-version="0.5.0"></script><div data-ui style="position:fixed;right:max(8px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));z-index:30"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button></div><script type="module" src="./workshop.js"></script>
+</body>
 </html>
 
