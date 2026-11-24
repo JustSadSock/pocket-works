@@ -82,7 +82,7 @@ export function warInit(s){
  s.fleets??=[];s.nextFleet??=0;s.warTimeline??=[];s.convoys??=[];s.nextConvoy??=0;s.operations??=[];s.nextOperation??=0;s.intel??=s.states.map(()=>({}));s.wars??=[];s.hospitals??=[];s.prisoners??=[];s.warStats??={battles:0,losses:0,convoysLost:0,shortageDays:0,peace:0,sieges:0};
  for(const a of s.armies){a.organization??=1;a.experience??=0;a.commander??='Капитан '+a.id;a.task??=null;a.group??=null;a.forage??=0;a.payChest??=0;a.arrears??=0;a.shortage??=0;a.marchFrom??=a.i;a.kind??='field';a.reinforce??=null;a.disengageUntil??=0;a.recovering??=false;a.withdrawFrom??=null;}
  for(const c of s.cities){c.depot??=zeros();c.port??=0;c.shipOrders??=[];c.siegeWorks??=null;c.loyalty??=1;}
- for(const st of s.states){st.cashStreak??=0;st.structuralDays??=0;st.crisisEpisodes??=0;st.totalStructuralDays??=0;st.totalCrisisDays??=0;st.cashEvents??=st.bankruptcies||0;st.fiscal??={income:0,expense:0,lastIncome:0,lastExpense:0};st.templates??=[];st.doctrine??='balanced';st.service??={dead:0,wounded:0,severe:0,captured:0,deserted:0,recovered:0,demobilized:0,mobilized:0,shortage:0};}
+ for(const st of s.states){st.cashStreak??=0;st.structuralDays??=0;st.crisisEpisodes??=0;st.totalStructuralDays??=0;st.totalCrisisDays??=0;st.cashEvents??=st.bankruptcies||0;st.fiscal??={income:0,expense:0,lastIncome:0,lastExpense:0};st.templates??=[];st.doctrine??='balanced';st.service??={dead:0,wounded:0,severe:0,captured:0,deserted:0,recovered:0,demobilized:0,mobilized:0,shortage:0};st.service.returnedToRanks??=0;st.service.released??=0;st.service.recoveredCivilian??=0;}
 }
 export function observe(s,f){warInit(s);const known=s.intel[f],own=s.armies.filter(a=>a.f===f),cities=s.cities.filter(c=>c.f===f&&c.occupation<0);for(const a of s.armies){if(a.f===f)continue;const cover=s.map.terrain[a.i]===2||s.map.terrain[a.i]===4?.62:1,weather=s.day%360>=270?.8:1;const seen=own.some(b=>dist(a.i,b.i)<(2.2+(b.units[6]+b.units[7])/50+(b.task?.kind==='scout'?5:0))*cover*weather)||cities.some(c=>dist(c.i,a.i)<(2+c.fort*.5)*cover);if(seen){const band=Math.max(20,Math.round(strength(a)/20)*20);known[a.id]={id:a.id,f:a.f,i:a.i,estimate:band,day:s.day,heading:a.marchFrom===a.i?null:a.marchFrom};}}for(const k of Object.keys(known))if(s.day-known[k].day>45)delete known[k];return Object.values(known).map(q=>({...q,visible:q.day===s.day}));}
 export function knownFor(s,f){return Object.values(s.intel?.[f]||{}).map(q=>({...q,visible:q.day===s.day}));}
@@ -329,8 +329,18 @@ function siegeStep(s,a,c){let w=c.siegeWorks;if(!w||w.attacker!==a.f)w=c.siegeWo
  if(c.siege>9+c.stock[9]*.03){c.occupation=a.f;s.occ[c.i]=a.f;s.pressure[c.i]=1;s.contender[c.i]=a.f;w.stage='capitulated';w.camp=null;s.warStats.sieges++;recalcTerritory(s,false);log(s,c.name+' капитулирует');}}
 export function assault(s,a,c){warInit(s);if(!a||a.fleet!=null||!c||a.i!==c.i||!atWar(s,a.f,c.f)||c.occupation>=0)return 'Армия не у крепости';if(s.battle)return 'Сражение уже идёт';if(c.fort&&!c.siegeWorks?.walls.some(q=>q<=0)&&c.siegeWorks?.gate!==0)return 'Нет пролома';let defender=s.armies.find(b=>b.f===c.f&&b.i===c.i);if(!defender){const msg=recruit(s,c,0);if(!msg.startsWith('Нанято'))return 'Гарнизон не может мобилизоваться';defender=s.armies.find(b=>b.f===c.f&&b.i===c.i);defender.kind='garrison';}s.battle={a:a.id,b:defender.id,i:c.i,defender:defender.id,siegeCity:c.id};return 'Штурм начат';}
 
-export function releasePrisoners(s,a,b){warInit(s);const keep=[];for(const p of s.prisoners){if(p.f===a&&p.captor===b||p.f===b&&p.captor===a){const c=s.cities.find(q=>q.id===p.city&&q.f===p.f&&q.occupation<0)||s.cities.find(q=>q.f===p.f&&q.occupation<0);if(c){c.returning+=p.n;s.states[p.f].service.recovered+=p.n;}else keep.push(p);}else keep.push(p);}s.prisoners=keep;}
-function recoveryStep(s){const keep=[];for(const p of s.hospitals){if(p.day>s.day){keep.push(p);continue;}const c=s.cities.find(q=>q.id===p.city&&q.f===p.f&&q.occupation<0)||s.cities.find(q=>q.f===p.f&&q.occupation<0);if(!c){keep.push(p);continue;}c.returning+=p.n;if(!p.deserter)s.states[p.f].service.recovered+=p.n;}s.hospitals=keep;for(const p of s.prisoners){const c=s.cities.find(q=>q.f===p.captor&&q.capital);if(c&&s.day%4===0)consume(s,c,9,p.n*4/170);}}
+export function releasePrisoners(s,a,b){warInit(s);const keep=[];for(const p of s.prisoners){if(p.f===a&&p.captor===b||p.f===b&&p.captor===a){const c=s.cities.find(q=>q.id===p.city&&q.f===p.f&&q.occupation<0)||s.cities.find(q=>q.f===p.f&&q.occupation<0)||s.cities.find(q=>q.id===p.city&&q.occupation<0);if(c){c.returning+=p.n;s.states[p.f].service.recovered+=p.n;s.states[p.f].service.released+=p.n;}else keep.push(p);}else keep.push(p);}s.prisoners=keep;}
+function recoveryStep(s){const keep=[];for(const p of s.hospitals){if(p.day>s.day){keep.push(p);continue;}
+ const peaceful=!s.states.some(st=>atWar(s,p.f,st.id)),c=s.cities.find(q=>q.id===p.city&&q.f===p.f&&q.occupation<0)||s.cities.find(q=>q.f===p.f&&q.occupation<0)||(peaceful?s.cities.find(q=>q.id===p.city&&q.occupation<0):null);
+ if(!c){keep.push(p);continue;}
+ const st=s.states[p.f],a=!peaceful&&!p.deserter?s.armies.find(q=>q.id===p.army&&q.f===p.f&&q.i===c.i&&q.fleet==null&&!q.path.length):null;
+ if(a){const u=UNIT[p.type],need=zeros();need[9]=10/60;need[13]=u[1]/10;need[14]=[0,1,1,4,0,2,2,8,0,1][p.type]/60;need[8]=p.type===6?.1:p.type===7?8/60:0;need[1]=u[5]?2/60:0;need[11]=u[5]?1/60:0;const cost=(12+u[1]*8)/60;
+ const n=Math.max(0,Math.min(p.n,Math.floor(st.gold/cost),...need.map((q,k)=>q?Math.floor(c.stock[k]/q):Infinity)));
+ if(n){for(let k=0;k<17;k++){const q=n*need[k];c.stock[k]-=q;if(k===9)a.rations+=q;else a.equipment[k]+=q;}st.gold-=n*cost;c.cash+=n*cost;st.budget.procurement+=n*cost;a.units[p.type]+=n;let co=a.cohorts.find(q=>q.city===p.city);if(!co){co={city:p.city,units:Array(10).fill(0)};a.cohorts.push(co);}co.units[p.type]+=n;st.service.returnedToRanks+=n;st.service.recovered+=n;p.n-=n;}
+ }
+ if(p.n){c.returning+=p.n;if(!p.deserter){st.service.recovered+=p.n;st.service.recoveredCivilian+=p.n;}}
+ }s.hospitals=keep;for(const p of s.prisoners){const c=s.cities.find(q=>q.f===p.captor&&q.capital);if(c&&s.day%4===0)consume(s,c,9,p.n*4/170);}}
+
 // Estimate the actual outbound and return travel cost, rather than a fixed number of ration days.
 export function operationEstimate(s,a,target){
  const route=safeRoute(s,a,target),home=s.cities.filter(c=>c.f===a.f&&c.occupation<0).sort((x,y)=>dist(target,x.i)-dist(target,y.i)||x.id-y.id)[0];
@@ -444,7 +454,18 @@ export function campaignSandbox(config={}){
  return s;
 }
 export function warSnapshot(s){warInit(s);return {day:s.day,...s.warStats,armies:s.armies.length,soldiers:s.armies.reduce((n,a)=>n+strength(a),0),hospital:s.hospitals.reduce((n,p)=>n+p.n,0),prisoners:s.prisoners.reduce((n,p)=>n+p.n,0),wars:s.wars.map(w=>({...w,score:warScore(s,w)})),treasury:s.states.map(st=>st.gold),service:s.states.map(st=>({...st.service})),occupation:s.occ.reduce((n,q)=>n+(q>=0?1:0),0)};}
-function warfare(s){economicInit(s);supplyStep(s);recoveryStep(s);operationStep(s);for(const a of s.armies){armySupply(s,a);if(a.fleet!=null)continue;let n=strength(a);if(a.path.length){let j=a.path[0];let winter=s.day%360>=270?.75:1,composition=a.units.reduce((sum,n,i)=>sum+n*UNIT[i][3],0)/(strength(a)||1);a.progress+=.85/travelCost(s,a.i,j)*(1-a.fatigue*.4)*winter*composition*(.65+a.supply/170);if(a.progress>=1){a.progress-=1;a.marchFrom=a.i;a.i=a.path.shift();a.fatigue=clamp(a.fatigue+.012,0,1)}}else a.fatigue=Math.max(0,a.fatigue-.025);let c=s.cities.find(c=>c.i===a.i&&atWar(s,a.f,c.f)&&c.occupation<0);if(c&&!a.path.length&&strength(a)>0&&!a.recovering)siegeStep(s,a,c);}
+function postwarRecovery(s){
+ for(const a of [...s.armies])if(a.postwar&&a.fleet==null&&!s.states.some(st=>atWar(s,a.f,st.id))){
+ const homes=s.cities.filter(c=>c.f===a.f&&c.occupation<0),home=homes.find(c=>c.i===a.i);
+ if(home){demobilize(s,a);continue;}
+ if(a.path.length)continue;
+ const candidates=(homes.length?homes:s.cities.filter(c=>c.occupation<0&&a.cohorts.some(co=>co.city===c.id))).sort((x,y)=>dist(a.i,x.i)-dist(a.i,y.i)||x.id-y.id);
+ const target=candidates[0];if(!target)continue;
+ if(a.i===target.i&&!homes.length){const st=s.states[a.f];st.service.demobilized+=strength(a);for(const co of a.cohorts){const dest=s.cities.find(c=>c.id===co.city&&c.occupation<0)||target;dest.returning+=co.units.reduce((n,q)=>n+q,0);}for(let k=0;k<17;k++)target.stock[k]+=a.equipment[k];target.stock[9]+=a.rations;target.stock[0]+=a.forage;st.gold+=a.payChest;s.armies=s.armies.filter(q=>q!==a);continue;}
+ a.path=pathfind(s,a.i,target.i,-1,i=>s.owner[i]<0||s.owner[i]===a.f||s.owner[i]===a.withdrawFrom||['access','alliance'].includes(s.relations[a.f][s.owner[i]]));a.progress=0;
+ }
+}
+function warfare(s){economicInit(s);supplyStep(s);recoveryStep(s);postwarRecovery(s);operationStep(s);for(const a of s.armies){armySupply(s,a);if(a.fleet!=null)continue;let n=strength(a);if(a.path.length){let j=a.path[0];let winter=s.day%360>=270?.75:1,composition=a.units.reduce((sum,n,i)=>sum+n*UNIT[i][3],0)/(strength(a)||1);a.progress+=.85/travelCost(s,a.i,j)*(1-a.fatigue*.4)*winter*composition*(.65+a.supply/170);if(a.progress>=1){a.progress-=1;a.marchFrom=a.i;a.i=a.path.shift();a.fatigue=clamp(a.fatigue+.012,0,1)}}else a.fatigue=Math.max(0,a.fatigue-.025);let c=s.cities.find(c=>c.i===a.i&&atWar(s,a.f,c.f)&&c.occupation<0);if(c&&!a.path.length&&strength(a)>0&&!a.recovering)siegeStep(s,a,c);}
 for(const a of [...s.armies])if(a.reinforce!=null){const target=s.armies.find(b=>b.id===a.reinforce&&b.f===a.f);if(target&&dist(a.i,target.i)<=1)combineArmies(s,target,a);else if(target&&!a.path.length&&s.day%5===0)a.path=safeRoute(s,a,target.i);}
 
 for(const c of s.cities){const w=c.siegeWorks;if(w&&c.occupation<0&&w.lastActive!==s.day&&w.stage!=='lifted'){w.stage='lifted';w.camp=null;c.siege=Math.max(0,c.siege-2);log(s,c.name+': осада снята');}else if(w?.stage==='lifted')c.siege=Math.max(0,c.siege-.25);}
