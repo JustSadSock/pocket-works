@@ -1056,7 +1056,7 @@ export function proposeConstitution(s,f,kind){
 function politicalArchitectureStep(s){
  const a=s.society.architecture;refreshTitles(s);
  const counts={};
- for(const t of Object.values(a.titles))if(t.kind==='land'&&s.admin[t.cell]>=0){const city=s.admin[t.cell];(counts[city]??={})[t.beneficiary]=(counts[city][t.beneficiary]||0)+s.development[t.cell];}
+ for(const t of Object.values(a.titles)){if(t.kind==='land'&&s.admin[t.cell]>=0){const city=s.admin[t.cell];(counts[city]??={})[t.beneficiary]=(counts[city][t.beneficiary]||0)+s.development[t.cell];}else if(t.kind==='workshop'){const c=s.cities.find(c=>c.id===t.city),k=Number(t.key.split(':')[2]),out=RECIPES[k]?.out;if(c&&out!=null){const value=c.output[out]*c.market[out]/Math.max(1,c.build[k]);(counts[c.id]??={})[t.beneficiary]=(counts[c.id][t.beneficiary]||0)+Math.min(10,value);}}}
  for(const c of s.cities){const sub=registerDistrict(s,c),d=c.society;sub.overlord=crownId(c.f);sub.contract.retention=legalRetention(s,c);const g=a.governments[c.f];
  // Legal beneficiaries receive a bounded portion of actual market revenue, not generated rent.
  if(c.occupation<0){const row=counts[c.id]||{},total=Object.values(row).reduce((n,v)=>n+v,0),pool=Math.min(c.cash*.004,total*.025);if(total>0&&pool>0)for(const [id,weight] of Object.entries(row)){const pay=pool*weight/total;if(creditAccount(s,id,pay))c.cash-=pay;}}
@@ -1066,6 +1066,7 @@ function politicalArchitectureStep(s){
  if(sub.dispute?.stage==='petition'&&sub.arrears>=8&&d.pressure>.68){sub.dispute.stage='withholding';polityEvent(s,c.f,'tax withholding',{district:c.id});}
  if(sub.dispute&&(d.pressure<.42||d.autonomy>=sub.dispute.requestedAutonomy-.001)){polityEvent(s,c.f,'petition settled',{district:c.id});sub.dispute=null;sub.arrears=0;}
  if(sub.dispute&&!d.reform&&polAI(s,c.f)&&s.day%360===0&&d.autonomy<.82)requestCharter(s,c,sub.dispute.requestedAutonomy);
+ if(s.day%80===0&&c.occupation<0&&c.lastFoodRatio>.8&&!c.orders.length)privateIndustryReview(s,c);
  if(s.day%360===0&&c.occupation<0){if(polAI(s,c.f)&&s.states.some(st=>atWar(s,c.f,st.id))&&g?.institutions.military==='lords')musterLevy(s,c);if(c.lastFoodRatio>.85&&!c.knowledge?.institutes?.school){const clergy=d.cohorts.find(q=>q.id==='clergy');if(clergy.cash>=INSTITUTES.school[1]){const st=s.states[c.f],fee=INSTITUTES.school[1];clergy.cash-=fee;st.gold+=fee;const msg=fundInstitute(s,c,'school');if(msg!=='Учреждение основано'){st.gold-=fee;clergy.cash+=fee;}else{st.budget.investment-=fee;polityEvent(s,c.f,'clergy school',{district:c.id});}}}}
  if(g&&c.colony?.kind==='overseas'&&c.colony.selfSufficiency>.8&&d.pressure>.52&&!d.reform&&d.autonomy<.75&&polAI(s,c.f))requestCharter(s,c,d.autonomy+.15);
  }
@@ -1133,3 +1134,18 @@ export function nominateDynasticSuccessor(s,f,b){
  const previous=g.heir;g.heir=q.id;polityEvent(s,f,'succession nomination',{previous,heir:q.id,realm:b});return 'Преемник признан; объединение казны и территории не происходит';
 }
 export function commonRuler(s,f,b){const a=s.society?.architecture;return f!==b&&a?.governments[f]?.ruler!=null&&a.governments[f].ruler===a.governments[b]?.ruler;}
+
+export function privateBuild(s,c,kind,investor){
+ if(!s.society?.architecture||!c||!Number.isInteger(kind)||kind<0||kind>=BUILD.length||subjectFaction(s,investor)!==c.f||investor===crownId(c.f))return 'Недоступная инвестиция';
+ const account=subjectAccount(s,investor),cost=BUILD[kind][5],index=c.build[kind],st=s.states[c.f];if(!account||account.obj[account.key]<cost)return 'Нет частного капитала';
+ if(!debitAccount(s,investor,cost))return 'Нет частного капитала';
+ st.gold+=cost;const result=build(s,c,kind);if(result!=='Построено'){st.gold-=cost;creditAccount(s,investor,cost);return result;}
+ st.budget.investment-=cost;const title=defaultTitle(s,c,'workshop:'+c.id+':'+kind+':'+index,'workshop');title.owner=title.user=title.beneficiary=investor;c.metrics.privateIndustry=(c.metrics.privateIndustry||0)+cost;polityEvent(s,c.f,'private industry',{city:c.id,kind,investor,cost});return result;
+}
+function privateIndustryReview(s,c){
+ const candidates=[];
+ for(const k of [2,3]){const r=RECIPES[k],cost=BUILD[k][5];if(c.build[k]>0||r.inputs.some(([g,n])=>c.stock[g]<n*3)||c.stock[r.out]>Math.max(4,c.demand[r.out]*5))continue;
+ const revenue=c.market[r.out]*r.yield,input=r.inputs.reduce((n,[g,q])=>n+c.market[g]*q,0);if(revenue<=input)continue;
+ for(const id of [groupId(c,'artisans'),groupId(c,'merchants'),groupId(c,'landowners'),localId(c)]){const account=subjectAccount(s,id);if(account&&account.obj[account.key]>=cost+5)candidates.push({id,k,score:(revenue-input)/cost});}}
+ candidates.sort((a,b)=>b.score-a.score||a.k-b.k||a.id.localeCompare(b.id));if(candidates.length){const v=candidates[0];privateBuild(s,c,v.k,v.id);}
+}
