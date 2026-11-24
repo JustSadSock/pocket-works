@@ -1,17 +1,17 @@
 {
-  "method": "120-second maximum; 3 maps x 3 AI styles plus fatigue stress; both sides; lane-matched direct attack or simple brace defense; normalized remaining combat power difference; fixed reserve slots measured in both policies",
+  "method": "120-second maximum; all three maps x three AI styles plus four general stress conditions; both sides; matched lane attack or brace control; normalized remaining combat power difference; fixed reserve slots measured in both policies",
   "mirror": {
-    "meanDeltaDifference": 4.657385588302532e-16,
-    "maxDeltaDifference": 2.6256774532384952e-14
+    "meanDeltaDifference": 0.0014970211129206512,
+    "maxDeltaDifference": 0.1945395205040411
   },
   "summary": [
     {
       "id": "double-envelopment",
-      "runs": 20,
-      "positive": 4,
+      "runs": 26,
+      "positive": 10,
       "negative": 16,
       "neutral": 0,
-      "meanDelta": -0.037169064932937895,
+      "meanDelta": -0.014231626827672162,
       "worst": {
         "seed": "valley",
         "style": "aggressive",
@@ -27,16 +27,16 @@
     },
     {
       "id": "oblique",
-      "runs": 20,
-      "positive": 20,
-      "negative": 0,
+      "runs": 26,
+      "positive": 22,
+      "negative": 4,
       "neutral": 0,
-      "meanDelta": 0.12440372266954654,
+      "meanDelta": 0.09920047110490872,
       "worst": {
-        "seed": "open",
-        "style": "adaptive",
+        "seed": "close",
+        "style": "aggressive",
         "mirror": false,
-        "delta": 0.060285314414382146
+        "delta": -0.01837554628312127
       },
       "best": {
         "seed": "stress",
@@ -47,16 +47,16 @@
     },
     {
       "id": "weighted-wing",
-      "runs": 20,
+      "runs": 26,
       "positive": 8,
-      "negative": 10,
-      "neutral": 2,
-      "meanDelta": -0.0541106321422995,
+      "negative": 14,
+      "neutral": 4,
+      "meanDelta": -0.09037819680045919,
       "worst": {
-        "seed": "open",
+        "seed": "close",
         "style": "aggressive",
         "mirror": false,
-        "delta": -0.34068205575588034
+        "delta": -0.5670505068357318
       },
       "best": {
         "seed": "valley",
@@ -67,11 +67,11 @@
     },
     {
       "id": "yielding-center",
-      "runs": 20,
-      "positive": 18,
+      "runs": 26,
+      "positive": 24,
       "negative": 2,
       "neutral": 0,
-      "meanDelta": 0.17515960674653902,
+      "meanDelta": 0.16186303450446854,
       "worst": {
         "seed": "stress",
         "style": "adaptive",
@@ -87,16 +87,16 @@
     },
     {
       "id": "feigned-retreat",
-      "runs": 20,
-      "positive": 8,
-      "negative": 6,
+      "runs": 26,
+      "positive": 10,
+      "negative": 10,
       "neutral": 6,
-      "meanDelta": 0.044323883114205834,
+      "meanDelta": -0.02078747957313833,
       "worst": {
-        "seed": "ford",
+        "seed": "close",
         "style": "aggressive",
-        "mirror": false,
-        "delta": -0.26596604010825314
+        "mirror": true,
+        "delta": -0.9053197502010105
       },
       "best": {
         "seed": "valley",
@@ -107,11 +107,11 @@
     },
     {
       "id": "reserve-breakthrough",
-      "runs": 20,
-      "positive": 4,
-      "negative": 16,
-      "neutral": 0,
-      "meanDelta": -0.06367950285963189,
+      "runs": 26,
+      "positive": 10,
+      "negative": 12,
+      "neutral": 4,
+      "meanDelta": -0.018794893449019315,
       "worst": {
         "seed": "stress",
         "style": "adaptive",
@@ -120,43 +120,43 @@
       },
       "best": {
         "seed": "open",
-        "style": "aggressive",
+        "style": "adaptive",
         "mirror": true,
-        "delta": 0.1846227320358002
+        "delta": 0.20732900880843216
       }
     },
     {
       "id": "defense-in-depth",
-      "runs": 20,
-      "positive": 0,
+      "runs": 26,
+      "positive": 2,
       "negative": 6,
-      "neutral": 14,
-      "meanDelta": -0.019384145442181068,
+      "neutral": 18,
+      "meanDelta": -0.04141547193285105,
       "worst": {
-        "seed": "open",
-        "style": "adaptive",
+        "seed": "exhausted",
+        "style": "aggressive",
         "mirror": false,
-        "delta": -0.09751996580544053
+        "delta": -0.290769280560147
       },
       "best": {
         "seed": "open",
-        "style": "defensive",
+        "style": "aggressive",
         "mirror": false,
-        "delta": 0
+        "delta": 0.016800082167531927
       }
     },
     {
       "id": "mobile-archery",
-      "runs": 20,
-      "positive": 20,
-      "negative": 0,
+      "runs": 26,
+      "positive": 24,
+      "negative": 2,
       "neutral": 0,
-      "meanDelta": 0.167549599035444,
+      "meanDelta": 0.1157261070027824,
       "worst": {
-        "seed": "valley",
+        "seed": "exhausted",
         "style": "aggressive",
         "mirror": true,
-        "delta": 0.04902593533234462
+        "delta": -0.5085226565604068
       },
       "best": {
         "seed": "open",
@@ -167,11 +167,11 @@
     },
     {
       "id": "pin-and-charge",
-      "runs": 20,
-      "positive": 14,
-      "negative": 6,
+      "runs": 26,
+      "positive": 18,
+      "negative": 8,
       "neutral": 0,
-      "meanDelta": 0.03296439532510699,
+      "meanDelta": 0.03427308560244508,
       "worst": {
         "seed": "open",
         "style": "adaptive",
@@ -187,11 +187,11 @@
     },
     {
       "id": "chokepoint",
-      "runs": 20,
-      "positive": 14,
-      "negative": 2,
+      "runs": 26,
+      "positive": 18,
+      "negative": 4,
       "neutral": 4,
-      "meanDelta": 0.013528401295027031,
+      "meanDelta": 0.03524385726081591,
       "worst": {
         "seed": "stress",
         "style": "adaptive",
@@ -199,10 +199,10 @@
         "delta": -0.228078430741958
       },
       "best": {
-        "seed": "valley",
+        "seed": "exhausted",
         "style": "aggressive",
         "mirror": false,
-        "delta": 0.07610798620803255
+        "delta": 0.3998800510379521
       }
     }
   ],
@@ -1708,6 +1708,456 @@
       }
     },
     {
+      "id": "double-envelopment",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.05804604073955805,
+      "control": {
+        "own": {
+          "power": 57.912063172981846,
+          "initial": 288,
+          "loss": 88.7362686893016,
+          "morale": 43.86639644864654,
+          "cohesion": 36.258698604386346,
+          "fatigue": 68.32500000000013,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 31.42349259931926,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 277.03118687179165,
+          "initial": 528,
+          "loss": 64.60161148599741,
+          "morale": 84.48206176104296,
+          "cohesion": 44.07291361841344,
+          "fatigue": 49.15800000000034,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.6524209706099768,
+          "crowding": 77.77499999999985
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.32359672548230733
+      },
+      "tactical": {
+        "own": {
+          "power": 117.69132969556242,
+          "initial": 288,
+          "loss": 73.47389939050274,
+          "morale": 49.07984785944464,
+          "cohesion": 52.88543943537809,
+          "fatigue": 30.655000000000218,
+          "routed": 2,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 12.072940983342162,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 355.9781993193694,
+          "initial": 528,
+          "loss": 57.83715749342713,
+          "morale": 90.5261012630796,
+          "cohesion": 67.94769091624532,
+          "fatigue": 33.366000000000334,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 27.62500000000003
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.2655506847427493
+      }
+    },
+    {
+      "id": "double-envelopment",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.05804604073955749,
+      "control": {
+        "own": {
+          "power": 57.91206317298193,
+          "initial": 288,
+          "loss": 88.7362686893016,
+          "morale": 43.866396448646356,
+          "cohesion": 36.258698604386346,
+          "fatigue": 68.32500000000013,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 31.423492599319264,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 277.03118687179165,
+          "initial": 528,
+          "loss": 64.60161148599741,
+          "morale": 84.48206176104296,
+          "cohesion": 44.07291361841344,
+          "fatigue": 49.15800000000034,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.6524209706099768,
+          "crowding": 77.77499999999985
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.323596725482307
+      },
+      "tactical": {
+        "own": {
+          "power": 117.69132969556242,
+          "initial": 288,
+          "loss": 73.47389939050274,
+          "morale": 49.07984785944464,
+          "cohesion": 52.88543943537809,
+          "fatigue": 30.655000000000218,
+          "routed": 2,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 12.07294098334216,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 355.97819931936954,
+          "initial": 528,
+          "loss": 57.83715749342713,
+          "morale": 90.5261012630796,
+          "cohesion": 67.94769091624532,
+          "fatigue": 33.366000000000334,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 27.62500000000003
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.2655506847427495
+      }
+    },
+    {
+      "id": "double-envelopment",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.09603712781292983,
+      "control": {
+        "own": {
+          "power": 86.27132582510322,
+          "initial": 288,
+          "loss": 92.10692820983752,
+          "morale": 48.48078343846102,
+          "cohesion": 65.6652419967397,
+          "fatigue": 62.880000000000074,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 8.80901064023054,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 268.20922071388657,
+          "initial": 528,
+          "loss": 79.54759555733483,
+          "morale": 66.23044130841299,
+          "cohesion": 64.64833070175442,
+          "fatigue": 32.97800000000019,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 2.4590668894153884,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.20841879425731819
+      },
+      "tactical": {
+        "own": {
+          "power": 88.56564736727037,
+          "initial": 288,
+          "loss": 58.70934864715943,
+          "morale": 35.36857075743731,
+          "cohesion": 39.55158311008097,
+          "fatigue": 45.817500000000294,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 9.95154779475774,
+          "crowding": 21.67500000000002
+        },
+        "enemy": {
+          "power": 221.70787338929938,
+          "initial": 528,
+          "loss": 57.129883471091546,
+          "morale": 61.11467799571924,
+          "cohesion": 56.544228356347695,
+          "fatigue": 36.24600000000022,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.07522559070017246,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.11238166644438835
+      }
+    },
+    {
+      "id": "double-envelopment",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.09603712781293028,
+      "control": {
+        "own": {
+          "power": 86.27132582510328,
+          "initial": 288,
+          "loss": 92.10692820983752,
+          "morale": 48.480783438461046,
+          "cohesion": 65.6652419967397,
+          "fatigue": 62.880000000000074,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 8.809010640230541,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 268.2092207138869,
+          "initial": 528,
+          "loss": 79.54759555733483,
+          "morale": 66.23044130841319,
+          "cohesion": 64.64833070175442,
+          "fatigue": 32.97800000000019,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 2.4590668894153884,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.20841879425731863
+      },
+      "tactical": {
+        "own": {
+          "power": 88.56564736727046,
+          "initial": 288,
+          "loss": 58.70934864715946,
+          "morale": 35.36857075743736,
+          "cohesion": 39.55158311008097,
+          "fatigue": 45.817500000000294,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 9.951547794757742,
+          "crowding": 21.67500000000002
+        },
+        "enemy": {
+          "power": 221.70787338929955,
+          "initial": 528,
+          "loss": 57.1298834710916,
+          "morale": 61.11467799571933,
+          "cohesion": 56.544228356347695,
+          "fatigue": 36.24600000000022,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.07522559070017246,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.11238166644438835
+      }
+    },
+    {
+      "id": "double-envelopment",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.03259633201715295,
+      "control": {
+        "own": {
+          "power": 48,
+          "initial": 288,
+          "loss": 37.83943431296265,
+          "morale": 27.050525523161465,
+          "cohesion": 32.821843452483606,
+          "fatigue": 75,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 30.922901819079357,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 431.17791326971377,
+          "initial": 528,
+          "loss": 5.135903557471806,
+          "morale": 100,
+          "cohesion": 71.82648608109373,
+          "fatigue": 25.493200000000144,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 58.64999999999986
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6499581690714277
+      },
+      "tactical": {
+        "own": {
+          "power": 48,
+          "initial": 288,
+          "loss": 43.596406152588315,
+          "morale": 26.804103290078114,
+          "cohesion": 31.171153302148824,
+          "fatigue": 75,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 34.25038156555624,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 413.967049964657,
+          "initial": 528,
+          "loss": 6.835213019480193,
+          "morale": 100,
+          "cohesion": 67.05199999999988,
+          "fatigue": 32.64400000000021,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 42.499999999999964
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6173618370542747
+      }
+    },
+    {
+      "id": "double-envelopment",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.03259633201715295,
+      "control": {
+        "own": {
+          "power": 48,
+          "initial": 288,
+          "loss": 37.83943431296268,
+          "morale": 27.050525523161458,
+          "cohesion": 32.821843452483606,
+          "fatigue": 75,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 30.922901819079357,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 431.17791326971377,
+          "initial": 528,
+          "loss": 5.135903557471806,
+          "morale": 100,
+          "cohesion": 71.82648608109373,
+          "fatigue": 25.493200000000144,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 58.64999999999986
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6499581690714277
+      },
+      "tactical": {
+        "own": {
+          "power": 48,
+          "initial": 288,
+          "loss": 43.596406152588315,
+          "morale": 26.804103290078096,
+          "cohesion": 31.171153302148824,
+          "fatigue": 75,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 34.25038156555624,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 413.967049964657,
+          "initial": 528,
+          "loss": 6.835213019480193,
+          "morale": 100,
+          "cohesion": 67.05199999999988,
+          "fatigue": 32.64400000000021,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 42.499999999999964
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6173618370542747
+      }
+    },
+    {
       "id": "oblique",
       "seed": "open",
       "style": "aggressive",
@@ -3205,6 +3655,456 @@
         "time": 120,
         "result": null,
         "score": -0.2652226534565634
+      }
+    },
+    {
+      "id": "oblique",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.01837554628312127,
+      "control": {
+        "own": {
+          "power": 246.64060296113746,
+          "initial": 508,
+          "loss": 131.82054657830622,
+          "morale": 66.70941695687807,
+          "cohesion": 70.13244459418831,
+          "fatigue": 38.77150000000032,
+          "routed": 0,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 83,
+          "frontYield": 2.0053927246787673,
+          "crowding": 0.85
+        },
+        "enemy": {
+          "power": 153.66487185196516,
+          "initial": 508,
+          "loss": 130.90431808221797,
+          "morale": 61.300561930939715,
+          "cohesion": 50.74327992980319,
+          "fatigue": 42.27600000000022,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.403236577299555,
+          "crowding": 63.32499999999993
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.1830230927345911
+      },
+      "tactical": {
+        "own": {
+          "power": 213.7457062460351,
+          "initial": 508,
+          "loss": 88.04157397258223,
+          "morale": 68.99952740522217,
+          "cohesion": 56.31430678627796,
+          "fatigue": 39.614000000000274,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 60.5,
+          "frontYield": 2.7540015959559416,
+          "crowding": 54.82499999999988
+        },
+        "enemy": {
+          "power": 130.10475264868842,
+          "initial": 508,
+          "loss": 97.35687172840215,
+          "morale": 55.78527497065738,
+          "cohesion": 45.502653105427484,
+          "fatigue": 38.048000000000144,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.40899242847893,
+          "crowding": 80.32499999999972
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.16464754645146984
+      }
+    },
+    {
+      "id": "oblique",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.01837554628312066,
+      "control": {
+        "own": {
+          "power": 246.6406029611373,
+          "initial": 508,
+          "loss": 131.82054657830616,
+          "morale": 66.70941695687797,
+          "cohesion": 70.13244459418831,
+          "fatigue": 38.77150000000032,
+          "routed": 0,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 83,
+          "frontYield": 2.0053927246787664,
+          "crowding": 0.85
+        },
+        "enemy": {
+          "power": 153.6648718519652,
+          "initial": 508,
+          "loss": 130.9043180822179,
+          "morale": 61.300561930939715,
+          "cohesion": 50.74327992980319,
+          "fatigue": 42.27600000000022,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.403236577299556,
+          "crowding": 63.32499999999993
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.18302309273459072
+      },
+      "tactical": {
+        "own": {
+          "power": 213.74570624603535,
+          "initial": 508,
+          "loss": 88.04157397258211,
+          "morale": 68.99952740522227,
+          "cohesion": 56.31430678627796,
+          "fatigue": 39.614000000000274,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 60.5,
+          "frontYield": 2.7540015959559416,
+          "crowding": 54.82499999999988
+        },
+        "enemy": {
+          "power": 130.10475264868856,
+          "initial": 508,
+          "loss": 97.35687172840204,
+          "morale": 55.785274970657426,
+          "cohesion": 45.502653105427484,
+          "fatigue": 38.048000000000144,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.408992428478925,
+          "crowding": 80.32499999999972
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.16464754645147006
+      }
+    },
+    {
+      "id": "oblique",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.018035307049505234,
+      "control": {
+        "own": {
+          "power": 213.50448107450723,
+          "initial": 508,
+          "loss": 73.65224893096467,
+          "morale": 69.21898896306762,
+          "cohesion": 29.96355329517496,
+          "fatigue": 34.94600000000019,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 1,
+          "reserveSeconds": 21,
+          "frontYield": 0,
+          "crowding": 241.3999999999997
+        },
+        "enemy": {
+          "power": 284.7025666424669,
+          "initial": 508,
+          "loss": 57.75376784699205,
+          "morale": 61.5277053729979,
+          "cohesion": 64.33480801162486,
+          "fatigue": 14.72000000000003,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 3.5491765814039247,
+          "crowding": 5.949999999999998
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.14015371174795205
+      },
+      "tactical": {
+        "own": {
+          "power": 260.91376173336533,
+          "initial": 508,
+          "loss": 101.67514686823193,
+          "morale": 67.30867107427923,
+          "cohesion": 59.39628051514252,
+          "fatigue": 29.580000000000126,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 1,
+          "reserveSeconds": 3.75,
+          "frontYield": 2.8358421587284144,
+          "crowding": 95.19999999999962
+        },
+        "enemy": {
+          "power": 341.27378328247363,
+          "initial": 508,
+          "loss": 93.13051191720098,
+          "morale": 77.82145047069619,
+          "cohesion": 84.33254512177993,
+          "fatigue": 13.668000000000026,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.274329644026714,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.15818901879745728
+      }
+    },
+    {
+      "id": "oblique",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.0180353070495049,
+      "control": {
+        "own": {
+          "power": 213.50448107450728,
+          "initial": 508,
+          "loss": 73.65224893096445,
+          "morale": 69.21898896306763,
+          "cohesion": 29.96355329517496,
+          "fatigue": 34.94600000000019,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 1,
+          "reserveSeconds": 21,
+          "frontYield": 0,
+          "crowding": 241.3999999999997
+        },
+        "enemy": {
+          "power": 284.7025666424669,
+          "initial": 508,
+          "loss": 57.753767846991934,
+          "morale": 61.527705372997914,
+          "cohesion": 64.33480801162486,
+          "fatigue": 14.72000000000003,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 3.5491765814039216,
+          "crowding": 5.949999999999998
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.14015371174795194
+      },
+      "tactical": {
+        "own": {
+          "power": 260.9137617333653,
+          "initial": 508,
+          "loss": 101.67514686823182,
+          "morale": 67.30867107427922,
+          "cohesion": 59.39628051514252,
+          "fatigue": 29.580000000000126,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 1,
+          "reserveSeconds": 3.75,
+          "frontYield": 2.835842158728411,
+          "crowding": 95.19999999999962
+        },
+        "enemy": {
+          "power": 341.27378328247335,
+          "initial": 508,
+          "loss": 93.13051191720143,
+          "morale": 77.82145047069612,
+          "cohesion": 84.33254512177993,
+          "fatigue": 13.668000000000026,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.2743296440267216,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.15818901879745684
+      }
+    },
+    {
+      "id": "oblique",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.08197975100097399,
+      "control": {
+        "own": {
+          "power": 111.11674727543642,
+          "initial": 508,
+          "loss": 33.10735130373132,
+          "morale": 34.599875166143775,
+          "cohesion": 30.27621131883591,
+          "fatigue": 80,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 13.082122749601687,
+          "crowding": 4.249999999999999
+        },
+        "enemy": {
+          "power": 432.8892540678397,
+          "initial": 508,
+          "loss": 6.893839413271905,
+          "morale": 99.93313180946402,
+          "cohesion": 77.15749999999984,
+          "fatigue": 27.34960000000016,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 65.87499999999983
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6334104464417387
+      },
+      "tactical": {
+        "own": {
+          "power": 131.45255089603125,
+          "initial": 508,
+          "loss": 25.567640427306515,
+          "morale": 36.477281317205986,
+          "cohesion": 38.94075448776906,
+          "fatigue": 76.76880000000004,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 11.003569135003861,
+          "crowding": 33.575000000000024
+        },
+        "enemy": {
+          "power": 411.5793441799397,
+          "initial": 508,
+          "loss": 6.618234060931684,
+          "morale": 97.6434648289968,
+          "cohesion": 71.76799999999962,
+          "fatigue": 26.833200000000126,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 75.22499999999975
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5514306954407647
+      }
+    },
+    {
+      "id": "oblique",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.08197975100097399,
+      "control": {
+        "own": {
+          "power": 111.11674727543642,
+          "initial": 508,
+          "loss": 33.10735130373121,
+          "morale": 34.59987516614378,
+          "cohesion": 30.27621131883591,
+          "fatigue": 80,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 13.082122749601684,
+          "crowding": 4.249999999999999
+        },
+        "enemy": {
+          "power": 432.8892540678397,
+          "initial": 508,
+          "loss": 6.893839413271905,
+          "morale": 99.93313180946402,
+          "cohesion": 77.15749999999984,
+          "fatigue": 27.34960000000016,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 65.87499999999983
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6334104464417387
+      },
+      "tactical": {
+        "own": {
+          "power": 131.45255089603125,
+          "initial": 508,
+          "loss": 25.567640427306515,
+          "morale": 36.47728131720598,
+          "cohesion": 38.94075448776906,
+          "fatigue": 76.76880000000004,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 11.003569135003861,
+          "crowding": 33.575000000000024
+        },
+        "enemy": {
+          "power": 411.5793441799397,
+          "initial": 508,
+          "loss": 6.618234060931684,
+          "morale": 97.6434648289968,
+          "cohesion": 71.76799999999962,
+          "fatigue": 26.833200000000126,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 75.22499999999975
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5514306954407647
       }
     },
     {
@@ -4708,6 +5608,456 @@
       }
     },
     {
+      "id": "weighted-wing",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.5670505068357318,
+      "control": {
+        "own": {
+          "power": 179.3290919241574,
+          "initial": 448,
+          "loss": 111.25357042980522,
+          "morale": 64.85225599736471,
+          "cohesion": 48.07917910349652,
+          "fatigue": 53.79400000000023,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 9.125276158489504,
+          "crowding": 70.97499999999991
+        },
+        "enemy": {
+          "power": 95.70750803166075,
+          "initial": 508,
+          "loss": 117.7530246016347,
+          "morale": 47.50105350543383,
+          "cohesion": 39.63742702547778,
+          "fatigue": 47.9640000000003,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 13.495296374010833,
+          "crowding": 88.39999999999978
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.21188754525488587
+      },
+      "tactical": {
+        "own": {
+          "power": 41.7965981315069,
+          "initial": 448,
+          "loss": 44.709784979422125,
+          "morale": 40.992225036970794,
+          "cohesion": 34.80999999999989,
+          "fatigue": 32.650000000000226,
+          "routed": 4,
+          "routEvents": 4,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 15.31357635542497,
+          "crowding": 110.07499999999966
+        },
+        "enemy": {
+          "power": 227.81714129290344,
+          "initial": 508,
+          "loss": 27.84222872406616,
+          "morale": 72.89270091184086,
+          "cohesion": 40.04921291149002,
+          "fatigue": 39.734000000000265,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.319477760435896,
+          "crowding": 151.72499999999974
+        },
+        "time": 112,
+        "result": "loss",
+        "score": -0.3551629615808459
+      }
+    },
+    {
+      "id": "weighted-wing",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.5670505068357314,
+      "control": {
+        "own": {
+          "power": 179.32909192415732,
+          "initial": 448,
+          "loss": 111.25357042980528,
+          "morale": 64.85225599736468,
+          "cohesion": 48.07917910349652,
+          "fatigue": 53.79400000000023,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 9.125276158489502,
+          "crowding": 70.97499999999991
+        },
+        "enemy": {
+          "power": 95.70750803166086,
+          "initial": 508,
+          "loss": 117.7530246016347,
+          "morale": 47.50105350543388,
+          "cohesion": 39.637427025477784,
+          "fatigue": 47.9640000000003,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 13.49529637401082,
+          "crowding": 88.39999999999978
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.21188754525488548
+      },
+      "tactical": {
+        "own": {
+          "power": 41.79659813150693,
+          "initial": 448,
+          "loss": 44.709784979422125,
+          "morale": 40.99222503697074,
+          "cohesion": 34.80999999999989,
+          "fatigue": 32.650000000000226,
+          "routed": 4,
+          "routEvents": 4,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 15.313576355424969,
+          "crowding": 110.07499999999966
+        },
+        "enemy": {
+          "power": 227.81714129290353,
+          "initial": 508,
+          "loss": 27.84222872406616,
+          "morale": 72.89270091184089,
+          "cohesion": 40.04921291149002,
+          "fatigue": 39.734000000000265,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.3194777604358965,
+          "crowding": 151.72499999999974
+        },
+        "time": 112,
+        "result": "win",
+        "score": -0.355162961580846
+      }
+    },
+    {
+      "id": "weighted-wing",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.05846583538935096,
+      "control": {
+        "own": {
+          "power": 213.1775801173005,
+          "initial": 448,
+          "loss": 51.329120788279056,
+          "morale": 62.62154571798478,
+          "cohesion": 39.91733654649233,
+          "fatigue": 45.67600000000014,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.725601089247276,
+          "crowding": 132.59999999999962
+        },
+        "enemy": {
+          "power": 247.7309339142989,
+          "initial": 508,
+          "loss": 46.199035385930756,
+          "morale": 63.05093918508155,
+          "cohesion": 61.92421357217054,
+          "fatigue": 18.291000000000047,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 2.369837522673869,
+          "crowding": 13.600000000000007
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.01181650596710343
+      },
+      "tactical": {
+        "own": {
+          "power": 258.21648730189565,
+          "initial": 448,
+          "loss": 74.86890636798648,
+          "morale": 58.478392138153595,
+          "cohesion": 67.87782458338374,
+          "fatigue": 29.54600000000014,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.684314710888711,
+          "crowding": 6.799999999999999
+        },
+        "enemy": {
+          "power": 328.5024819746212,
+          "initial": 508,
+          "loss": 58.944310230309156,
+          "morale": 75.46981026771729,
+          "cohesion": 79.41005654237946,
+          "fatigue": 13.91000000000001,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.0857577991976997,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.07028234135645439
+      }
+    },
+    {
+      "id": "weighted-wing",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.05846583538935085,
+      "control": {
+        "own": {
+          "power": 213.17758011730058,
+          "initial": 448,
+          "loss": 51.32912078827894,
+          "morale": 62.62154571798478,
+          "cohesion": 39.91733654649233,
+          "fatigue": 45.67600000000014,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.725601089247279,
+          "crowding": 132.59999999999962
+        },
+        "enemy": {
+          "power": 247.7309339142989,
+          "initial": 508,
+          "loss": 46.19903538593064,
+          "morale": 63.05093918508154,
+          "cohesion": 61.92421357217054,
+          "fatigue": 18.291000000000047,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 2.3698375226738646,
+          "crowding": 13.600000000000007
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.011816505967103208
+      },
+      "tactical": {
+        "own": {
+          "power": 258.2164873018959,
+          "initial": 448,
+          "loss": 74.86890636798614,
+          "morale": 58.47839213815363,
+          "cohesion": 67.87782458338374,
+          "fatigue": 29.54600000000014,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.684314710888697,
+          "crowding": 6.799999999999999
+        },
+        "enemy": {
+          "power": 328.50248197462133,
+          "initial": 508,
+          "loss": 58.944310230309156,
+          "morale": 75.46981026771732,
+          "cohesion": 79.41005654237946,
+          "fatigue": 13.91000000000001,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.0857577991977017,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.07028234135645406
+      }
+    },
+    {
+      "id": "weighted-wing",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.008293894757891995,
+      "control": {
+        "own": {
+          "power": 116.08306637255932,
+          "initial": 448,
+          "loss": 41.40132381005367,
+          "morale": 38.11848085966714,
+          "cohesion": 27.67208822198238,
+          "fatigue": 80,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 22.580269774299897,
+          "crowding": 16.15000000000001
+        },
+        "enemy": {
+          "power": 395.15682554934926,
+          "initial": 508,
+          "loss": 8.769464452902866,
+          "morale": 100,
+          "cohesion": 67.71340519680491,
+          "fatigue": 30.23880000000015,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 103.27499999999957
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5187537793906792
+      },
+      "tactical": {
+        "own": {
+          "power": 149.31680320205425,
+          "initial": 448,
+          "loss": 24.0369316418047,
+          "morale": 33.164794666615364,
+          "cohesion": 42.10900065534999,
+          "fatigue": 68.39999999999972,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 24.990671058737252,
+          "crowding": 97.74999999999973
+        },
+        "enemy": {
+          "power": 437.05480781266067,
+          "initial": 508,
+          "loss": 3.3398916645506347,
+          "morale": 97.38501243577302,
+          "cohesion": 82.12399999999982,
+          "fatigue": 31.642800000000182,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5270476741485712
+      }
+    },
+    {
+      "id": "weighted-wing",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.008293894757891995,
+      "control": {
+        "own": {
+          "power": 116.08306637255932,
+          "initial": 448,
+          "loss": 41.401323810053725,
+          "morale": 38.11848085966717,
+          "cohesion": 27.67208822198238,
+          "fatigue": 80,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 22.5802697742999,
+          "crowding": 16.15000000000001
+        },
+        "enemy": {
+          "power": 395.15682554934926,
+          "initial": 508,
+          "loss": 8.769464452902866,
+          "morale": 100,
+          "cohesion": 67.71340519680491,
+          "fatigue": 30.23880000000015,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 103.27499999999957
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5187537793906792
+      },
+      "tactical": {
+        "own": {
+          "power": 149.31680320205425,
+          "initial": 448,
+          "loss": 24.0369316418047,
+          "morale": 33.16479466661537,
+          "cohesion": 42.10900065534999,
+          "fatigue": 68.39999999999972,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 24.990671058737252,
+          "crowding": 97.74999999999973
+        },
+        "enemy": {
+          "power": 437.05480781266067,
+          "initial": 508,
+          "loss": 3.3398916645506347,
+          "morale": 97.38501243577302,
+          "cohesion": 82.12399999999982,
+          "fatigue": 31.642800000000182,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5270476741485712
+      }
+    },
+    {
       "id": "yielding-center",
       "seed": "open",
       "style": "aggressive",
@@ -6205,6 +7555,456 @@
         "time": 110.75,
         "result": "win",
         "score": -0.6072449342993964
+      }
+    },
+    {
+      "id": "yielding-center",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.19508374648341836,
+      "control": {
+        "own": {
+          "power": 88.83674973374951,
+          "initial": 368,
+          "loss": 111.85463561847831,
+          "morale": 61.428519797565656,
+          "cohesion": 47.89114961734203,
+          "fatigue": 48.84250000000032,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 2,
+          "reserveSeconds": 212,
+          "frontYield": 15.523822090047991,
+          "crowding": 8.499999999999998
+        },
+        "enemy": {
+          "power": 237.49770290899363,
+          "initial": 508,
+          "loss": 115.75326081301529,
+          "morale": 71.54607198037328,
+          "cohesion": 53.578491761642475,
+          "fatigue": 43.39400000000036,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.30256254289002443,
+          "crowding": 38.25
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.22611095197366538
+      },
+      "tactical": {
+        "own": {
+          "power": 144.6248049766964,
+          "initial": 368,
+          "loss": 117.59934851942413,
+          "morale": 64.80689882816466,
+          "cohesion": 59.6341229476091,
+          "fatigue": 36.7162500000002,
+          "routed": 0,
+          "routEvents": 1,
+          "reserve": 2,
+          "reserveSeconds": 193.5,
+          "frontYield": 8.661666337899002,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 215.40693160687638,
+          "initial": 508,
+          "loss": 125.68610925716553,
+          "morale": 72.32346271205171,
+          "cohesion": 48.973582378679474,
+          "fatigue": 41.59000000000028,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 72.67499999999977
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.031027205490247012
+      }
+    },
+    {
+      "id": "yielding-center",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.19508374648341933,
+      "control": {
+        "own": {
+          "power": 88.83674973374917,
+          "initial": 368,
+          "loss": 111.85463561847831,
+          "morale": 61.42851979756528,
+          "cohesion": 47.891149617342016,
+          "fatigue": 48.84250000000032,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 2,
+          "reserveSeconds": 212,
+          "frontYield": 15.523822090047988,
+          "crowding": 8.499999999999998
+        },
+        "enemy": {
+          "power": 237.49770290899357,
+          "initial": 508,
+          "loss": 115.75326081301534,
+          "morale": 71.54607198037328,
+          "cohesion": 53.578491761642475,
+          "fatigue": 43.39400000000036,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.30256254289002443,
+          "crowding": 38.25
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.22611095197366618
+      },
+      "tactical": {
+        "own": {
+          "power": 144.62480497669642,
+          "initial": 368,
+          "loss": 117.5993485194241,
+          "morale": 64.80689882816463,
+          "cohesion": 59.6341229476091,
+          "fatigue": 36.7162500000002,
+          "routed": 0,
+          "routEvents": 1,
+          "reserve": 2,
+          "reserveSeconds": 193.5,
+          "frontYield": 8.661666337898989,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 215.40693160687636,
+          "initial": 508,
+          "loss": 125.68610925716564,
+          "morale": 72.32346271205171,
+          "cohesion": 48.973582378679474,
+          "fatigue": 41.59000000000028,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 72.67499999999977
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.031027205490246845
+      }
+    },
+    {
+      "id": "yielding-center",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.02641248154989545,
+      "control": {
+        "own": {
+          "power": 150.7918526564529,
+          "initial": 368,
+          "loss": 95.87698060545313,
+          "morale": 52.09403206000151,
+          "cohesion": 68.09376339612913,
+          "fatigue": 42.352500000000234,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 2,
+          "reserveSeconds": 160.25,
+          "frontYield": 4.8661342438371875,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 234.93707186051068,
+          "initial": 508,
+          "loss": 104.50364497205265,
+          "morale": 64.35387892237752,
+          "cohesion": 65.66894081631725,
+          "fatigue": 35.47800000000019,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.9282499215334028,
+          "crowding": 2.9749999999999996
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.05271408173137332
+      },
+      "tactical": {
+        "own": {
+          "power": 195.09326340609306,
+          "initial": 368,
+          "loss": 110.80922444512635,
+          "morale": 73.02246101578747,
+          "cohesion": 73.57866253684372,
+          "fatigue": 27.97250000000014,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 2,
+          "reserveSeconds": 169.5,
+          "frontYield": 4.407755464404055,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 282.6747395506018,
+          "initial": 508,
+          "loss": 125.24439497173597,
+          "morale": 68.98270919731014,
+          "cohesion": 84.02370526506354,
+          "fatigue": 22.242499999999943,
+          "routed": 0,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.02630160018147787
+      }
+    },
+    {
+      "id": "yielding-center",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.026485705725510345,
+      "control": {
+        "own": {
+          "power": 150.7648731538514,
+          "initial": 368,
+          "loss": 95.90294228019707,
+          "morale": 52.087850989873345,
+          "cohesion": 68.0926758296102,
+          "fatigue": 42.352500000000234,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 2,
+          "reserveSeconds": 160.25,
+          "frontYield": 4.866134245425141,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 234.93702629791443,
+          "initial": 508,
+          "loss": 104.50312696179964,
+          "morale": 64.35411511541835,
+          "cohesion": 65.66931814796372,
+          "fatigue": 35.47800000000019,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.9271469521052352,
+          "crowding": 2.9749999999999996
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.05278730590698821
+      },
+      "tactical": {
+        "own": {
+          "power": 195.09326340609306,
+          "initial": 368,
+          "loss": 110.8092244451264,
+          "morale": 73.02246101578746,
+          "cohesion": 73.57866253684372,
+          "fatigue": 27.97250000000014,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 2,
+          "reserveSeconds": 169.5,
+          "frontYield": 4.407755464404058,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 282.6747395506018,
+          "initial": 508,
+          "loss": 125.24439497173586,
+          "morale": 68.98270919731013,
+          "cohesion": 84.02370526506354,
+          "fatigue": 22.242499999999943,
+          "routed": 0,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.02630160018147787
+      }
+    },
+    {
+      "id": "yielding-center",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.13109054097157863,
+      "control": {
+        "own": {
+          "power": 74.95305353881008,
+          "initial": 368,
+          "loss": 7.467443701699096,
+          "morale": 37.34993347527452,
+          "cohesion": 32.86534064828691,
+          "fatigue": 75,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 28.5,
+          "frontYield": 10.761260181258779,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 420.05836071897335,
+          "initial": 508,
+          "loss": 0.929443808691758,
+          "morale": 100,
+          "cohesion": 72.89449999999962,
+          "fatigue": 25.201600000000088,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 59.92499999999985
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6232097609276932
+      },
+      "tactical": {
+        "own": {
+          "power": 110.609733000388,
+          "initial": 368,
+          "loss": 18.416844054968237,
+          "morale": 48.47080631219632,
+          "cohesion": 38.64084713763295,
+          "fatigue": 73.02999999999993,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.6226405989296404,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 402.6860864665027,
+          "initial": 508,
+          "loss": 8.247987153459803,
+          "morale": 100,
+          "cohesion": 67.97700469338699,
+          "fatigue": 26.600800000000095,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 94.34999999999962
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.4921192199561146
+      }
+    },
+    {
+      "id": "yielding-center",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.13109054097157924,
+      "control": {
+        "own": {
+          "power": 74.95305353881001,
+          "initial": 368,
+          "loss": 7.467443701699096,
+          "morale": 37.34993347527446,
+          "cohesion": 32.86534064828691,
+          "fatigue": 75,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 28.5,
+          "frontYield": 10.761260181258779,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 420.05836071897335,
+          "initial": 508,
+          "loss": 0.929443808691758,
+          "morale": 100,
+          "cohesion": 72.89449999999962,
+          "fatigue": 25.201600000000088,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 59.92499999999985
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6232097609276934
+      },
+      "tactical": {
+        "own": {
+          "power": 110.60973300038813,
+          "initial": 368,
+          "loss": 18.416844054968237,
+          "morale": 48.47080631219642,
+          "cohesion": 38.64084713763295,
+          "fatigue": 73.02999999999993,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.62264059892964,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 402.6860864665027,
+          "initial": 508,
+          "loss": 8.247987153459803,
+          "morale": 100,
+          "cohesion": 67.97700469338699,
+          "fatigue": 26.600800000000095,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 94.34999999999962
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.4921192199561142
       }
     },
     {
@@ -7708,13 +9508,463 @@
       }
     },
     {
+      "id": "feigned-retreat",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.7107802296969694,
+      "control": {
+        "own": {
+          "power": 145.7545828512088,
+          "initial": 328,
+          "loss": 59.89089509089206,
+          "morale": 51.7388626713264,
+          "cohesion": 53.992467967588404,
+          "fatigue": 53.5650000000002,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 2,
+          "reserveSeconds": 161.5,
+          "frontYield": 0.839539461053183,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 80.3729758294541,
+          "initial": 328,
+          "loss": 51.206203448681435,
+          "morale": 30.85061596368264,
+          "cohesion": 42.23043830332452,
+          "fatigue": 41.1737500000001,
+          "routed": 2,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.973304414714222,
+          "crowding": 33.15000000000003
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.19933416774925208
+      },
+      "tactical": {
+        "own": {
+          "power": 48,
+          "initial": 328,
+          "loss": 41.9554099642217,
+          "morale": 31.414510774688324,
+          "cohesion": 25.045168836581137,
+          "fatigue": 30.93625000000008,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 2,
+          "reserveSeconds": 95.5,
+          "frontYield": 14.609396496259906,
+          "crowding": 116.44999999999959
+        },
+        "enemy": {
+          "power": 215.7543083188513,
+          "initial": 328,
+          "loss": 11.142514717072572,
+          "morale": 84.87907010457491,
+          "cohesion": 64.88077190894306,
+          "fatigue": 36.96500000000011,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.306579536009356,
+          "crowding": 26.35000000000002
+        },
+        "time": 64.75,
+        "result": "loss",
+        "score": -0.5114460619477174
+      }
+    },
+    {
+      "id": "feigned-retreat",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.9053197502010105,
+      "control": {
+        "own": {
+          "power": 204.15205539913055,
+          "initial": 328,
+          "loss": 50.3945284402962,
+          "morale": 72.63402499645326,
+          "cohesion": 70.25810670099682,
+          "fatigue": 38.33500000000015,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 2,
+          "reserveSeconds": 98.25,
+          "frontYield": 0.3342431400761902,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 48,
+          "initial": 328,
+          "loss": 37.762097116381256,
+          "morale": 38.729632113140475,
+          "cohesion": 58.93373362038598,
+          "fatigue": 23.44499999999999,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.2158559501560554,
+          "crowding": 26.775000000000027
+        },
+        "time": 77,
+        "result": "loss",
+        "score": 0.47607333963149556
+      },
+      "tactical": {
+        "own": {
+          "power": 46.71219333550344,
+          "initial": 328,
+          "loss": 51.94786060777733,
+          "morale": 35.38892237806626,
+          "cohesion": 27.8,
+          "fatigue": 48.070000000000206,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 2,
+          "reserveSeconds": 116.25,
+          "frontYield": 33.97782176587044,
+          "crowding": 172.97499999999997
+        },
+        "enemy": {
+          "power": 187.50501600230433,
+          "initial": 328,
+          "loss": 15.542463766444598,
+          "morale": 81.00506627157803,
+          "cohesion": 51.28795311736173,
+          "fatigue": 54.7525000000002,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.2061711717070416,
+          "crowding": 6.799999999999999
+        },
+        "time": 114.25,
+        "result": "win",
+        "score": -0.42924641056951496
+      }
+    },
+    {
+      "id": "feigned-retreat",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.12630296721157144,
+      "control": {
+        "own": {
+          "power": 78.22343237363118,
+          "initial": 328,
+          "loss": 107.85532665072193,
+          "morale": 42.6776451430033,
+          "cohesion": 51.04818887205277,
+          "fatigue": 54.63750000000014,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 2,
+          "reserveSeconds": 156,
+          "frontYield": 2.9517738194765295,
+          "crowding": 24.650000000000023
+        },
+        "enemy": {
+          "power": 160.1377054325102,
+          "initial": 328,
+          "loss": 63.88522850681778,
+          "morale": 69.16723825336828,
+          "cohesion": 63.23821746290263,
+          "fatigue": 16.335000000000022,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.1563338516260753,
+          "crowding": 39.95000000000001
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.24973863737463112
+      },
+      "tactical": {
+        "own": {
+          "power": 273.4582536212173,
+          "initial": 328,
+          "loss": 43.0432495394283,
+          "morale": 80.45635511639047,
+          "cohesion": 84.29239305473752,
+          "fatigue": 22.537500000000076,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 313.9451534347009,
+          "initial": 328,
+          "loss": 6.2928792073753925,
+          "morale": 99.35870667257737,
+          "cohesion": 94.02431057332475,
+          "fatigue": 3.747500000000005,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.013303816050246513,
+          "crowding": 21.250000000000018
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.12343567016305967
+      }
+    },
+    {
+      "id": "feigned-retreat",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.12630296721157105,
+      "control": {
+        "own": {
+          "power": 78.2234323736314,
+          "initial": 328,
+          "loss": 107.85532665072168,
+          "morale": 42.67764514300339,
+          "cohesion": 51.04818887205276,
+          "fatigue": 54.63750000000014,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 2,
+          "reserveSeconds": 156,
+          "frontYield": 2.951773819476526,
+          "crowding": 24.650000000000023
+        },
+        "enemy": {
+          "power": 160.13770543251036,
+          "initial": 328,
+          "loss": 63.885228506817555,
+          "morale": 69.16723825336834,
+          "cohesion": 63.23821746290263,
+          "fatigue": 16.335000000000022,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.1563338516260753,
+          "crowding": 39.95000000000001
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.24973863737463095
+      },
+      "tactical": {
+        "own": {
+          "power": 273.4582536212173,
+          "initial": 328,
+          "loss": 43.04324953942819,
+          "morale": 80.4563551163905,
+          "cohesion": 84.29239305473752,
+          "fatigue": 22.537500000000076,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 313.94515343470096,
+          "initial": 328,
+          "loss": 6.2928792073753925,
+          "morale": 99.35870667257737,
+          "cohesion": 94.02431057332475,
+          "fatigue": 3.747500000000005,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.013303816050246513,
+          "crowding": 21.250000000000018
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.1234356701630599
+      }
+    },
+    {
+      "id": "feigned-retreat",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.03172904285543787,
+      "control": {
+        "own": {
+          "power": 47.83421087015364,
+          "initial": 328,
+          "loss": 49.222879931842044,
+          "morale": 32.369329817610605,
+          "cohesion": 37.98921466977184,
+          "fatigue": 75,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 2,
+          "reserveSeconds": 40.75,
+          "frontYield": 20.83401879945064,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 282.8467881942812,
+          "initial": 328,
+          "loss": 6.625723775416873,
+          "morale": 99.6528627861986,
+          "cohesion": 78.70758914943488,
+          "fatigue": 29.47225000000008,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 31.875000000000036
+        },
+        "time": 83.75,
+        "result": "loss",
+        "score": -0.7165017601345353
+      },
+      "tactical": {
+        "own": {
+          "power": 44.260720849729786,
+          "initial": 328,
+          "loss": 28.343925724749397,
+          "morale": 36.92562635900524,
+          "cohesion": 44.78827485049114,
+          "fatigue": 67.29999999999987,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 2,
+          "reserveSeconds": 44,
+          "frontYield": 15.118583324217624,
+          "crowding": 20.825000000000017
+        },
+        "enemy": {
+          "power": 289.68042423044096,
+          "initial": 328,
+          "loss": 5.370456161482593,
+          "morale": 98.93794400990507,
+          "cohesion": 80.48499999999967,
+          "fatigue": 30.925000000000107,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 33.15000000000003
+        },
+        "time": 95.5,
+        "result": "loss",
+        "score": -0.7482308029899731
+      }
+    },
+    {
+      "id": "feigned-retreat",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.03172904285543787,
+      "control": {
+        "own": {
+          "power": 47.83421087015364,
+          "initial": 328,
+          "loss": 49.222879931842044,
+          "morale": 32.369329817610605,
+          "cohesion": 37.98921466977184,
+          "fatigue": 75,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 2,
+          "reserveSeconds": 40.75,
+          "frontYield": 20.83401879945064,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 282.8467881942812,
+          "initial": 328,
+          "loss": 6.625723775416873,
+          "morale": 99.6528627861986,
+          "cohesion": 78.70758914943488,
+          "fatigue": 29.47225000000008,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 31.875000000000036
+        },
+        "time": 83.75,
+        "result": "win",
+        "score": -0.7165017601345353
+      },
+      "tactical": {
+        "own": {
+          "power": 44.260720849729786,
+          "initial": 328,
+          "loss": 28.343925724749397,
+          "morale": 36.92562635900524,
+          "cohesion": 44.78827485049114,
+          "fatigue": 67.29999999999987,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 2,
+          "reserveSeconds": 44,
+          "frontYield": 15.118583324217624,
+          "crowding": 20.825000000000017
+        },
+        "enemy": {
+          "power": 289.68042423044096,
+          "initial": 328,
+          "loss": 5.370456161482593,
+          "morale": 98.93794400990507,
+          "cohesion": 80.48499999999967,
+          "fatigue": 30.925000000000107,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 33.15000000000003
+        },
+        "time": 95.5,
+        "result": "win",
+        "score": -0.7482308029899731
+      }
+    },
+    {
       "id": "reserve-breakthrough",
       "seed": "open",
       "style": "aggressive",
       "map": "open",
       "stress": false,
       "mirror": false,
-      "delta": 0.1846227320358,
+      "delta": 0.08033019131207517,
       "control": {
         "own": {
           "power": 90.93086258776336,
@@ -7750,36 +10000,36 @@
       },
       "tactical": {
         "own": {
-          "power": 209.5293832431124,
+          "power": 206.25419917562152,
           "initial": 448,
-          "loss": 63.31565983202705,
-          "morale": 66.32894252471193,
-          "cohesion": 60.35683105614699,
-          "fatigue": 34.47900000000017,
+          "loss": 71.46690307102159,
+          "morale": 58.65659120189747,
+          "cohesion": 60.437999999999604,
+          "fatigue": 33.81800000000014,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 61.75,
-          "frontYield": 5.086647682030798,
-          "crowding": 29.32500000000003
+          "reserveSeconds": 28.25,
+          "frontYield": 13.990549206189092,
+          "crowding": 81.59999999999971
         },
         "enemy": {
-          "power": 164.17404647618687,
+          "power": 213.44083237302354,
           "initial": 508,
-          "loss": 77.48400929793786,
-          "morale": 54.46226713976472,
-          "cohesion": 33.76519175201022,
-          "fatigue": 40.56000000000018,
+          "loss": 77.69387875291284,
+          "morale": 62.87912674372173,
+          "cohesion": 47.2387371493261,
+          "fatigue": 40.736000000000175,
           "routed": 1,
           "routEvents": 1,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 5.2245896974308,
-          "crowding": 83.29999999999977
+          "frontYield": 5.21431414923573,
+          "crowding": 63.749999999999886
         },
         "time": 120,
         "result": null,
-        "score": 0.14452225932477403
+        "score": 0.04022971860104918
       }
     },
     {
@@ -7789,7 +10039,7 @@
       "map": "open",
       "stress": false,
       "mirror": true,
-      "delta": 0.1846227320358002,
+      "delta": 0.08033019131207514,
       "control": {
         "own": {
           "power": 90.93086258776343,
@@ -7825,36 +10075,36 @@
       },
       "tactical": {
         "own": {
-          "power": 209.52938324311242,
+          "power": 206.2541991756216,
           "initial": 448,
-          "loss": 63.315659832026995,
-          "morale": 66.32894252471195,
-          "cohesion": 60.35683105614699,
-          "fatigue": 34.47900000000017,
+          "loss": 71.46690307102153,
+          "morale": 58.65659120189749,
+          "cohesion": 60.437999999999604,
+          "fatigue": 33.81800000000014,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 61.75,
-          "frontYield": 5.086647682030798,
-          "crowding": 29.32500000000003
+          "reserveSeconds": 28.25,
+          "frontYield": 13.990549206189096,
+          "crowding": 81.59999999999971
         },
         "enemy": {
-          "power": 164.1740464761869,
+          "power": 213.44083237302377,
           "initial": 508,
-          "loss": 77.48400929793786,
-          "morale": 54.46226713976472,
-          "cohesion": 33.76519175201022,
-          "fatigue": 40.56000000000018,
+          "loss": 77.69387875291267,
+          "morale": 62.879126743721805,
+          "cohesion": 47.2387371493261,
+          "fatigue": 40.736000000000175,
           "routed": 1,
           "routEvents": 1,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 5.2245896974308,
-          "crowding": 83.29999999999977
+          "frontYield": 5.21431414923573,
+          "crowding": 63.749999999999886
         },
         "time": 120,
         "result": null,
-        "score": 0.14452225932477403
+        "score": 0.04022971860104896
       }
     },
     {
@@ -7864,7 +10114,7 @@
       "map": "open",
       "stress": false,
       "mirror": false,
-      "delta": 0.08525912671446384,
+      "delta": 0.2073290088084318,
       "control": {
         "own": {
           "power": 97.48059903042996,
@@ -7900,36 +10150,36 @@
       },
       "tactical": {
         "own": {
-          "power": 175.86114002172394,
+          "power": 231.5488060041747,
           "initial": 448,
-          "loss": 29.47289485962881,
-          "morale": 56.658228886633744,
-          "cohesion": 50.21649999999961,
-          "fatigue": 29.52900000000016,
-          "routed": 2,
-          "routEvents": 2,
+          "loss": 24.52150391374937,
+          "morale": 62.14564733521668,
+          "cohesion": 59.82105368583332,
+          "fatigue": 26.77000000000013,
+          "routed": 1,
+          "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 36,
-          "frontYield": 3.699649767751817,
-          "crowding": 87.97499999999967
+          "reserveSeconds": 15,
+          "frontYield": 3.5345615041962692,
+          "crowding": 69.69999999999979
         },
         "enemy": {
-          "power": 169.97498935986846,
+          "power": 171.1093247898046,
           "initial": 508,
-          "loss": 50.50513151362884,
-          "morale": 43.950267060547894,
-          "cohesion": 45.54721683048549,
-          "fatigue": 31.290000000000113,
+          "loss": 42.684728802498796,
+          "morale": 43.09803760729087,
+          "cohesion": 47.51421683048542,
+          "fatigue": 29.530000000000122,
           "routed": 2,
           "routEvents": 2,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 11.368940325547175,
-          "crowding": 95.19999999999975
+          "frontYield": 9.348644092889998,
+          "crowding": 67.14999999999992
         },
         "time": 120,
         "result": null,
-        "score": 0.0579507518007184
+        "score": 0.18002063389468637
       }
     },
     {
@@ -7939,7 +10189,7 @@
       "map": "open",
       "stress": false,
       "mirror": true,
-      "delta": 0.0852591267144642,
+      "delta": 0.20732900880843216,
       "control": {
         "own": {
           "power": 97.48059903042996,
@@ -7975,36 +10225,36 @@
       },
       "tactical": {
         "own": {
-          "power": 175.861140021724,
+          "power": 231.54880600417476,
           "initial": 448,
-          "loss": 29.47289485962881,
-          "morale": 56.65822888663375,
-          "cohesion": 50.21649999999961,
-          "fatigue": 29.52900000000016,
-          "routed": 2,
-          "routEvents": 2,
+          "loss": 24.521503913749314,
+          "morale": 62.14564733521669,
+          "cohesion": 59.82105368583332,
+          "fatigue": 26.77000000000013,
+          "routed": 1,
+          "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 36,
-          "frontYield": 3.699649767751817,
-          "crowding": 87.97499999999967
+          "reserveSeconds": 15,
+          "frontYield": 3.5345615041962697,
+          "crowding": 69.69999999999979
         },
         "enemy": {
-          "power": 169.97498935986846,
+          "power": 171.1093247898046,
           "initial": 508,
-          "loss": 50.50513151362884,
-          "morale": 43.950267060547915,
-          "cohesion": 45.54721683048549,
-          "fatigue": 31.290000000000113,
+          "loss": 42.68472880249874,
+          "morale": 43.09803760729087,
+          "cohesion": 47.51421683048542,
+          "fatigue": 29.530000000000122,
           "routed": 2,
           "routEvents": 2,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 11.368940325547175,
-          "crowding": 95.19999999999975
+          "frontYield": 9.348644092889998,
+          "crowding": 67.14999999999992
         },
         "time": 120,
         "result": null,
-        "score": 0.057950751800718514
+        "score": 0.18002063389468648
       }
     },
     {
@@ -8014,7 +10264,7 @@
       "map": "open",
       "stress": false,
       "mirror": false,
-      "delta": -0.19958506346844024,
+      "delta": -0.16767843870427313,
       "control": {
         "own": {
           "power": 147.06356998038314,
@@ -8050,36 +10300,36 @@
       },
       "tactical": {
         "own": {
-          "power": 202.80986551897718,
+          "power": 262.0959860830235,
           "initial": 448,
-          "loss": 69.84550969380507,
-          "morale": 48.40164243928395,
-          "cohesion": 54.106713029348974,
-          "fatigue": 29.353000000000158,
-          "routed": 2,
-          "routEvents": 2,
-          "reserve": 1,
-          "reserveSeconds": 61.75,
-          "frontYield": 4.77967501065724,
-          "crowding": 30.175000000000033
+          "loss": 55.306588201721866,
+          "morale": 67.99856191778159,
+          "cohesion": 76.067591704563,
+          "fatigue": 20.373000000000125,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.016369686517287,
+          "crowding": 0
         },
         "enemy": {
-          "power": 352.05511766562137,
+          "power": 403.0727782821556,
           "initial": 508,
-          "loss": 53.458170302985366,
-          "morale": 82.32769808354989,
-          "cohesion": 72.61110446790073,
-          "fatigue": 18.964000000000002,
+          "loss": 40.696076277291525,
+          "morale": 86.24667731139105,
+          "cohesion": 83.40254972459982,
+          "fatigue": 13.04100000000004,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 0.306871800722616,
-          "crowding": 31.875000000000036
+          "frontYield": 0.11677772809210196,
+          "crowding": 16.15000000000001
         },
         "time": 120,
         "result": null,
-        "score": -0.2403212924922577
+        "score": -0.20841466772809059
       }
     },
     {
@@ -8089,7 +10339,7 @@
       "map": "open",
       "stress": false,
       "mirror": true,
-      "delta": -0.19958506346844063,
+      "delta": -0.1676784387042733,
       "control": {
         "own": {
           "power": 147.06356998038328,
@@ -8125,36 +10375,36 @@
       },
       "tactical": {
         "own": {
-          "power": 202.80986551897712,
+          "power": 262.09598608302343,
           "initial": 448,
-          "loss": 69.84550969380501,
-          "morale": 48.40164243928393,
-          "cohesion": 54.106713029348974,
-          "fatigue": 29.353000000000158,
-          "routed": 2,
-          "routEvents": 2,
-          "reserve": 1,
-          "reserveSeconds": 61.75,
-          "frontYield": 4.779675010657236,
-          "crowding": 30.175000000000033
+          "loss": 55.30658820172198,
+          "morale": 67.99856191778159,
+          "cohesion": 76.067591704563,
+          "fatigue": 20.373000000000125,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.016369686517287,
+          "crowding": 0
         },
         "enemy": {
-          "power": 352.0551176656214,
+          "power": 403.0727782821555,
           "initial": 508,
-          "loss": 53.45817030298542,
-          "morale": 82.3276980835499,
-          "cohesion": 72.61110446790073,
-          "fatigue": 18.964000000000002,
+          "loss": 40.69607627729164,
+          "morale": 86.24667731139104,
+          "cohesion": 83.40254972459982,
+          "fatigue": 13.04100000000004,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 0.30687180072261616,
-          "crowding": 31.875000000000036
+          "frontYield": 0.11677772809210185,
+          "crowding": 16.15000000000001
         },
         "time": 120,
         "result": null,
-        "score": -0.24032129249225792
+        "score": -0.20841466772809059
       }
     },
     {
@@ -8164,7 +10414,7 @@
       "map": "wooded",
       "stress": false,
       "mirror": false,
-      "delta": -0.04543854481185322,
+      "delta": -0.04496849231016431,
       "control": {
         "own": {
           "power": 152.3012611636694,
@@ -8200,36 +10450,36 @@
       },
       "tactical": {
         "own": {
-          "power": 236.14041006367125,
+          "power": 237.85527792892407,
           "initial": 448,
-          "loss": 36.86776901561086,
-          "morale": 70.5508704275878,
-          "cohesion": 47.49434069405737,
-          "fatigue": 34.55600000000014,
+          "loss": 33.48259753013633,
+          "morale": 68.39235064348023,
+          "cohesion": 52.351635804071705,
+          "fatigue": 31.9630000000001,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 52.75,
-          "frontYield": 12.742382418370187,
-          "crowding": 69.69999999999979
+          "reserveSeconds": 25,
+          "frontYield": 18.630704062862605,
+          "crowding": 64.59999999999982
         },
         "enemy": {
-          "power": 218.04864383969232,
+          "power": 219.75439483746925,
           "initial": 508,
-          "loss": 32.176613330018995,
-          "morale": 71.4798673245967,
-          "cohesion": 39.15481640223722,
-          "fatigue": 40.43960000000017,
+          "loss": 34.64824790315237,
+          "morale": 74.1395776706864,
+          "cohesion": 37.61380837961749,
+          "fatigue": 39.402400000000185,
           "routed": 1,
           "routEvents": 1,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 1.475541853485029,
-          "crowding": 44.199999999999996
+          "frontYield": 0.5540227031150291,
+          "crowding": 77.7749999999998
         },
         "time": 120,
         "result": null,
-        "score": 0.09786951574874697
+        "score": 0.09833956825043588
       }
     },
     {
@@ -8239,7 +10489,7 @@
       "map": "wooded",
       "stress": false,
       "mirror": true,
-      "delta": -0.04543854481185297,
+      "delta": -0.04496849231016434,
       "control": {
         "own": {
           "power": 152.3012611636696,
@@ -8275,36 +10525,36 @@
       },
       "tactical": {
         "own": {
-          "power": 236.1404100636712,
+          "power": 237.85527792892407,
           "initial": 448,
-          "loss": 36.867769015610975,
-          "morale": 70.55087042758778,
-          "cohesion": 47.494340694057364,
-          "fatigue": 34.55600000000014,
+          "loss": 33.48259753013633,
+          "morale": 68.39235064348023,
+          "cohesion": 52.351635804071705,
+          "fatigue": 31.9630000000001,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 52.75,
-          "frontYield": 12.742382418370193,
-          "crowding": 69.69999999999979
+          "reserveSeconds": 25,
+          "frontYield": 18.630704062862602,
+          "crowding": 64.59999999999982
         },
         "enemy": {
-          "power": 218.04864383969215,
+          "power": 219.75439483746928,
           "initial": 508,
-          "loss": 32.17661333001922,
-          "morale": 71.47986732459665,
-          "cohesion": 39.15481640223722,
-          "fatigue": 40.43960000000017,
+          "loss": 34.64824790315231,
+          "morale": 74.1395776706864,
+          "cohesion": 37.61380837961749,
+          "fatigue": 39.402400000000185,
           "routed": 1,
           "routEvents": 1,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 1.475541853485029,
-          "crowding": 44.199999999999996
+          "frontYield": 0.5540227031150291,
+          "crowding": 77.7749999999998
         },
         "time": 120,
         "result": null,
-        "score": 0.0978695157487472
+        "score": 0.09833956825043583
       }
     },
     {
@@ -8314,7 +10564,7 @@
       "map": "wooded",
       "stress": false,
       "mirror": false,
-      "delta": -0.10105744460387261,
+      "delta": -0.07049278468070874,
       "control": {
         "own": {
           "power": 166.70755609223076,
@@ -8350,36 +10600,36 @@
       },
       "tactical": {
         "own": {
-          "power": 222.2360124162946,
+          "power": 226.89753167762038,
           "initial": 448,
-          "loss": 23.493487146090388,
-          "morale": 70.76335225673706,
-          "cohesion": 45.57385727990719,
-          "fatigue": 29.24800000000016,
+          "loss": 19.612671977638627,
+          "morale": 75.95281779362709,
+          "cohesion": 49.59299999999994,
+          "fatigue": 27.826000000000136,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 53.25,
-          "frontYield": 4.0876677957649505,
-          "crowding": 91.37499999999964
+          "reserveSeconds": 33,
+          "frontYield": 4.939505128344187,
+          "crowding": 69.69999999999979
         },
         "enemy": {
-          "power": 277.4226405380286,
+          "power": 267.1816231737432,
           "initial": 508,
-          "loss": 36.39728046353571,
-          "morale": 76.26993913547352,
-          "cohesion": 48.33586004966716,
-          "fatigue": 32.32600000000013,
+          "loss": 30.4381873357695,
+          "morale": 69.5139697221525,
+          "cohesion": 47.72685279341597,
+          "fatigue": 31.944400000000133,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 1.7731385841736904,
-          "crowding": 67.99999999999987
+          "frontYield": 0.8740342638812639,
+          "crowding": 50.99999999999998
         },
         "time": 120,
         "result": null,
-        "score": -0.050045032399286093
+        "score": -0.01948037247612222
       }
     },
     {
@@ -8389,7 +10639,7 @@
       "map": "wooded",
       "stress": false,
       "mirror": true,
-      "delta": -0.10105744460387317,
+      "delta": -0.07049278468070952,
       "control": {
         "own": {
           "power": 166.70755609223102,
@@ -8425,36 +10675,36 @@
       },
       "tactical": {
         "own": {
-          "power": 222.2360124162946,
+          "power": 226.89753167762032,
           "initial": 448,
-          "loss": 23.493487146090388,
-          "morale": 70.76335225673704,
-          "cohesion": 45.57385727990719,
-          "fatigue": 29.24800000000016,
+          "loss": 19.612671977638627,
+          "morale": 75.95281779362708,
+          "cohesion": 49.59299999999994,
+          "fatigue": 27.826000000000136,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 53.25,
-          "frontYield": 4.0876677957649505,
-          "crowding": 91.37499999999964
+          "reserveSeconds": 33,
+          "frontYield": 4.939505128344186,
+          "crowding": 69.69999999999979
         },
         "enemy": {
-          "power": 277.42264053802865,
+          "power": 267.1816231737433,
           "initial": 508,
-          "loss": 36.39728046353571,
-          "morale": 76.26993913547352,
-          "cohesion": 48.33586004966716,
-          "fatigue": 32.32600000000013,
+          "loss": 30.4381873357695,
+          "morale": 69.5139697221525,
+          "cohesion": 47.72685279341597,
+          "fatigue": 31.944400000000133,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 1.7731385841736902,
-          "crowding": 67.99999999999987
+          "frontYield": 0.8740342638812639,
+          "crowding": 50.99999999999998
         },
         "time": 120,
         "result": null,
-        "score": -0.050045032399286205
+        "score": -0.019480372476122554
       }
     },
     {
@@ -8464,7 +10714,7 @@
       "map": "wooded",
       "stress": false,
       "mirror": false,
-      "delta": -0.20189835294712188,
+      "delta": -0.11517339870974491,
       "control": {
         "own": {
           "power": 154.58369039555467,
@@ -8500,28 +10750,28 @@
       },
       "tactical": {
         "own": {
-          "power": 218.26917388791065,
+          "power": 261.58230196737475,
           "initial": 448,
-          "loss": 51.299911137040056,
-          "morale": 61.230818974395696,
-          "cohesion": 45.809271288006734,
-          "fatigue": 30.145800000000172,
+          "loss": 31.494396601231983,
+          "morale": 73.67987253916212,
+          "cohesion": 64.14836695029369,
+          "fatigue": 21.00800000000013,
           "routed": 1,
           "routEvents": 1,
-          "reserve": 1,
-          "reserveSeconds": 59.5,
-          "frontYield": 4.691443772139465,
-          "crowding": 33.15000000000003
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.8997105010398725,
+          "crowding": 0
         },
         "enemy": {
-          "power": 366.0914876638025,
+          "power": 371.14920435846443,
           "initial": 508,
-          "loss": 32.400089999491,
-          "morale": 81.30241392096102,
-          "cohesion": 78.20231722811317,
-          "fatigue": 15.462000000000021,
-          "routed": 0,
-          "routEvents": 0,
+          "loss": 17.263490748168692,
+          "morale": 83.07154683133231,
+          "cohesion": 84.39049999999972,
+          "fatigue": 9.917600000000036,
+          "routed": 1,
+          "routEvents": 1,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
@@ -8529,7 +10779,7 @@
         },
         "time": 120,
         "result": null,
-        "score": -0.23344455734289277
+        "score": -0.1467196031055158
       }
     },
     {
@@ -8539,7 +10789,7 @@
       "map": "wooded",
       "stress": false,
       "mirror": true,
-      "delta": -0.2018983529471221,
+      "delta": -0.11517339870974458,
       "control": {
         "own": {
           "power": 154.58369039555473,
@@ -8575,28 +10825,28 @@
       },
       "tactical": {
         "own": {
-          "power": 218.26917388791077,
+          "power": 261.58230196737475,
           "initial": 448,
-          "loss": 51.299911137039885,
-          "morale": 61.230818974395746,
-          "cohesion": 45.809271288006734,
-          "fatigue": 30.145800000000172,
+          "loss": 31.494396601231983,
+          "morale": 73.67987253916212,
+          "cohesion": 64.14836695029369,
+          "fatigue": 21.00800000000013,
           "routed": 1,
           "routEvents": 1,
-          "reserve": 1,
-          "reserveSeconds": 59.5,
-          "frontYield": 4.691443772139463,
-          "crowding": 33.15000000000003
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.8997105010398725,
+          "crowding": 0
         },
         "enemy": {
-          "power": 366.0914876638029,
+          "power": 371.14920435846443,
           "initial": 508,
-          "loss": 32.40008999949072,
-          "morale": 81.30241392096107,
-          "cohesion": 78.20231722811317,
-          "fatigue": 15.462000000000021,
-          "routed": 0,
-          "routEvents": 0,
+          "loss": 17.263490748168692,
+          "morale": 83.07154683133231,
+          "cohesion": 84.39049999999972,
+          "fatigue": 9.917600000000036,
+          "routed": 1,
+          "routEvents": 1,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
@@ -8604,7 +10854,7 @@
         },
         "time": 120,
         "result": null,
-        "score": -0.23344455734289332
+        "score": -0.1467196031055158
       }
     },
     {
@@ -8614,7 +10864,7 @@
       "map": "ford",
       "stress": false,
       "mirror": false,
-      "delta": -0.07433349244548354,
+      "delta": -0.1332594081687996,
       "control": {
         "own": {
           "power": 200.3336225048334,
@@ -8650,36 +10900,36 @@
       },
       "tactical": {
         "own": {
-          "power": 261.3735883351982,
+          "power": 290.0008902902151,
           "initial": 448,
-          "loss": 21.040843081108164,
-          "morale": 72.20160761037569,
-          "cohesion": 52.94561683326858,
-          "fatigue": 28.14500000000009,
+          "loss": 6.15259801323316,
+          "morale": 82.60227167653835,
+          "cohesion": 64.17142644874414,
+          "fatigue": 19.09800000000008,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 50.5,
-          "frontYield": 5.802945335504225,
-          "crowding": 53.54999999999989
+          "reserveSeconds": 13.25,
+          "frontYield": 2.6298588149361968,
+          "crowding": 26.350000000000026
         },
         "enemy": {
-          "power": 314.8404090430796,
+          "power": 377.2360898402309,
           "initial": 508,
-          "loss": 24.548427705002496,
-          "morale": 86.18619437902686,
-          "cohesion": 50.84127614051247,
-          "fatigue": 33.70880000000014,
+          "loss": 5.0144142852690265,
+          "morale": 88.90119354746827,
+          "cohesion": 65.99299999999968,
+          "fatigue": 26.668800000000157,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 0,
-          "crowding": 171.69999999999996
+          "frontYield": 0.2448338318920969,
+          "crowding": 130.04999999999953
         },
         "time": 120,
         "result": null,
-        "score": -0.03634139648226142
+        "score": -0.09526731220557749
       }
     },
     {
@@ -8689,7 +10939,7 @@
       "map": "ford",
       "stress": false,
       "mirror": true,
-      "delta": -0.07433349244545728,
+      "delta": -0.13325940816879966,
       "control": {
         "own": {
           "power": 200.33362250483322,
@@ -8725,36 +10975,36 @@
       },
       "tactical": {
         "own": {
-          "power": 261.3735883352139,
+          "power": 290.00089029021507,
           "initial": 448,
-          "loss": 21.040843081104583,
-          "morale": 72.20160761038207,
-          "cohesion": 52.94561683326858,
-          "fatigue": 28.14500000000009,
+          "loss": 6.15259801323316,
+          "morale": 82.60227167653832,
+          "cohesion": 64.17142644874414,
+          "fatigue": 19.09800000000008,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 50.5,
-          "frontYield": 5.802945335504198,
-          "crowding": 53.54999999999989
+          "reserveSeconds": 13.25,
+          "frontYield": 2.6298588149361986,
+          "crowding": 26.350000000000026
         },
         "enemy": {
-          "power": 314.8404090430842,
+          "power": 377.2360898402309,
           "initial": 508,
-          "loss": 24.548427704996584,
-          "morale": 86.18619437902787,
-          "cohesion": 50.84127614051241,
-          "fatigue": 33.70880000000014,
+          "loss": 5.014414285269083,
+          "morale": 88.90119354746825,
+          "cohesion": 65.99299999999968,
+          "fatigue": 26.668800000000157,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
-          "frontYield": 0,
-          "crowding": 171.69999999999996
+          "frontYield": 0.24483383189209698,
+          "crowding": 130.04999999999953
         },
         "time": 120,
         "result": null,
-        "score": -0.03634139648223533
+        "score": -0.09526731220557771
       }
     },
     {
@@ -8764,7 +11014,7 @@
       "map": "ford",
       "stress": false,
       "mirror": false,
-      "delta": -0.017749297336045244,
+      "delta": -0.00974747225590289,
       "control": {
         "own": {
           "power": 189.9124250581287,
@@ -8800,36 +11050,36 @@
       },
       "tactical": {
         "own": {
-          "power": 273.30906391581465,
+          "power": 296.89115665896804,
           "initial": 448,
-          "loss": 11.849036545279489,
-          "morale": 73.81002758278738,
-          "cohesion": 56.089999999999534,
-          "fatigue": 24.20700000000011,
+          "loss": 5.609722750397907,
+          "morale": 86.9139199298813,
+          "cohesion": 67.25815740092327,
+          "fatigue": 17.281000000000088,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 49.75,
-          "frontYield": 2.852877797066922,
-          "crowding": 59.49999999999985
+          "reserveSeconds": 1,
+          "frontYield": 2.416894103600653,
+          "crowding": 28.05000000000003
         },
         "enemy": {
-          "power": 377.28847026012585,
+          "power": 399.96395185495356,
           "initial": 508,
-          "loss": 14.258561396221126,
-          "morale": 85.21446101016957,
-          "cohesion": 68.92699999999982,
-          "fatigue": 26.797200000000082,
+          "loss": 3.059760301358267,
+          "morale": 99.49526553351014,
+          "cohesion": 67.91973554428894,
+          "fatigue": 21.602800000000123,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 84.14999999999979
+          "crowding": 124.52499999999942
         },
         "time": 120,
         "result": null,
-        "score": -0.1326289642826497
+        "score": -0.12462713920250734
       }
     },
     {
@@ -8839,7 +11089,7 @@
       "map": "ford",
       "stress": false,
       "mirror": true,
-      "delta": -0.017749297336045022,
+      "delta": -0.009747472255903111,
       "control": {
         "own": {
           "power": 189.91242505812855,
@@ -8875,36 +11125,36 @@
       },
       "tactical": {
         "own": {
-          "power": 273.3090639158146,
+          "power": 296.8911566589678,
           "initial": 448,
-          "loss": 11.849036545279489,
-          "morale": 73.81002758278736,
-          "cohesion": 56.089999999999534,
-          "fatigue": 24.20700000000011,
+          "loss": 5.609722750397907,
+          "morale": 86.91391992988125,
+          "cohesion": 67.25815740092327,
+          "fatigue": 17.281000000000088,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 49.75,
-          "frontYield": 2.852877797066922,
-          "crowding": 59.49999999999985
+          "reserveSeconds": 1,
+          "frontYield": 2.416894103600653,
+          "crowding": 28.05000000000003
         },
         "enemy": {
-          "power": 377.28847026012585,
+          "power": 399.96395185495356,
           "initial": 508,
-          "loss": 14.258561396221126,
-          "morale": 85.21446101016957,
-          "cohesion": 68.92699999999982,
-          "fatigue": 26.797200000000082,
+          "loss": 3.059760301358267,
+          "morale": 99.49526553351014,
+          "cohesion": 67.91973554428894,
+          "fatigue": 21.602800000000123,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 84.14999999999979
+          "crowding": 124.52499999999942
         },
         "time": 120,
         "result": null,
-        "score": -0.1326289642826498
+        "score": -0.1246271392025079
       }
     },
     {
@@ -8914,7 +11164,7 @@
       "map": "ford",
       "stress": false,
       "mirror": false,
-      "delta": -0.017749297336045244,
+      "delta": -0.00974747225590289,
       "control": {
         "own": {
           "power": 189.9124250581287,
@@ -8950,36 +11200,36 @@
       },
       "tactical": {
         "own": {
-          "power": 273.30906391581465,
+          "power": 296.89115665896804,
           "initial": 448,
-          "loss": 11.849036545279489,
-          "morale": 73.81002758278738,
-          "cohesion": 56.089999999999534,
-          "fatigue": 24.20700000000011,
+          "loss": 5.609722750397907,
+          "morale": 86.9139199298813,
+          "cohesion": 67.25815740092327,
+          "fatigue": 17.281000000000088,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 49.75,
-          "frontYield": 2.852877797066922,
-          "crowding": 59.49999999999985
+          "reserveSeconds": 1,
+          "frontYield": 2.416894103600653,
+          "crowding": 28.05000000000003
         },
         "enemy": {
-          "power": 377.28847026012585,
+          "power": 399.96395185495356,
           "initial": 508,
-          "loss": 14.258561396221126,
-          "morale": 85.21446101016957,
-          "cohesion": 68.92699999999982,
-          "fatigue": 26.797200000000082,
+          "loss": 3.059760301358267,
+          "morale": 99.49526553351014,
+          "cohesion": 67.91973554428894,
+          "fatigue": 21.602800000000123,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 84.14999999999979
+          "crowding": 124.52499999999942
         },
         "time": 120,
         "result": null,
-        "score": -0.1326289642826497
+        "score": -0.12462713920250734
       }
     },
     {
@@ -8989,7 +11239,7 @@
       "map": "ford",
       "stress": false,
       "mirror": true,
-      "delta": -0.017749297336045022,
+      "delta": -0.009747472255903111,
       "control": {
         "own": {
           "power": 189.91242505812855,
@@ -9025,36 +11275,36 @@
       },
       "tactical": {
         "own": {
-          "power": 273.3090639158146,
+          "power": 296.8911566589678,
           "initial": 448,
-          "loss": 11.849036545279489,
-          "morale": 73.81002758278736,
-          "cohesion": 56.089999999999534,
-          "fatigue": 24.20700000000011,
+          "loss": 5.609722750397907,
+          "morale": 86.91391992988125,
+          "cohesion": 67.25815740092327,
+          "fatigue": 17.281000000000088,
           "routed": 1,
           "routEvents": 1,
           "reserve": 1,
-          "reserveSeconds": 49.75,
-          "frontYield": 2.852877797066922,
-          "crowding": 59.49999999999985
+          "reserveSeconds": 1,
+          "frontYield": 2.416894103600653,
+          "crowding": 28.05000000000003
         },
         "enemy": {
-          "power": 377.28847026012585,
+          "power": 399.96395185495356,
           "initial": 508,
-          "loss": 14.258561396221126,
-          "morale": 85.21446101016957,
-          "cohesion": 68.92699999999982,
-          "fatigue": 26.797200000000082,
+          "loss": 3.059760301358267,
+          "morale": 99.49526553351014,
+          "cohesion": 67.91973554428894,
+          "fatigue": 21.602800000000123,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 84.14999999999979
+          "crowding": 124.52499999999942
         },
         "time": 120,
         "result": null,
-        "score": -0.1326289642826498
+        "score": -0.1246271392025079
       }
     },
     {
@@ -9208,13 +11458,463 @@
       }
     },
     {
+      "id": "reserve-breakthrough",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.02932235074147027,
+      "control": {
+        "own": {
+          "power": 161.92418384135158,
+          "initial": 448,
+          "loss": 77.87326836763356,
+          "morale": 50.325054865704445,
+          "cohesion": 42.453499999999565,
+          "fatigue": 54.894000000000254,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 63.5,
+          "frontYield": 8.501464875091397,
+          "crowding": 142.79999999999967
+        },
+        "enemy": {
+          "power": 152.9555368790007,
+          "initial": 508,
+          "loss": 83.81245831080565,
+          "morale": 46.06831595230695,
+          "cohesion": 42.614357647744555,
+          "fatigue": 42.9505000000003,
+          "routed": 1,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.277591735944894,
+          "crowding": 51.8499999999999
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.0603443338266938
+      },
+      "tactical": {
+        "own": {
+          "power": 155.89655713998764,
+          "initial": 448,
+          "loss": 85.37804836395776,
+          "morale": 45.69898455288333,
+          "cohesion": 46.923999999999396,
+          "fatigue": 37.59100000000017,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 49.75,
+          "frontYield": 16.096235414387642,
+          "crowding": 108.79999999999953
+        },
+        "enemy": {
+          "power": 131.22488456775147,
+          "initial": 508,
+          "loss": 110.31464370205805,
+          "morale": 54.548419636296046,
+          "cohesion": 34.97573966078646,
+          "fatigue": 47.182000000000215,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 8.56042979758656,
+          "crowding": 109.64999999999964
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.08966668456816407
+      }
+    },
+    {
+      "id": "reserve-breakthrough",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.029322350741469883,
+      "control": {
+        "own": {
+          "power": 161.9241838413517,
+          "initial": 448,
+          "loss": 77.87326836763339,
+          "morale": 50.325054865704466,
+          "cohesion": 42.453499999999565,
+          "fatigue": 54.894000000000254,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 63.5,
+          "frontYield": 8.501464875091399,
+          "crowding": 142.79999999999967
+        },
+        "enemy": {
+          "power": 152.9555368790007,
+          "initial": 508,
+          "loss": 83.81245831080548,
+          "morale": 46.0683159523069,
+          "cohesion": 42.614357647744555,
+          "fatigue": 42.9505000000003,
+          "routed": 1,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.27759173594489,
+          "crowding": 51.8499999999999
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.060344333826694074
+      },
+      "tactical": {
+        "own": {
+          "power": 155.89655713998752,
+          "initial": 448,
+          "loss": 85.37804836395776,
+          "morale": 45.698984552883275,
+          "cohesion": 46.923999999999396,
+          "fatigue": 37.59100000000017,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 49.75,
+          "frontYield": 16.096235414387642,
+          "crowding": 108.79999999999953
+        },
+        "enemy": {
+          "power": 131.22488456775142,
+          "initial": 508,
+          "loss": 110.31464370205805,
+          "morale": 54.548419636296046,
+          "cohesion": 34.97573966078646,
+          "fatigue": 47.182000000000215,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 8.560429797586561,
+          "crowding": 109.64999999999964
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.08966668456816396
+      }
+    },
+    {
+      "id": "reserve-breakthrough",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.04803835770816667,
+      "control": {
+        "own": {
+          "power": 225.39521929092297,
+          "initial": 448,
+          "loss": 32.72462891604886,
+          "morale": 80.61229857995153,
+          "cohesion": 35.84799999999984,
+          "fatigue": 43.91000000000028,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.546519264230322,
+          "crowding": 265.6250000000011
+        },
+        "enemy": {
+          "power": 333.6401880918238,
+          "initial": 508,
+          "loss": 39.129246217086575,
+          "morale": 67.04833516121724,
+          "cohesion": 76.85065553517073,
+          "fatigue": 14.297500000000019,
+          "routed": 1,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.398406295683664,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.15365769502842108
+      },
+      "tactical": {
+        "own": {
+          "power": 278.2195211902089,
+          "initial": 448,
+          "loss": 89.135362183513,
+          "morale": 70.67048539796602,
+          "cohesion": 81.08054319017486,
+          "fatigue": 22.4780000000001,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 6.670082499132492,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 369.13568756544396,
+          "initial": 508,
+          "loss": 73.17122240327654,
+          "morale": 82.8550360794267,
+          "cohesion": 83.53499999999951,
+          "fatigue": 18.083000000000055,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.10561933732025441
+      }
+    },
+    {
+      "id": "reserve-breakthrough",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.048038357708166224,
+      "control": {
+        "own": {
+          "power": 225.395219290923,
+          "initial": 448,
+          "loss": 32.7246289160488,
+          "morale": 80.61229857995154,
+          "cohesion": 35.84799999999984,
+          "fatigue": 43.91000000000028,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.54651926423032,
+          "crowding": 265.6250000000011
+        },
+        "enemy": {
+          "power": 333.64018809182375,
+          "initial": 508,
+          "loss": 39.129246217086575,
+          "morale": 67.04833516121721,
+          "cohesion": 76.85065553517073,
+          "fatigue": 14.297500000000019,
+          "routed": 1,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.398406295683665,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.15365769502842097
+      },
+      "tactical": {
+        "own": {
+          "power": 278.21952119020847,
+          "initial": 448,
+          "loss": 89.13536218351379,
+          "morale": 70.6704853979659,
+          "cohesion": 81.08054319017485,
+          "fatigue": 22.4780000000001,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 6.67008249913251,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 369.1356875654436,
+          "initial": 508,
+          "loss": 73.17122240327706,
+          "morale": 82.85503607942664,
+          "cohesion": 83.53499999999951,
+          "fatigue": 18.083000000000055,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.10561933732025475
+      }
+    },
+    {
+      "id": "reserve-breakthrough",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.190579338075835,
+      "control": {
+        "own": {
+          "power": 78.68749208369118,
+          "initial": 448,
+          "loss": 21.008864134477335,
+          "morale": 28.62523079366385,
+          "cohesion": 21.696,
+          "fatigue": 80,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 1,
+          "reserveSeconds": 29.75,
+          "frontYield": 32.79164821817494,
+          "crowding": 139.82499999999965
+        },
+        "enemy": {
+          "power": 372.16662285113637,
+          "initial": 508,
+          "loss": 3.191979478494204,
+          "morale": 85.73024283868122,
+          "cohesion": 67.43246523898185,
+          "fatigue": 35.46760000000018,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 8.499999999999998
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5569697389042901
+      },
+      "tactical": {
+        "own": {
+          "power": 161.09665419221201,
+          "initial": 448,
+          "loss": 17.556853217225125,
+          "morale": 39.63861723169828,
+          "cohesion": 40.016,
+          "fatigue": 68.39999999999972,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 21.25,
+          "frontYield": 26.21196017982634,
+          "crowding": 164.05000000000035
+        },
+        "enemy": {
+          "power": 368.79842257095277,
+          "initial": 508,
+          "loss": 1.8264510881370484,
+          "morale": 96.58686708028708,
+          "cohesion": 57.78999999999979,
+          "fatigue": 32.10280000000016,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 148.74999999999972
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.36639040082845514
+      }
+    },
+    {
+      "id": "reserve-breakthrough",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.1905793380758372,
+      "control": {
+        "own": {
+          "power": 78.68749208369118,
+          "initial": 448,
+          "loss": 21.008864134477335,
+          "morale": 28.62523079366383,
+          "cohesion": 21.696,
+          "fatigue": 80,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 1,
+          "reserveSeconds": 29.75,
+          "frontYield": 32.79164821817494,
+          "crowding": 139.82499999999965
+        },
+        "enemy": {
+          "power": 372.16662285113637,
+          "initial": 508,
+          "loss": 3.191979478494204,
+          "morale": 85.73024283868122,
+          "cohesion": 67.43246523898185,
+          "fatigue": 35.46760000000018,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 8.499999999999998
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.5569697389042901
+      },
+      "tactical": {
+        "own": {
+          "power": 161.096654192213,
+          "initial": 448,
+          "loss": 17.556853217225125,
+          "morale": 39.63861723169839,
+          "cohesion": 40.016,
+          "fatigue": 68.39999999999972,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 21.25,
+          "frontYield": 26.21196017982634,
+          "crowding": 164.05000000000035
+        },
+        "enemy": {
+          "power": 368.79842257095277,
+          "initial": 508,
+          "loss": 1.8264510881370484,
+          "morale": 96.58686708028708,
+          "cohesion": 57.78999999999979,
+          "fatigue": 32.10280000000016,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 148.74999999999972
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.3663904008284529
+      }
+    },
+    {
       "id": "defense-in-depth",
       "seed": "open",
       "style": "aggressive",
       "map": "open",
       "stress": false,
       "mirror": false,
-      "delta": -0.04777855141323151,
+      "delta": 0.016800082167531927,
       "control": {
         "own": {
           "power": 410.29338025400943,
@@ -9250,36 +11950,36 @@
       },
       "tactical": {
         "own": {
-          "power": 387.94845830708596,
+          "power": 419.0491450631834,
           "initial": 468,
-          "loss": 9.125624243543996,
-          "morale": 91.4909244523222,
-          "cohesion": 85.53949999999989,
+          "loss": 9.192917506275592,
+          "morale": 93.17743948043855,
+          "cohesion": 94.67100000000012,
           "fatigue": 0,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 57.79999999999996
+          "crowding": 0
         },
         "enemy": {
-          "power": 252.35992238159025,
+          "power": 253.20029211589468,
           "initial": 448,
-          "loss": 71.94385605812533,
-          "morale": 80.62670692085887,
-          "cohesion": 54.83910395603849,
-          "fatigue": 24.208000000000187,
+          "loss": 73.74086152078087,
+          "morale": 80.34741005123449,
+          "cohesion": 55.49628963649958,
+          "fatigue": 22.92000000000019,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 110.49999999999964
+          "crowding": 102.84999999999968
         },
         "time": 120,
         "result": null,
-        "score": 0.2656462990641706
+        "score": 0.330224932644934
       }
     },
     {
@@ -9289,7 +11989,7 @@
       "map": "open",
       "stress": false,
       "mirror": true,
-      "delta": -0.04777855141323162,
+      "delta": 0.016800082167531816,
       "control": {
         "own": {
           "power": 410.29338025400943,
@@ -9325,36 +12025,36 @@
       },
       "tactical": {
         "own": {
-          "power": 387.94845830708596,
+          "power": 419.04914506318335,
           "initial": 468,
-          "loss": 9.125624243543996,
-          "morale": 91.4909244523222,
-          "cohesion": 85.53949999999989,
+          "loss": 9.192917506275649,
+          "morale": 93.17743948043855,
+          "cohesion": 94.67100000000012,
           "fatigue": 0,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 57.79999999999996
+          "crowding": 0
         },
         "enemy": {
-          "power": 252.35992238159028,
+          "power": 253.2002921158947,
           "initial": 448,
-          "loss": 71.94385605812528,
-          "morale": 80.62670692085888,
-          "cohesion": 54.83910395603849,
-          "fatigue": 24.208000000000187,
+          "loss": 73.74086152078087,
+          "morale": 80.34741005123449,
+          "cohesion": 55.49628963649958,
+          "fatigue": 22.92000000000019,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 110.49999999999964
+          "crowding": 102.84999999999968
         },
         "time": 120,
         "result": null,
-        "score": 0.2656462990641705
+        "score": 0.3302249326449339
       }
     },
     {
@@ -9364,7 +12064,7 @@
       "map": "open",
       "stress": false,
       "mirror": false,
-      "delta": -0.09751996580544053,
+      "delta": 0.01200532297805057,
       "control": {
         "own": {
           "power": 407.7360117067393,
@@ -9400,36 +12100,36 @@
       },
       "tactical": {
         "own": {
-          "power": 302.08952519677473,
+          "power": 416.39684997589245,
           "initial": 468,
-          "loss": 11.747874724627309,
-          "morale": 75.7714441243783,
-          "cohesion": 67.62499999999989,
-          "fatigue": 1.5150000000000055,
+          "loss": 11.528550987880465,
+          "morale": 93.1565646674162,
+          "cohesion": 94.5910000000001,
+          "fatigue": 0.11200000000000006,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 82.44999999999982
+          "crowding": 0
         },
         "enemy": {
-          "power": 199.4849758137695,
+          "power": 259.84004280851923,
           "initial": 448,
-          "loss": 75.29785615397958,
-          "morale": 69.03972045626752,
-          "cohesion": 50.241499999999704,
-          "fatigue": 25.62600000000013,
-          "routed": 1,
-          "routEvents": 1,
+          "loss": 80.26372615907923,
+          "morale": 77.54627012058407,
+          "cohesion": 59.19728963649967,
+          "fatigue": 23.030000000000143,
+          "routed": 0,
+          "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 73.52499999999986
+          "crowding": 67.14999999999989
         },
         "time": 120,
         "result": null,
-        "score": 0.20021147458462563
+        "score": 0.30973676336811673
       }
     },
     {
@@ -9439,7 +12139,7 @@
       "map": "open",
       "stress": false,
       "mirror": true,
-      "delta": -0.09751996580544042,
+      "delta": 0.01200532297805057,
       "control": {
         "own": {
           "power": 407.7360117067393,
@@ -9475,36 +12175,36 @@
       },
       "tactical": {
         "own": {
-          "power": 302.08952519677473,
+          "power": 416.39684997589245,
           "initial": 468,
-          "loss": 11.747874724627309,
-          "morale": 75.77144412437832,
-          "cohesion": 67.62499999999989,
-          "fatigue": 1.5150000000000055,
+          "loss": 11.528550987880521,
+          "morale": 93.1565646674162,
+          "cohesion": 94.5910000000001,
+          "fatigue": 0.11200000000000006,
           "routed": 0,
           "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 82.44999999999982
+          "crowding": 0
         },
         "enemy": {
-          "power": 199.4849758137695,
+          "power": 259.8400428085193,
           "initial": 448,
-          "loss": 75.29785615397947,
-          "morale": 69.03972045626753,
-          "cohesion": 50.241499999999704,
-          "fatigue": 25.62600000000013,
-          "routed": 1,
-          "routEvents": 1,
+          "loss": 80.26372615907906,
+          "morale": 77.54627012058407,
+          "cohesion": 59.19728963649967,
+          "fatigue": 23.030000000000143,
+          "routed": 0,
+          "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 73.52499999999986
+          "crowding": 67.14999999999989
         },
         "time": 120,
         "result": null,
-        "score": 0.20021147458462563
+        "score": 0.3097367633681166
       }
     },
     {
@@ -10564,7 +13264,7 @@
       "map": "wooded",
       "stress": true,
       "mirror": false,
-      "delta": -0.048542937203138736,
+      "delta": -0.0812284807247563,
       "control": {
         "own": {
           "power": 154.4704640405214,
@@ -10600,36 +13300,36 @@
       },
       "tactical": {
         "own": {
-          "power": 131.25226344957062,
+          "power": 134.3441614052507,
           "initial": 468,
-          "loss": 17.511322713244567,
-          "morale": 38.80250583407652,
-          "cohesion": 55.04499581732498,
-          "fatigue": 46.170999999999864,
+          "loss": 18.68498125310009,
+          "morale": 34.67849357205739,
+          "cohesion": 55.11328197083269,
+          "fatigue": 36.60299999999972,
           "routed": 2,
           "routEvents": 2,
           "reserve": 1,
-          "reserveSeconds": 28,
-          "frontYield": 2.796941903119602,
-          "crowding": 110.07499999999962
+          "reserveSeconds": 23.5,
+          "frontYield": 6.357889200717649,
+          "crowding": 56.94999999999987
         },
         "enemy": {
-          "power": 218.6500150528106,
+          "power": 236.25290411490698,
           "initial": 448,
-          "loss": 48.214964994978345,
-          "morale": 62.24318286107915,
-          "cohesion": 46.4183853967861,
-          "fatigue": 35.29000000000006,
-          "routed": 2,
-          "routEvents": 2,
+          "loss": 41.70917906619354,
+          "morale": 80.50809920764395,
+          "cohesion": 35.59580098285933,
+          "fatigue": 40.016000000000126,
+          "routed": 0,
+          "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 148.74999999999943
+          "crowding": 127.92499999999953
         },
         "time": 120,
         "result": null,
-        "score": -0.20760451493488502
+        "score": -0.2402900584565026
       }
     },
     {
@@ -10639,7 +13339,7 @@
       "map": "wooded",
       "stress": true,
       "mirror": true,
-      "delta": -0.048542937203138514,
+      "delta": -0.08122848072475586,
       "control": {
         "own": {
           "power": 154.4704640405213,
@@ -10675,36 +13375,486 @@
       },
       "tactical": {
         "own": {
-          "power": 131.25226344957062,
+          "power": 134.34416140525076,
           "initial": 468,
-          "loss": 17.511322713244567,
-          "morale": 38.80250583407651,
-          "cohesion": 55.04499581732498,
-          "fatigue": 46.170999999999864,
+          "loss": 18.684981253100148,
+          "morale": 34.67849357205741,
+          "cohesion": 55.11328197083269,
+          "fatigue": 36.60299999999972,
           "routed": 2,
           "routEvents": 2,
           "reserve": 1,
-          "reserveSeconds": 28,
-          "frontYield": 2.796941903119602,
-          "crowding": 110.07499999999962
+          "reserveSeconds": 23.5,
+          "frontYield": 6.357889200717649,
+          "crowding": 56.94999999999987
         },
         "enemy": {
-          "power": 218.6500150528106,
+          "power": 236.25290411490695,
           "initial": 448,
-          "loss": 48.21496499497846,
-          "morale": 62.24318286107914,
-          "cohesion": 46.4183853967861,
-          "fatigue": 35.29000000000006,
-          "routed": 2,
-          "routEvents": 2,
+          "loss": 41.709179066193485,
+          "morale": 80.50809920764397,
+          "cohesion": 35.59580098285933,
+          "fatigue": 40.016000000000126,
+          "routed": 0,
+          "routEvents": 0,
           "reserve": 0,
           "reserveSeconds": 0,
           "frontYield": 0,
-          "crowding": 148.74999999999943
+          "crowding": 127.92499999999953
         },
         "time": 120,
         "result": null,
-        "score": -0.20760451493488502
+        "score": -0.24029005845650236
+      }
+    },
+    {
+      "id": "defense-in-depth",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.19520877898774297,
+      "control": {
+        "own": {
+          "power": 259.45749474844973,
+          "initial": 468,
+          "loss": 39.59572880621852,
+          "morale": 69.9926433140599,
+          "cohesion": 68.78492592592542,
+          "fatigue": 12.090000000000103,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.8308203428565104,
+          "crowding": 75.64999999999975
+        },
+        "enemy": {
+          "power": 168.6472449838091,
+          "initial": 448,
+          "loss": 118.42141637315757,
+          "morale": 65.97396828500116,
+          "cohesion": 31.149178365411807,
+          "fatigue": 44.09400000000028,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 171.27499999999992
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.17795161303267532
+      },
+      "tactical": {
+        "own": {
+          "power": 158.6592358135684,
+          "initial": 468,
+          "loss": 39.25036006253845,
+          "morale": 50.43958979605968,
+          "cohesion": 46.10788674858305,
+          "fatigue": 25.3770000000001,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 28.5,
+          "frontYield": 5.8731318682753715,
+          "crowding": 70.97499999999978
+        },
+        "enemy": {
+          "power": 159.61013693863663,
+          "initial": 448,
+          "loss": 128.5974030564476,
+          "morale": 56.211790729460105,
+          "cohesion": 32.498786394290676,
+          "fatigue": 50.51800000000019,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 189.55000000000004
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.017257165955067655
+      }
+    },
+    {
+      "id": "defense-in-depth",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.19520877898774314,
+      "control": {
+        "own": {
+          "power": 259.45749474844973,
+          "initial": 468,
+          "loss": 39.59572880621852,
+          "morale": 69.9926433140599,
+          "cohesion": 68.78492592592542,
+          "fatigue": 12.090000000000103,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.8308203428565117,
+          "crowding": 75.64999999999975
+        },
+        "enemy": {
+          "power": 168.64724498380903,
+          "initial": 448,
+          "loss": 118.42141637315757,
+          "morale": 65.97396828500116,
+          "cohesion": 31.149178365411803,
+          "fatigue": 44.09400000000028,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 171.27499999999992
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.17795161303267543
+      },
+      "tactical": {
+        "own": {
+          "power": 158.6592358135684,
+          "initial": 468,
+          "loss": 39.25036006253845,
+          "morale": 50.43958979605969,
+          "cohesion": 46.10788674858305,
+          "fatigue": 25.3770000000001,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 28.5,
+          "frontYield": 5.87313186827537,
+          "crowding": 70.97499999999978
+        },
+        "enemy": {
+          "power": 159.61013693863666,
+          "initial": 448,
+          "loss": 128.59740305644755,
+          "morale": 56.211790729460134,
+          "cohesion": 32.498786394290676,
+          "fatigue": 50.51800000000019,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 189.55000000000004
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.01725716595506771
+      }
+    },
+    {
+      "id": "defense-in-depth",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0,
+      "control": {
+        "own": {
+          "power": 468,
+          "initial": 468,
+          "loss": 0,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 440.60489874061903,
+          "initial": 448,
+          "loss": 7.395101259380965,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.016506922453975337
+      },
+      "tactical": {
+        "own": {
+          "power": 468,
+          "initial": 468,
+          "loss": 0,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 440.60489874061903,
+          "initial": 448,
+          "loss": 7.395101259380965,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.016506922453975337
+      }
+    },
+    {
+      "id": "defense-in-depth",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0,
+      "control": {
+        "own": {
+          "power": 468,
+          "initial": 468,
+          "loss": 0,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 440.60489874061903,
+          "initial": 448,
+          "loss": 7.395101259380965,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.016506922453975337
+      },
+      "tactical": {
+        "own": {
+          "power": 468,
+          "initial": 468,
+          "loss": 0,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 440.60489874061903,
+          "initial": 448,
+          "loss": 7.395101259380965,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.016506922453975337
+      }
+    },
+    {
+      "id": "defense-in-depth",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.290769280560147,
+      "control": {
+        "own": {
+          "power": 356.506150000001,
+          "initial": 468,
+          "loss": 0,
+          "morale": 66.80400000000029,
+          "cohesion": 100,
+          "fatigue": 33.59999999999891,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 313.45698485384764,
+          "initial": 448,
+          "loss": 14.359478102559478,
+          "morale": 100,
+          "cohesion": 51.157499999999814,
+          "fatigue": 24.444000000000013,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 196.35000000000122
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.06208450801472709
+      },
+      "tactical": {
+        "own": {
+          "power": 216.827661597317,
+          "initial": 468,
+          "loss": 7.47132160747617,
+          "morale": 49.462089649993786,
+          "cohesion": 60.80000000000005,
+          "fatigue": 51.33999999999944,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.151999281288025,
+          "crowding": 101.99999999999957
+        },
+        "enemy": {
+          "power": 310.01230031316436,
+          "initial": 448,
+          "loss": 23.128653937556294,
+          "morale": 99.19463926055525,
+          "cohesion": 53.42337959970435,
+          "fatigue": 26.233600000000074,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 198.0500000000012
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.2286847725454199
+      }
+    },
+    {
+      "id": "defense-in-depth",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.2907692805601469,
+      "control": {
+        "own": {
+          "power": 356.506150000001,
+          "initial": 468,
+          "loss": 0,
+          "morale": 66.80400000000029,
+          "cohesion": 100,
+          "fatigue": 33.59999999999891,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 313.4569848538477,
+          "initial": 448,
+          "loss": 14.359478102559365,
+          "morale": 100,
+          "cohesion": 51.157499999999814,
+          "fatigue": 24.444000000000013,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 196.35000000000122
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.06208450801472698
+      },
+      "tactical": {
+        "own": {
+          "power": 216.827661597317,
+          "initial": 468,
+          "loss": 7.47132160747617,
+          "morale": 49.462089649993786,
+          "cohesion": 60.80000000000005,
+          "fatigue": 51.33999999999944,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 5.151999281288024,
+          "crowding": 101.99999999999957
+        },
+        "enemy": {
+          "power": 310.01230031316436,
+          "initial": 448,
+          "loss": 23.128653937556237,
+          "morale": 99.19463926055525,
+          "cohesion": 53.42337959970435,
+          "fatigue": 26.233600000000074,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 198.0500000000012
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.2286847725454199
       }
     },
     {
@@ -12208,6 +15358,456 @@
       }
     },
     {
+      "id": "mobile-archery",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.15676290410225963,
+      "control": {
+        "own": {
+          "power": 119.58160821454668,
+          "initial": 288,
+          "loss": 116.59032526219568,
+          "morale": 70.02693804114888,
+          "cohesion": 81.03159283321673,
+          "fatigue": 21.960000000000104,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.1377367592460248,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 130.96734179512924,
+          "initial": 328,
+          "loss": 69.81585261593455,
+          "morale": 67.81485307309708,
+          "cohesion": 46.27145992357947,
+          "fatigue": 57.49750000000019,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.052648037380438,
+          "crowding": 6.374999999999998
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.01592324120695804
+      },
+      "tactical": {
+        "own": {
+          "power": 171.5734129316562,
+          "initial": 288,
+          "loss": 70.6477181876595,
+          "morale": 79.8905526399059,
+          "cohesion": 89.21754089898407,
+          "fatigue": 6.392500000000011,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.5267955215616245,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 138.76199795518505,
+          "initial": 328,
+          "loss": 78.82144380533111,
+          "morale": 60.07863832742432,
+          "cohesion": 54.26731313619753,
+          "fatigue": 33.447500000000176,
+          "routed": 0,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 29.32500000000003
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.17268614530921766
+      }
+    },
+    {
+      "id": "mobile-archery",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.15676290410225968,
+      "control": {
+        "own": {
+          "power": 119.58160821454666,
+          "initial": 288,
+          "loss": 116.59032526219573,
+          "morale": 70.02693804114888,
+          "cohesion": 81.03159283321673,
+          "fatigue": 21.960000000000104,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 1.1377367592460248,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 130.96734179512924,
+          "initial": 328,
+          "loss": 69.81585261593449,
+          "morale": 67.81485307309708,
+          "cohesion": 46.27145992357947,
+          "fatigue": 57.49750000000019,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.052648037380438,
+          "crowding": 6.374999999999998
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.015923241206957983
+      },
+      "tactical": {
+        "own": {
+          "power": 171.5734129316562,
+          "initial": 288,
+          "loss": 70.6477181876595,
+          "morale": 79.89055263990589,
+          "cohesion": 89.21754089898407,
+          "fatigue": 6.392500000000011,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.5267955215616245,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 138.76199795518505,
+          "initial": 328,
+          "loss": 78.82144380533111,
+          "morale": 60.078638327424315,
+          "cohesion": 54.26731313619753,
+          "fatigue": 33.447500000000176,
+          "routed": 0,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 29.32500000000003
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.17268614530921766
+      }
+    },
+    {
+      "id": "mobile-archery",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.18070315313987806,
+      "control": {
+        "own": {
+          "power": 218.66921948943457,
+          "initial": 288,
+          "loss": 34.617547237234646,
+          "morale": 88.24002882996659,
+          "cohesion": 93.48809677143772,
+          "fatigue": 10.020000000000037,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 230.15860612684634,
+          "initial": 328,
+          "loss": 76.39843048525245,
+          "morale": 89.68246099135172,
+          "cohesion": 98.85737031426589,
+          "fatigue": 2.820000000000002,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.2166109574085606,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.05756505576730597
+      },
+      "tactical": {
+        "own": {
+          "power": 276.4370696560921,
+          "initial": 288,
+          "loss": 9.815719251754274,
+          "morale": 99.77302549689911,
+          "cohesion": 98.67789934994187,
+          "fatigue": 1.5087500000000056,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.006654813059409192,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 236.67913458677077,
+          "initial": 328,
+          "loss": 33.18483478574632,
+          "morale": 78.02106311337289,
+          "cohesion": 86.95776486405816,
+          "fatigue": 3.7000000000000037,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.23826820890718403
+      }
+    },
+    {
+      "id": "mobile-archery",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.18070315313987806,
+      "control": {
+        "own": {
+          "power": 218.66921948943457,
+          "initial": 288,
+          "loss": 34.617547237234646,
+          "morale": 88.24002882996659,
+          "cohesion": 93.48809677143772,
+          "fatigue": 10.020000000000037,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 230.15860612684634,
+          "initial": 328,
+          "loss": 76.39843048525245,
+          "morale": 89.68246099135172,
+          "cohesion": 98.85737031426589,
+          "fatigue": 2.820000000000002,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.2166109574085606,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.05756505576730597
+      },
+      "tactical": {
+        "own": {
+          "power": 276.4370696560921,
+          "initial": 288,
+          "loss": 9.815719251754274,
+          "morale": 99.77302549689911,
+          "cohesion": 98.67789934994187,
+          "fatigue": 1.5087500000000056,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.006654813059409192,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 236.67913458677077,
+          "initial": 328,
+          "loss": 33.18483478574632,
+          "morale": 78.02106311337289,
+          "cohesion": 86.95776486405816,
+          "fatigue": 3.7000000000000037,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.23826820890718403
+      }
+    },
+    {
+      "id": "mobile-archery",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.5085226565604066,
+      "control": {
+        "own": {
+          "power": 168.8397735089606,
+          "initial": 288,
+          "loss": 2.8564391417367005,
+          "morale": 56.228449109831104,
+          "cohesion": 78.83838953951819,
+          "fatigue": 51.52749999999929,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.5913044614337544,
+          "crowding": 9.775
+        },
+        "enemy": {
+          "power": 118.0788611796957,
+          "initial": 328,
+          "loss": 15.269115771051815,
+          "morale": 78.76828767629604,
+          "cohesion": 30.961538808656833,
+          "fatigue": 24.2070000000001,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.4768632959364141,
+          "crowding": 192.95000000000016
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.22625268558590278
+      },
+      "tactical": {
+        "own": {
+          "power": 141.02599629158107,
+          "initial": 288,
+          "loss": 14.08985159641702,
+          "morale": 52.2253159113029,
+          "cohesion": 61.624374999999674,
+          "fatigue": 58.64849999999973,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.243275478199876,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 253.19749070060456,
+          "initial": 328,
+          "loss": 13.395199760269747,
+          "morale": 96.43508972059207,
+          "cohesion": 72.52289088600978,
+          "fatigue": 17.782500000000105,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 66.72499999999988
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.2822699709745038
+      }
+    },
+    {
+      "id": "mobile-archery",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.5085226565604068,
+      "control": {
+        "own": {
+          "power": 168.8397735089606,
+          "initial": 288,
+          "loss": 2.8564391417367005,
+          "morale": 56.228449109831104,
+          "cohesion": 78.83838953951819,
+          "fatigue": 51.52749999999929,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.5913044614337544,
+          "crowding": 9.775
+        },
+        "enemy": {
+          "power": 118.07886117969568,
+          "initial": 328,
+          "loss": 15.269115771051815,
+          "morale": 78.76828767629603,
+          "cohesion": 30.961538808656833,
+          "fatigue": 24.2070000000001,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.4768632959364141,
+          "crowding": 192.95000000000016
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.22625268558590284
+      },
+      "tactical": {
+        "own": {
+          "power": 141.025996291581,
+          "initial": 288,
+          "loss": 14.08985159641702,
+          "morale": 52.22531591130288,
+          "cohesion": 61.624374999999674,
+          "fatigue": 58.64849999999973,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.243275478199876,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 253.19749070060456,
+          "initial": 328,
+          "loss": 13.395199760269747,
+          "morale": 96.43508972059207,
+          "cohesion": 72.52289088600978,
+          "fatigue": 17.782500000000105,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 66.72499999999988
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.282269970974504
+      }
+    },
+    {
       "id": "pin-and-charge",
       "seed": "open",
       "style": "aggressive",
@@ -13708,6 +17308,456 @@
       }
     },
     {
+      "id": "pin-and-charge",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.12814758783621874,
+      "control": {
+        "own": {
+          "power": 117.64189155008035,
+          "initial": 348,
+          "loss": 82.65372486839908,
+          "morale": 59.61653414464233,
+          "cohesion": 45.94646853670852,
+          "fatigue": 59.87250000000017,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 98.75,
+          "frontYield": 4.636640422553746,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 45.75477562223986,
+          "initial": 388,
+          "loss": 93.87762764663296,
+          "morale": 31.23884514253738,
+          "cohesion": 33.00499366332579,
+          "fatigue": 49.950000000000266,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 21.522223553830912,
+          "crowding": 71.39999999999982
+        },
+        "time": 119.5,
+        "result": "win",
+        "score": 0.22012673306146832
+      },
+      "tactical": {
+        "own": {
+          "power": 186.02279819409495,
+          "initial": 348,
+          "loss": 55.40005785378145,
+          "morale": 80.20883578255433,
+          "cohesion": 70.25703841574665,
+          "fatigue": 37.303750000000306,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 56.75,
+          "frontYield": 0.004681566564924024,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 72.27429251269984,
+          "initial": 388,
+          "loss": 70.28785055569074,
+          "morale": 37.278658704000556,
+          "cohesion": 53.66474104263337,
+          "fatigue": 31.93000000000028,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.789195516111366,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.34827432089768706
+      }
+    },
+    {
+      "id": "pin-and-charge",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.12814758783621893,
+      "control": {
+        "own": {
+          "power": 117.64189155008029,
+          "initial": 348,
+          "loss": 82.65372486839908,
+          "morale": 59.616534144642316,
+          "cohesion": 45.94646853670852,
+          "fatigue": 59.87250000000017,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 98.75,
+          "frontYield": 4.636640422553746,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 45.754775622239826,
+          "initial": 388,
+          "loss": 93.8776276466329,
+          "morale": 31.23884514253735,
+          "cohesion": 33.00499366332579,
+          "fatigue": 49.950000000000266,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 21.522223553830912,
+          "crowding": 71.39999999999982
+        },
+        "time": 119.5,
+        "result": "loss",
+        "score": 0.22012673306146824
+      },
+      "tactical": {
+        "own": {
+          "power": 186.022798194095,
+          "initial": 348,
+          "loss": 55.40005785378145,
+          "morale": 80.20883578255439,
+          "cohesion": 70.25703841574665,
+          "fatigue": 37.303750000000306,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 56.75,
+          "frontYield": 0.004681566564924024,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 72.27429251269986,
+          "initial": 388,
+          "loss": 70.28785055569068,
+          "morale": 37.27865870400058,
+          "cohesion": 53.66474104263337,
+          "fatigue": 31.93000000000028,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 7.789195516111366,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.3482743208976872
+      }
+    },
+    {
+      "id": "pin-and-charge",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.03865112034223722,
+      "control": {
+        "own": {
+          "power": 129.5216177686147,
+          "initial": 348,
+          "loss": 97.02820757277894,
+          "morale": 49.061889859969355,
+          "cohesion": 63.18771517661043,
+          "fatigue": 49.495000000000154,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 95.75,
+          "frontYield": 2.931999866024866,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 138.18944539371267,
+          "initial": 388,
+          "loss": 85.4447293409188,
+          "morale": 61.76107729873019,
+          "cohesion": 68.19565385111278,
+          "fatigue": 19.048750000000055,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.817400346703878,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.016030192389578868
+      },
+      "tactical": {
+        "own": {
+          "power": 146.21394552212843,
+          "initial": 348,
+          "loss": 85.28094629273505,
+          "morale": 59.15965272363404,
+          "cohesion": 72.09849435652447,
+          "fatigue": 36.55375000000023,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 66.75,
+          "frontYield": 1.4937682234554899,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 141.8037968169112,
+          "initial": 388,
+          "loss": 81.43923544920744,
+          "morale": 54.51788875414509,
+          "cohesion": 73.07408578596497,
+          "fatigue": 16.02375000000002,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.798907085127111,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.05468131273181609
+      }
+    },
+    {
+      "id": "pin-and-charge",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.038651120342237166,
+      "control": {
+        "own": {
+          "power": 129.52161776861473,
+          "initial": 348,
+          "loss": 97.028207572779,
+          "morale": 49.06188985996934,
+          "cohesion": 63.18771517661043,
+          "fatigue": 49.495000000000154,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 95.75,
+          "frontYield": 2.931999866024866,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 138.18944539371273,
+          "initial": 388,
+          "loss": 85.4447293409188,
+          "morale": 61.76107729873024,
+          "cohesion": 68.19565385111278,
+          "fatigue": 19.048750000000055,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.8174003467038835,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.016030192389578757
+      },
+      "tactical": {
+        "own": {
+          "power": 146.21394552212826,
+          "initial": 348,
+          "loss": 85.28094629273534,
+          "morale": 59.15965272363398,
+          "cohesion": 72.09849435652447,
+          "fatigue": 36.55375000000023,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 1,
+          "reserveSeconds": 66.75,
+          "frontYield": 1.4937682234554899,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 141.80379681691107,
+          "initial": 388,
+          "loss": 81.43923544920779,
+          "morale": 54.517888754145005,
+          "cohesion": 73.07408578596497,
+          "fatigue": 16.02375000000002,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 4.798907085127117,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.05468131273181592
+      }
+    },
+    {
+      "id": "pin-and-charge",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.05089254859773984,
+      "control": {
+        "own": {
+          "power": 81.29193091247973,
+          "initial": 348,
+          "loss": 45.68418273796908,
+          "morale": 35.95657110467119,
+          "cohesion": 33.15722452623634,
+          "fatigue": 75,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 56,
+          "frontYield": 21.387919184510938,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 340.43251452218556,
+          "initial": 388,
+          "loss": 8.444627974363073,
+          "morale": 100,
+          "cohesion": 84.73477317702215,
+          "fatigue": 24.983000000000217,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.643805885321709
+      },
+      "tactical": {
+        "own": {
+          "power": 81.29193091247973,
+          "initial": 348,
+          "loss": 36.43717354177147,
+          "morale": 36.7669405111418,
+          "cohesion": 32.79722452623634,
+          "fatigue": 75,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 30.5,
+          "frontYield": 15.10890371966282,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 360.17882337810863,
+          "initial": 388,
+          "loss": 6.785600831569752,
+          "morale": 100,
+          "cohesion": 91.77999999999969,
+          "fatigue": 23.12300000000014,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6946984339194489
+      }
+    },
+    {
+      "id": "pin-and-charge",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.05089254859773984,
+      "control": {
+        "own": {
+          "power": 81.29193091247976,
+          "initial": 348,
+          "loss": 45.684182737969024,
+          "morale": 35.95657110467119,
+          "cohesion": 33.15722452623634,
+          "fatigue": 75,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 56,
+          "frontYield": 21.387919184510938,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 340.43251452218556,
+          "initial": 388,
+          "loss": 8.444627974363073,
+          "morale": 100,
+          "cohesion": 84.73477317702215,
+          "fatigue": 24.983000000000217,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.643805885321709
+      },
+      "tactical": {
+        "own": {
+          "power": 81.29193091247976,
+          "initial": 348,
+          "loss": 36.43717354177147,
+          "morale": 36.766940511141804,
+          "cohesion": 32.79722452623634,
+          "fatigue": 75,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 1,
+          "reserveSeconds": 30.5,
+          "frontYield": 15.10890371966282,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 360.17882337810863,
+          "initial": 388,
+          "loss": 6.785600831569752,
+          "morale": 100,
+          "cohesion": 91.77999999999969,
+          "fatigue": 23.12300000000014,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.6946984339194489
+      }
+    },
+    {
       "id": "chokepoint",
       "seed": "open",
       "style": "aggressive",
@@ -15205,6 +19255,456 @@
         "time": 113.25,
         "result": "win",
         "score": -0.4566205290871529
+      }
+    },
+    {
+      "id": "chokepoint",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": -0.09736501607744708,
+      "control": {
+        "own": {
+          "power": 120.81938097450048,
+          "initial": 368,
+          "loss": 34.28190166712005,
+          "morale": 50.22223078685347,
+          "cohesion": 54.91091542656902,
+          "fatigue": 23.528750000000034,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.00645350568414701,
+          "crowding": 13.175000000000006
+        },
+        "enemy": {
+          "power": 168.41729207635456,
+          "initial": 548,
+          "loss": 104.68218455554836,
+          "morale": 59.30933450970354,
+          "cohesion": 16.68,
+          "fatigue": 50.80700000000016,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 352.75000000000057
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.02098271029994342
+      },
+      "tactical": {
+        "own": {
+          "power": 110.54322850998905,
+          "initial": 368,
+          "loss": 27.36494641965197,
+          "morale": 56.757891805465945,
+          "cohesion": 47.80062499999954,
+          "fatigue": 19.877500000000094,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.007920941165845416,
+          "crowding": 72.24999999999977
+        },
+        "enemy": {
+          "power": 206.47078949942528,
+          "initial": 548,
+          "loss": 108.15680501948339,
+          "morale": 80.79392886612052,
+          "cohesion": 16.666666666666668,
+          "fatigue": 49.26200000000017,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 465.3750000000033
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.07638230577750366
+      }
+    },
+    {
+      "id": "chokepoint",
+      "seed": "close",
+      "style": "aggressive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": -0.09736501607744685,
+      "control": {
+        "own": {
+          "power": 120.8193809745004,
+          "initial": 368,
+          "loss": 34.28190166712017,
+          "morale": 50.22223078685337,
+          "cohesion": 54.91091542656902,
+          "fatigue": 23.528750000000034,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.00645350568414701,
+          "crowding": 13.175000000000006
+        },
+        "enemy": {
+          "power": 168.41729207635453,
+          "initial": 548,
+          "loss": 104.68218455554836,
+          "morale": 59.30933450970351,
+          "cohesion": 16.68,
+          "fatigue": 50.80700000000016,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 352.75000000000057
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.020982710299943252
+      },
+      "tactical": {
+        "own": {
+          "power": 110.54322850998906,
+          "initial": 368,
+          "loss": 27.36494641965197,
+          "morale": 56.75789180546596,
+          "cohesion": 47.80062499999954,
+          "fatigue": 19.877500000000094,
+          "routed": 2,
+          "routEvents": 2,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.007920941165845451,
+          "crowding": 72.24999999999977
+        },
+        "enemy": {
+          "power": 206.47078949942528,
+          "initial": 548,
+          "loss": 108.15680501948333,
+          "morale": 80.79392886612052,
+          "cohesion": 16.666666666666668,
+          "fatigue": 49.26200000000017,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 465.3750000000033
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.0763823057775036
+      }
+    },
+    {
+      "id": "chokepoint",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.020371096479831374,
+      "control": {
+        "own": {
+          "power": 342.1104268074916,
+          "initial": 368,
+          "loss": 25.205061597443773,
+          "morale": 99.72227030805016,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 454.29760902258397,
+          "initial": 548,
+          "loss": 71.74340111687957,
+          "morale": 88.95900505493707,
+          "cohesion": 95.6338728072576,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 25.925000000000026
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.10063766349072956
+      },
+      "tactical": {
+        "own": {
+          "power": 358.53998229448007,
+          "initial": 368,
+          "loss": 9.460017705519931,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 467.59999925726055,
+          "initial": 548,
+          "loss": 58.5889453254897,
+          "morale": 91.99826055932515,
+          "cohesion": 97.36498511084825,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 25.925000000000026
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.12100875997056093
+      }
+    },
+    {
+      "id": "chokepoint",
+      "seed": "screen",
+      "style": "defensive",
+      "map": "open",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.020371096479831374,
+      "control": {
+        "own": {
+          "power": 342.1104268074916,
+          "initial": 368,
+          "loss": 25.205061597443773,
+          "morale": 99.72227030805016,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 454.29760902258397,
+          "initial": 548,
+          "loss": 71.74340111687957,
+          "morale": 88.95900505493707,
+          "cohesion": 95.6338728072576,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 25.925000000000026
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.10063766349072956
+      },
+      "tactical": {
+        "own": {
+          "power": 358.53998229448007,
+          "initial": 368,
+          "loss": 9.460017705519931,
+          "morale": 100,
+          "cohesion": 100,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 467.59999925726055,
+          "initial": 548,
+          "loss": 58.5889453254897,
+          "morale": 91.99826055932515,
+          "cohesion": 97.36498511084825,
+          "fatigue": 0,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 25.925000000000026
+        },
+        "time": 120,
+        "result": null,
+        "score": 0.12100875997056093
+      }
+    },
+    {
+      "id": "chokepoint",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": false,
+      "delta": 0.3998800510379521,
+      "control": {
+        "own": {
+          "power": 48,
+          "initial": 368,
+          "loss": 31.41662713715033,
+          "morale": 28.966744611197406,
+          "cohesion": 68.4009151105796,
+          "fatigue": 48.10249999999924,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.23316774141275054,
+          "crowding": 42.075
+        },
+        "enemy": {
+          "power": 379.5254625635526,
+          "initial": 548,
+          "loss": 44.34898723509417,
+          "morale": 94.04577222220313,
+          "cohesion": 60.523275530262595,
+          "fatigue": 19.895000000000106,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 146.6249999999999
+        },
+        "time": 118,
+        "result": "loss",
+        "score": -0.5621299300985171
+      },
+      "tactical": {
+        "own": {
+          "power": 149.40315315144397,
+          "initial": 368,
+          "loss": 22.157052829367103,
+          "morale": 46.353607887530515,
+          "cohesion": 77.76937499999961,
+          "fatigue": 46.94999999999894,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 311.39371613549207,
+          "initial": 548,
+          "loss": 48.13073519922398,
+          "morale": 91.33559180799939,
+          "cohesion": 38.90785425101311,
+          "fatigue": 35.300000000000146,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 182.75000000000085
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.16224987906056498
+      }
+    },
+    {
+      "id": "chokepoint",
+      "seed": "exhausted",
+      "style": "aggressive",
+      "map": "ford",
+      "stress": false,
+      "mirror": true,
+      "delta": 0.3998800510379521,
+      "control": {
+        "own": {
+          "power": 48,
+          "initial": 368,
+          "loss": 31.41662713715033,
+          "morale": 28.966744611197395,
+          "cohesion": 68.4009151105796,
+          "fatigue": 48.10249999999924,
+          "routed": 3,
+          "routEvents": 3,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0.23316774141275054,
+          "crowding": 42.075
+        },
+        "enemy": {
+          "power": 379.5254625635526,
+          "initial": 548,
+          "loss": 44.34898723509417,
+          "morale": 94.04577222220313,
+          "cohesion": 60.523275530262595,
+          "fatigue": 19.895000000000106,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 146.6249999999999
+        },
+        "time": 118,
+        "result": "win",
+        "score": -0.5621299300985171
+      },
+      "tactical": {
+        "own": {
+          "power": 149.40315315144397,
+          "initial": 368,
+          "loss": 22.157052829367103,
+          "morale": 46.353607887530515,
+          "cohesion": 77.76937499999961,
+          "fatigue": 46.94999999999894,
+          "routed": 1,
+          "routEvents": 1,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 0
+        },
+        "enemy": {
+          "power": 311.39371613549207,
+          "initial": 548,
+          "loss": 48.13073519922398,
+          "morale": 91.33559180799939,
+          "cohesion": 38.90785425101311,
+          "fatigue": 35.300000000000146,
+          "routed": 0,
+          "routEvents": 0,
+          "reserve": 0,
+          "reserveSeconds": 0,
+          "frontYield": 0,
+          "crowding": 182.75000000000085
+        },
+        "time": 120,
+        "result": null,
+        "score": -0.16224987906056498
       }
     }
   ]
