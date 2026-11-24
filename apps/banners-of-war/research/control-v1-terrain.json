@@ -1,0 +1,490 @@
+{
+  "protocol": "paired-control-v1",
+  "engineCommit": "84a8441226b1dd6e5e5111a190008efa66ad53c9",
+  "execution": "Isolated V8; original ESM module bindings adapted",
+  "suite": "terrain",
+  "results": [
+    {
+      "factor": "ridge-control",
+      "suite": "terrain",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge",
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialScore": 0,
+      "score": 0,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9814285714285714,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 97.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.9814285714285714,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 97.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-control",
+      "suite": "terrain",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge",
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialScore": 0,
+      "score": 0,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9814285714285714,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 97.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.9814285714285714,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 97.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-policy",
+      "suite": "terrain",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge",
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialScore": 0,
+      "score": -0.012450265536761712,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.012450265536761712,
+      "contact": 116.5,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.8955356374149758,
+        "loss": 27.2971075528734,
+        "fatigue": 9.557790979523508,
+        "strain": 4.090228883076818,
+        "morale": 89.51912964462777,
+        "cohesion": 94.39486038462191,
+        "contacts": 58.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.9508701509116946,
+        "loss": 22.533272366393447,
+        "fatigue": 0.6917985952551067,
+        "strain": 2.963725528064205,
+        "morale": 95.90523462131348,
+        "cohesion": 100,
+        "contacts": 58.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-policy",
+      "suite": "terrain",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge",
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialScore": 0,
+      "score": 0.00538210620931593,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.00538210620931593,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9811458304331703,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 97.2927346263014,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.9572253583917661,
+        "loss": 0,
+        "fatigue": 6.4386383199334345,
+        "strain": 0,
+        "morale": 95.77611703666793,
+        "cohesion": 96.66681000220491,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-policy",
+      "suite": "terrain",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge",
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialScore": 0,
+      "score": -0.012450265536761736,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.012450265536761736,
+      "contact": 116.5,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.8955356374149758,
+        "loss": 27.297107552873285,
+        "fatigue": 9.557790979523508,
+        "strain": 4.090228883076811,
+        "morale": 89.5191296446278,
+        "cohesion": 94.39486038462191,
+        "contacts": 58.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.9508701509116947,
+        "loss": 22.533272366393305,
+        "fatigue": 0.6917985952551069,
+        "strain": 2.9637255280641974,
+        "morale": 95.90523462131348,
+        "cohesion": 100,
+        "contacts": 58.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-policy",
+      "suite": "terrain",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge",
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialScore": 0,
+      "score": 0.00538210620931593,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.00538210620931593,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9811458304331703,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 97.2927346263014,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.9572253583917661,
+        "loss": 0,
+        "fatigue": 6.4386383199334345,
+        "strain": 0,
+        "morale": 95.77611703666793,
+        "cohesion": 96.66681000220491,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    }
+  ],
+  "errors": [
+    {
+      "case": {
+        "factor": "ridge-control",
+        "suite": "terrain",
+        "seed": 47,
+        "mirror": false,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 1 находится в воде; Полк 4 находится в воде; Полк 5 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-control",
+        "suite": "terrain",
+        "seed": 47,
+        "mirror": true,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 101 находится в воде; Полк 104 находится в воде; Полк 105 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-control",
+        "suite": "terrain",
+        "seed": 91,
+        "mirror": false,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 100 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-control",
+        "suite": "terrain",
+        "seed": 91,
+        "mirror": true,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 0 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 47,
+        "mirror": false,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 1 находится в воде; Полк 4 находится в воде; Полк 5 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 47,
+        "mirror": false,
+        "swapPolicies": true,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 1 находится в воде; Полк 4 находится в воде; Полк 5 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 47,
+        "mirror": true,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 101 находится в воде; Полк 104 находится в воде; Полк 105 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 47,
+        "mirror": true,
+        "swapPolicies": true,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 101 находится в воде; Полк 104 находится в воде; Полк 105 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 91,
+        "mirror": false,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 100 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 91,
+        "mirror": false,
+        "swapPolicies": true,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 100 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 91,
+        "mirror": true,
+        "swapPolicies": false,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 0 находится в воде"
+    },
+    {
+      "case": {
+        "factor": "ridge-policy",
+        "suite": "terrain",
+        "seed": 91,
+        "mirror": true,
+        "swapPolicies": true,
+        "seconds": 240
+      },
+      "error": "Error: invalid control scenario: Полк 0 находится в воде"
+    }
+  ]
+}

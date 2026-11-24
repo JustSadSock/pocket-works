@@ -122,7 +122,8 @@
       "kind": "node-test",
       "files": [
         "chronicles.test.mjs",
-        "laboratory.test.mjs"
+        "laboratory.test.mjs",
+        "control-lab.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -155,6 +156,24 @@
         7
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "controlled-battles",
+      "kind": "node",
+      "entry": "control-lab-run.mjs",
+      "args": [
+        "shard:{seed}:6",
+        "{output}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "tier": "deep"
     }
   ]
 }

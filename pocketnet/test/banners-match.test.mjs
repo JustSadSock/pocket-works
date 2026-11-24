@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {readFileSync,readdirSync} from 'node:fs';
 import {E as Local} from '../../apps/banners-of-war/engine.js';
 import {chronicles} from '../banners-engine-v1/chronicles.js';
 import {createMatch,joinMatch,mutateMatch,tickMatch,resolveLocked,resolveDuel,validateOrders,viewMatch,viewRound,scenarioProject,rematchSource,ENGINE} from '../banners-match.mjs';
@@ -14,3 +16,45 @@ test('Historical Command accepts only own hierarchy and hides enemy internals',a
 test('free deployment, scenario digest, surrender',async()=>{let m=await match({deployment:'free'});assert.match(m.checksum,/^[0-9a-f]{64}$/);assert.throws(()=>act(m,b,'deploy',{placements:[{id:0,x:100,y:100,a:0}]}),/invalid_deployment/);assert.throws(()=>act(m,a,'deploy',{placements:[{id:0,x:1000,y:400,a:0}]}),/deployment_boundary/);for(let u of [a,b])act(m,u,'deploy_ready');act(m,a,'surrender');assert.equal(m.phase,'finished');assert.throws(()=>scenarioProject({project:{kind:'banners-lab-project',schema:999}}))});
 
 test('scenario plans remain private and seed own first round; rematch swaps armies',async()=>{let p=scenarioProject({landscape:'flat',seconds:60,fog:true}),g=p.armies[0].units[0].groupName||p.armies[0].units[0].group;p.plans=[{side:0,group:g,task:'advance',x:600,y:400,wait:0,when:'complete',threshold:30,autonomy:'bounded',phases:[]}];let m=await match({project:p});assert.ok(Object.keys(viewMatch(m,a,start).draft).length>0);assert.deepEqual(viewMatch(m,b,start).draft,{});assert.throws(()=>rematchSource(m,a),/match_not_finished/);act(m,b,'surrender');let r=rematchSource(m,a);assert.equal(r.project.armies[0].name,m.project.armies[1].name);assert.equal(r.project.plans[0].side,1);assert.throws(()=>rematchSource(m,c),/not_member/)})
+
+test('immutable engine v1 files match the reviewed Git blob digests',()=>{
+ const pins={
+  'battle-events.js':'3413afc4faf5ee577b8a64674c7f25c116f0df17',
+  'battle-plans.js':'6fa56aa05a8c0031c6c093a9758f8ca793436603',
+  'chronicles.js':'af4d86e88202fd9a3d367b4d9fc64ae463a3e790',
+  'commander.js':'6434e46ae6e140f5ae6caee9f59c8771ba10018a',
+  'engine.js':'b7408697eb7ccc876bda662216f2adc20a0773c7',
+  'historical-command.js':'7cffd02dc4502feb8b338dc07b4150972a58f8da',
+  'historical-profiles.js':'0daa66f572358fe6eb1f188fdc1000c022ff4ae7',
+  'laboratory.js':'323c91226da241bbb548b498bf23d4f9b42a1cd6'
+ };
+ const root=new URL('../banners-engine-v1/',import.meta.url);
+ assert.deepEqual(readdirSync(root).sort(),Object.keys(pins).sort());
+ for(const [name,expected] of Object.entries(pins)){
+  const bytes=readFileSync(new URL(name,root));
+  assert.equal(createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex'),expected,name);
+ }
+});
+test('active match rejects hidden targets, forged state and oversized scenarios',async()=>{
+ const m=await match(),original={seed:m.project.seed,physics:m.battle.physicsVersion,checksum:m.checksum};
+ const v=viewMatch(m,a,start),visible=new Set(v.units.map(u=>u.id));
+ const hidden=m.battle.units.find(u=>u.side===1&&!visible.has(u.id));
+ assert.ok(hidden,'fixture must contain a hidden enemy');
+ assert.throws(()=>validateOrders(m.battle,0,{0:{kind:'attack',target:hidden.id,path:[]}}),/invalid_target/);
+ assert.throws(()=>validateOrders(m.battle,0,{0:{kind:'hold',path:[],physicsVersion:999}}),/invalid_order/);
+ assert.throws(()=>act(m,a,'set_seed',{seed:'forged'}),/unknown_action/);
+ act(m,a,'draft',{round:1,orders:{},seed:'forged',physicsVersion:999,result:'win'});
+ assert.deepEqual({seed:m.project.seed,physics:m.battle.physicsVersion,checksum:m.checksum},original);
+ assert.equal(m.battle.result,null);
+ for(const key of ['project','battle','seed','enemyHierarchy','aiIntent'])assert.ok(!Object.hasOwn(viewMatch(m,a,start),key));
+ const p=scenarioProject({landscape:'flat'});
+ for(const army of p.armies)army.units=Array.from({length:30},()=>({...army.units[0]}));
+ assert.throws(()=>scenarioProject({project:p}),/regiment_limit_60/);
+});
+test('Historical Command rejects overlapping assignments and unauthorized unit orders',async()=>{
+ const m=await match({historical:true}),h=m.battle.commandHierarchy,n=h.nodes.find(n=>n.level===1);
+ assert.ok(n);
+ assert.throws(()=>validateOrders(m.battle,0,{0:{kind:'hold',path:[]}}),/invalid_unit/);
+ const request=group=>({group,task:'advance',anchor:{x:700,y:450},autonomy:'bounded'});
+ assert.throws(()=>validateOrders(m.battle,0,{commands:[request(h.nodes[0].id),request(n.id)]}),/overlapping_commands/);
+});

@@ -15,4 +15,7 @@ test('equal material and same command have deterministic control inputs', {timeo
  assert.ok(Math.abs(a.initialScore)<1e-10&&Math.abs(b.initialScore)<1e-10);
  assert.deepEqual(controlTrial(k),a);
  assert.equal(a.rounds,1);assert.equal(b.rounds,1);
+ const another=controlTrial({...k,seed:47});
+ assert.notDeepEqual(a.initialPositions,another.initialPositions);
+ assert.ok(Math.abs(another.initialScore)<1e-10);
 });

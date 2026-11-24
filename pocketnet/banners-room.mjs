@@ -10,9 +10,18 @@ export class BannersMatchRoom{
  constructor(ctx,env){this.ctx=ctx;this.env=env;this.tail=Promise.resolve();let sql=ctx.storage.sql;sql.exec("CREATE TABLE IF NOT EXISTS battle_meta (key TEXT PRIMARY KEY,value TEXT NOT NULL)");sql.exec("CREATE TABLE IF NOT EXISTS battle_rounds (number INTEGER PRIMARY KEY,value TEXT NOT NULL)");sql.exec("CREATE TABLE IF NOT EXISTS battle_index (id TEXT PRIMARY KEY,created INTEGER NOT NULL)")}
  run(fn){let result=this.tail.then(fn,fn);this.tail=result.catch(()=>{});return result}
  read(){let r=this.ctx.storage.sql.exec("SELECT value FROM battle_meta WHERE key='match'").toArray()[0];return r?JSON.parse(r.value):null}
- write(m,row=null){let data=encode(m),history=row?encode(row):null;this.ctx.storage.transactionSync(()=>{this.ctx.storage.sql.exec("INSERT OR REPLACE INTO battle_meta(key,value) VALUES ('match',?)",data);if(row)this.ctx.storage.sql.exec("INSERT INTO battle_rounds(number,value) VALUES (?,?)",row.number,history)})}
  async schedule(m){if(m.phase==="locked")await this.ctx.storage.setAlarm(Date.now()+10);else if(m.deadline!==null)await this.ctx.storage.setAlarm(Math.max(Date.now()+10,m.deadline));else await this.ctx.storage.deleteAlarm()}
- async commit(m,row=null){await this.schedule(m);this.write(m,row)}
+ async commit(m,row=null){
+  const data=encode(m),history=row?encode(row):null;
+  // SQLite storage.transaction includes SQL and alarm operations in the same
+  // transaction. A crash must not persist a lock without its wakeup, or
+  // remove the wakeup before the finished state and replay become durable.
+  await this.ctx.storage.transaction(async()=>{
+   this.ctx.storage.sql.exec("INSERT OR REPLACE INTO battle_meta(key,value) VALUES ('match',?)",data);
+   if(row)this.ctx.storage.sql.exec("INSERT INTO battle_rounds(number,value) VALUES (?,?)",row.number,history);
+   await this.schedule(m);
+  });
+ }
  async advance(m,now){if(m.engine!==ENGINE)return false;if(tickMatch(m,now)){await this.commit(m);return true}return false}
  async alarm(){return this.run(async()=>{let m=this.read();if(!m)return;let now=Date.now();if(m.engine!==ENGINE)return;if(m.phase==="locked"){let row=resolveLocked(m,now);if(m.phase==="replay")m.deadline=Date.now()+m.rules.replaySeconds*1000;await this.commit(m,row);return}if(tickMatch(m,now)){await this.commit(m);return}await this.schedule(m)})}
  async fetch(req){return this.run(async()=>{try{let u=userFrom(req),url=new URL(req.url),action=url.pathname.split("/").at(-1);if(!ACCOUNT.test(u.id||""))return json({error:"sign_in_required"},401);let now=Date.now();
