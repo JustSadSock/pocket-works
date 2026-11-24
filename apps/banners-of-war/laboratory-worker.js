@@ -1,0 +1,2 @@
+import {simulate,variantProject,validateScenarioProject} from './laboratory.js';
+self.onmessage=({data})=>{let t=performance.now();try{let p=data.project;for(let variant of data.case?.variants||[])p=variantProject(p,variant);let check=validateScenarioProject(p);if(check.errors.length)throw Error(check.errors.slice(0,4).join("; "));let result=simulate(p,{seed:data.case?.seed??p.seed,mirror:!!data.case?.mirror,keep:!!data.keep});self.postMessage({id:data.id,result,ms:performance.now()-t})}catch(e){self.postMessage({id:data.id,error:String(e),ms:performance.now()-t})}};

@@ -3,14 +3,14 @@
   "slug": "banners-of-war",
   "name": "Banners of War",
   "shortName": "Banners",
-  "description": "Историческая тактическая WEGO-песочница от Античности до Средневековья, с групповым командованием и задержкой распоряжений.",
-  "version": "0.6.0",
+  "description": "Историческая WEGO-песочница: редактор карты и армий, командные сети и сравнительные эксперименты.",
+  "version": "0.7.0",
   "releaseDate": "2026-11-24",
   "releaseDateTime": "2026-11-24T13:25:00+02:00",
   "changelog": [
-    "Age of Antiquity: шесть новых исторических сражений, физические профили оружия, слоны и колесницы.",
-    "Карты переменного размера, античные организации войск и Historical Command с посыльными и донесениями.",
-    "Chronicles of War: сохранения альтернативных линий, образовательные фазы и личная хроника."
+    "Battle Laboratory: физический редактор поля боя, армии и командиры, сценарии и замыслы.",
+    "Серийные эксперименты в отдельном вычислительном потоке и локальная библиотека проектов.",
+    "Age of Antiquity: проверенная физика выносливости и четырёхуровневая иерархия."
   ],
   "status": "experimental",
   "preset": "canvas",
@@ -19,7 +19,7 @@
   "backgroundColor": "#d8d5b8",
   "themeColor": "#263b36",
   "orientation": "any",
-  "cacheName": "banners-of-war-v0.6.0-antiquity-rc9",
+  "cacheName": "banners-of-war-v0.7.0-laboratory-rc1",
   "storageNamespace": "pocket-works:banners-of-war",
   "tags": [
     "game",
