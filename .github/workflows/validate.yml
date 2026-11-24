@@ -69,6 +69,12 @@ jobs:
           npm run test:covers
           npm run validate:launcher
           node scripts/test-publish-policy.mjs
+      - name: Verify runtime contracts before full production builds
+        run: |
+          node --test scripts/runtime-repair-transforms.test.mjs scripts/runtime-contract-repair.test.mjs
+          npm run validate:mobile
+          npm run validate:updates
+          npm run validate:capabilities
 
   production-packaging:
     needs: release-preflight
