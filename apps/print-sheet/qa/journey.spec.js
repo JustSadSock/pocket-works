@@ -1,0 +1,25 @@
+import {test,expect} from '@playwright/test';
+test('upload, size, print PDF, restore after reload',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/apps/print-sheet/');
+  await expect(page.locator('#files')).toBeEnabled();
+  await page.screenshot({path:test.info().outputPath('initial.png'),fullPage:true});
+  const fixture=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf2QAAAAASUVORK5CYII=','base64');
+  await page.locator('#files').setInputFiles([{name:'one.png',mimeType:'image/png',buffer:fixture},{name:'two.png',mimeType:'image/png',buffer:fixture}]);
+  await expect(page.locator('#count')).toHaveText('2');
+  await page.locator('.photo').first().locator('select').first().selectOption('5,7');
+  await page.locator('.photo').nth(1).locator('select').first().selectOption('5,7');
+  await page.locator('#marks').check();
+  await expect(page.locator('.paper .tile')).toHaveCount(2);
+  await expect(page.locator('.paper')).toHaveCount(1);
+  await page.screenshot({path:test.info().outputPath('populated.png'),fullPage:true});
+  const download=page.waitForEvent('download');await page.locator('#pdf').click();const file=await download;expect(file.suggestedFilename()).toBe('Print-Sheet-A4.pdf');
+  await expect(page.locator('#status')).toContainText('PDF готов');
+  await page.reload();await expect(page.locator('#count')).toHaveText('2');
+  await expect(page.locator('.paper .tile')).toHaveCount(2);
+  await expect(page.locator('#marks')).toBeChecked();
+  await page.locator('.photo').first().getByRole('button',{name:/Удалить/}).click();await expect(page.locator('#count')).toHaveText('1');
+  await page.locator('#restore').click();await expect(page.locator('#count')).toHaveText('2');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+  expect(errors).toEqual([]);
+});
