@@ -1,4 +1,4 @@
-import {createMatch,joinMatch,mutateMatch,tickMatch,resolveLocked,viewMatch,viewRound,roomSummary,MAX_BODY,ENGINE} from './banners-match.mjs';
+import {createMatch,joinMatch,mutateMatch,tickMatch,resolveLocked,viewMatch,viewRound,roomSummary,rematchSource,MAX_BODY,ENGINE} from './banners-match.mjs';
 const CODE=/^[0-9a-f]{16}$/i,ACCOUNT=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}});
 const failure=e=>json({error:String(e?.message||e).slice(0,180)},String(e?.message).includes("not_member")?403:400);
@@ -22,6 +22,7 @@ export class BannersMatchRoom{
   if(!m)return json({error:"room_not_found"},404);
   if(action==="join"&&req.method==="POST"){joinMatch(m,u,now);await this.commit(m);return json(viewMatch(m,u,now,{terrain:true}))}
   if(!m.players.some(p=>p?.id===u.id))return json({error:"not_member"},403);
+  if(action==="rematch-source"&&req.method==="GET")return json(rematchSource(m,u));
   if(action==="summary"&&req.method==="GET")return json(roomSummary(m,u));
   if(action==="round"&&req.method==="GET"){let n=Number(url.searchParams.get("n"));if(!Number.isInteger(n)||n<1||n>m.completed)throw Error("round_unavailable");let row=this.ctx.storage.sql.exec("SELECT value FROM battle_rounds WHERE number=?",n).toArray()[0];if(!row)throw Error("round_unavailable");return json(viewRound(m,u,JSON.parse(row.value)))}
   if(action==="view"&&req.method==="GET"){await this.advance(m,now);return json(viewMatch(m,u,now,{terrain:url.searchParams.get("terrain")==="1"}))}
@@ -42,6 +43,7 @@ export async function handleBanners(request,env){const url=new URL(request.url);
   if(parts[0]==="rooms"&&parts.length===1&&request.method==="POST"){let p=await body(request),id=newCode(),reserved=await callIndex("POST",{id,create:true});if(!reserved.ok)return reserved;try{let r=await roomCall(id,"create","POST",p);if(!r.ok)await callIndex("POST",{id,remove:true});return r}catch(e){await callIndex("POST",{id,remove:true});throw e}}
   let id=parts[0].toLowerCase(),action=parts[1]||"view";if(!CODE.test(id)||parts.length>2)return json({error:"invalid_room"},400);
   if(action==="join"&&request.method==="POST"){let reserved=await callIndex("POST",{id});if(!reserved.ok)return reserved;let r=await roomCall(id,"join","POST",{});if(!r.ok)await callIndex("POST",{id,remove:true});return r}
+  if(action==="rematch"&&request.method==="POST"){let old=await roomCall(id,"rematch-source","GET");if(!old.ok)return old;let p=await old.json(),next=newCode(),reserved=await callIndex("POST",{id:next,create:true});if(!reserved.ok)return reserved;try{let result=await roomCall(next,"create","POST",p);if(!result.ok)await callIndex("POST",{id:next,remove:true});return result}catch(e){await callIndex("POST",{id:next,remove:true});throw e}}
   if(action==="archive"&&request.method==="POST")return callIndex("POST",{id,remove:true});
   if(!["view","round","action"].includes(action))return json({error:"not_found"},404);
   return roomCall(id,action,request.method,request.method==="POST"?await body(request):undefined,url.search)
