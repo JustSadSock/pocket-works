@@ -5,7 +5,8 @@
       "id": "regression",
       "kind": "node-test",
       "files": [
-        "engine.test.mjs"
+        "engine.test.mjs",
+        "living.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -128,6 +129,79 @@
         {
           "action": "visible",
           "selector": "[data-act=\"lab\"]"
+        }
+      ]
+    },
+    {
+      "id": "mobile-performance",
+      "kind": "browser-node",
+      "entry": "mobile-benchmark.mjs",
+      "tier": "smoke"
+    },
+    {
+      "id": "living-lands",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "fill",
+          "selector": "#seed",
+          "value": "living-valley"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"new\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"specialize\"][data-value=\"mining\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"specialize\"][data-value=\"mining\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"layer\"][data-value=\"development\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"connect\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"cancel\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"cancel\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"tab\"][data-value=\"realm\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"autonomy\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"3\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "screenshot"
         }
       ]
     }
