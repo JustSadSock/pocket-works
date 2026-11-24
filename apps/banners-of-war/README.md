@@ -1,4 +1,4 @@
-# Banners of War · 0.3.0 (Living Battlefield — experimental)
+# Banners of War · 0.5.0 — Chronicles of War (release candidate)
  
 An offline-first WEGO medieval tactics game for Pocket Works. The launcher uses the isolated app.config.json. No root or platform changes.
 
@@ -95,3 +95,7 @@ Three representative-sector scenario definitions and atlas entry point, selectab
 
 ### Chronicles completion laboratory
 The 1008 original cases are regenerated using the original commander-lab case function and unchanged common physics. Separate independent tests vary forecast horizon at the same commander budget and compare difficulty levels. 300 historical cases cross six chapters, five series and ten deterministic initial perturbations with 120/360/900-second horizons. Eight QA shards emit per-battle JSONL, not merged into prior defective results. Local V8 smoke results are in completion-smoke.json; the complete matrix must be retrieved from GitHub Actions artifacts and validated before conclusions. Physical benchmark is ten simulated seconds, not browser FPS. Historical sector geometry and profile numbers are illustrative modelling assumptions.
+
+
+## 0.5.0 — completion evidence
+Six playable representative-sector reconstructions, profile-based equipment, schematic historical study, branch graph and personal archive. See completion-ci-summary.json for actual CI laboratory counts at 782eb8d. The historical/expanded scales add separate regiments to the same fixed battlefield; they do not simulate full historical populations. The 900 s horizon represents an extended tactical sector, not the duration of the original battles. Release remains conditional on required QA and deployed production verification.

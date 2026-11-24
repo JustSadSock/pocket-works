@@ -96,3 +96,7 @@ export function battlePhases(E,t){
  out.push({...metrics,stage,contact,committed,cohesion:[0,1].map(side=>{let q=units.filter(u=>u.side===side);return q.reduce((n,u)=>n+u.cohesion,0)/Math.max(1,q.length)}),morale:[0,1].map(side=>{let q=units.filter(u=>u.side===side);return q.reduce((n,u)=>n+u.morale,0)/Math.max(1,q.length)}),goals:zoneStatus(E,s).map(q=>({name:q.name,control:q.control})),postures:[0,1].map(side=>s.aiIntent?.[side]?.posture||null)});
  }return out
 }
+
+// Store common immutable round snapshots once, without changing replay state.
+export function packHistoryGraph(history,branches){let records=[],keys=new Map();const intern=r=>{let record={...r,before:{...r.before,terrain:null}},key=JSON.stringify(record);if(!keys.has(key)){keys.set(key,records.length);records.push(record)}return keys.get(key)};return {records,active:history.map(intern),branches:branches.map(t=>{let {history,...rest}=packTimeline(t);return {...rest,refs:t.history.map(intern)}})}}
+export function unpackHistoryGraph(graph,terrain){if(!graph||!Array.isArray(graph.records)||!Array.isArray(graph.active)||!Array.isArray(graph.branches))throw Error("Invalid history graph");const read=i=>{if(!Number.isInteger(i)||!graph.records[i]?.before)throw Error("Invalid round reference");let r=graph.records[i];return {...r,before:{...r.before,terrain}}};return {history:graph.active.map(read),branches:graph.branches.map(t=>{let {refs,...rest}=t;return {...rest,state:{...rest.state,terrain},history:refs.map(read)}})}}

@@ -17,7 +17,7 @@ export function perceive(E,s,side){
  for(const u of s.units.filter(u=>u.side!==side&&E.alive(u)&&E.visible(s,side,u)).sort((a,b)=>a.id-b.id)){
   // A sighting includes observable geometry and movement; never orders, programs or exact hidden stats.
   const estimate=s.fog?{n:Math.max(1,Math.round(u.n/10)*10),cohesion:Math.round(u.cohesion/25)*25,morale:u.rout?15:65,fatigue:u.v>2?40:25}: {n:u.n,cohesion:u.cohesion,morale:u.morale,fatigue:u.fatigue};
-  const v={id:u.id,type:u.type,profile:u.profile,x:u.x,y:u.y,a:u.a,motionX:u.motionX||0,motionY:u.motionY||0,rout:!!u.rout,cols:u.cols,form:u.form,...estimate,confidence:1,seen:s.time};intel[u.id]=v;enemy.push(v);
+  const v={id:u.id,type:u.type,profile:u.profile??null,x:u.x,y:u.y,a:u.a,motionX:u.motionX||0,motionY:u.motionY||0,rout:!!u.rout,cols:u.cols,form:u.form,...estimate,confidence:1,seen:s.time};intel[u.id]=v;enemy.push(v);
  }
  for(const [id,v] of Object.entries({...previous,...Object.fromEntries(Object.entries(s.known?.[side]||{}).map(([k,q])=>[k,previous[k]&&previous[k].seen>=q.time?previous[k]:{...q,n:previous[k]?.n??E.spec(q).n,cohesion:previous[k]?.cohesion??75,morale:previous[k]?.morale??70,fatigue:previous[k]?.fatigue??30,motionX:previous[k]?.motionX??0,motionY:previous[k]?.motionY??0,seen:q.time}]))})){
   if(intel[id]||!s.fog)continue;let age=s.time-v.seen;if(age>180)continue;let q={...v,confidence:Math.max(.15,1-age/210)};intel[id]=q;enemy.push(q)
@@ -58,7 +58,7 @@ export function positionValue(E,p,b,q){
 // Deterministic coarse forward model. No orders or hidden enemy state are consulted.
 export function forecast(E,p,b,q,h,depth){
  const f=p.front, lane=b.lanes.find(v=>v.wing===q.wing), goal=q.posture==="hold"||q.posture==="reinforce"||q.posture==="screen"?b.home:q.posture==="withdraw"?point(clamp(b.home.x-f*150,25,E.W-25),b.home.y):lane;
- const copyUnit=u=>({x:u.x,y:u.y,type:u.type,profile:u.profile,n:u.n,cohesion:u.cohesion,morale:u.morale,fatigue:u.fatigue,confidence:u.confidence??1});
+ const copyUnit=u=>({x:u.x,y:u.y,type:u.type,profile:u.profile??null,n:u.n,cohesion:u.cohesion,morale:u.morale,fatigue:u.fatigue,confidence:u.confidence??1});
  const own=p.own.filter(u=>u.type!=="guard").map(copyUnit),enemy=b.foes.filter(u=>u.type!=="guard").map(copyUnit);
  const baseOwn=sum(own,power),baseEnemy=sum(enemy,u=>power(u)*u.confidence);
  const move=(u,dest,seconds)=>{let distance=dist(u,dest);if(distance<1)return;let land=E.sample(p.terrain,u.x,u.y),speed=E.spec(u).speed*land.move*(.45+.55*u.cohesion/100)*(1-u.fatigue/160),length=Math.min(distance,speed*seconds),x=clamp(u.x+(dest.x-u.x)*length/distance,25,E.W-25),y=clamp(u.y+(dest.y-u.y)*length/distance,25,E.H-25);let to=E.sample(p.terrain,x,y),slope=Math.abs(to.h-land.h)/Math.max(1,length),pass=Math.min(1,to.move/Math.max(.15,land.move))/(1+slope*3);u.x+=(x-u.x)*pass;u.y+=(y-u.y)*pass;u.fatigue=clamp(u.fatigue+length*.025*(2-land.move),0,100)};
