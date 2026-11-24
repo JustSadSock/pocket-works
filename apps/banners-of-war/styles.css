@@ -54,3 +54,5 @@ dialog label{display:flex;flex-direction:column;gap:4px;margin:10px 0;font-size:
 #study-controls{padding:8px 10px;background:#e9e2c5;color:#343b30;max-height:35dvh;overflow:auto}#study-controls[hidden]{display:none}#study-caption{font:600 .83rem/1.35 Georgia,serif;margin:0 0 6px}.study-navigation{display:flex;align-items:center;gap:6px}.study-navigation input{min-width:30px;flex:1}#study-interpretation{width:100%;margin:4px 0}.phase-table{max-width:100%;overflow:auto}.chronicle details{overflow-wrap:anywhere}
 
 .geo-chapters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.35rem}.geo-chapters button{text-align:left;min-height:44px;font-size:.85rem}
+
+#command-board{white-space:nowrap}#command-detail{font-size:.85rem;line-height:1.5;margin:.5rem 0;color:var(--muted,#64634d)}
