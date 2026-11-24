@@ -152,4 +152,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.scre
 addEventListener('resize',()=>renderer.resize(),{passive:true});
 
 renderer.resize();setScreen('menu');hud();requestAnimationFrame(frame);
-if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}),{once:true});
+
