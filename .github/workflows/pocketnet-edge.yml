@@ -46,7 +46,7 @@ permissions:
 
 jobs:
   edge:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -113,7 +113,6 @@ jobs:
           node pocketnet/test/perekos.mjs
           node pocketnet/test/chyepukha-safety.mjs
           node pocketnet/test/chyepukha-longrun.mjs
-          node pocketnet/test/banners-real.mjs
       - name: Install real Fog browser QA and copy authentic app assets
         run: |
           mkdir -p dist-site/apps
@@ -131,10 +130,28 @@ jobs:
           /tmp/pocketnet-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/pocketnet-fog.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; tail -n 120 /tmp/pocketnet-fog.log' EXIT
-          node pocketnet/test/banners-real.mjs --resume
           node pocketnet/test/fog-real-worker.mjs
           node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/worker.config.ts
 
+      - name: Banners isolated real Worker, durable restart and browser matches
+        shell: bash
+        run: |
+          set -euo pipefail
+          wr=/tmp/pocketnet-wrangler/node_modules/.bin/wrangler
+          start() {
+            "$wr" dev --local --port 8787 --persist-to "$1" > /tmp/banners-worker.log 2>&1 &
+            pid=$!
+          }
+          stop() { kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; }
+          trap 'stop; tail -n 120 /tmp/banners-worker.log' EXIT
+          start /tmp/banners-durable
+          node pocketnet/test/banners-real.mjs
+          stop
+          start /tmp/banners-durable
+          node pocketnet/test/banners-real.mjs --resume
+          stop
+          start /tmp/banners-browser
+          for i in {1..100}; do curl -fsS http://127.0.0.1:8787/pocket-id/config >/dev/null && break; sleep 1; done
           node_modules/.bin/playwright test --config apps/banners-of-war/qa/network-real.config.ts
       - name: Banners network browser evidence
         if: always()
