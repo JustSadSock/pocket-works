@@ -57,6 +57,9 @@ export const antiquityProfiles={
  gallic:{base:"sword",name:"Галльская пехота",weapon:"longSword",shield:"oval",helmet:"cap",protection:"textile",organization:"contingent",physics:{reach:1.2,armor:.12,speed:1.7,arms:arms(1.2,1.6,1,.47,9,.8)}},
  numidian:{base:"horseArcher",name:"Нумидийские всадники",weapon:"javelin",shield:"round",helmet:"cap",protection:"textile",organization:"contingent",physics:{range:36,ammo:6,reload:6,armor:.04,speed:5.9,arms:arms(.95,1.8,1,.2,4,.65)}},
  punicHorse:{base:"knight",name:"Иберо-галльская конница",weapon:"spear",shield:"oval",helmet:"cap",protection:"mail",organization:"contingent",physics:{reach:2,armor:.24,speed:5,arms:arms(2,1.8,1,.25,10,.8)}},
+ elephant:{base:"knight",name:"Боевые слоны",weapon:"spear",shield:"none",helmet:"cap",protection:"textile",organization:"elephantDetachment",physics:{reach:2.8,armor:.20,speed:3.1,skill:.92,discipline:.72,morale:88,attack:2.1,mount:"elephant",crew:3,teamGap:5.5,depthGap:7,bodyMass:11,turnRate:.18,arms:arms(2.8,3,1,0,11,.8)}},
+ chariot:{base:"lightHorse",name:"Серпоносные колесницы",weapon:"spear",shield:"none",helmet:"cap",protection:"scale",organization:"chariotDetachment",physics:{reach:2.1,armor:.17,speed:5.4,skill:.85,discipline:.75,morale:80,attack:1.75,mount:"chariot",crew:2,teamGap:4.5,depthGap:6,bodyMass:5,turnRate:.23,arms:arms(2.1,3,1,0,8,.65)}},
+ lateSarissa:{base:"pike",name:"Антигонидские фалангиты",weapon:"sarissa",shield:"smallRound",helmet:"phrygian",protection:"textile",organization:"taxis",physics:{reach:4.8,armor:.23,speed:1.27,discipline:1.1,arms:arms(4.8,1.02,5,.25,17,.65)}},
  ancientGuard:{base:"guard",name:"Командир и свита",weapon:"spear",shield:"round",helmet:"attic",protection:"bronze",organization:"command",physics:{reach:2,armor:.28,speed:3.6,arms:arms(2,1.8,1,.3,12,.7)}}
 };
 Object.assign(historicalProfiles,antiquityProfiles);
