@@ -2,6 +2,7 @@
 // fresh worktree. Build reuse is opt-in and restricted to verified same-run artifacts.
 import { spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { performance } from 'node:perf_hooks';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,9 +58,13 @@ export async function executeShard(root,shard,{buildBundle=null}={}) {
     mkdirSync(dest,{recursive:true});
     let failure=null, run=null, cleanup=null;
     const startedAt=new Date().toISOString();
+    const taskStart=performance.now(), phases={};
+    let phase='checkout', phaseStart=taskStart;
+    const next=name=>{phases[phase]=Math.round(performance.now()-phaseStart);phase=name;phaseStart=performance.now();};
     try {
       const checkout=await command('git',['worktree','add','--detach',work,'HEAD'],{cwd:root,timeoutMs:120000});
       if(!checkout.success) throw Error('Isolated checkout failed: '+JSON.stringify(checkout));
+      next('install');
       if(shard.pool!=='cpu-plain') {
         const install=await command('npm',['ci','--legacy-peer-deps','--no-audit','--no-fund'],{cwd:work,timeoutMs:600000});
         if(!install.success) throw Error('Dependency installation failed: '+JSON.stringify(install));
@@ -68,6 +73,7 @@ export async function executeShard(root,shard,{buildBundle=null}={}) {
           if(!browser.success) throw Error('Playwright version mismatch');
         }
       }
+      next('stageBuild');
       let runner='scripts/universal-qa/run.mjs', verified=false;
       if(buildBundle&&shard.pool==='browser'){
         const config=JSON.parse(readFileSync(join(work,'apps',task.app,'app.config.json'),'utf8'));
@@ -78,9 +84,11 @@ export async function executeShard(root,shard,{buildBundle=null}={}) {
           verified=true;
         }
       }
+      next('legacyExecution');
       run=await command(process.execPath,[runner],{
         cwd:work,timeoutMs:2700000,env:{...process.env,PW_QA_TASK:JSON.stringify(task),PW_QA_VERIFIED_BUILD:verified?'1':'0'}
       });
+      next('collectEvidence');
       const evidence=join(work,'qa-artifacts',task.key);
       if(existsSync(evidence)) cpSync(evidence,dest,{recursive:true});
       if(!run.success) throw Error('Legacy runner failed: '+JSON.stringify(run));
@@ -90,6 +98,7 @@ export async function executeShard(root,shard,{buildBundle=null}={}) {
         throw Error('Missing, mismatched or failed legacy evidence');
     } catch(e) { failure=e.message; }
     finally {
+      next('cleanup');
       if(existsSync(work)) {
         cleanup=await command('git',['worktree','remove','--force',work],{cwd:root,timeoutMs:120000});
         if(!cleanup.success) failure=(failure?failure+'; ':'')+'Worktree cleanup failed';
@@ -101,6 +110,9 @@ export async function executeShard(root,shard,{buildBundle=null}={}) {
       if(existsSync(resultFile)) cpSync(resultFile,join(dest,'legacy-result.json'));
       writeFileSync(resultFile,JSON.stringify({schema:1,...task,success:false,startedAt,finishedAt:new Date().toISOString(),error:failure},null,2));
     }
+    next('done');
+    const telemetry={schema:1,key:task.key,pool:shard.pool,success:!failure,totalMs:Math.round(performance.now()-taskStart),phases};
+    writeFileSync(join(dest,'executor-timing.json'),JSON.stringify(telemetry,null,2),{flag:'wx'});
     results.push({key:task.key,success:!failure,error:failure});
     console.log((failure?'FAIL ':'PASS ')+task.key+(failure?': '+failure:''));
   }
