@@ -1,6 +1,9 @@
+const RELEASE_NOTES = ["Полностью переработано ощущение вращения квартетов: фрагменты теперь идут по дуге вокруг заклёпки, приподнимаются над листом и мягко садятся на место.","Добавлены механический отклик рамы, пружинный доворот заклёпок и более выразительная анимация успешного оттиска.","Сохранён полноценный режим reduced motion и обновлён офлайн-кэш приложения."];
+const RELEASE_DATE = "2026-08-22";
+const APP_VERSION = "1.1.0";
 const CACHE_NAME = 'kvarta-v1.1.0';
 const CACHE_PREFIX = 'kvarta-';
-const APP_SHELL = [
+const APP_SHELL = ["../../shared/update-manager.js","../../shared/update-manager.css","../../shared/pwa-utils.js",
   './',
   './index.html',
   './styles.css',
@@ -14,7 +17,7 @@ const APP_SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  
 });
 
 self.addEventListener('activate', (event) => {
@@ -44,3 +47,5 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:1,cacheName:"kvarta-v1.1.0"});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
