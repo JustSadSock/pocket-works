@@ -84,3 +84,7 @@ The previous physical kernel and legacy commander remain intact. New games opt i
 - Positional value now samples approach capacity, flank obstruction, elevation, withdrawal routes, line of sight and actual available infantry frontage. Hold orders no longer fall through to attack at close contact.
 - Bounded one-to-three-round coarse forecasts compare observed enemy hypotheses. This is an approximation, not a second physical engine. No hidden orders are read. Existing physics and difficulty stats are unchanged.
 - 12 commander regressions passed in a JavaScript execution harness (not Node/Playwright). Four 180-second paired smoke trials are recorded in `position-audit.json`; not a statistically meaningful replacement for the 1008-battle matrix.
+
+
+### Chronicles of War (unreleased development)
+Three representative-sector scenario definitions and atlas entry point, selectable sides, historical/free/alternate/observer modes, generic time-limit zone objectives, terrain grids and historical comparison. Reconstruction limitations in research/. Four scenario regressions executed in JS harness, six 120-second smoke trials in chronicles-audit.json. Browser test registered, not yet confirmed. Additional scenarios, full-scale aggregation, period equipment physics, interactive timeline, non-destructive branching and full experiments remain open. Existing version remains experimental until release gates pass.

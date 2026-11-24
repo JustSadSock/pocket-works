@@ -1,0 +1,148 @@
+[
+  {
+    "id": "hastings",
+    "variant": "autonomous",
+    "seconds": 120,
+    "result": null,
+    "counts": [
+      1228,
+      1008
+    ],
+    "power": [
+      1218.6399999999999,
+      970.5600000000002
+    ],
+    "fatigue": 3.166122378703023,
+    "score": 0.6603322475570031,
+    "zones": [
+      {
+        "name": "Гребень Сенлака",
+        "control": 1
+      }
+    ],
+    "loss": 0
+  },
+  {
+    "id": "hastings",
+    "variant": "changed-ground",
+    "seconds": 120,
+    "result": null,
+    "counts": [
+      1228,
+      1008
+    ],
+    "power": [
+      1218.6399999999999,
+      970.5600000000002
+    ],
+    "fatigue": 3.166122378703023,
+    "score": 0.6603322475570031,
+    "zones": [
+      {
+        "name": "Гребень Сенлака",
+        "control": 1
+      }
+    ],
+    "loss": 0
+  },
+  {
+    "id": "bannockburn",
+    "variant": "autonomous",
+    "seconds": 120,
+    "result": null,
+    "counts": [
+      1148,
+      2008
+    ],
+    "power": [
+      1046.4897944565691,
+      1740.6965619059958
+    ],
+    "fatigue": 18.55922333856542,
+    "score": 0.1672417734047989,
+    "zones": [
+      {
+        "name": "Подход к Стерлингу",
+        "control": 1
+      },
+      {
+        "name": "Рубеж развёртывания",
+        "control": -1
+      }
+    ],
+    "loss": 66.05487576174764
+  },
+  {
+    "id": "bannockburn",
+    "variant": "changed-ground",
+    "seconds": 120,
+    "result": null,
+    "counts": [
+      1148,
+      2008
+    ],
+    "power": [
+      1046.1318081920876,
+      1740.277050281879
+    ],
+    "fatigue": 18.584595418957832,
+    "score": 0.16718825781611354,
+    "zones": [
+      {
+        "name": "Подход к Стерлингу",
+        "control": 1
+      },
+      {
+        "name": "Рубеж развёртывания",
+        "control": -1
+      }
+    ],
+    "loss": 66.13995996065952
+  },
+  {
+    "id": "agincourt",
+    "variant": "autonomous",
+    "seconds": 120,
+    "result": null,
+    "counts": [
+      728,
+      1228
+    ],
+    "power": [
+      595.8230178911283,
+      1105.0083942358413
+    ],
+    "fatigue": 34.014561180922726,
+    "score": 0.5133674089636682,
+    "zones": [
+      {
+        "name": "Английская линия",
+        "control": 1
+      }
+    ],
+    "loss": 32.49789753603767
+  },
+  {
+    "id": "agincourt",
+    "variant": "changed-ground",
+    "seconds": 120,
+    "result": null,
+    "counts": [
+      728,
+      1228
+    ],
+    "power": [
+      621.3660802464669,
+      1122.6813325202336
+    ],
+    "fatigue": 19.446537612072408,
+    "score": 0.522680150215853,
+    "zones": [
+      {
+        "name": "Английская линия",
+        "control": 1
+      }
+    ],
+    "loss": 20.992566938895067
+  }
+]

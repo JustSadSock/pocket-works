@@ -22,7 +22,7 @@ export function perceive(E,s,side){
  for(const [id,v] of Object.entries({...previous,...Object.fromEntries(Object.entries(s.known?.[side]||{}).map(([k,q])=>[k,previous[k]&&previous[k].seen>=q.time?previous[k]:{...q,n:previous[k]?.n??E.types[q.type].n,cohesion:previous[k]?.cohesion??75,morale:previous[k]?.morale??70,fatigue:previous[k]?.fatigue??30,motionX:previous[k]?.motionX??0,motionY:previous[k]?.motionY??0,seen:q.time}]))})){
   if(intel[id]||!s.fog)continue;let age=s.time-v.seen;if(age>180)continue;let q={...v,confidence:Math.max(.15,1-age/210)};intel[id]=q;enemy.push(q)
  }
- return {own,enemy:enemy.sort((a,b)=>a.id-b.id),intel,terrain:s.terrain,side,front:side?-1:1,round:s.round,time:s.time,remaining:Math.max(0,(s.objective?.seconds||1800)-s.time),objective:s.objective?.kind||"power",memory:s.aiIntent?.[side]||null}
+ return {own,enemy:enemy.sort((a,b)=>a.id-b.id),intel,terrain:s.terrain,side,front:side?-1:1,round:s.round,time:s.time,remaining:Math.max(0,(s.objective?.seconds||1800)-s.time),objective:s.objective?.kind||"power",goals:s.objective?.zones||[],memory:s.aiIntent?.[side]||null}
 }
 function center(a,fallback){return a.length?point(mean(a,u=>u.x),mean(a,u=>u.y)):fallback}
 export function analyze(E,p){
@@ -52,8 +52,8 @@ export function positionValue(E,p,b,q){
  const enemyDistance=dist(q,b.enemy), relevance=b.foes.length?clamp(1-enemyDistance/420,0,1):0;
  const constriction=clamp(1-width/250,0,1);
  const crossing=mean(approaches,m=>m<.4?1:0)*clamp(at(45,0).move,0,1);
- const value=relevance*(1.1*constriction*screen+flank*.55+rise*.65+crossing*.45+reserve*.22+sight*.12)*clamp(retreat+.15,.15,1.15);
- return {value,width,flank,retreat,rise,screen,reserve,sight,crossing};
+ const goalValue=mean(p.goals||[],z=>clamp(1-dist(q,z)/z.r,0,1)*z.weight);const value=relevance*(1.1*constriction*screen+flank*.55+rise*.65+crossing*.45+reserve*.22+sight*.12)*clamp(retreat+.15,.15,1.15);
+ return {value:value+goalValue*.65,width,flank,retreat,rise,screen,reserve,sight,crossing,goalValue};
 }
 // Deterministic coarse forward model. No orders or hidden enemy state are consulted.
 export function forecast(E,p,b,q,h,depth){
@@ -72,7 +72,8 @@ export function forecast(E,p,b,q,h,depth){
   pressure+=mean(a,v=>Math.max(0,v.ratio-1));
  }
  const ownRetention=sum(own,power)/Math.max(1,baseOwn),enemyRetention=sum(enemy,u=>power(u)*u.confidence)/Math.max(1,baseEnemy),progress=clamp(f*(mean(own,u=>u.x)-ownHome.x)/150,-1,1);
- return {value:clamp((ownRetention-enemyRetention)*2.5,-1.5,1.5)+progress*(p.objective==="territory"?.25:.08)-Math.min(.6,pressure/Math.max(1,depth)*.12),ownRetention,enemyRetention,progress,pressure,arrived,depth};
+ const zoneGain=sum(p.goals||[],z=>{let before=mean(p.own,u=>clamp(1-dist(u,z)/z.r,0,1)),after=mean(own,u=>clamp(1-dist(u,z)/z.r,0,1));return (after-before)*z.weight});
+ return {value:zoneGain*1.2+clamp((ownRetention-enemyRetention)*2.5,-1.5,1.5)+progress*(p.objective==="territory"?.25:.08)-Math.min(.6,pressure/Math.max(1,depth)*.12),ownRetention,enemyRetention,progress,pressure,arrived,depth,zoneGain};
 }
 
 export function alternatives(E,p,b,traits,level){

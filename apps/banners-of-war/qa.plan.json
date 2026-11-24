@@ -116,6 +116,22 @@
         "qa/minds.spec.ts"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "chronicles",
+      "kind": "node-test",
+      "files": [
+        "chronicles.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "chronicles-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/chronicles.spec.ts"
+      ],
+      "tier": "smoke"
     }
   ]
 }
