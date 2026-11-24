@@ -1,0 +1,372 @@
+name: CI Overhaul Integrated Shadow
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-integrated.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ci-overhaul-integrated
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      cpu: ${{ steps.plan.outputs.cpu }}
+      browser: ${{ steps.plan.outputs.browser }}
+      has_cpu: ${{ steps.plan.outputs.has_cpu }}
+      has_browser: ${{ steps.plan.outputs.has_browser }}
+      has_build: ${{ steps.plan.outputs.has_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify legacy comparison inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45380288938" |
+            jq -e '.head_sha == "d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3" and .name == "Universal Pocket Works QA" and .status == "completed" and .conclusion == "success"'
+          git diff --exit-code d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 HEAD -- . ':!scripts/ci-overhaul/**' ':!.github/workflows/ci-overhaul-*'
+      - name: Test and construct complete integrated plan
+        id: plan
+        run: |
+          node --test scripts/ci-overhaul/*.test.mjs
+          mkdir plan
+          printf '{}' > "$RUNNER_TEMP/integrated-event.json"
+          GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$RUNNER_TEMP/integrated-event.json" \
+            QA_BASE_SHA=327ebcdc3f32eb1120d7164f5113746c0e5cd92e \
+            QA_HEAD_SHA=d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 \
+            GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' \
+            node scripts/universal-qa/plan.mjs > plan/legacy.txt
+          node scripts/ci-overhaul/integrated.mjs plan plan/legacy.txt plan/plan.json
+          {
+            echo "cpu=$(jq -c .cpu plan/plan.json)"
+            echo "browser=$(jq -c .browser plan/plan.json)"
+            echo "has_cpu=$(jq -c .hasCpu plan/plan.json)"
+            echo "has_browser=$(jq -c .hasBrowser plan/plan.json)"
+            echo "has_build=$(jq -c .hasBuild plan/plan.json)"
+          } >> "$GITHUB_OUTPUT"
+          jq '{legacyJobs,shardJobs,sharedBuildTasks:(.prebuilt|length)}' plan/plan.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integrated-plan-${{ github.run_attempt }}
+          path: plan/
+          if-no-files-found: error
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.has_build == 'true'
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Trust only the checked-out workspace
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" rev-parse --verify HEAD
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - run: npm run deploy:site
+      - name: Seal one validated site
+        run: |
+          node scripts/ci-overhaul/build-once.mjs seal . build-bundle
+          tar -cf build-bundle.tar -C build-bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integrated-build-${{ github.run_attempt }}
+          path: build-bundle.tar
+          if-no-files-found: error
+          retention-days: 3
+
+  cpu:
+    needs: plan
+    if: needs.plan.outputs.has_cpu == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.plan.outputs.cpu) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute isolated tasks; record failed attempts for audit
+        continue-on-error: true
+        env:
+          PW_QA_SHARD: ${{ toJSON(matrix) }}
+        run: node scripts/ci-overhaul/run-shard.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shadow-shard-${{ matrix.id }}-${{ github.run_attempt }}
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  browser:
+    needs: [plan, build]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.has_browser == 'true' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.plan.outputs.browser) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Trust only the checked-out workspace
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" rev-parse --verify HEAD
+      - uses: actions/download-artifact@v4
+        if: matrix.needsBuild
+        with:
+          name: integrated-build-${{ github.run_attempt }}
+          path: incoming
+      - name: Verify downloaded build
+        if: matrix.needsBuild
+        run: |
+          mkdir build-bundle
+          tar -xf incoming/build-bundle.tar -C build-bundle
+          node scripts/ci-overhaul/build-once.mjs verify . build-bundle
+      - name: Execute isolated tasks; record failed attempts for audit
+        continue-on-error: true
+        env:
+          PW_QA_SHARD: ${{ toJSON(matrix) }}
+          PW_QA_BUILD_BUNDLE: ${{ matrix.needsBuild && format('{0}/build-bundle', github.workspace) || '' }}
+        run: node scripts/ci-overhaul/run-shard.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shadow-shard-${{ matrix.id }}-${{ github.run_attempt }}
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  first:
+    needs: [plan, build, cpu, browser]
+    if: always() && needs.plan.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.cpu.result == 'success' || needs.cpu.result == 'skipped') && (needs.browser.result == 'success' || needs.browser.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      cpu: ${{ steps.first.outputs.cpu }}
+      browser: ${{ steps.first.outputs.browser }}
+      has_cpu: ${{ steps.first.outputs.has_cpu }}
+      has_browser: ${{ steps.first.outputs.has_browser }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: integrated-plan-${{ github.run_attempt }}
+          path: plan
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-summary-45380288938
+          run-id: 45380288938
+          github-token: ${{ github.token }}
+          path: legacy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shadow-shard-*-${{ github.run_attempt }}
+          path: first-evidence
+      - name: Normalize attempt-specific artifact directories
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for folder in first-evidence/shadow-shard-*-"$GITHUB_RUN_ATTEMPT"; do
+            mv "$folder" "${folder%-$GITHUB_RUN_ATTEMPT}"
+          done
+      - name: Audit all first attempts and select bounded retries
+        id: first
+        run: |
+          node scripts/ci-overhaul/integrated.mjs first plan/plan.json legacy/summary.json first-evidence first-report
+          {
+            echo "cpu=$(jq -c .cpu first-report/retry.json)"
+            echo "browser=$(jq -c .browser first-report/retry.json)"
+            echo "has_cpu=$(jq -c .hasCpu first-report/retry.json)"
+            echo "has_browser=$(jq -c .hasBrowser first-report/retry.json)"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integrated-first-${{ github.run_attempt }}
+          path: first-report/
+          if-no-files-found: error
+
+  retry_cpu:
+    needs: [first, build]
+    if: always() && needs.first.result == 'success' && needs.first.outputs.has_cpu == 'true' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.first.outputs.cpu) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute isolated tasks; record failed attempts for audit
+        continue-on-error: true
+        env:
+          PW_QA_SHARD: ${{ toJSON(matrix) }}
+        run: node scripts/ci-overhaul/run-shard.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: retry-shard-${{ matrix.id }}-${{ github.run_attempt }}
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  retry_browser:
+    needs: [first, build]
+    if: always() && needs.first.result == 'success' && needs.first.outputs.has_browser == 'true' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.first.outputs.browser) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Trust only the checked-out workspace
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" rev-parse --verify HEAD
+      - uses: actions/download-artifact@v4
+        if: matrix.needsBuild
+        with:
+          name: integrated-build-${{ github.run_attempt }}
+          path: incoming
+      - name: Verify downloaded build
+        if: matrix.needsBuild
+        run: |
+          mkdir build-bundle
+          tar -xf incoming/build-bundle.tar -C build-bundle
+          node scripts/ci-overhaul/build-once.mjs verify . build-bundle
+      - name: Execute isolated tasks; record failed attempts for audit
+        continue-on-error: true
+        env:
+          PW_QA_SHARD: ${{ toJSON(matrix) }}
+          PW_QA_BUILD_BUNDLE: ${{ matrix.needsBuild && format('{0}/build-bundle', github.workspace) || '' }}
+        run: node scripts/ci-overhaul/run-shard.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: retry-shard-${{ matrix.id }}-${{ github.run_attempt }}
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  final:
+    needs: [plan, first, retry_cpu, retry_browser]
+    if: always() && needs.plan.result == 'success' && needs.first.result == 'success' && (needs.retry_cpu.result == 'success' || needs.retry_cpu.result == 'skipped') && (needs.retry_browser.result == 'success' || needs.retry_browser.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: integrated-plan-${{ github.run_attempt }}
+          path: plan
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-summary-45380288938
+          run-id: 45380288938
+          github-token: ${{ github.token }}
+          path: legacy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shadow-shard-*-${{ github.run_attempt }}
+          path: first-evidence
+      - name: Normalize attempt-specific artifact directories
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for folder in first-evidence/shadow-shard-*-"$GITHUB_RUN_ATTEMPT"; do
+            mv "$folder" "${folder%-$GITHUB_RUN_ATTEMPT}"
+          done
+      - name: Prepare retry evidence folder
+        run: mkdir -p retry-evidence
+      - uses: actions/download-artifact@v4
+        if: needs.first.outputs.has_cpu == 'true' || needs.first.outputs.has_browser == 'true'
+        with:
+          pattern: retry-shard-*-${{ github.run_attempt }}
+          path: retry-evidence
+      - name: Normalize retry artifact directories
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for folder in retry-evidence/retry-shard-*-"$GITHUB_RUN_ATTEMPT"; do
+            mv "$folder" "${folder%-$GITHUB_RUN_ATTEMPT}"
+          done
+      - name: Final independent coverage and build reuse audit
+        run: node scripts/ci-overhaul/integrated.mjs finish plan/plan.json legacy/summary.json first-evidence retry-evidence final-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integrated-final-${{ github.run_attempt }}
+          path: final-report/
+          if-no-files-found: error
+
+  gate:
+    needs: [plan, build, cpu, browser, first, retry_cpu, retry_browser, final]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require final evidence, never green on a skipped audit
+        env:
+          FINAL: ${{ needs.final.result }}
+        run: test "$FINAL" = success
