@@ -20,7 +20,7 @@ concurrency:
 jobs:
   parity:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,6 +50,16 @@ jobs:
             const line="Legacy tasks: "+s.legacyJobs+"; proposed jobs: "+s.shardJobs+"; exact task parity verified";
             console.log(line);appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Shadow parity\n"+line+"\n");
           '
+      - name: Run bounded real-test pilot (individual versus batched)
+        run: node scripts/ci-overhaul/pilot.mjs shadow-evidence/legacy-plan.txt
+      - name: Upload pilot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-overhaul-pilot-results
+          path: pilot-evidence/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload shadow planning evidence
         if: always()
         uses: actions/upload-artifact@v4
