@@ -1,0 +1,4 @@
+import assert from 'node:assert/strict';
+import {missions,key,inside,reveal,fresh,transition,target,route} from './core.mjs';
+function verify(){let report=[];for(const m of missions){let s=fresh(m);for(const end of [...m.samples,m.home]){const path=route(m,[s.x,s.y],end);if(!path)throw Error('Disconnected '+m.title);for(const a of path)s=transition(m,s,a)}if(s.result!=='won'||s.hull!==3)throw Error('Cannot finish '+m.title);let scan=transition(m,fresh(m),{type:'scan'});if(scan.oxygen!==m.oxygen-3||scan.known.length<=fresh(m).known.length)throw Error('Bad scan');report.push({mission:m.title,turns:s.turns,oxygenLeft:s.oxygen})}const m=missions[0];let s=fresh(m);s={...s,x:4,y:2};s=transition(m,s,{type:'move',dx:0,dy:1});if(s.hull!==2||s.y!==2||s.oxygen!==69)throw Error('Collision');s=transition(m,{...fresh(m),oxygen:1},{type:'move',dx:0,dy:-1});if(s.result!=='lost')throw Error('Oxygen loss');return report}
+assert.equal(verify().length,3);console.log(verify());
