@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "files": [
+        "engine.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "fill",
+          "selector": "#seed",
+          "value": "crown0"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"new\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#panel .panelhead"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"build\"][data-value=\"0\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"recruit\"][data-value=\"0\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"tab\"][data-value=\"diplomacy\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"menu\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"save\"]"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
