@@ -11,7 +11,7 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.x,a.
 function seeded(s){let h=2166136261;for(let c of String(s))h=Math.imul(h^c.charCodeAt(0),16777619);return ()=>((h=Math.imul(h,1664525)+1013904223|0)>>>0)/4294967296}
 export function personality(style,seed){let a=personalities[style];if(!a){let r=seeded(seed);a=Array.from({length:10},()=>.15+r()*.7)}return Object.fromEntries(["risk","patience","initiative","aggression","caution","preservation","adaptability","reserve","maneuver","uncertainty"].map((k,i)=>[k,a[i]]))}
 const power=u=>u.n*(.3+.7*u.cohesion/100)*(.3+.7*u.morale/100)*(1-u.fatigue/160);
-export function perceive(E,s,side){
+export function perceive(E,s,side){if(s.commandView?.side===side)return s.commandView;
  const own=s.units.filter(u=>u.side===side&&E.alive(u)&&!u.rout).map(u=>({...u})).sort((a,b)=>a.id-b.id);
  const previous=s.aiIntent?.[side]?.intel||{},intel={},enemy=[];
  for(const u of s.units.filter(u=>u.side!==side&&E.alive(u)&&E.visible(s,side,u)).sort((a,b)=>a.id-b.id)){
