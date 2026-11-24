@@ -12,7 +12,7 @@ test('commander without territorial control plans to contest the objective',()=>
 
 test('numerically inferior intact army does not withdraw before a local crisis',()=>{let s=createHistorical(E,'bannockburn',{difficulty:'commander'});let a=E.command(s,0);assert.ok(E.total(s,0)<E.total(s,1));assert.notEqual(a.intent.posture,'withdraw');assert.ok(a.intent.alternatives.every(q=>Number.isFinite(q.localRatio)&&q.withdrawalPressure===0));});
 
-test('six scenarios have three collision-free physical scales and valid profile references',()=>{assert.equal(chronicles.length,6);for(let d of chronicles){let count=0;for(let scale of ['compact','historical','expanded']){let s=createHistorical(E,d.id,{scale});assert.ok(s.units.length>count);count=s.units.length;assert.ok(s.units.every((u,i)=>E.spec(u)&&!s.units.slice(i+1).some(v=>E.overlap(u,v))));}}});
+test('eight scenarios have three collision-free physical scales and valid profile references',()=>{assert.equal(chronicles.length,8);for(let d of chronicles){let count=0;for(let scale of ['compact','historical','expanded']){let s=createHistorical(E,d.id,{scale});assert.ok(s.units.length>count);count=s.units.length;assert.ok(s.units.every((u,i)=>E.spec(u)&&!s.units.slice(i+1).some(v=>E.overlap(u,v))));}}});
 
 test('historical educational phases are independent from playable state',()=>{for(let d of chronicles){let before=createHistorical(E,d.id),snapshot=JSON.stringify(before);for(let i=0;i<d.phases.length;i++){let s=studyFrame(E,d.id,i);assert.equal(s.study.phase,i);assert.ok(s.units.every(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)));assert.equal(s.time,0)}assert.equal(JSON.stringify(before),snapshot)}assert.notDeepEqual(studyFrame(E,'grunwald',2,'ordered'),studyFrame(E,'grunwald',2,'uncertain'));});
 
