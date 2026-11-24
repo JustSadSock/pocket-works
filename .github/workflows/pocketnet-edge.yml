@@ -139,7 +139,7 @@ jobs:
           set -euo pipefail
           wr=/tmp/pocketnet-wrangler/node_modules/.bin/wrangler
           start() {
-            "$wr" dev --local --port 8787 --persist-to "$1" > /tmp/banners-worker.log 2>&1 &
+            "$wr" dev --local --port 8787 --persist-to "$1" "${@:2}" > /tmp/banners-worker.log 2>&1 &
             pid=$!
           }
           stop() { kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; }
@@ -150,9 +150,10 @@ jobs:
           start /tmp/banners-durable
           node pocketnet/test/banners-real.mjs --resume
           stop
-          start /tmp/banners-browser
-          for i in {1..100}; do curl -fsS http://127.0.0.1:8787/pocket-id/config >/dev/null && break; sleep 1; done
-          node_modules/.bin/playwright test --config apps/banners-of-war/qa/network-real.config.ts
+          start /tmp/banners-browser --local-protocol https
+          for i in {1..100}; do curl -kfsS https://127.0.0.1:8787/pocket-id/config >/dev/null && break; sleep 1; done
+          curl -kfsS https://127.0.0.1:8787/pocket-id/config >/dev/null
+          POCKETNET_TEST_URL=https://127.0.0.1:8787 node_modules/.bin/playwright test --config apps/banners-of-war/qa/network-real.config.ts
       - name: Banners network browser evidence
         if: always()
         uses: actions/upload-artifact@v4
