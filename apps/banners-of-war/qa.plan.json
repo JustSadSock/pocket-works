@@ -153,6 +153,31 @@
         7
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "final-integration",
+      "kind": "node",
+      "entry": "final-integration-runner.mjs",
+      "args": [
+        "{seed}",
+        "12",
+        "{output}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "tier": "smoke"
     }
   ]
 }
