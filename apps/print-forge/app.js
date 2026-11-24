@@ -320,4 +320,4 @@ if(!ctx){$('errors').textContent='Canvas 2D недоступен в этом б�
   refresh();const observer=new ResizeObserver(resize);observer.observe(stage);resize();
 }
 
-createWorkshopMode({appName:'Pocket Forge 3D',version:'1.0.0',cachePrefix:'print-forge-',storageNamespace:'pocket-works:print-forge',onReset:()=>{state.job={...DEFAULTS.gear_pair};state.running=false;state.theta=0;state.view='3d';refresh()}});
+createWorkshopMode({appName:'Pocket Forge 3D',version:'1.0.0',cachePrefix: 'print-forge-',storageNamespace: 'pocket-works:print-forge',onReset:()=>{state.job={...DEFAULTS.gear_pair};state.running=false;state.theta=0;state.view='3d';refresh()}});
