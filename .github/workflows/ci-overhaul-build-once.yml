@@ -1,0 +1,82 @@
+name: CI Overhaul Build Once Pilot
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-build-once.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-overhaul-build-once
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Build and validate production site once
+        run: npm run deploy:site
+      - name: Seal exact same-run site and package all files
+        run: |
+          node scripts/ci-overhaul/build-once.mjs seal . build-bundle
+          tar -cf build-bundle.tar -C build-bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-once-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build-bundle.tar
+          if-no-files-found: error
+          retention-days: 3
+
+  compare:
+    needs: build
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-once-${{ github.run_id }}-${{ github.run_attempt }}
+          path: incoming
+      - name: Verify complete artifact and replay original plan
+        run: |
+          mkdir build-bundle
+          tar -xf incoming/build-bundle.tar -C build-bundle
+          node scripts/ci-overhaul/build-once.mjs verify . build-bundle
+          printf '{}' > "$RUNNER_TEMP/build-pilot-event.json"
+          GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$RUNNER_TEMP/build-pilot-event.json" \
+            QA_BASE_SHA=327ebcdc3f32eb1120d7164f5113746c0e5cd92e \
+            QA_HEAD_SHA=d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 \
+            GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' \
+            node scripts/universal-qa/plan.mjs > build-pilot-plan.txt
+      - name: Compare real enhanced browser suite with and without build reuse
+        run: node scripts/ci-overhaul/build-pilot.mjs build-pilot-plan.txt build-bundle
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-once-comparison
+          path: build-pilot-evidence/
+          if-no-files-found: warn
+          retention-days: 14
