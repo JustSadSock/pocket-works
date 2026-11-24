@@ -1,0 +1,132 @@
+name: CI Overhaul Current PR Canary Lab
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-canary.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  test-controller:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/*.test.mjs
+  canary:
+    needs: test-controller
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: print-sheet
+            run: 45379950411
+            conclusion: success
+            base: 327ebcdc3f32eb1120d7164f5113746c0e5cd92e
+            head: 9df92fd2a9b0a6443dec13b18e6fdb06d501af71
+            checkout: 6fcefa9c1f8a6840bce244999fffb45829e7e29f
+            expected: 3
+          - id: crown-current
+            run: 45500645554
+            conclusion: failure
+            base: e0275d6d2971ddeaac02b3f93c7cd57ab0c788ac
+            head: a83635125b9eb6976acec4a43e8338ae233f3a83
+            checkout: a6c2da89265cb1ec9a2382e63e182297d9899556
+            expected: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: controller
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          path: frozen
+          ref: ${{ matrix.checkout }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact historical checkout and original workflow status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ matrix.run }}
+          HEAD_SHA: ${{ matrix.head }}
+          CHECKOUT: ${{ matrix.checkout }}
+          CONCLUSION: ${{ matrix.conclusion }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/frozen"
+          test "$(git -C frozen rev-parse HEAD)" = "$CHECKOUT"
+          test "$(git -C frozen rev-parse HEAD^2)" = "$HEAD_SHA"
+          node --input-type=module -e '
+            const r=await fetch(process.env.GITHUB_API_URL+"/repos/"+process.env.GITHUB_REPOSITORY+"/actions/runs/"+process.env.RUN,{headers:{Authorization:"Bearer "+process.env.GH_TOKEN,Accept:"application/vnd.github+json"}});
+            if(!r.ok)throw Error("GitHub source API "+r.status);
+            const d=await r.json();if(d.head_sha!==process.env.HEAD_SHA||d.name!=="Universal Pocket Works QA"||d.status!=="completed"||d.conclusion!==process.env.CONCLUSION||d.run_attempt!==1)throw Error("Source mismatch");
+          '
+      - uses: actions/download-artifact@v4
+        if: matrix.conclusion == 'success'
+        with:
+          name: qa-summary-${{ matrix.run }}
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+          path: legacy
+      - name: Construct candidate plan without modifying tracked legacy source
+        env:
+          QA_BASE_SHA: ${{ matrix.base }}
+          QA_HEAD_SHA: ${{ matrix.head }}
+          SOURCE_CONCLUSION: ${{ matrix.conclusion }}
+        run: |
+          test ! -e frozen/scripts/ci-overhaul
+          cp -R controller/scripts/ci-overhaul frozen/scripts/ci-overhaul
+          cp controller/scripts/universal-qa/plan.mjs frozen/scripts/universal-qa/plan-canary.mjs
+          printf '{}' > "$RUNNER_TEMP/canary-event.json"
+          cd frozen
+          if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$RUNNER_TEMP/canary-event.json" GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' node scripts/universal-qa/plan.mjs > ../original-plan.txt 2> ../original-plan-error.txt; then
+            test "$SOURCE_CONCLUSION" = success
+          else
+            test "$SOURCE_CONCLUSION" = failure
+            grep -F 'Too many QA jobs (25 > 20)' ../original-plan-error.txt
+          fi
+          GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$RUNNER_TEMP/canary-event.json" GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' node scripts/universal-qa/plan-canary.mjs > ../candidate-plan.txt
+          if test "$SOURCE_CONCLUSION" = success; then
+            diff -u ../original-plan.txt ../candidate-plan.txt
+          fi
+          git diff --exit-code HEAD
+      - name: Execute every candidate task and compare independent verdicts
+        env:
+          EXPECTED: ${{ matrix.expected }}
+          SOURCE_CONCLUSION: ${{ matrix.conclusion }}
+        run: |
+          cd frozen
+          node scripts/ci-overhaul/canary-run.mjs ../candidate-plan.txt ../legacy/summary.json ../canary-evidence "$EXPECTED" "$SOURCE_CONCLUSION"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-canary-${{ matrix.id }}-${{ github.run_attempt }}
+          path: |
+            canary-evidence/
+            original-plan.txt
+            original-plan-error.txt
+            candidate-plan.txt
+          if-no-files-found: warn
+          retention-days: 14
+  gate:
+    needs: [test-controller, canary]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require successful experimental executions
+        env:
+          TESTS: ${{ needs.test-controller.result }}
+          CANARY: ${{ needs.canary.result }}
+        run: test "$TESTS" = success && test "$CANARY" = success
