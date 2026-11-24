@@ -1,6 +1,8 @@
 import {controlCases,controlTrial} from './control-lab.mjs';
-import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
-const suite=process.argv[2]||'all',path=process.argv[3];
+import {readFileSync,readdirSync,writeFileSync,renameSync,existsSync,statSync} from 'node:fs';
+import {join} from 'node:path';
+const suite=process.argv[2]||'all',output=process.argv[3];
+const path=output&&existsSync(output)&&statSync(output).isDirectory()?join(output,'control-v2-results.json'):output;
 const protocol='paired-control-v2',engineCommit='8ce73ccc09880eefe53b1e69028c5cb0c2fe6f7d';
 const key=k=>JSON.stringify([k.factor,k.suite,k.seed,k.mirror,k.swapPolicies,k.seconds]);
 const all=controlCases(),valid=new Set(all.map(key)),archive=new Map();
@@ -14,10 +16,12 @@ const shard=/^shard:(\d+):(\d+)$/.exec(suite);
 let cases=shard?all:controlCases(suite);
 if(shard){const i=Number(shard[1]),n=Number(shard[2]);if(n<1||i>=n)throw Error('invalid shard');cases=cases.filter((_,j)=>j%n===i);}
 const results=[],errors=[];let reused=0;
+const report=()=>({protocol,engineCommit,suite,reused,results,errors});
+function checkpoint(){if(path){writeFileSync(path+'.tmp',JSON.stringify(report(),null,2)+'\n');renameSync(path+'.tmp',path)}}
 for(const k of cases){
- try{const cached=archive.get(key(k)),r=cached||controlTrial(k);if(cached)reused++;results.push(r);if(path)process.stderr.write(JSON.stringify({factor:r.factor,seed:r.seed,mirror:r.mirror,swap:r.swapPolicies,result:r.result,contact:r.contact,reused:!!cached})+'\n');}
+ try{const cached=archive.get(key(k)),r=cached||controlTrial(k);if(cached)reused++;results.push(r);if(path&&!cached)process.stdout.write('CONTROL_V2_CASE '+JSON.stringify(r)+'\n');}
  catch(e){errors.push({case:k,error:String(e)});}
+ checkpoint();
 }
-const report={protocol,engineCommit,suite,reused,results,errors};
-if(path)writeFileSync(path,JSON.stringify(report,null,2)+'\n');else process.stdout.write(JSON.stringify(report,null,2)+'\n');
+if(path){checkpoint();console.log('CONTROL_V2_SUMMARY '+JSON.stringify({suite,reused,completed:results.length,errors:errors.length}));}else process.stdout.write(JSON.stringify(report(),null,2)+'\n');
 if(errors.length)process.exitCode=1;
