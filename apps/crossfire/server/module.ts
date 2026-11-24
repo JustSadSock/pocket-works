@@ -7,4 +7,41 @@ export function play(s,id,a){if(s.units[s.turn]?.id!==id||!actions(s).some(v=>v.
 export function bot(s){const u=s.units[s.turn],a=actions(s);if(!a.length)return;const enemies=s.units.filter(v=>v.hp&&v.team!==u.team);const rank=v=>v.type==='hit'?100:v.type==='move'?20-dist(v,{x:3,y:3})*2-Math.min(...enemies.map(e=>dist(v,e)))*.2:v.type==='wait'&&u.x===3&&u.y===3?30:0;a.sort((x,y)=>rank(y)-rank(x));play(s,u.id,a[0]);}
 function bots(s){for(let i=0;i<4&&s.winner===null&&s.units[s.turn].id.startsWith('bot');i++)bot(s);}
 const emit=state=>({state,events:[{type:'state',payload:state}]});
-export default {protocolVersion:1,createRoom({player,payload}){return {state:{phase:'lobby',host:player.id,mode:['coop','team','duel'].includes(payload?.mode)?payload.mode:'duel',players:[player],match:null}}},onJoin({state,players}){if(state.phase!=='lobby'||players.length>count(state.mode))throw Error('room_full');state.players=players;return emit(state)},onLeave({state,player,players}){state.players=players;if(state.host===player.id)state.host=players[0]?.id;if(state.phase==='playing'){const u=state.match.units.find(u=>u.id===player.id);state.match.winner=1-u.team;state.phase='finished';}return emit(state)},onMessage({state,player,players,payload}){if(payload?.type==='sync')return emit(state);if(payload?.type==='start'&&player.id===state.host&&state.phase!=='playing'&&players.length===count(state.mode)){const ids=players.map(p=>p.id);state.match=initial(state.mode,state.mode==='coop'?[ids[0],'bot1',ids[1],'bot3']:ids);state.phase='playing';return emit(state);}if(state.phase==='playing'&&payload?.type==='act'&&play(state.match,player.id,payload.action)){bots(state.match);if(state.match.winner!==null)state.phase='finished';return emit(state);}return {state,events:[]};}};
+const changed=state=>{state.revision=(state.revision||0)+1;return emit(state)};
+export default {
+ protocolVersion:1,
+ createRoom({player,payload}){
+  return {state:{phase:'lobby',host:player.id,mode:['coop','team','duel'].includes(payload?.mode)?payload.mode:'duel',players:[player],match:null,revision:0}};
+ },
+ onJoin({state,players}){
+  if(state.phase==='playing'||players.length>count(state.mode))throw Error('room_full');
+  state.players=players;
+  return changed(state);
+ },
+ onLeave({state,player,players}){
+  state.players=players;
+  if(state.host===player.id)state.host=players[0]?.id||null;
+  if(state.phase==='playing'){
+   const u=state.match.units.find(u=>u.id===player.id);
+   if(u){state.match.winner=1-u.team;state.match.log='Игрок покинул комнату';state.phase='finished';}
+  }
+  return changed(state);
+ },
+ onMessage({state,player,players,payload}){
+  if(payload?.type==='sync')return emit(state);
+  if(!players.some(p=>p.id===player.id))return {state,events:[]};
+  if(payload?.revision!==state.revision)return emit(state);
+  if(payload?.type==='start'&&player.id===state.host&&state.phase!=='playing'&&players.length===count(state.mode)){
+   const ids=players.map(p=>p.id);
+   state.match=initial(state.mode,state.mode==='coop'?[ids[0],'bot1',ids[1],'bot3']:ids);
+   state.phase='playing';
+   return changed(state);
+  }
+  if(state.phase==='playing'&&payload?.type==='act'&&play(state.match,player.id,payload.action)){
+   bots(state.match);
+   if(state.match.winner!==null)state.phase='finished';
+   return changed(state);
+  }
+  return emit(state);
+ }
+};
