@@ -4,7 +4,7 @@
   "product": "banners-of-war",
   "direction": {
     "premise": "A working field commander's topographic atlas, where a decision is drawn into the landscape and executed against another army.",
-    "composition": "The map occupies the working surface; portrait devices turn the whole battlefield ninety degrees, while a desktop command ledger sits beside the map.",
+    "composition": "The battlefield is a continuous background beneath inset status and a collapsible command sheet; a landscape screen places the sheet on the right over the field.",
     "shapeLanguage": "Thin rectangular regiment footprints, individual ranks, forked heraldic pennants, dashed future routes and an unrounded ruled command ledger.",
     "surfaceAndMaterial": "Procedural ink contour lines and wooded clusters on muted survey paper, with solid colored regiment marks rather than polished tiles.",
     "paletteLogic": "Muted greens encode the landscape, blue and russet identify opposing armies, and ivory supports text; pressure and route lines use the side colors.",
@@ -13,15 +13,25 @@
     "distinction": "Compared with Doctrina's political atlas and Chernye Znamena's hex campaign, this map resolves continuous oriented footprints, timed multi-step paths and animated rank movement."
   },
   "architecture": {
-    "spatialLayout": "map-table",
+    "spatialLayout": "full-bleed-world",
     "controlLocation": "contextual",
     "navigation": "scene-zoom",
     "chromeTopology": "layered-panels",
     "dominantMotion": "immediate",
     "primaryVerb": "Select a field regiment, draw its projected movement path, queue subsequent orders, and confirm a fixed-duration WEGO turn.",
     "physicalFeedback": "A drawn route immediately renders its numbered stage and footprint; the committed round moves opposing regiments according to contact, acceleration and formation cohesion.",
-    "spatialRationale": "A portrait player can see the two fronts along the long axis instead of a narrow horizontal strip; selection exposes the command ledger while landscape places it to the right.",
+    "spatialRationale": "The canvas fills the battle workspace beneath controls. A fitted safe rectangle keeps orders visible; folding the inset command sheet restores additional battlefield space.",
     "comparisons": [
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "The battlefield is continuous beneath a foldable inset command sheet instead of a split laboratory with a permanent measurement journal.",
+        "interactionDifference": "Draw a regiment's commanded trajectory and resolve both armies together rather than intervene in autonomous historical geography."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "The map extends beneath floating controls and the command sheet folds away; there is no permanent chronological strip dividing the screen.",
+        "interactionDifference": "The user writes and revises numbered tactical orders and locks simultaneous turns rather than scrubbing a documented timeline."
+      },
       {
         "slug": "doctrina",
         "spatialDifference": "A rotated battlefield and contextual command ledger replace the political atlas and strategic menu.",
@@ -71,7 +81,8 @@
     ]
   },
   "review": {
-    "baselineRun": 45297817306,
-    "observations": "Baseline Chromium and WebKit screenshots were reviewed. Portrait wasted vertical map space, and initial WebKit frames could show a blank atlas. The current implementation rotates the viewport and draws synchronously on resize. Current-build screenshot review is pending; status deliberately remains draft."
+    "baselineRun": 45300337365,
+    "observations": "Inspected 24 Chromium/WebKit mobile and desktop frames of 0.2.0. The portrait rotation corrected previous wasted map space. The new continuous battlefield and inset command sheet address the architectural overlap identified by the creative validator. Final current-build visual review pending.",
+    "status": "current build pending"
   }
 }
