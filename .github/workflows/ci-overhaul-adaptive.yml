@@ -1,0 +1,53 @@
+name: CI Overhaul Adaptive Scheduling Lab
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-adaptive.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ci-overhaul-adaptive
+  cancel-in-progress: false
+jobs:
+  simulation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45423462734" |
+            jq -e '.head_sha == "5340689e15379db475cc7b2e5bcc7c99b82691b8" and .name == "CI Overhaul Full Shadow Lab" and .status == "completed" and .run_attempt == 1'
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadow-full-plan
+          run-id: 45423462734
+          github-token: ${{ github.token }}
+          path: prior-plan
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadow-full-audit
+          run-id: 45423462734
+          github-token: ${{ github.token }}
+          path: prior-audit
+      - run: node --test scripts/ci-overhaul/*.test.mjs
+      - name: Compare fixed versus adaptive scheduling with measured history
+        run: |
+          mkdir adaptive-evidence
+          node scripts/ci-overhaul/adaptive.mjs prior-plan/plan.json prior-audit/audit.json adaptive-evidence/schedule.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-scheduling-evidence
+          path: adaptive-evidence/
+          if-no-files-found: error
+          retention-days: 14
