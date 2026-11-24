@@ -1,0 +1,4876 @@
+{
+  "engine": "b7ccecae236b72306ea7667c283ca9ac57feaf61",
+  "method": "Matched variants on two new seeds; 120/360-second checkpoints, time/territory and full-duration stress runs; depth varies deployment intentionally",
+  "runs": [
+    {
+      "name": "concentration",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            70000,
+            140000
+          ],
+          "contested": 1,
+          "power": [
+            67.0461763381864,
+            250.87577768747755
+          ],
+          "sides": [
+            {
+              "loss": 92.09776412304404,
+              "fatigue": 54.26750000000011,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 67.5,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 125.25,
+              "crowding": 199.32500000000033,
+              "isolated": 3,
+              "panic": 43.92845368527614,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 57.0332069347985,
+              "fatigue": 0.9900000000000098,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 161,
+          "result": "loss",
+          "area": [
+            70000,
+            140000
+          ],
+          "contested": 1,
+          "power": [
+            48,
+            250.9969380857376
+          ],
+          "sides": [
+            {
+              "loss": 92.09776412304404,
+              "fatigue": 59.597500000000004,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 67.5,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 125.25,
+              "crowding": 269.0250000000022,
+              "isolated": 2,
+              "panic": 74.67682555079828,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 57.0332069347985,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "concentration",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            80000,
+            130000
+          ],
+          "contested": 0,
+          "power": [
+            72.98038953769048,
+            127.39024314411711
+          ],
+          "sides": [
+            {
+              "loss": 21.351790474333455,
+              "fatigue": 53.22249999999998,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 59,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 136.75,
+              "crowding": 256.2750000000008,
+              "isolated": 2,
+              "panic": 21.95316389300104,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 12.097016815356284,
+              "fatigue": 12.278750000000018,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 3.8249999999999993,
+              "isolated": 0,
+              "panic": 47.977801843152506,
+              "reserveContact": 2.75,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 167.5,
+          "result": "loss",
+          "area": [
+            80000,
+            140000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            95.83225472680856
+          ],
+          "sides": [
+            {
+              "loss": 34.80800873632762,
+              "fatigue": 74.43749999999991,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 59,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 232.75,
+              "crowding": 352.32500000000334,
+              "isolated": 3,
+              "panic": 105.70132656502105,
+              "reserveContact": 17,
+              "reserveWait": 0
+            },
+            {
+              "loss": 15.689822671225812,
+              "fatigue": 31.528750000000098,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 3.8249999999999993,
+              "isolated": 0,
+              "panic": 131.8362709174403,
+              "reserveContact": 31.25,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "concentration",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            90000,
+            180000
+          ],
+          "contested": 0,
+          "power": [
+            67.14854736716397,
+            251.23865033670387
+          ],
+          "sides": [
+            {
+              "loss": 91.93481903265229,
+              "fatigue": 54.24000000000011,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 68.25,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 125,
+              "crowding": 199.3250000000003,
+              "isolated": 3,
+              "panic": 43.36148173685686,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 56.708562684948646,
+              "fatigue": 1.05625000000001,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 161.5,
+          "result": "loss",
+          "area": [
+            90000,
+            180000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            251.4064917751585
+          ],
+          "sides": [
+            {
+              "loss": 91.93481903265229,
+              "fatigue": 59.635,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 68.25,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 125,
+              "crowding": 269.87500000000216,
+              "isolated": 2,
+              "panic": 74.87430371306905,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 56.708562684948646,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "concentration",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            100000,
+            160000
+          ],
+          "contested": 0,
+          "power": [
+            73.68283832899814,
+            128.2598618480677
+          ],
+          "sides": [
+            {
+              "loss": 20.00087792680688,
+              "fatigue": 52.61249999999998,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 58.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 136,
+              "crowding": 251.17500000000067,
+              "isolated": 2,
+              "panic": 20.914594010449193,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 11.670419757717298,
+              "fatigue": 11.935000000000016,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 4.249999999999999,
+              "isolated": 0,
+              "panic": 47.95991666429567,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 167.5,
+          "result": "loss",
+          "area": [
+            100000,
+            160000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            97.91460900386015
+          ],
+          "sides": [
+            {
+              "loss": 31.92732407494256,
+              "fatigue": 74.26499999999989,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 58.75,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 231,
+              "crowding": 362.9500000000037,
+              "isolated": 3,
+              "panic": 105.60521096744102,
+              "reserveContact": 9.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 14.849769719084577,
+              "fatigue": 29.6737500000001,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 4.249999999999999,
+              "isolated": 0,
+              "panic": 132.19656809540356,
+              "reserveContact": 25.75,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "weak-front",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            90000,
+            140000
+          ],
+          "contested": 0,
+          "power": [
+            108,
+            239.72030396541317
+          ],
+          "sides": [
+            {
+              "loss": 89.75760783815548,
+              "fatigue": 23.80750000000016,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 91.25,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 114,
+              "crowding": 0,
+              "isolated": 1,
+              "panic": 22.130291330722173,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 69.89362131089882,
+              "fatigue": 0.6025000000000047,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "loss",
+          "area": [
+            90000,
+            140000
+          ],
+          "contested": 1,
+          "power": [
+            102.54180000000109,
+            239.72030396541317
+          ],
+          "sides": [
+            {
+              "loss": 89.75760783815548,
+              "fatigue": 50,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 91.25,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 114,
+              "crowding": 703.8,
+              "isolated": 0,
+              "panic": 393.2105642309802,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 69.89362131089882,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "weak-front",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            160000,
+            70000
+          ],
+          "contested": 1,
+          "power": [
+            187.6907459676074,
+            115.65835709089903
+          ],
+          "sides": [
+            {
+              "loss": 57.881009042622665,
+              "fatigue": 23.240000000000165,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 93,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 65.5,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 12
+            },
+            {
+              "loss": 61.42133847420703,
+              "fatigue": 20.054999999999836,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 115.5,
+              "breachWidth": 29,
+              "breachDepth": 0.23299323966905922,
+              "pressure": 8,
+              "crowding": 49.724999999999916,
+              "isolated": 3,
+              "panic": 50.294459418924845,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 149.5,
+          "result": "win",
+          "area": [
+            180000,
+            60000
+          ],
+          "contested": 0,
+          "power": [
+            150.60355003398888,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 58.48399400935385,
+              "fatigue": 36.22125000000024,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 93,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 73,
+              "crowding": 52.27499999999998,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 12
+            },
+            {
+              "loss": 63.95828336860748,
+              "fatigue": 26.024999999999828,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 115.5,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 28.5,
+              "crowding": 86.27499999999975,
+              "isolated": 2,
+              "panic": 95.24807117609402,
+              "reserveContact": 8.25,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "weak-front",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            170000
+          ],
+          "contested": 1,
+          "power": [
+            108,
+            239.7955190168264
+          ],
+          "sides": [
+            {
+              "loss": 89.75789331985143,
+              "fatigue": 23.80750000000016,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 92.25,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 114,
+              "crowding": 0,
+              "isolated": 1,
+              "panic": 21.371272278430045,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 69.79474086565193,
+              "fatigue": 0.6775000000000049,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "loss",
+          "area": [
+            120000,
+            180000
+          ],
+          "contested": 0,
+          "power": [
+            102.57480000000109,
+            239.7955190168264
+          ],
+          "sides": [
+            {
+              "loss": 89.75789331985143,
+              "fatigue": 50,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 92.25,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 114,
+              "crowding": 700.825,
+              "isolated": 0,
+              "panic": 391.9202402025754,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 69.79474086565193,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "weak-front",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            170000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            188.1806131452963,
+            116.178968380157
+          ],
+          "sides": [
+            {
+              "loss": 57.73951390142982,
+              "fatigue": 23.080000000000165,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 93.75,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 65.25,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 12
+            },
+            {
+              "loss": 61.10326419421847,
+              "fatigue": 19.82249999999984,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 116.5,
+              "breachWidth": 29,
+              "breachDepth": 0.18350923372733996,
+              "pressure": 7,
+              "crowding": 48.87499999999992,
+              "isolated": 3,
+              "panic": 49.29086769219366,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 152.5,
+          "result": "win",
+          "area": [
+            190000,
+            80000
+          ],
+          "contested": 0,
+          "power": [
+            151.30532891789795,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 58.393146231402454,
+              "fatigue": 37.005000000000244,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 93.75,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 70.25,
+              "crowding": 53.54999999999997,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 12
+            },
+            {
+              "loss": 64.13751947910177,
+              "fatigue": 26.622499999999825,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 116.5,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 32.5,
+              "crowding": 91.79999999999974,
+              "isolated": 2,
+              "panic": 99.0037697880604,
+              "reserveContact": 6.75,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-seal",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            120000,
+            110000
+          ],
+          "contested": 1,
+          "power": [
+            121.19674238504807,
+            113.13305617779757
+          ],
+          "sides": [
+            {
+              "loss": 62.64270028812011,
+              "fatigue": 50.59250000000005,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 74,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 70,
+              "crowding": 160.22499999999985,
+              "isolated": 1,
+              "panic": 10.29037088571257,
+              "reserveContact": 0.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 48.4925637590033,
+              "fatigue": 10.28500000000003,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 63.74999999999982,
+              "isolated": 0,
+              "panic": 54.85479626547999,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 173.5,
+          "result": "win",
+          "area": [
+            90000,
+            80000
+          ],
+          "contested": 0,
+          "power": [
+            68.92097783460147,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 64.01499268716236,
+              "fatigue": 63.70500000000012,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 74,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 89.5,
+              "crowding": 228.65000000000055,
+              "isolated": 0,
+              "panic": 15.133365997579729,
+              "reserveContact": 2,
+              "reserveWait": 0
+            },
+            {
+              "loss": 51.61041944172291,
+              "fatigue": 23.477500000000123,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 161.49999999999986,
+              "isolated": 0,
+              "panic": 139.28906304680226,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-seal",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            80000,
+            150000
+          ],
+          "contested": 1,
+          "power": [
+            70.7636598618115,
+            90.7443918022156
+          ],
+          "sides": [
+            {
+              "loss": 60.87666502741676,
+              "fatigue": 59.12000000000011,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 75,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 102.75,
+              "crowding": 177.6500000000005,
+              "isolated": 0,
+              "panic": 24.749166680920396,
+              "reserveContact": 4.75,
+              "reserveWait": 0
+            },
+            {
+              "loss": 47.04388292466034,
+              "fatigue": 21.520000000000028,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 65,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 0.598449974078875,
+              "pressure": 0,
+              "crowding": 101.57499999999968,
+              "isolated": 0,
+              "panic": 73.63979227003266,
+              "reserveContact": 35.75,
+              "reserveWait": 54.25
+            }
+          ]
+        },
+        {
+          "time": 144.5,
+          "result": "win",
+          "area": [
+            90000,
+            80000
+          ],
+          "contested": 0,
+          "power": [
+            66.05931689403704,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 60.87666502741676,
+              "fatigue": 62.305,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 75,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 102.75,
+              "crowding": 219.3000000000016,
+              "isolated": 0,
+              "panic": 43.05609088378356,
+              "reserveContact": 4.75,
+              "reserveWait": 0
+            },
+            {
+              "loss": 47.04388292466034,
+              "fatigue": 25.94750000000007,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 65,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 0.598449974078875,
+              "pressure": 0,
+              "crowding": 168.7249999999999,
+              "isolated": 0,
+              "panic": 117.98638432436003,
+              "reserveContact": 35.75,
+              "reserveWait": 71.25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-seal",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            120000,
+            120000
+          ],
+          "contested": 2,
+          "power": [
+            120.93374029938954,
+            113.50536129481263
+          ],
+          "sides": [
+            {
+              "loss": 62.553100368345966,
+              "fatigue": 50.79000000000002,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 74,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 70.25,
+              "crowding": 166.1749999999999,
+              "isolated": 1,
+              "panic": 10.486962791978208,
+              "reserveContact": 0.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 47.89828679024447,
+              "fatigue": 10.16625000000003,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 63.324999999999825,
+              "isolated": 0,
+              "panic": 53.70801038891011,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 175.5,
+          "result": "win",
+          "area": [
+            100000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            68.90319343364924,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 63.87786374367009,
+              "fatigue": 64.08250000000011,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 74,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 87,
+              "crowding": 235.8750000000006,
+              "isolated": 0,
+              "panic": 16.255644771276906,
+              "reserveContact": 0.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 51.130512612451696,
+              "fatigue": 23.516250000000124,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 163.6249999999999,
+              "isolated": 0,
+              "panic": 140.3863260199248,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-seal",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            160000
+          ],
+          "contested": 0,
+          "power": [
+            72.15478726338135,
+            93.21437512853917
+          ],
+          "sides": [
+            {
+              "loss": 58.5357126327967,
+              "fatigue": 57.622499999999846,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 74.5,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 96.5,
+              "crowding": 171.70000000000033,
+              "isolated": 0,
+              "panic": 29.509974906399485,
+              "reserveContact": 3.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 45.83985581918222,
+              "fatigue": 19.56125000000003,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 64.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 0.609805758969595,
+              "pressure": 0,
+              "crowding": 95.62499999999969,
+              "isolated": 0,
+              "panic": 73.48228866802427,
+              "reserveContact": 31.25,
+              "reserveWait": 58.75
+            }
+          ]
+        },
+        {
+          "time": 153.75,
+          "result": "win",
+          "area": [
+            100000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            65.05584554625891,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 58.5357126327967,
+              "fatigue": 62.18499999999989,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 74.5,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 96.5,
+              "crowding": 229.07500000000186,
+              "isolated": 1,
+              "panic": 52.79360975312241,
+              "reserveContact": 3.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 45.83985581918222,
+              "fatigue": 23.74750000000019,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 64.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 0.609805758969595,
+              "pressure": 0,
+              "crowding": 99.87499999999967,
+              "isolated": 0,
+              "panic": 129.91789642844054,
+              "reserveContact": 31.25,
+              "reserveWait": 63.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-timing",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            150000,
+            70000
+          ],
+          "contested": 2,
+          "power": [
+            176.3849427230009,
+            111.34059689229252
+          ],
+          "sides": [
+            {
+              "loss": 58.64726377462256,
+              "fatigue": 27.192500000000166,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": 93,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 64.75,
+              "crowding": 21.250000000000018,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 4
+            },
+            {
+              "loss": 56.856039570683876,
+              "fatigue": 10.105000000000025,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 109,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.135758873234638,
+              "pressure": 3.75,
+              "crowding": 52.699999999999896,
+              "isolated": 3,
+              "panic": 55.37831005087746,
+              "reserveContact": 1.75,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 152,
+          "result": "win",
+          "area": [
+            170000,
+            60000
+          ],
+          "contested": 1,
+          "power": [
+            91.20640453184558,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 63.15596153983448,
+              "fatigue": 41.79500000000023,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 93,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 94,
+              "crowding": 73.52499999999978,
+              "isolated": 1,
+              "panic": 27.597754086633742,
+              "reserveContact": 0,
+              "reserveWait": 4
+            },
+            {
+              "loss": 58.11107023911772,
+              "fatigue": 15.798750000000094,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 109,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.6126296334172043,
+              "pressure": 6.5,
+              "crowding": 79.04999999999983,
+              "isolated": 0,
+              "panic": 100.3665131139442,
+              "reserveContact": 16,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-timing",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            140000,
+            80000
+          ],
+          "contested": 2,
+          "power": [
+            154.8596416361751,
+            109.87924503220887
+          ],
+          "sides": [
+            {
+              "loss": 58.847400749964976,
+              "fatigue": 32.60875000000016,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 93.25,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 68.5,
+              "crowding": 60.77499999999984,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 22
+            },
+            {
+              "loss": 56.73960982711033,
+              "fatigue": 10.598750000000026,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 108.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.156067965753508,
+              "pressure": 7,
+              "crowding": 45.89999999999994,
+              "isolated": 2,
+              "panic": 56.870683989009436,
+              "reserveContact": 7,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 153.25,
+          "result": "win",
+          "area": [
+            140000,
+            70000
+          ],
+          "contested": 1,
+          "power": [
+            83.65619338294633,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 62.93463135866054,
+              "fatigue": 47.83875000000017,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 93.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 98.75,
+              "crowding": 117.72499999999948,
+              "isolated": 1,
+              "panic": 33.2742562934208,
+              "reserveContact": 0,
+              "reserveWait": 22
+            },
+            {
+              "loss": 57.457802633211,
+              "fatigue": 16.7312500000001,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 108.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.156067965753508,
+              "pressure": 7,
+              "crowding": 78.19999999999985,
+              "isolated": 0,
+              "panic": 101.7880710099951,
+              "reserveContact": 18,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-timing",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            170000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            180.108644025661,
+            112.20610883359286
+          ],
+          "sides": [
+            {
+              "loss": 58.09407570333195,
+              "fatigue": 26.910000000000167,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": 94,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 62.75,
+              "crowding": 21.67500000000002,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 4
+            },
+            {
+              "loss": 56.47352520402191,
+              "fatigue": 9.926250000000024,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 110,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 0.8920413094104396,
+              "pressure": 2,
+              "crowding": 53.97499999999989,
+              "isolated": 3,
+              "panic": 54.52264414125861,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 152.75,
+          "result": "win",
+          "area": [
+            160000,
+            90000
+          ],
+          "contested": 1,
+          "power": [
+            91.18308638783621,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 62.95327680712167,
+              "fatigue": 42.07000000000022,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 94,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 92.5,
+              "crowding": 75.22499999999977,
+              "isolated": 0,
+              "panic": 25.833862976816242,
+              "reserveContact": 0,
+              "reserveWait": 4
+            },
+            {
+              "loss": 57.978959475764555,
+              "fatigue": 15.866250000000093,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 110,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.6773604252748016,
+              "pressure": 6.5,
+              "crowding": 79.47499999999982,
+              "isolated": 0,
+              "panic": 100.87058452490764,
+              "reserveContact": 15.75,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reserve-timing",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            140000,
+            100000
+          ],
+          "contested": 3,
+          "power": [
+            155.8710568253,
+            110.37760066419943
+          ],
+          "sides": [
+            {
+              "loss": 58.58751344341027,
+              "fatigue": 32.60875000000016,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 94.25,
+              "breachWidth": 29,
+              "breachDepth": 1.5224999999999997,
+              "pressure": 67.75,
+              "crowding": 61.19999999999984,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 21
+            },
+            {
+              "loss": 56.53732509742581,
+              "fatigue": 10.536250000000026,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 109.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.1258331573051104,
+              "pressure": 7,
+              "crowding": 46.32499999999994,
+              "isolated": 2,
+              "panic": 55.934170961398976,
+              "reserveContact": 6.5,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 153.75,
+          "result": "win",
+          "area": [
+            160000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            83.64996131733892,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 62.7938188784029,
+              "fatigue": 48.01625000000016,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 94.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 98.5,
+              "crowding": 118.57499999999948,
+              "isolated": 1,
+              "panic": 32.821331000689135,
+              "reserveContact": 0,
+              "reserveWait": 21
+            },
+            {
+              "loss": 57.26800406301514,
+              "fatigue": 16.6837500000001,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 109.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.1258331573051104,
+              "pressure": 7,
+              "crowding": 78.19999999999985,
+              "isolated": 0,
+              "panic": 101.54428675299849,
+              "reserveContact": 18,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 119,
+          "result": "loss",
+          "area": [
+            70000,
+            160000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            214.37506632374237
+          ],
+          "sides": [
+            {
+              "loss": 100.25044207599274,
+              "fatigue": 49.310000000000194,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 71.25,
+              "breachWidth": 36.75,
+              "breachDepth": 2.03,
+              "pressure": 158,
+              "crowding": 21.67500000000002,
+              "isolated": 2,
+              "panic": 43.64115885833202,
+              "reserveContact": 59.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 72.00988800770804,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 59.25,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            100000,
+            80000
+          ],
+          "contested": 4,
+          "power": [
+            109.78770677783862,
+            101.17803806928443
+          ],
+          "sides": [
+            {
+              "loss": 29.302038603167873,
+              "fatigue": 48.90250000000019,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 71.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 14.25,
+              "crowding": 8.924999999999999,
+              "isolated": 0,
+              "panic": 21.963712902123877,
+              "reserveContact": 67.75,
+              "reserveWait": 0
+            },
+            {
+              "loss": 33.3027136054353,
+              "fatigue": 21.541250000000094,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 79.75,
+              "breachWidth": 29,
+              "breachDepth": 2.394779048962521,
+              "pressure": 32.75,
+              "crowding": 65.02499999999982,
+              "isolated": 1,
+              "panic": 54.764160790234776,
+              "reserveContact": 67.75,
+              "reserveWait": 2
+            }
+          ]
+        },
+        {
+          "time": 124.25,
+          "result": "win",
+          "area": [
+            130000,
+            60000
+          ],
+          "contested": 1,
+          "power": [
+            73.24540881028287,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 29.564232203880863,
+              "fatigue": 50.0550000000002,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 71.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 17,
+              "crowding": 8.924999999999999,
+              "isolated": 0,
+              "panic": 22.376583817318334,
+              "reserveContact": 68.75,
+              "reserveWait": 0
+            },
+            {
+              "loss": 33.72026657547836,
+              "fatigue": 22.485000000000106,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 79.75,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 34.5,
+              "crowding": 65.02499999999982,
+              "isolated": 1,
+              "panic": 59.09593227065064,
+              "reserveContact": 68.75,
+              "reserveWait": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth",
+      "seed": "Ash Hollow",
+      "variant": 2,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            120000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            104.01653425458744,
+            117.34027914798253
+          ],
+          "sides": [
+            {
+              "loss": 27.25615890263127,
+              "fatigue": 52.992500000000156,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 62.25,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 72.75,
+              "crowding": 148.32499999999965,
+              "isolated": 0,
+              "panic": 37.44680901495681,
+              "reserveContact": 12.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 25.27041412010381,
+              "fatigue": 18.265000000000075,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 89.5,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 0.568734254905343,
+              "pressure": 4.5,
+              "crowding": 87.97499999999978,
+              "isolated": 0,
+              "panic": 78.65365574124223,
+              "reserveContact": 0,
+              "reserveWait": 47.75
+            }
+          ]
+        },
+        {
+          "time": 181,
+          "result": "loss",
+          "area": [
+            90000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            84.17025971962718
+          ],
+          "sides": [
+            {
+              "loss": 27.292510346620105,
+              "fatigue": 61.114999999999924,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 62.25,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 72.75,
+              "crowding": 252.02500000000188,
+              "isolated": 0,
+              "panic": 92.44050241015427,
+              "reserveContact": 12.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 25.319892219791882,
+              "fatigue": 26.38750000000023,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 89.5,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 0.568734254905343,
+              "pressure": 4.5,
+              "crowding": 191.67500000000047,
+              "isolated": 0,
+              "panic": 157.70860093675515,
+              "reserveContact": 0,
+              "reserveWait": 108.75
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 119.25,
+          "result": "loss",
+          "area": [
+            80000,
+            190000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            214.13316598521757
+          ],
+          "sides": [
+            {
+              "loss": 100.33566976210983,
+              "fatigue": 49.3225000000002,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 72,
+              "breachWidth": 36.75,
+              "breachDepth": 2.03,
+              "pressure": 158,
+              "crowding": 21.250000000000018,
+              "isolated": 2,
+              "panic": 43.44941594699742,
+              "reserveContact": 59.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 72.07442566888545,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 59.5,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            110000
+          ],
+          "contested": 5,
+          "power": [
+            111.63931852019374,
+            102.76760914796273
+          ],
+          "sides": [
+            {
+              "loss": 29.36122708274908,
+              "fatigue": 48.74750000000019,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 71.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 13.5,
+              "crowding": 9.349999999999998,
+              "isolated": 0,
+              "panic": 21.969623475910243,
+              "reserveContact": 66.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 33.15961595025267,
+              "fatigue": 21.32125000000009,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 80.25,
+              "breachWidth": 29,
+              "breachDepth": 2.278620226523979,
+              "pressure": 32.25,
+              "crowding": 66.29999999999981,
+              "isolated": 1,
+              "panic": 54.5575288477721,
+              "reserveContact": 66.5,
+              "reserveWait": 2
+            }
+          ]
+        },
+        {
+          "time": 125,
+          "result": "win",
+          "area": [
+            150000,
+            90000
+          ],
+          "contested": 0,
+          "power": [
+            73.36119763441272,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 29.669313406478267,
+              "fatigue": 50.1325000000002,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 71.75,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 17,
+              "crowding": 9.349999999999998,
+              "isolated": 0,
+              "panic": 22.379707304300105,
+              "reserveContact": 68,
+              "reserveWait": 0
+            },
+            {
+              "loss": 33.6712796766398,
+              "fatigue": 22.496250000000106,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 80.25,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 34.75,
+              "crowding": 66.29999999999981,
+              "isolated": 1,
+              "panic": 59.640423169152086,
+              "reserveContact": 68,
+              "reserveWait": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth",
+      "seed": "Wren Crossing",
+      "variant": 2,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            100000,
+            160000
+          ],
+          "contested": 1,
+          "power": [
+            92.60809744931416,
+            145.60506794370227
+          ],
+          "sides": [
+            {
+              "loss": 26.39596699544073,
+              "fatigue": 53.13750000000009,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 61.75,
+              "breachWidth": 29,
+              "breachDepth": 4.317319146279177,
+              "pressure": 77.5,
+              "crowding": 231.62500000000028,
+              "isolated": 1,
+              "panic": 45.610387073373076,
+              "reserveContact": 23.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 22.12828732089865,
+              "fatigue": 15.683750000000057,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 112.62499999999963,
+              "isolated": 0,
+              "panic": 54.43006404985392,
+              "reserveContact": 23.25,
+              "reserveWait": 26.5
+            }
+          ]
+        },
+        {
+          "time": 153,
+          "result": "win",
+          "area": [
+            100000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            61.43007199578642,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 27.19182441895026,
+              "fatigue": 59.5525000000001,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 61.75,
+              "breachWidth": 29,
+              "breachDepth": 4.654733537596311,
+              "pressure": 100.5,
+              "crowding": 276.6750000000013,
+              "isolated": 0,
+              "panic": 90.58611350647841,
+              "reserveContact": 47.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 22.67527714360554,
+              "fatigue": 24.248750000000097,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 199.32500000000027,
+              "isolated": 0,
+              "panic": 102.68411540897019,
+              "reserveContact": 47.25,
+              "reserveWait": 32.25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "relief",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            90000,
+            140000
+          ],
+          "contested": 0,
+          "power": [
+            108,
+            292.6605379731527
+          ],
+          "sides": [
+            {
+              "loss": 55.71061694860839,
+              "fatigue": 37.110000000000085,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 90.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 81,
+              "crowding": 0,
+              "isolated": 2,
+              "panic": 20.99583750542144,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 35.677002107030745,
+              "fatigue": 0.41000000000000375,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 326.75,
+          "result": "loss",
+          "area": [
+            70000,
+            150000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            292.6605379731527
+          ],
+          "sides": [
+            {
+              "loss": 55.71061694860839,
+              "fatigue": 50.867499999999986,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 90.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 81,
+              "crowding": 592.8750000000043,
+              "isolated": 0,
+              "panic": 341.89658184467703,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 35.677002107030745,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "relief",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            100000,
+            140000
+          ],
+          "contested": 1,
+          "power": [
+            128.19984611746762,
+            303.1048091910896
+          ],
+          "sides": [
+            {
+              "loss": 40.366340847415714,
+              "fatigue": 37.000000000000085,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 89.75,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 60,
+              "crowding": 118.14999999999947,
+              "isolated": 1,
+              "panic": 5.478893236200626,
+              "reserveContact": 0,
+              "reserveWait": 109
+            },
+            {
+              "loss": 32.86726033433209,
+              "fatigue": 0.3000000000000033,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "draw",
+          "area": [
+            140000,
+            140000
+          ],
+          "contested": 0,
+          "power": [
+            219.28017985665218,
+            266.20627602731474
+          ],
+          "sides": [
+            {
+              "loss": 66.0638383509321,
+              "fatigue": 27.41437499999981,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 89.75,
+              "breachWidth": 36.75,
+              "breachDepth": 5.9463162037887916,
+              "pressure": 125.25,
+              "crowding": 265.62500000000307,
+              "isolated": 0,
+              "panic": 111.10015552923247,
+              "reserveContact": 65.25,
+              "reserveWait": 142
+            },
+            {
+              "loss": 46.809585606704815,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "relief",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            180000
+          ],
+          "contested": 0,
+          "power": [
+            108,
+            292.8283939250467
+          ],
+          "sides": [
+            {
+              "loss": 55.47865852467383,
+              "fatigue": 37.11000000000008,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 91,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 80.75,
+              "crowding": 0,
+              "isolated": 2,
+              "panic": 20.007136647174864,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 35.56595563719719,
+              "fatigue": 0.4850000000000037,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 327.75,
+          "result": "loss",
+          "area": [
+            90000,
+            180000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            292.8283939250467
+          ],
+          "sides": [
+            {
+              "loss": 55.47865852467383,
+              "fatigue": 50.867499999999986,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 91,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 80.75,
+              "crowding": 592.8750000000043,
+              "isolated": 0,
+              "panic": 341.7853050897187,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 35.56595563719719,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "relief",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            100000,
+            170000
+          ],
+          "contested": 1,
+          "power": [
+            128.1186395729551,
+            303.15375693491336
+          ],
+          "sides": [
+            {
+              "loss": 40.36638055077148,
+              "fatigue": 37.00000000000008,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 90.75,
+              "breachWidth": 29,
+              "breachDepth": 2.03,
+              "pressure": 60,
+              "crowding": 119.42499999999946,
+              "isolated": 1,
+              "panic": 5.2092382644917175,
+              "reserveContact": 0,
+              "reserveWait": 109
+            },
+            {
+              "loss": 32.79886200284207,
+              "fatigue": 0.3750000000000033,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "draw",
+          "area": [
+            150000,
+            180000
+          ],
+          "contested": 0,
+          "power": [
+            218.90647437145253,
+            266.5184809457373
+          ],
+          "sides": [
+            {
+              "loss": 65.88336921987786,
+              "fatigue": 27.83374999999983,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 90.75,
+              "breachWidth": 36.75,
+              "breachDepth": 6.064781598077037,
+              "pressure": 124.25,
+              "crowding": 268.60000000000315,
+              "isolated": 0,
+              "panic": 111.67249198987903,
+              "reserveContact": 64.25,
+              "reserveWait": 143
+            },
+            {
+              "loss": 46.72495724897831,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "isolation",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            140000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            199.0452803956154,
+            206.2942425462602
+          ],
+          "sides": [
+            {
+              "loss": 29.95867652424903,
+              "fatigue": 11.292500000000047,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 73.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.0765001632017395,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 6.735482022936202,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.280956022591667,
+              "fatigue": 31.317499999999995,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 147.89999999999992,
+              "isolated": 1,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            150000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            280.90459439539006,
+            115.94372865985225
+          ],
+          "sides": [
+            {
+              "loss": 31.011468664883523,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": 73.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.0765001632017395,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 18.344591326049866,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 28.153095814147264,
+              "fatigue": 50,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 290.27500000000373,
+              "isolated": 0,
+              "panic": 194.6022522107918,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "isolation",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            180000,
+            70000
+          ],
+          "contested": 0,
+          "power": [
+            258.26039977167477,
+            181.29461741251788
+          ],
+          "sides": [
+            {
+              "loss": 23.2771569534699,
+              "fatigue": 2.16812500000002,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.583339855879504,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 21.56248632684475,
+              "fatigue": 33.08750000000016,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 241.40000000000072,
+              "isolated": 3,
+              "panic": 0,
+              "reserveContact": 7.25,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 248.25,
+          "result": "win",
+          "area": [
+            200000,
+            70000
+          ],
+          "contested": 0,
+          "power": [
+            256.47091590489094,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 26.439621433588115,
+              "fatigue": 13.800625000000117,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.993218874703502,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.257425309018316,
+              "fatigue": 69.60249999999985,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 132,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 67.25,
+              "crowding": 537.6250000000084,
+              "isolated": 0,
+              "panic": 59.8792246128034,
+              "reserveContact": 53.75,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "isolation",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            150000,
+            150000
+          ],
+          "contested": 0,
+          "power": [
+            198.9914729348468,
+            206.1376491408128
+          ],
+          "sides": [
+            {
+              "loss": 29.804200893260713,
+              "fatigue": 11.333125000000047,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 73.25,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.014372790807498,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 6.787915948239268,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.135394358227487,
+              "fatigue": 31.412499999999994,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 148.74999999999994,
+              "isolated": 1,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            170000,
+            150000
+          ],
+          "contested": 0,
+          "power": [
+            281.0179130495485,
+            115.90059658580454
+          ],
+          "sides": [
+            {
+              "loss": 30.84482540600459,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": 73.25,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.014372790807498,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 18.351384388237268,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.999660844709325,
+              "fatigue": 50,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 291.12500000000375,
+              "isolated": 0,
+              "panic": 194.03829511948334,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "isolation",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            190000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            258.18822565017445,
+            179.57803838243146
+          ],
+          "sides": [
+            {
+              "loss": 23.325824625738036,
+              "fatigue": 2.1443750000000192,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.584476446552223,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 21.66277083189796,
+              "fatigue": 33.36250000000016,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 246.07500000000078,
+              "isolated": 3,
+              "panic": 0,
+              "reserveContact": 7,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 241.25,
+          "result": "win",
+          "area": [
+            180000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            195.46825257828357,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 26.750218291911494,
+              "fatigue": 16.700625000000098,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.999549924174481,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.565729285282785,
+              "fatigue": 69.5987499999999,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 131.5,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 67.25,
+              "crowding": 527.0000000000081,
+              "isolated": 0,
+              "panic": 62.49264219848399,
+              "reserveContact": 70,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "encirclement",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            140000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            199.0452803956154,
+            206.2942425462602
+          ],
+          "sides": [
+            {
+              "loss": 29.95867652424903,
+              "fatigue": 11.292500000000047,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 73.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.0765001632017395,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 6.735482022936202,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.280956022591667,
+              "fatigue": 31.317499999999995,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 147.89999999999992,
+              "isolated": 1,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            150000,
+            120000
+          ],
+          "contested": 0,
+          "power": [
+            280.90459439539006,
+            115.94372865985225
+          ],
+          "sides": [
+            {
+              "loss": 31.011468664883523,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": 73.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.0765001632017395,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 18.344591326049866,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 28.153095814147264,
+              "fatigue": 50,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 290.27500000000373,
+              "isolated": 0,
+              "panic": 194.6022522107918,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "encirclement",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            180000,
+            70000
+          ],
+          "contested": 0,
+          "power": [
+            258.26039977167477,
+            181.29461741251788
+          ],
+          "sides": [
+            {
+              "loss": 23.2771569534699,
+              "fatigue": 2.16812500000002,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.583339855879504,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 21.56248632684475,
+              "fatigue": 33.08750000000016,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 241.40000000000072,
+              "isolated": 3,
+              "panic": 0,
+              "reserveContact": 7.25,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 248.25,
+          "result": "win",
+          "area": [
+            200000,
+            70000
+          ],
+          "contested": 0,
+          "power": [
+            256.47091590489094,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 26.439621433588115,
+              "fatigue": 13.800625000000117,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.993218874703502,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.257425309018316,
+              "fatigue": 69.60249999999985,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 132,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 67.25,
+              "crowding": 537.6250000000084,
+              "isolated": 0,
+              "panic": 59.8792246128034,
+              "reserveContact": 53.75,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "encirclement",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            150000,
+            150000
+          ],
+          "contested": 0,
+          "power": [
+            198.9914729348468,
+            206.1376491408128
+          ],
+          "sides": [
+            {
+              "loss": 29.804200893260713,
+              "fatigue": 11.333125000000047,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 73.25,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.014372790807498,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 6.787915948239268,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.135394358227487,
+              "fatigue": 31.412499999999994,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 148.74999999999994,
+              "isolated": 1,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            170000,
+            150000
+          ],
+          "contested": 0,
+          "power": [
+            281.0179130495485,
+            115.90059658580454
+          ],
+          "sides": [
+            {
+              "loss": 30.84482540600459,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": 73.25,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.014372790807498,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 18.351384388237268,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.999660844709325,
+              "fatigue": 50,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 291.12500000000375,
+              "isolated": 0,
+              "panic": 194.03829511948334,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "encirclement",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            190000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            258.18822565017445,
+            179.57803838243146
+          ],
+          "sides": [
+            {
+              "loss": 23.325824625738036,
+              "fatigue": 2.1443750000000192,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.584476446552223,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 21.66277083189796,
+              "fatigue": 33.36250000000016,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 246.07500000000078,
+              "isolated": 3,
+              "panic": 0,
+              "reserveContact": 7,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 241.25,
+          "result": "win",
+          "area": [
+            180000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            195.46825257828357,
+            48
+          ],
+          "sides": [
+            {
+              "loss": 26.750218291911494,
+              "fatigue": 16.700625000000098,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 7.999549924174481,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 27.565729285282785,
+              "fatigue": 69.5987499999999,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 131.5,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 67.25,
+              "crowding": 527.0000000000081,
+              "isolated": 0,
+              "panic": 62.49264219848399,
+              "reserveContact": 70,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            130000,
+            60000
+          ],
+          "contested": 1,
+          "power": [
+            256.25145553073014,
+            228.1939803304491
+          ],
+          "sides": [
+            {
+              "loss": 15.161287918269949,
+              "fatigue": 0.10499999999999865,
+              "ammo": 15,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 58.97500825198932,
+              "fatigue": 16.381250000000136,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 52.5,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 10.115724355544105,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            140000,
+            70000
+          ],
+          "contested": 1,
+          "power": [
+            243.8726781324121,
+            225.46807545334974
+          ],
+          "sides": [
+            {
+              "loss": 15.264954207319562,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 1,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 85.49431229668971,
+              "fatigue": 27.1000000000006,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 55.75,
+              "crowding": 41.22499999999997,
+              "isolated": 1,
+              "panic": 10.115724355544105,
+              "reserveContact": 0,
+              "reserveWait": 77
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            130000,
+            90000
+          ],
+          "contested": 1,
+          "power": [
+            271.90007349976617,
+            324.719768406403
+          ],
+          "sides": [
+            {
+              "loss": 4.674854294798408,
+              "fatigue": 0.4674999999999993,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 19.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 16.66196209593683,
+              "fatigue": 13.367500000000083,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 19.25,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            140000,
+            90000
+          ],
+          "contested": 0,
+          "power": [
+            247.5333493560873,
+            285.44805834327025
+          ],
+          "sides": [
+            {
+              "loss": 17.215056703801444,
+              "fatigue": 0,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 70.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 40.068848156647164,
+              "fatigue": 40.948750000000544,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 170.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 95.25,
+              "crowding": 26.77500000000002,
+              "isolated": 0,
+              "panic": 4.388047487494876,
+              "reserveContact": 0,
+              "reserveWait": 48
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            140000,
+            80000
+          ],
+          "contested": 1,
+          "power": [
+            256.80273867848655,
+            227.73300596887654
+          ],
+          "sides": [
+            {
+              "loss": 15.429603748088027,
+              "fatigue": 0.1949999999999977,
+              "ammo": 15,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 58.08650618639784,
+              "fatigue": 16.410000000000135,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 53,
+              "crowding": 0.425,
+              "isolated": 0,
+              "panic": 9.939903691105897,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            150000,
+            60000
+          ],
+          "contested": 1,
+          "power": [
+            244.70323907986443,
+            231.2183871135193
+          ],
+          "sides": [
+            {
+              "loss": 15.53328005325875,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 1,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 83.35989820247505,
+              "fatigue": 25,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 56.25,
+              "crowding": 121.12499999999955,
+              "isolated": 1,
+              "panic": 9.939903691105897,
+              "reserveContact": 0,
+              "reserveWait": 131
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            160000,
+            110000
+          ],
+          "contested": 0,
+          "power": [
+            271.92485867652255,
+            323.19017678950365
+          ],
+          "sides": [
+            {
+              "loss": 4.6789099830238,
+              "fatigue": 0.4487499999999993,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 19.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 16.51035015935915,
+              "fatigue": 13.367500000000083,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 19.25,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": "win",
+          "area": [
+            170000,
+            60000
+          ],
+          "contested": 1,
+          "power": [
+            244.0354409646771,
+            179.82475031320428
+          ],
+          "sides": [
+            {
+              "loss": 24.698924905606965,
+              "fatigue": 0,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 111.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 56.641655824852265,
+              "fatigue": 66.07500000000111,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 189.25,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 131.5,
+              "crowding": 93.92499999999967,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 43.75,
+              "reserveWait": 13
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            104.19724393777727,
+            92.53998115293518
+          ],
+          "sides": [
+            {
+              "loss": 28.327427430850747,
+              "fatigue": 50.97500000000018,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 102,
+              "breachWidth": 18.375,
+              "breachDepth": 1.2240137734057686,
+              "pressure": 5.5,
+              "crowding": 111.77499999999964,
+              "isolated": 1,
+              "panic": 28.18733416543177,
+              "reserveContact": 103.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 32.78594242560716,
+              "fatigue": 46.47750000000019,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 28.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 127.75,
+              "crowding": 210.37500000000034,
+              "isolated": 0,
+              "panic": 157.36830102489563,
+              "reserveContact": 5.5,
+              "reserveWait": 6
+            }
+          ]
+        },
+        {
+          "time": 173,
+          "result": "win",
+          "area": [
+            140000,
+            60000
+          ],
+          "contested": 2,
+          "power": [
+            167.17486097112754,
+            45.178980873620354
+          ],
+          "sides": [
+            {
+              "loss": 28.457210570146714,
+              "fatigue": 45.13687500000033,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 102,
+              "breachWidth": 18.375,
+              "breachDepth": 1.2240137734057686,
+              "pressure": 8,
+              "crowding": 139.82499999999945,
+              "isolated": 0,
+              "panic": 44.89030710532248,
+              "reserveContact": 109.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 33.26114450691637,
+              "fatigue": 54.035000000000004,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 28.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 134.75,
+              "crowding": 240.55000000000084,
+              "isolated": 0,
+              "panic": 268.3591744270555,
+              "reserveContact": 8,
+              "reserveWait": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            60000
+          ],
+          "contested": 0,
+          "power": [
+            200.40603958621256,
+            132.53106728360825
+          ],
+          "sides": [
+            {
+              "loss": 8.335299686001122,
+              "fatigue": 40.14375000000009,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 118,
+              "breachWidth": 18.375,
+              "breachDepth": 0.6243449579415138,
+              "pressure": 2.25,
+              "crowding": 17.00000000000001,
+              "isolated": 1,
+              "panic": 14.95475802266488,
+              "reserveContact": 93,
+              "reserveWait": 0
+            },
+            {
+              "loss": 23.873537270105828,
+              "fatigue": 43.517499999999835,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 47.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 108.75,
+              "crowding": 155.55000000000013,
+              "isolated": 2,
+              "panic": 84.44115655180632,
+              "reserveContact": 2.25,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 159,
+          "result": "win",
+          "area": [
+            110000,
+            40000
+          ],
+          "contested": 2,
+          "power": [
+            133.87580176654376,
+            47.062859490902866
+          ],
+          "sides": [
+            {
+              "loss": 12.565115284117645,
+              "fatigue": 46.44125000000008,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 118,
+              "breachWidth": 18.375,
+              "breachDepth": 5.3208505086469255,
+              "pressure": 45.25,
+              "crowding": 17.00000000000001,
+              "isolated": 1,
+              "panic": 59.29523741948276,
+              "reserveContact": 132,
+              "reserveWait": 0
+            },
+            {
+              "loss": 26.232109198783036,
+              "fatigue": 59.85250000000003,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 47.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 127,
+              "crowding": 173.40000000000038,
+              "isolated": 2,
+              "panic": 157.03959088775687,
+              "reserveContact": 32.25,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Wren Crossing",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            110000
+          ],
+          "contested": 1,
+          "power": [
+            105.21733937581703,
+            93.89138566852205
+          ],
+          "sides": [
+            {
+              "loss": 27.7823936207336,
+              "fatigue": 51.08250000000018,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 104.97499999999968,
+              "isolated": 0,
+              "panic": 26.467552568358407,
+              "reserveContact": 103,
+              "reserveWait": 0
+            },
+            {
+              "loss": 32.98994128818805,
+              "fatigue": 46.7250000000002,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 28.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 128,
+              "crowding": 210.37500000000034,
+              "isolated": 0,
+              "panic": 157.25139238818758,
+              "reserveContact": 0,
+              "reserveWait": 6
+            }
+          ]
+        },
+        {
+          "time": 157,
+          "result": "win",
+          "area": [
+            170000,
+            80000
+          ],
+          "contested": 0,
+          "power": [
+            159.04224383242064,
+            46.714904118902
+          ],
+          "sides": [
+            {
+              "loss": 28.017763866974164,
+              "fatigue": 47.16812500000028,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 120.25,
+              "breachWidth": 18.375,
+              "breachDepth": 1.8327227191230844,
+              "pressure": 8.75,
+              "crowding": 131.7499999999995,
+              "isolated": 0,
+              "panic": 34.8093130753563,
+              "reserveContact": 112.5,
+              "reserveWait": 0
+            },
+            {
+              "loss": 33.43457512644912,
+              "fatigue": 53.3875,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 28.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 134.25,
+              "crowding": 248.6250000000009,
+              "isolated": 0,
+              "panic": 237.28825550615852,
+              "reserveContact": 8.75,
+              "reserveWait": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Wren Crossing",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 360
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            120000,
+            60000
+          ],
+          "contested": 2,
+          "power": [
+            174.873974064962,
+            120.24456890041324
+          ],
+          "sides": [
+            {
+              "loss": 8.017676818246969,
+              "fatigue": 43.7337500000001,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 115.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 1.161401523915586,
+              "pressure": 14.25,
+              "crowding": 1.7,
+              "isolated": 2,
+              "panic": 6.2377626839175555,
+              "reserveContact": 93.75,
+              "reserveWait": 0
+            },
+            {
+              "loss": 22.609880132003653,
+              "fatigue": 45.762500000000145,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 45.5,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 112.25,
+              "crowding": 153.00000000000006,
+              "isolated": 0,
+              "panic": 105.78637254169166,
+              "reserveContact": 18.25,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 248,
+          "result": "loss",
+          "area": [
+            90000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            48,
+            73.04876708487953
+          ],
+          "sides": [
+            {
+              "loss": 13.475433209351081,
+              "fatigue": 50,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 115.5,
+              "breachWidth": 18.375,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 54.25,
+              "crowding": 219.30000000000183,
+              "isolated": 1,
+              "panic": 161.73110839370176,
+              "reserveContact": 99,
+              "reserveWait": 0
+            },
+            {
+              "loss": 28.645481209134786,
+              "fatigue": 65.63750000000017,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 45.5,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 116,
+              "crowding": 402.4750000000059,
+              "isolated": 0,
+              "panic": 357.12661811600356,
+              "reserveContact": 56.75,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "territory",
+        "seconds": 120
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": "win",
+          "area": [
+            130000,
+            60000
+          ],
+          "contested": 1,
+          "power": [
+            256.25145553073014,
+            228.1939803304491
+          ],
+          "sides": [
+            {
+              "loss": 15.161287918269949,
+              "fatigue": 0.10499999999999865,
+              "ammo": 15,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 58.97500825198932,
+              "fatigue": 16.381250000000136,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 52.5,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 10.115724355544105,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 1800
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            130000,
+            60000
+          ],
+          "contested": 1,
+          "power": [
+            256.25145553073014,
+            228.1939803304491
+          ],
+          "sides": [
+            {
+              "loss": 15.161287918269949,
+              "fatigue": 0.10499999999999865,
+              "ammo": 15,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 58.97500825198932,
+              "fatigue": 16.381250000000136,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 52.5,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 10.115724355544105,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": null,
+          "area": [
+            140000,
+            70000
+          ],
+          "contested": 1,
+          "power": [
+            243.8726781324121,
+            225.46807545334974
+          ],
+          "sides": [
+            {
+              "loss": 15.264954207319562,
+              "fatigue": 0,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 1,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            },
+            {
+              "loss": 85.49431229668971,
+              "fatigue": 27.1000000000006,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 55.75,
+              "crowding": 41.22499999999997,
+              "isolated": 1,
+              "panic": 10.115724355544105,
+              "reserveContact": 0,
+              "reserveWait": 77
+            }
+          ]
+        },
+        {
+          "time": 1800,
+          "result": "win",
+          "area": [
+            130000,
+            70000
+          ],
+          "contested": 0,
+          "power": [
+            170.95437784095014,
+            178.1935000828906
+          ],
+          "sides": [
+            {
+              "loss": 26.372082586875877,
+              "fatigue": 25.05625,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 1,
+              "panic": 215.29205557125312,
+              "reserveContact": 34.75,
+              "reserveWait": 0
+            },
+            {
+              "loss": 97.55393058293225,
+              "fatigue": 52.430000000000064,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 468.25,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 2.03,
+              "pressure": 287.75,
+              "crowding": 824.0749999999923,
+              "isolated": 0,
+              "panic": 483.5048606920413,
+              "reserveContact": 0,
+              "reserveWait": 122
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "territory",
+        "seconds": 120
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": "win",
+          "area": [
+            130000,
+            90000
+          ],
+          "contested": 1,
+          "power": [
+            271.90007349976617,
+            324.719768406403
+          ],
+          "sides": [
+            {
+              "loss": 4.674854294798408,
+              "fatigue": 0.4674999999999993,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 19.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 16.66196209593683,
+              "fatigue": 13.367500000000083,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 19.25,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile-archers",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 1800
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            130000,
+            90000
+          ],
+          "contested": 1,
+          "power": [
+            271.90007349976617,
+            324.719768406403
+          ],
+          "sides": [
+            {
+              "loss": 4.674854294798408,
+              "fatigue": 0.4674999999999993,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 19.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 16.66196209593683,
+              "fatigue": 13.367500000000083,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 19.25,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 0,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 360,
+          "result": null,
+          "area": [
+            140000,
+            90000
+          ],
+          "contested": 0,
+          "power": [
+            247.5333493560873,
+            285.44805834327025
+          ],
+          "sides": [
+            {
+              "loss": 17.215056703801444,
+              "fatigue": 0,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 0,
+              "reserveContact": 70.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 40.068848156647164,
+              "fatigue": 40.948750000000544,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 170.5,
+              "breachWidth": 9.666666666666666,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 95.25,
+              "crowding": 26.77500000000002,
+              "isolated": 0,
+              "panic": 4.388047487494876,
+              "reserveContact": 0,
+              "reserveWait": 48
+            }
+          ]
+        },
+        {
+          "time": 1800,
+          "result": "draw",
+          "area": [
+            160000,
+            150000
+          ],
+          "contested": 0,
+          "power": [
+            212.65648394125841,
+            272.7203881918707
+          ],
+          "sides": [
+            {
+              "loss": 33.58128702938883,
+              "fatigue": 0,
+              "ammo": 38,
+              "organized": 4,
+              "breachTime": null,
+              "breachWidth": 0,
+              "breachDepth": 0,
+              "pressure": 0,
+              "crowding": 0,
+              "isolated": 0,
+              "panic": 18.4959898535553,
+              "reserveContact": 115,
+              "reserveWait": 0
+            },
+            {
+              "loss": 93.73560065483034,
+              "fatigue": 37.15999999999981,
+              "ammo": 0,
+              "organized": 4,
+              "breachTime": 170.5,
+              "breachWidth": 29,
+              "breachDepth": 2.5374999999999996,
+              "pressure": 268.75,
+              "crowding": 317.90000000000043,
+              "isolated": 0,
+              "panic": 13.403772353774581,
+              "reserveContact": 0,
+              "reserveWait": 316
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "territory",
+        "seconds": 120
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": "draw",
+          "area": [
+            110000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            104.19724393777727,
+            92.53998115293518
+          ],
+          "sides": [
+            {
+              "loss": 28.327427430850747,
+              "fatigue": 50.97500000000018,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 102,
+              "breachWidth": 18.375,
+              "breachDepth": 1.2240137734057686,
+              "pressure": 5.5,
+              "crowding": 111.77499999999964,
+              "isolated": 1,
+              "panic": 28.18733416543177,
+              "reserveContact": 103.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 32.78594242560716,
+              "fatigue": 46.47750000000019,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 28.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 127.75,
+              "crowding": 210.37500000000034,
+              "isolated": 0,
+              "panic": 157.36830102489563,
+              "reserveContact": 5.5,
+              "reserveWait": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Ash Hollow",
+      "variant": 0,
+      "objective": {
+        "kind": "power",
+        "seconds": 1800
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            100000
+          ],
+          "contested": 0,
+          "power": [
+            104.19724393777727,
+            92.53998115293518
+          ],
+          "sides": [
+            {
+              "loss": 28.327427430850747,
+              "fatigue": 50.97500000000018,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 102,
+              "breachWidth": 18.375,
+              "breachDepth": 1.2240137734057686,
+              "pressure": 5.5,
+              "crowding": 111.77499999999964,
+              "isolated": 1,
+              "panic": 28.18733416543177,
+              "reserveContact": 103.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 32.78594242560716,
+              "fatigue": 46.47750000000019,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 28.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 127.75,
+              "crowding": 210.37500000000034,
+              "isolated": 0,
+              "panic": 157.36830102489563,
+              "reserveContact": 5.5,
+              "reserveWait": 6
+            }
+          ]
+        },
+        {
+          "time": 173,
+          "result": "win",
+          "area": [
+            140000,
+            60000
+          ],
+          "contested": 2,
+          "power": [
+            167.17486097112754,
+            45.178980873620354
+          ],
+          "sides": [
+            {
+              "loss": 28.457210570146714,
+              "fatigue": 45.13687500000033,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 102,
+              "breachWidth": 18.375,
+              "breachDepth": 1.2240137734057686,
+              "pressure": 8,
+              "crowding": 139.82499999999945,
+              "isolated": 0,
+              "panic": 44.89030710532248,
+              "reserveContact": 109.25,
+              "reserveWait": 0
+            },
+            {
+              "loss": 33.26114450691637,
+              "fatigue": 54.035000000000004,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 28.75,
+              "breachWidth": 19.333333333333332,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 134.75,
+              "crowding": 240.55000000000084,
+              "isolated": 0,
+              "panic": 268.3591744270555,
+              "reserveContact": 8,
+              "reserveWait": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "territory",
+        "seconds": 120
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": "win",
+          "area": [
+            110000,
+            60000
+          ],
+          "contested": 0,
+          "power": [
+            200.40603958621256,
+            132.53106728360825
+          ],
+          "sides": [
+            {
+              "loss": 8.335299686001122,
+              "fatigue": 40.14375000000009,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 118,
+              "breachWidth": 18.375,
+              "breachDepth": 0.6243449579415138,
+              "pressure": 2.25,
+              "crowding": 17.00000000000001,
+              "isolated": 1,
+              "panic": 14.95475802266488,
+              "reserveContact": 93,
+              "reserveWait": 0
+            },
+            {
+              "loss": 23.873537270105828,
+              "fatigue": 43.517499999999835,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 47.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 108.75,
+              "crowding": 155.55000000000013,
+              "isolated": 2,
+              "panic": 84.44115655180632,
+              "reserveContact": 2.25,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "yielding-center",
+      "seed": "Ash Hollow",
+      "variant": 1,
+      "objective": {
+        "kind": "power",
+        "seconds": 1800
+      },
+      "timeline": [
+        {
+          "time": 120,
+          "result": null,
+          "area": [
+            110000,
+            60000
+          ],
+          "contested": 0,
+          "power": [
+            200.40603958621256,
+            132.53106728360825
+          ],
+          "sides": [
+            {
+              "loss": 8.335299686001122,
+              "fatigue": 40.14375000000009,
+              "ammo": 0,
+              "organized": 3,
+              "breachTime": 118,
+              "breachWidth": 18.375,
+              "breachDepth": 0.6243449579415138,
+              "pressure": 2.25,
+              "crowding": 17.00000000000001,
+              "isolated": 1,
+              "panic": 14.95475802266488,
+              "reserveContact": 93,
+              "reserveWait": 0
+            },
+            {
+              "loss": 23.873537270105828,
+              "fatigue": 43.517499999999835,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 47.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 108.75,
+              "crowding": 155.55000000000013,
+              "isolated": 2,
+              "panic": 84.44115655180632,
+              "reserveContact": 2.25,
+              "reserveWait": 0
+            }
+          ]
+        },
+        {
+          "time": 159,
+          "result": "win",
+          "area": [
+            110000,
+            40000
+          ],
+          "contested": 2,
+          "power": [
+            133.87580176654376,
+            47.062859490902866
+          ],
+          "sides": [
+            {
+              "loss": 12.565115284117645,
+              "fatigue": 46.44125000000008,
+              "ammo": 0,
+              "organized": 2,
+              "breachTime": 118,
+              "breachWidth": 18.375,
+              "breachDepth": 5.3208505086469255,
+              "pressure": 45.25,
+              "crowding": 17.00000000000001,
+              "isolated": 1,
+              "panic": 59.29523741948276,
+              "reserveContact": 132,
+              "reserveWait": 0
+            },
+            {
+              "loss": 26.232109198783036,
+              "fatigue": 59.85250000000003,
+              "ammo": 0,
+              "organized": 1,
+              "breachTime": 47.25,
+              "breachWidth": 29,
+              "breachDepth": 3.0449999999999995,
+              "pressure": 127,
+              "crowding": 173.40000000000038,
+              "isolated": 2,
+              "panic": 157.03959088775687,
+              "reserveContact": 32.25,
+              "reserveWait": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
