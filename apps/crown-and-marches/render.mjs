@@ -52,7 +52,7 @@ for(const g of b.units){if(!g.alive)continue;if(selected.includes(g.id)){c.strok
 // Sprites are generated once for each silhouette, faction, orientation and animation phase.
 // At overview scale draw the same physical soldiers with low-detail atlas glyphs.
 this.figures??=new Map();
-const detail=cam.s>=1.25&&quality!=='low', phase=Math.floor(b.time*7)%4;
+const visible=b.soldiers.filter(p=>p.state!=='escaped'&&p.state!=='captured'&&!(p.hp<=0&&quality==='low')&&p.x*cam.s+cam.ox>=-30&&p.x*cam.s+cam.ox<=w+30&&p.y*cam.s+cam.oy>=-30&&p.y*cam.s+cam.oy<=h+30);const detail=cam.s>=1.25&&quality!=='low'&&(visible.length<1000||cam.s>=2.2),phase=Math.floor(b.time*7)%4;
 const sprite=(p,g)=>{
  const face=(Math.round(p.angle/(Math.PI/8))+16)%16,pose=p.hp<=0?'down':p.state==='shoot'?'shoot':p.hit>0?'hit':p.state==='block'?'block':p.state==='fight'?'fight':p.state==='move'||p.state==='flee'?'walk':'stand';
  const moving=pose==='walk'||pose==='fight'||pose==='shoot';
@@ -72,9 +72,22 @@ const sprite=(p,g)=>{
  else{let reach=[4,5,8,12,4,4,7,9,3,4][p.type];q.beginPath();q.moveTo(0,2);q.lineTo(reach+(pose==='fight'?step:0),pose==='fight'?1:2);q.stroke();}
  if(this.figures.size>=1500)this.figures.delete(this.figures.keys().next().value);this.figures.set(key,a);return a;
 };
-for(const p of b.soldiers){if(p.state==='escaped'||p.state==='captured')continue;let g=b.units[p.g];if(p.hp<=0&&quality==='low')continue;
- if(p.x*cam.s+cam.ox<-30||p.x*cam.s+cam.ox>w+30||p.y*cam.s+cam.oy<-30||p.y*cam.s+cam.oy>h+30)continue;
- c.drawImage(sprite(p,g),p.x-16,p.y-16,32,32);}
+if(detail){for(const p of visible)c.drawImage(sprite(p,b.units[p.g]),p.x-16,p.y-16,32,32);}
+else{
+ // A small number of Canvas paths replace thousands of scaled image blits.
+ // Positions and facing still come from each physical soldier, not regiment proxies.
+ const faction=Array.from({length:PALETTE.length},()=>[]),horses=[],fallen=[],weapons=[],heads=[];
+ for(const p of visible){if(p.hp<=0){fallen.push(p);continue;}const co=Math.cos(p.angle),si=Math.sin(p.angle),g=b.units[p.g],v={p,co,si};(faction[g.f]||faction[0]).push(v);if(p.type===6||p.type===7)horses.push(v);weapons.push(v);heads.push(v);}
+ const quad=(v,length,width,offset=0)=>{const {p,co,si}=v,x=p.x+co*offset,y=p.y+si*offset,l=length/2,r=width/2;c.moveTo(x-co*l-si*r,y-si*l+co*r);c.lineTo(x+co*l-si*r,y+si*l+co*r);c.lineTo(x+co*l+si*r,y+si*l-co*r);c.lineTo(x-co*l+si*r,y-si*l-co*r);c.closePath();};
+ if(fallen.length){c.fillStyle='#483d32a0';c.beginPath();for(const p of fallen)c.rect(p.x-2.6,p.y-.75,5.2,1.5);c.fill();}
+ if(horses.length){c.fillStyle='#73583e';c.beginPath();for(const v of horses)quad(v,v.p.type===7?11:9,4.6,-.5);c.fill();}
+ for(let i=0;i<faction.length;i++){if(!faction[i].length)continue;c.fillStyle=PALETTE[i];c.beginPath();for(const v of faction[i])quad(v,v.p.type===6||v.p.type===7?4:4.4,v.p.type===3?3.2:3.6);c.fill();}
+ if(cam.s>=.42&&quality!=='low'){c.fillStyle='#d5c7a8';c.beginPath();for(const v of heads){const {p,co,si}=v;c.rect(p.x+co*1.3-.8,p.y+si*1.3-.8,1.6,1.6);}c.fill();}
+ c.strokeStyle='#d9d0b4';c.lineWidth=Math.max(.65,.47/cam.s);c.beginPath();for(const v of weapons){const {p,co,si}=v,x=p.x,y=p.y;
+ if(p.type===4||p.type===5||p.type===9){if(cam.s<.42&&p.state!=='shoot')continue;c.moveTo(x+co*2-si*2,y+si*2+co*2);c.lineTo(x+co*4,y+si*4);c.lineTo(x+co*2+si*2,y+si*2-co*2);}
+ else{let reach=[4,5,8,12,4,4,7,9,3,4][p.type];c.moveTo(x-si*1.5,y+co*1.5);c.lineTo(x+co*reach-si*1.5,y+si*reach+co*1.5);}
+ }c.stroke();
+}
 if(b.previewLine){const [a,z]=b.previewLine;c.strokeStyle='#ffe6aa';c.lineWidth=2/cam.s;c.setLineDash([6/cam.s,4/cam.s]);c.beginPath();c.moveTo(...a);c.lineTo(...z);c.stroke();c.setLineDash([]);}c.lineWidth=.65;c.strokeStyle='#f4e0aa';c.beginPath();for(const p of b.projectiles||[]){c.moveTo(p.x,p.y);c.lineTo(p.x-p.vx*.045,p.y-p.vy*.045);}c.stroke();
 c.restore();for(const g of b.units){if(!g.alive)continue;let x=cam.ox+g.x*cam.s,y=cam.oy+g.y*cam.s-24*cam.s;c.fillStyle=PALETTE[g.f];c.fillRect(x-13,y-7,26,14);c.strokeStyle=selected.includes(g.id)?'#fff0a5':'#e6d0a3';c.strokeRect(x-13,y-7,26,14);c.fillStyle='white';c.font='bold 10px system-ui';c.textAlign='center';c.fillText(g.alive,x,y+3)}
 }
