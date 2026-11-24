@@ -7,7 +7,8 @@
       "files": [
         "engine.test.mjs",
         "living.test.mjs",
-        "wealth.test.mjs"
+        "wealth.test.mjs",
+        "sinews.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -281,6 +282,121 @@
         {
           "action": "visible",
           "selector": "[data-act=\"econlab\"]"
+        }
+      ]
+    },
+    {
+      "id": "sinews-campaign-experiments",
+      "kind": "node",
+      "entry": "sinews-experiment.mjs",
+      "args": [
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "campaign-sandbox",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-act=\"campaignlab\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#wseed"
+        },
+        {
+          "action": "fill",
+          "selector": "#wseed",
+          "value": "sinews-trial-1"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"campaignstart\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"campaignexport\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"warplayer\"][data-value=\"0\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"togglearmy\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"togglearmy\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"opdays\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"opplace\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"cancel\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"cancel\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"tab\"][data-value=\"war\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"observer\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"8\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"campaignretry\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"campaignexport\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econexit\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"campaignlab\"]"
         }
       ]
     }
