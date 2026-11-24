@@ -1,9 +1,33 @@
-import {UNIT, strength, clamp, xx, yy, W, H, idx, random} from './world.mjs';
+import {UNIT, strength, clamp, xx, yy, W, H, idx, random, neighbors} from './world.mjs';
 export const BW=1000,BH=640;
 export const FORM=['Линия','Колонна','Плотный строй','Рассыпной строй','Клин','Каре'];
 export function createBattle(s){const info=s.battle, armies=[s.armies.find(a=>a.id===info.a),s.armies.find(a=>a.id===info.b)];let b={seed:s.rng,rng:s.rng,armies:armies.map(a=>({id:a.id,f:a.f,count:strength(a)})),units:[],soldiers:[],time:0,winner:null,terrain:[],river:false,settlement:false};
-for(let y=0;y<32;y++)for(let x=0;x<50;x++){let wx=clamp(xx(info.i)+Math.floor((x-25)/12),0,W-1),wy=clamp(yy(info.i)+Math.floor((y-16)/12),0,H-1),i=idx(wx,wy);b.terrain.push({h:s.map.height[i]+Math.sin(x*.28+y*.12)*.018,forest:s.map.terrain[i]===2,water:!!s.map.river[i]&&Math.abs(y-15-Math.sin(x*.19)*2)<1.1});}b.river=b.terrain.some(t=>t.water);b.settlement=s.cities.some(c=>c.i===info.i);
+b.terrain=campaignTerrain(s,info.i);b.river=b.terrain.some(t=>t.water);b.settlement=b.terrain.some(t=>t.building);
 for(let side=0;side<2;side++){let a=armies[side],groups=[];for(let type=0;type<10;type++){for(let n=a.units[type];n>0;n-=60)groups.push([type,Math.min(n,60)])}let columns=Math.min(5,groups.length);for(let k=0;k<groups.length;k++){let [type,n]=groups[k],x=side?760:240,y=BH/2+(k%columns-(columns-1)/2)*105; x+=(side?1:-1)*Math.floor(k/columns)*75;let g={id:b.units.length,side,f:a.f,type,x,y,tx:x,ty:y,angle:side?Math.PI:0,form:0,order:'hold',target:null,alive:n,morale:a.morale,ammo:UNIT[type][5]?18:0};b.units.push(g);for(let j=0;j<n;j++){let p=slot(g,j,n);b.soldiers.push({id:b.soldiers.length,g:g.id,side,type,x:p.x,y:p.y,angle:g.angle,hp:1,morale:a.morale,fatigue:a.fatigue,experience:0,ammo:g.ammo,cd:random(b),state:'hold',j,n,target:-1})}}}return b}
+// The strategic cell is the centre of a 4.2 x 2.7-cell battle window.
+// Use the actual drainage graph and road edges, not a fabricated horizontal river.
+export function campaignTerrain(s,center){
+ const m=s.map,originX=xx(center)+.5,originY=yy(center)+.5,scale=12,tiles=[];
+ const seg=(x,y,ax,ay,bx,by)=>{const dx=bx-ax,dy=by-ay,t=clamp(((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(x-ax-dx*t,y-ay-dy*t);};
+ const cell=(x,y)=>idx(clamp(x,0,W-1),clamp(y,0,H-1));
+ const heightAt=(x,y)=>{let ix=Math.floor(x-.5),iy=Math.floor(y-.5),u=x-.5-ix,v=y-.5-iy;return m.height[cell(ix,iy)]*(1-u)*(1-v)+m.height[cell(ix+1,iy)]*u*(1-v)+m.height[cell(ix,iy+1)]*(1-u)*v+m.height[cell(ix+1,iy+1)]*u*v;};
+ for(let y=0;y<32;y++)for(let x=0;x<50;x++){
+ let wx=originX+(x+.5-25)/scale,wy=originY+(y+.5-16)/scale,i=cell(Math.floor(wx),Math.floor(wy)),cx=xx(i)+.5,cy=yy(i)+.5;
+ let water=!m.land[i],road=false,bridge=false,nearRiver=Infinity;
+ const r= [i,...neighbors(i)];
+ for(const j of r){let jx=xx(j)+.5,jy=yy(j)+.5,d=m.down[j];
+ if(m.river[j]&&d>=0){let w=clamp(.065+Math.sqrt(m.flow?.[j]||20)*.006,.08,.22),distance=seg(wx,wy,jx,jy,xx(d)+.5,yy(d)+.5);nearRiver=Math.min(nearRiver,distance);if(distance<w)water=true;}
+ if(s.road[j])for(const k of neighbors(j))if(s.road[k]&&seg(wx,wy,jx,jy,xx(k)+.5,yy(k)+.5)<.10)road=true;
+ if(s.bridge?.[j]&&Math.hypot(wx-jx,wy-jy)<.26&&nearRiver<.24)bridge=true;
+ }
+ if(water&&road&&s.bridge?.[i])bridge=true;
+ const district=s.district?.[i]||0,city=s.cities.find(c=>c.i===i),localX=wx-cx,localY=wy-cy;
+ const urban=[1,5,6,7,8,9].includes(district)||!!city,building=urban&&!water&&!road&&Math.abs(localX)<.34&&Math.abs(localY)<.35&&((Math.floor((localX+.5)*7)+Math.floor((localY+.5)*7))%3===0);
+ const fort=(district===8||city?.fort>0)&&Math.max(Math.abs(localX),Math.abs(localY))>.34&&Math.max(Math.abs(localX),Math.abs(localY))<.44&&!road&&!water;
+ tiles.push({h:heightAt(wx,wy),forest:m.terrain[i]===2&&!urban&&!road,water:water&&!bridge,bridge,road:road||bridge,field:district===2,building:building||fort,fort:!!fort,worldCell:i});
+ }
+ return tiles;
+}
 function slot(g,j,n){let cols=g.width|| (g.form===1?4:g.form===2?8:g.form===3?15:g.form===5?Math.ceil(Math.sqrt(n)):12),space=Math.max(g.type===6||g.type===7?7:3.8,g.form===3?9:g.form===2?4:5);let row=Math.floor(j/cols),col=j%cols,along=-(row-(Math.ceil(n/cols)-1)/2)*space,across=(col-(cols-1)/2)*space;if(g.form===4){row=Math.floor(Math.sqrt(j));along=-row*space;across=(j-row*row-row)*space}if(g.form===5){let p=j/n*Math.PI*2;along=Math.cos(p)*25;across=Math.sin(p)*25}let c=Math.cos(g.angle),s=Math.sin(g.angle);return {x:g.x+along*c-across*s,y:g.y+along*s+across*c}}
 
 const REACH=[5,5.5,9,13,4,4,7,8,3,4],RADIUS=[1.8,1.8,1.8,1.8,1.7,1.7,3.1,3.4,2.2,1.7];
@@ -62,7 +86,7 @@ export function battleTick(b,dt=.1){
  for(const g of groups){const m=men[g.id];g.alive=m.length;g.morale=m.reduce((n,p)=>n+p.morale,0)/(m.length||1);g.cohesion=m.reduce((n,p)=>{const s=slot(g,p.j,p.n);return n+Math.min(1,Math.hypot(p.x-s.x,p.y-s.y)/35)},0)/(m.length||1);g.cohesion=1-g.cohesion;}
  for(const g of groups){if(!g.alive)continue;const foes=groups.filter(q=>q.side!==g.side&&q.alive),allies=groups.filter(q=>q.side===g.side&&q.alive);if(b.routAt==null&&(g.ai??g.f!==0)&&Math.floor(b.time/1.2)!==Math.floor((b.time-dt)/1.2))ai(b,g,foes,allies);
  const target=groups[g.target];if(!target?.alive&&['attack','flank','distance','pursue'].includes(g.order)&&foes.length){g.target=foes.reduce((a,q)=>Math.hypot(a.x-g.x,a.y-g.y)<Math.hypot(q.x-g.x,q.y-g.y)?a:q).id;}const objective=groups[g.target];if(objective?.alive&&['attack','flank','distance','pursue'].includes(g.order)){let dx=objective.x-g.x,dy=objective.y-g.y,d=Math.hypot(dx,dy)||1,stop=g.order==='distance'?UNIT[g.type][5]*.78:8;g.tx=objective.x-dx/d*stop;g.ty=objective.y-dy/d*stop;if(g.order==='flank'&&d>100){const sign=g.id%2?1:-1;g.tx-=dy/d*95*sign;g.ty+=dx/d*95*sign;}}
- let dx=g.tx-g.x,dy=g.ty-g.y,d=Math.hypot(dx,dy);if(d>3&&!['hold','defend','reserve'].includes(g.order)){const t=tile(b,g.x,g.y),speed=UNIT[g.type][3]*18*(t.water?.42:t.forest?.72:1);if(!Number.isFinite(g.fixedAngle))g.angle=Math.atan2(dy,dx);g.x=clamp(g.x+dx/d*Math.min(d,speed*dt),5,BW-5);g.y=clamp(g.y+dy/d*Math.min(d,speed*dt),5,BH-5);}else if(g.queue?.length)apply(g,g.queue.shift());}
+ let dx=g.tx-g.x,dy=g.ty-g.y,d=Math.hypot(dx,dy);if(d>3&&!['hold','defend','reserve'].includes(g.order)){const t=tile(b,g.x,g.y),speed=UNIT[g.type][3]*18*(t.water?.42:t.building?.35:t.road?1.10:t.forest?.72:1);if(!Number.isFinite(g.fixedAngle))g.angle=Math.atan2(dy,dx);g.x=clamp(g.x+dx/d*Math.min(d,speed*dt),5,BW-5);g.y=clamp(g.y+dy/d*Math.min(d,speed*dt),5,BH-5);}else if(g.queue?.length)apply(g,g.queue.shift());}
  let grid=gridOf(living);
  for(const p of living){if(!active(p))continue;const g=groups[p.g],u=UNIT[p.type],t=tile(b,p.x,p.y),horse=mounted(p),reach=REACH[p.type],range=ranged(p)?u[5]*(b.weather==='rain'?.75:1):0;let target=b.soldiers[p.target],best=Infinity,panic=0;const search=Math.max(23,range);
  if(target&&active(target)&&target.side!==p.side){best=(p.x-target.x)**2+(p.y-target.y)**2;if(best>search*search){target=null;best=Infinity;}}else target=null;
@@ -79,7 +103,7 @@ export function battleTick(b,dt=.1){
  p.fatigue=clamp(p.fatigue+.018,0,1);}
  dx=dy=dist=0;
  }else{if(target&&d<30&&!range&&!['move','hold','defend','reserve'].includes(g.order)){dx=target.x-p.x;dy=target.y-p.y;dist=d;}p.state=dist>2?'move':'hold';if(dist>2)p.angle=Math.atan2(dy,dx);}
- let speed=u[3]*26*(1-p.fatigue*.45)*(t.water?.43:t.forest?.68:1)*(b.weather==='rain'?.87:1),desired=dist>1?Math.min(speed,dist/dt):0,blend=Math.min(1,dt*(horse?1.7:9));p.vx=(p.vx||0)*(1-blend)+(dist?dx/dist*desired:0)*blend;p.vy=(p.vy||0)*(1-blend)+(dist?dy/dist*desired:0)*blend;p.x=clamp(p.x+p.vx*dt,2,BW-2);p.y=clamp(p.y+p.vy*dt,2,BH-2);p.fatigue=clamp(p.fatigue+(desired>.5?.003:-.008)*dt,0,1);
+ let speed=u[3]*26*(1-p.fatigue*.45)*(t.water?.43:t.building?.35:t.road?1.12:t.forest?.68:1)*(b.weather==='rain'?.87:1),desired=dist>1?Math.min(speed,dist/dt):0,blend=Math.min(1,dt*(horse?1.7:9));p.vx=(p.vx||0)*(1-blend)+(dist?dx/dist*desired:0)*blend;p.vy=(p.vy||0)*(1-blend)+(dist?dy/dist*desired:0)*blend;p.x=clamp(p.x+p.vx*dt,2,BW-2);p.y=clamp(p.y+p.vy*dt,2,BH-2);p.fatigue=clamp(p.fatigue+(desired>.5?.003:-.008)*dt,0,1);
  }
  // Two position-based collision passes. All soldiers, including enemies, have physical radii.
  for(let pass=0;pass<2;pass++){grid=gridOf(living.filter(active));for(const p of living){if(!active(p))continue;grid.visit(p.x,p.y,8,q=>{if(q.id<=p.id||!active(q))return;let dx=q.x-p.x,dy=q.y-p.y,d=Math.hypot(dx,dy),min=RADIUS[p.type]+RADIUS[q.type];if(d>=min)return;if(d<.001){dx=p.id%2?1:-1;dy=0;d=1;}const push=(min-d)*.5;dx/=d;dy/=d;p.x=clamp(p.x-dx*push,1,BW-1);p.y=clamp(p.y-dy*push,1,BH-1);q.x=clamp(q.x+dx*push,1,BW-1);q.y=clamp(q.y+dy*push,1,BH-1);if(p.side!==q.side){if(mounted(p)&&Math.hypot(p.vx,p.vy)>22){injury(b,q,.15,grid);p.vx*=.5;p.vy*=.5;}if(mounted(q)&&Math.hypot(q.vx,q.vy)>22){injury(b,p,.15,grid);q.vx*=.5;q.vy*=.5;}}});}}
