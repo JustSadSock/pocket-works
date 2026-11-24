@@ -368,6 +368,12 @@
           "selector": "[data-act=\"econexit\"]"
         }
       ]
+    },
+    {
+      "id": "sinews-journeys",
+      "kind": "browser-node",
+      "entry": "sinews-journeys.mjs",
+      "tier": "smoke"
     }
   ]
 }
