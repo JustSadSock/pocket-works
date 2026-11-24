@@ -374,6 +374,12 @@
       "kind": "browser-node",
       "entry": "sinews-journeys.mjs",
       "tier": "smoke"
+    },
+    {
+      "id": "sinews-memory",
+      "kind": "node",
+      "entry": "sinews-memory.mjs",
+      "tier": "smoke"
     }
   ]
 }
