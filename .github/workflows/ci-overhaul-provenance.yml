@@ -1,0 +1,60 @@
+name: CI Overhaul Protected Receipt Lab
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-provenance.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/*.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: integrated-plan-1
+          run-id: 45483925251
+          github-token: ${{ github.token }}
+          path: source-plan
+      - name: Prove successful experimental run cannot issue reusable receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir provenance-evidence
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {assessSource} from './scripts/ci-overhaul/protected-issuer.mjs';
+          const policy=JSON.parse(readFileSync('scripts/ci-overhaul/verified-policy.json','utf8'));
+          const plan=JSON.parse(readFileSync('source-plan/plan.json','utf8'));
+          const base=process.env.GITHUB_API_URL+'/repos/'+process.env.GITHUB_REPOSITORY;
+          async function get(path){
+            const res=await fetch(base+path,{headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'}});
+            if(!res.ok)throw Error('Source API '+res.status);
+            return res.json();
+          }
+          const run=await get('/actions/runs/45483925251');
+          if(run.head_sha!=='63ae82fc75240e804638e432b368f84af3f92c6f'||run.conclusion!=='success'||run.status!=='completed')throw Error('Unexpected frozen source');
+          const commit=await get('/git/commits/'+run.head_sha);
+          const candidates=plan.tasks.filter(t=>['node','node-test'].includes(t.kind)&&!t.install);
+          if(!candidates.length||policy.enabled!==false||policy.eligibleTaskDigests.length)throw Error('Expected disabled policy');
+          const results=candidates.map(task=>({key:task.key,...assessSource({run,commit,task,policy,issuer:{ref:process.env.GITHUB_REF,refProtected:process.env.GITHUB_REF_PROTECTED==='true',environment:null}})}));
+          if(results.some(r=>r.allowed))throw Error('Unsafe source unexpectedly approved');
+          const report={schema:1,sourceRun:run.id,sourceConclusion:run.conclusion,checked:results.length,allowed:0,skippingEnabled:false,results};
+          writeFileSync('provenance-evidence/report.json',JSON.stringify(report,null,2));
+          console.log('Successful source rejected for '+results.length+' candidate tasks; receipts issued: 0');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: protected-receipt-shadow
+          path: provenance-evidence/
+          if-no-files-found: error
