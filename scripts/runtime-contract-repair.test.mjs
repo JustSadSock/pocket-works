@@ -4,10 +4,11 @@ import {readFileSync,existsSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
+import {normalizeAppConfig} from './app-config.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const slugs=["tihiy-kadr","bzyn","print-forge","not-dead-yet","living-history","cavitation-lab","bozhe-ne-tak","venets","blockies","mezha","otves","shest-hodov","cantica-glass","zamazka","shock-lab","billiard-lab","natyazhenie","crossline-5x5","black-bazaar","styk","oskolki","trace-mosaic","jam-tape","axis-pals","chyepukha","blind-pals","kromka-duel","palimpsest-atlas","tyaga-duel","meat-exe","ne-tem-golosom","chronatlas","rasklad","rivals-roulette","inkfall","linii-vetra","nulevoy-etazh","witness-of-era","scriptorium","kvarta","turniket","toy-lens","miniature-lab","forma","perigee","kalibr"];
+const slugs=["tihiy-kadr","bzyn","print-forge","not-dead-yet","living-history","cavitation-lab","bozhe-ne-tak","venets","blockies","mezha","otves","shest-hodov","cantica-glass","zamazka","shock-lab","billiard-lab","natyazhenie","crossline-5x5","black-bazaar","styk","oskolki","trace-mosaic","jam-tape","axis-pals","chyepukha","blind-pals","kromka-duel","palimpsest-atlas","tyaga-duel","meat-exe","ne-tem-golosom","chronatlas","rasklad","rivals-roulette","inkfall","linii-vetra","nulevoy-etazh","witness-of-era","scriptorium","kvarta","turniket","toy-lens","miniature-lab","forma","perigee","kalibr","shpilka"];
 for(const slug of slugs)test(slug+' reports the real release metadata and supports managed activation',()=>{
- const dir=resolve(root,'apps',slug),c=JSON.parse(readFileSync(resolve(dir,'app.config.json'),'utf8')),source=readFileSync(resolve(dir,'sw.js'),'utf8');
+ const dir=resolve(root,'apps',slug),c=normalizeAppConfig(JSON.parse(readFileSync(resolve(dir,'app.config.json'),'utf8')),slug),source=readFileSync(resolve(dir,'sw.js'),'utf8');
  const handlers=new Map();let activated=0;const scope='https://pocket.invalid/apps/'+slug+'/';
  const self={registration:{scope},location:new URL(scope),addEventListener(type,handler){if(!handlers.has(type))handlers.set(type,[]);handlers.get(type).push(handler)},skipWaiting(){activated++;return Promise.resolve()},clients:{claim(){return Promise.resolve()}}};
  vm.runInNewContext(source,{self,location:self.location,URL,URLSearchParams,Request,Response,Headers,console,caches:{},fetch(){throw Error('Unexpected network at worker initialization')}},{timeout:1000,filename:slug+'/sw.js'});
