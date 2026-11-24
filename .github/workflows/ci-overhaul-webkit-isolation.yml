@@ -1,0 +1,63 @@
+name: CI Overhaul WebKit Isolation Lab
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-webkit-isolation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        order: [isolated, original-prefix, reversed-prefix]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 63ae82fc75240e804638e432b368f84af3f92c6f
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/download-artifact@v4
+        with:
+          name: integrated-plan-1
+          run-id: 45483925251
+          github-token: ${{ github.token }}
+          path: frozen-plan
+      - name: Select original failing task and controlled predecessor order
+        env:
+          ORDER: ${{ matrix.order }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const plan=JSON.parse(readFileSync('frozen-plan/plan.json','utf8'));
+          const shard=plan.shards.find(s=>s.tasks.some(t=>t.key==='crown-laws-visual'));
+          const index=shard.tasks.findIndex(t=>t.key==='crown-laws-visual');
+          const predecessors=shard.tasks.slice(0,index),target=shard.tasks[index];
+          if(shard.pool!=='browser'||predecessors.map(t=>t.key).join(',')!=='chronatlas-visual,contour-visual,crossline-5x5-visual')throw Error('Unexpected original task ordering');
+          const order=process.env.ORDER;
+          const tasks=order==='isolated'?[target]:[...(order==='reversed-prefix'?[...predecessors].reverse():predecessors),target];
+          writeFileSync('experiment-shard.json',JSON.stringify({...shard,tasks}));
+          NODE
+      - name: Capture real browser outcomes and Playwright browser process logs
+        env:
+          DEBUG: pw:browser
+        run: |
+          export PW_QA_SHARD="$(cat experiment-shard.json)"
+          node scripts/ci-overhaul/run-shard.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webkit-isolation-${{ matrix.order }}
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 14
