@@ -6,7 +6,8 @@
       "kind": "node-test",
       "files": [
         "engine.test.mjs",
-        "living.test.mjs"
+        "living.test.mjs",
+        "wealth.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -202,6 +203,84 @@
         },
         {
           "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "wealth-decades",
+      "kind": "node",
+      "entry": "wealth-experiment.mjs",
+      "args": [
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "economy-sandbox",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-act=\"econlab\"]"
+        },
+        {
+          "action": "fill",
+          "selector": "#estates",
+          "value": "3"
+        },
+        {
+          "action": "visible",
+          "selector": "#epop"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econstart\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"econexport\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econnext\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"goodsmap\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"8\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econexit\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"econlab\"]"
         }
       ]
     }
