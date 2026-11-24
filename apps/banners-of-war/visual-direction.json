@@ -23,6 +23,11 @@
     "spatialRationale": "The canvas fills the battle workspace beneath controls. A fitted safe rectangle keeps orders visible; folding the inset command sheet restores additional battlefield space.",
     "comparisons": [
       {
+        "slug": "echolot",
+        "spatialDifference": "Continuous rectangular terrain with a zoomable battlefield and contextual command sheet, rather than a fixed circular sonar instrument and detached directional console.",
+        "interactionDifference": "Multi-regiment plans, delegated objectives and simultaneous thirty-second battle execution instead of single-vessel step movement and oxygen-consuming sonar pulses."
+      },
+      {
         "slug": "emergent-kingdoms",
         "spatialDifference": "The battlefield is continuous beneath a foldable inset command sheet instead of a split laboratory with a permanent measurement journal.",
         "interactionDifference": "Draw a regiment's commanded trajectory and resolve both armies together rather than intervene in autonomous historical geography."
@@ -83,6 +88,8 @@
   "review": {
     "baselineRun": 45306566752,
     "finalVisualRun": 45307237101,
-    "observations": "Inspected actual final Chromium desktop/mobile and WebKit mobile strategic, tactical, warrior-focus and visibility captures after the 6.4 CSS px/m focus and folded idle dock changes. All three scales render the same battlefield geometry; mobile controls remain inside viewport. Individual ranks are readable, though terrain sampling and soldier silhouettes remain schematic. Hosted visual, journey and performance jobs passed. Visual direction is signed off for this experimental build; overall release is NOT signed off: separate WebKit offline navigation still fails with an internal browser error."
+    "observations": "Inspected actual final Chromium desktop/mobile and WebKit mobile strategic, tactical, warrior-focus and visibility captures after the 6.4 CSS px/m focus and folded idle dock changes. All three scales render the same battlefield geometry; mobile controls remain inside viewport. Individual ranks are readable, though terrain sampling and soldier silhouettes remain schematic. Hosted visual, journey and performance jobs passed. Visual direction is signed off for this experimental build; overall release is NOT signed off: separate WebKit offline navigation still fails with an internal browser error.",
+    "enemyMindsRun": 45371749114,
+    "enemyMindsObservations": "Inspected actual mobile Chromium setup, staff delegation dialog and observer decision chronicle. The staff task and score table are readable; the setup and chronicle need vertical scrolling, and the decision explanation still mixes English diagnostic terms. No final WebKit offline or full-browser sign-off claimed."
   }
 }
