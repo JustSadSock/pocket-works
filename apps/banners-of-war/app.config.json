@@ -3,14 +3,14 @@
   "slug": "banners-of-war",
   "name": "Banners of War",
   "shortName": "Banners",
-  "description": "Историческая WEGO-песочница: редактор карты и армий, командные сети и сравнительные эксперименты.",
-  "version": "0.7.0",
+  "description": "Историческая WEGO-тактика: сетевые дуэли, командная иерархия и лаборатория сражений.",
+  "version": "0.8.0",
   "releaseDate": "2026-11-24",
   "releaseDateTime": "2026-11-24T13:25:00+02:00",
   "changelog": [
-    "Battle Laboratory: физический редактор поля боя, армии и командиры, сценарии и замыслы.",
-    "Серийные эксперименты в отдельном вычислительном потоке и локальная библиотека проектов.",
-    "Age of Antiquity: проверенная физика выносливости и четырёхуровневая иерархия."
+    "War Against Men: приватные дуэли через Pocket ID и авторитетная серверная симуляция.",
+    "Синхронные и асинхронные сроки, скрытые приказы, восстановление и повторы.",
+    "Battle Laboratory: пользовательские сценарии и исследовательская библиотека."
   ],
   "status": "experimental",
   "preset": "canvas",
@@ -19,7 +19,7 @@
   "backgroundColor": "#d8d5b8",
   "themeColor": "#263b36",
   "orientation": "any",
-  "cacheName": "banners-of-war-v0.7.0-laboratory-rc5",
+  "cacheName": "banners-of-war-v0.8.0-war-against-men-rc1",
   "storageNamespace": "pocket-works:banners-of-war",
   "tags": [
     "game",
