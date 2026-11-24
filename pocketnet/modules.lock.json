@@ -361,5 +361,11 @@
       "v16",
       "v17"
     ]
+  },
+  "crossfire": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "crossfire",
+  "name": "Crossfire",
+  "shortName": "Crossfire",
+  "description": "Тактические дуэли и командные бои за центральный сектор.",
+  "version": "0.1.0",
+  "releaseDate": "2026-11-24",
+  "releaseDateTime": "2026-11-24T02:41:00+02:00",
+  "changelog": [
+    "Соло, кооператив, дуэль и командная игра через PocketNet."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#b34c26",
+  "backgroundColor": "#e9dfc6",
+  "themeColor": "#e9dfc6",
+  "orientation": "any",
+  "cacheName": "crossfire-v0.1.0",
+  "storageNamespace": "pocket-works:crossfire",
+  "tags": [
+    "game",
+    "tactics",
+    "PocketNet",
+    "offline"
+  ],
+  "order": 354
+}
