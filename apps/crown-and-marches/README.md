@@ -18,3 +18,20 @@ This is an initial playable vertical slice, not the full requested grand strateg
 
 ## Visual direction
 An earthy relief atlas, rectangular brass-and-wood command controls, faction banners and a 2D field diorama. The map remains central; expanding a city panel exposes the actual stocks and orders rather than a dashboard. Original procedural assets and app-local SVG icon. No external art or audio dependencies.
+
+
+## 0.2.0 — Art of War (experimental)
+
+- Individual circles and two collision passes, weapon reach, cavalry acceleration and braking, defensive spear bracing, projectile flight and friendly interception, morale contagion, fatigue and pursuit. Wounded soldiers are counted as unavailable in the campaign; no recovery system yet.
+- Custom Battle opens independently from the start menu. Both armies can be human or AI, 1–1500 soldiers per side; four terrain presets, rain, experience, formations, deployment offsets, deterministic seed, retry and session history. The campaign save remains untouched.
+- Active pause, group selection and three stored groups, queued orders, reserve/defensive/free doctrines, touch-drawn front lines, formation width and angle.
+- Canvas sprite cache, viewport culling and zoom-dependent detail. Projectile lines are drawn in a single path. Tactical simulation runs in 100 ms steps independently of the display loop.
+- Exact casualties by unit type transfer to the campaign; no proportional loss rounding for individual battles.
+
+### Regression and performance
+
+Run `node --test apps/crown-and-marches/engine.test.mjs` at the repository root. Eight scenarios cover world determinism, economy, campaign battle transfer, custom battle determinism, physical separation, queued orders, projectiles/friendly interception, and 3000-soldier creation. Browser QA plan includes a fresh custom battle launch and pause.
+
+Measured in the connector JavaScript runtime (not mobile hardware, no rendering): 180 steps at 0.1 s on a plain map, seed 123, both AI, 60% spears / 20% archers / 20% heavy cavalry, deployment shifted 70 toward the center on both sides. 500 soldiers median 9 ms / p95 12 ms; 1000 median 19 ms / p95 22 ms; 3000 median 64 ms / p95 85 ms. Mobile FPS and actual battery/thermal behavior remain unmeasured.
+
+Limitations: collision solver is approximate; no full navigation around obstacles, animation interpolation, persistent wounded prisoners, or advanced coordinated multi-army AI. Formation orders are discrete simulations, not a full historical physics model. Release remains experimental until CI and deployment are confirmed.
