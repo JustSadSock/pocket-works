@@ -12,6 +12,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 </head>
 <body data-fullscreen-app>
 <main class="app-shell" data-app-shell>
@@ -138,4 +140,6 @@
 <script type="module">
 if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
 </script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="MEAT.EXE" data-app-version="1.9.5"></script>
+<div data-ui style="position:fixed;right:max(8px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));z-index:30"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button></div><script type="module" src="./workshop.js"></script>
 </body></html>

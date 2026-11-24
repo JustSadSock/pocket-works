@@ -13,7 +13,7 @@
 <body data-fullscreen-app>
 <main class="app-shell" data-app-shell id="app">
   <canvas id="field" data-gesture-surface data-block-callout aria-label="Карта сражения. Проведите пальцем для перемещения, коснитесь цели для приказа."></canvas>
-  <header class="hud" id="hud" data-ui>
+  <header class="hud" id="hud" data-ui><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
     <div class="hud-brand"><span class="little-shield"></span><b>МЕЖА</b></div>
     <div class="hud-economy"><span aria-label="Золото"><i class="coin"></i><b id="gold">142</b></span><span aria-label="Дерево"><i class="wood"></i><b id="wood">100</b></span><span aria-label="Пища"><i class="food"></i><b id="food">120</b></span></div>
     <button id="pauseBtn" class="icon-action" title="Пауза" aria-label="Пауза" data-native-press>Ⅱ</button>
@@ -76,5 +76,6 @@
 </main>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МЕЖА" data-app-version="1.2.0"></script>
 <script type="module" src="./app.js"></script>
+<script type="module" src="./workshop.js"></script>
 </body>
 </html>
