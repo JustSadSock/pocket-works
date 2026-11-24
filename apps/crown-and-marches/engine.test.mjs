@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {N,W,H,newGame,step,restore,serialize,build,recruit,settle,pathfind,treaty,strength,resolveBattle,dist,neighbors} from './world.mjs';
+import {N,W,H,newGame,step,restore,serialize,simulationHash,sandboxGame,build,recruit,settle,pathfind,treaty,strength,resolveBattle,dist,neighbors} from './world.mjs';
 import {createBattle,customBattle,battleTick,command,result} from './battle.mjs';
 test('seed, topology and deterministic simulation',()=>{let a=newGame('crown0'),b=newGame('crown0');assert.equal(N,24576);assert.equal(a.map.land.length,N);assert.deepEqual(a.map.height,b.map.height);assert.ok(a.map.land.some(x=>x===0));assert.ok(a.map.river.some(Boolean));for(let i=0;i<N;i++)if(a.map.down[i]>=0)assert.ok(a.map.height[a.map.down[i]]<a.map.height[i]);for(let i=0;i<100;i++){step(a);step(b)}assert.equal(serialize(a),serialize(b));assert.ok(a.cities.length>6);assert.equal(serialize(restore(serialize(a))),serialize(a))});
 test('construction, recruitment and founding use real stocks and treasury',()=>{let s=newGame('test'),c=s.cities[0],gold=s.states[0].gold,pop=c.pop;assert.equal(build(s,c,0),'Построено');assert.equal(s.states[0].gold,gold-20);assert.equal(c.build[0],2);assert.match(recruit(s,c,2),/Нанято/);assert.equal(c.pop,pop-60);assert.equal(strength(s.armies[0]),60);let target=-1;for(let i=0;i<N;i++)if(s.map.land[i]&&s.owner[i]<0&&dist(c.i,i)>=8&&dist(c.i,i)<15&&!s.cities.some(d=>dist(d.i,i)<7)&&pathfind(s,c.i,i,0).length){target=i;break}assert.notEqual(target,-1);assert.match(settle(s,0,target),/Основано/);assert.equal(s.cities.filter(c=>c.f===0).length,2);assert.equal(s.owner[target],0)});
@@ -12,3 +12,15 @@ test('physical separation and queued orders',()=>{let config=trial([1,1],2);conf
 test('missile travel and friendly interception',()=>{let config=trial([4,1],2);config.sides.forEach(s=>s.ai=false);let b=customBattle(config);let p=b.soldiers[0],friend=b.soldiers[1],enemy=b.soldiers[2];p.x=100;p.y=100;p.cd=0;friend.x=115;friend.y=100;enemy.x=155;enemy.y=100;let ammo=p.ammo;for(let i=0;i<3;i++)battleTick(b);assert.ok(p.ammo<ammo);assert.ok(b.projectiles.length>0||friend.hp<1||enemy.hp<1);friend.x=200;friend.y=200;friend.hp=1;friend.state='hold';b.projectiles=[{x:195,y:200,vx:50,vy:0,life:1,damage:.5,source:p.id,side:p.side,type:4}];b.units[0].x=200;b.units[0].y=200;friend.vx=0;friend.vy=0;battleTick(b);assert.ok(friend.hp<1)});
 test('exact campaign casualties by unit type',()=>{let s=newGame('exact');recruit(s,s.cities[0],1);recruit(s,s.cities[0],2);recruit(s,s.cities[1],7);let a=s.armies[0],b=s.armies[1];s.battle={a:a.id,b:b.id,i:a.i};let loss=[Array(10).fill(0),Array(10).fill(0)];loss[0][2]=11;loss[1][7]=3;resolveBattle(s,0,11,3,loss);assert.equal(a.units[1],60);assert.equal(a.units[2],49);assert.equal(b.units[7],57)});
 test('3000 soldiers fit custom battle',()=>{const a=customBattle(trial([2,7],1500));assert.equal(a.soldiers.length,3000);assert.equal(a.units.length,20);battleTick(a);assert.ok(a.soldiers.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)))});
+
+// The original topology/expansion/determinism assertion remains unchanged.
+test('checkpoint replay survives saving a modified-resource sandbox',()=>{
+ const a=sandboxGame({seed:'lab',resources:'iron-scarce'}),before=simulationHash(a);
+ const initial=restore(serialize(a));assert.deepEqual(initial.map.resource,a.map.resource);assert.equal(simulationHash(initial),before);
+ const trace={interval:20,checkpoints:[]},replay={interval:20,checkpoints:[]};
+ for(let i=0;i<40;i++)step(a,trace);
+ const b=restore(serialize(a));assert.equal(simulationHash(a),simulationHash(b));
+ for(let i=0;i<80;i++){step(a,trace);step(b,replay);}
+ assert.deepEqual(trace.checkpoints.slice(2),replay.checkpoints);
+ assert.equal(serialize(a),serialize(b));
+});
