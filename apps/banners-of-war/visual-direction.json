@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "status": "draft",
+  "status": "ready",
   "product": "banners-of-war",
   "direction": {
     "premise": "A living medieval topographic battle atlas: connected shaded relief, muted forest and water marks, and actual formation sectors becoming legible individual warriors as the commander zooms in.",
@@ -82,6 +82,7 @@
   },
   "review": {
     "baselineRun": 45306566752,
-    "observations": "Inspected captured Chromium and WebKit mobile/desktop 0.3.0 overview/command journey and zoom screenshots. The wide idle command dock now folds away; major improvement needed was a closer view of individual warriors. Increased focus scale to 6.4 CSS pixels/m and enabled smooth atlas sampling. Latest build screenshot revalidation still required. Prior online gameplay and visual suite passed; WebKit offline navigation was fixed separately and must be retested."
+    "finalVisualRun": 45307237101,
+    "observations": "Inspected actual final Chromium desktop/mobile and WebKit mobile strategic, tactical, warrior-focus and visibility captures after the 6.4 CSS px/m focus and folded idle dock changes. All three scales render the same battlefield geometry; mobile controls remain inside viewport. Individual ranks are readable, though terrain sampling and soldier silhouettes remain schematic. Hosted visual, journey and performance jobs passed. Visual direction is signed off for this experimental build; overall release is NOT signed off: separate WebKit offline navigation still fails with an internal browser error."
   }
 }
