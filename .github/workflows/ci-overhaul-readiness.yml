@@ -1,0 +1,68 @@
+name: CI Overhaul Migration Readiness
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-readiness.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/*.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: integrated-final-1
+          run-id: 45483925251
+          github-token: ${{ github.token }}
+          path: integrated
+      - uses: actions/download-artifact@v4
+        with:
+          name: protected-receipt-shadow
+          run-id: 45490754186
+          github-token: ${{ github.token }}
+          path: provenance
+      - name: Verify legacy routing remains mandatory during migration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir readiness
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {migrationDecision} from './scripts/ci-overhaul/migration-gate.mjs';
+          const read=p=>JSON.parse(readFileSync(p,'utf8'));
+          const policy=read('scripts/ci-overhaul/migration-policy.json');
+          const integrated=read('integrated/integrated-report.json');
+          const provenance=read('provenance/report.json');
+          const base=process.env.GITHUB_API_URL+'/repos/'+process.env.GITHUB_REPOSITORY;
+          const lookup=async(id,sha)=>{
+            const r=await fetch(base+'/actions/runs/'+id,{headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'}});
+            if(!r.ok)throw Error('Source API '+r.status);
+            const d=await r.json();if(d.head_sha!==sha)throw Error('Source revision changed');
+            return {id:d.id,status:d.status,conclusion:d.conclusion};
+          };
+          const source=await lookup(45483925251,'63ae82fc75240e804638e432b368f84af3f92c6f');
+          const issuer=await lookup(45490754186,'1291454d3ad36d8f64c9352e3f97e147f487d319');
+          const replay=await lookup(45485063517,'8261e49b54c96029b4c1cad1132e92fceab85eb6');
+          const graph=await lookup(45497950699,'d2ffd019317a8551d5280eeb1eccb30755881588');
+          if(source.conclusion!=='success'||issuer.conclusion!=='success'||!integrated.success||provenance.allowed!==0)throw Error('Invalid historical evidence');
+          const decision=migrationDecision({policy,evidence:{integrated,provenance:{success:true,skippingEnabled:provenance.skippingEnabled},verifiedByProtectedController:false},health:{}});
+          if(decision.route!=='legacy-full'||decision.canReplaceLegacy||!decision.legacyRequired)throw Error('Unsafe migration decision');
+          const report={...decision,sources:{source,issuer,replay,graph},note:'Experimental readiness check; no protected controller, branch rule changes, or actual rollback drill performed'};
+          writeFileSync('readiness/report.json',JSON.stringify(report,null,2));
+          console.log(JSON.stringify(report,null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: migration-readiness
+          path: readiness/
+          if-no-files-found: error
