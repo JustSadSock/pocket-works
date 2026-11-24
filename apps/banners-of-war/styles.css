@@ -39,3 +39,12 @@ dialog label{display:flex;flex-direction:column;gap:4px;margin:10px 0;font-size:
 }
 @media(max-height:520px) and (orientation:landscape){#desk{top:56px}#desk .unitline button{padding:4px 6px}#desk .unitline small{font-size:10px}}
 @media(orientation:portrait){#desk .formline{flex-wrap:wrap}#desk .formline #program{flex:1}#desk .unitline button{padding:5px 7px}#desk .actionline{flex-wrap:wrap}#desk .actionline .primary{min-width:120px}}
+
+@media(min-width:720px) and (orientation:landscape){
+ #desk[data-expanded="false"]{top:auto;bottom:8px;left:auto;right:8px;width:min(560px,70%);max-height:42%}
+ #desk[data-expanded="false"] .unitline>div{flex-basis:auto}
+ #desk[data-expanded="false"] .actionline{margin-top:0}
+}
+#maptools button{padding-inline:8px}
+#mapwrap .scale{max-width:48%;font-size:10px}
+@media(orientation:portrait){#mapwrap .maptools{max-width:calc(100% - 16px)}#mapwrap .maptools select{min-width:86px;max-width:105px}#mapwrap .scale{bottom:calc(var(--field-bottom,96px) + 4px);font-size:9px;max-width:34%}#mapwrap #maphint{max-width:58%}}
