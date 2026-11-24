@@ -1,12 +1,12 @@
-const APP_VERSION='0.19.2';
+const APP_VERSION="0.19.2";
 const VERSION=APP_VERSION;
-const RELEASE_DATE='2026-10-24';
-const RELEASE_NOTES = ["Честное перемешивание стартовых мест без преимущества исходного порядка.","Независимая проверка баланса для групп 2–6 игроков.","Торговля, события и правила победы остались прежними."];
+const RELEASE_DATE="2026-10-24";
+const RELEASE_NOTES = ["Равномерное распределение стартовых мест алгоритмом Фишера—Йетса вместо смещённой случайной сортировки.","Автоматический воспроизводимый баланс-аудит: 1200 партий, три стратегии и все размеры комнат 2–6 игроков.","Подробные показатели выполнения квот, банкротств, распределения побед и стартовых мест доступны в отчёте CI."];
 const NOTES=RELEASE_NOTES;
 const CACHE='black-bazaar-v0.19.2';
 const CACHE_NAME='black-bazaar-v0.19.2';
 const PREFIX='black-bazaar-v';
-const FILES=[
+const FILES=["../../shared/pwa-utils.js",
  './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./economy.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./inbox.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
@@ -30,7 +30,7 @@ self.addEventListener('activate',e=>e.waitUntil((async()=>{
 self.addEventListener('message',event=>{const e=event;
  if(e.data?.type==='SKIP_WAITING')self.skipWaiting();
  if(e.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({
-   version:VERSION,releaseDate:'2026-10-24',releaseNotes:NOTES,
+   version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,
    cacheProtocol:1,cacheName:CACHE
  });
 });
