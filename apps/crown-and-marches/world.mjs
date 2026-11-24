@@ -948,7 +948,8 @@ function createGovernment(s,st,kind){
  return a.governments[st.id]={institutions:{...profile},ruler:p.id,heir:heir.id,legitimacy:.75,regent:null,law:null};
 }
 export function governmentType(s,f){const g=s.society?.architecture?.governments[f];if(!g)return null;return Object.entries(CONSTITUTIONS).find(([_,p])=>['selection','legislature','treasury','military','diplomacy','veto','floor'].every(k=>p[k]===g.institutions[k]))?.[0]||'mixed';}
-function internalRetention(s,c){const d=c.society,g=s.society?.architecture?.governments[c.f],floor=g?.institutions.floor??0;return clamp(Math.max(d.autonomy,floor),0,.95);}
+function legalRetention(s,c){const d=c.society,g=s.society?.architecture?.governments[c.f],floor=g?.institutions.floor??0;return clamp(Math.max(d.autonomy,floor),0,.95);}
+function internalRetention(s,c){const share=legalRetention(s,c),sub=s.society?.architecture?.subjects[localId(c)];return sub?.dispute?.stage==='withholding'?Math.min(.95,share+(1-share)*.4):share;}
 function registerDistrict(s,c){
  const a=s.society.architecture,d=societyDistrict(s,c),id=localId(c);
  if(!a.subjects[id]){const p=createPerson(s,c.f,'lord',id,24+hash(s.seed+':lord:'+c.id)%24);a.subjects[id]={id,city:c.id,person:p.id,overlord:crownId(c.f),contract:{retention:d.autonomy,levy:60,justice:'local',trade:'open',fortification:false,inheritance:'hereditary',external:'restricted',protection:true},arrears:0};}
@@ -993,11 +994,36 @@ function miningInvestor(s,c,i){
  const a=s.society?.architecture;if(!a)return null;const t=a.titles['land:'+i],ids=[t?.beneficiary,groupId(c,'landowners'),groupId(c,'artisans'),localId(c)];
  return ids.find(id=>{const v=subjectAccount(s,id);return v&&subjectFaction(s,id)===c.f&&id!==crownId(c.f)&&v.obj[v.key]>=.4;})||null;
 }
+// Political preferences are issue-specific, based on actual finances and employment.
+function constituency(s,f){
+ const cs=s.cities.filter(c=>c.f===f&&c.society),a=s.society.architecture,st=s.states[f],war=s.states.some(q=>atWar(s,f,q.id)),ownership={};
+ for(const t of Object.values(a.titles))ownership[t.owner]=(ownership[t.owner]||0)+1;
+ const groups=[];
+ for(const c of cs){const d=c.society;for(const q of d.cohorts){const id=q.id,wealth=q.cash/Math.max(1,q.pop),need=clamp(1-c.lastFoodRatio,0,1),trade=clamp(c.lastTrade/Math.max(1,c.pop),0,1),income=q.income/Math.max(1,q.pop),power=q.pop*.01+q.cash*.05+(ownership[groupId(c,id)]||0)*.05;
+ const base={peasants:.11,artisans:.15,merchants:.11,landowners:.08,clergy:.14,military:.23,scholars:.19}[id];
+ const tax=clamp(base+Math.min(.08,income*.5)-need*.12-(id==='merchants'?trade*.045:0)+(war&&id==='military'?.06:0),.02,.38);
+ const autonomy=clamp((id==='landowners'||id==='clergy'?.68:id==='merchants'?.42:.32)+wealth*.08+(st.tax>.22?.1:0),.05,.95);
+ const openTrade=clamp((id==='merchants'?.8:id==='artisans'?.62:.42)+trade*.25-(war?.12:0),0,1);
+ groups.push({city:c.id,id,power,tax,autonomy,openTrade});}
+ const sub=a.subjects[localId(c)];if(sub)groups.push({city:c.id,id:'district',power:Math.max(1,c.society.localTreasury*.06+(ownership[sub.id]||0)*.05),tax:clamp(.13-c.society.pressure*.09,.02,.3),autonomy:clamp(d.autonomy+.15,.05,.95),openTrade:.55});
+ }
+ return groups;
+}
+export function taxAssembly(s,f,target=null){
+ const g=s.society.architecture.governments[f],st=s.states[f],rows=constituency(s,f),body=g.institutions.treasury;
+ let voters=rows.filter(q=>body==='merchants'?q.id==='merchants':body==='clergy'?q.id==='clergy':body==='lords'?q.id==='landowners'||q.id==='district':body==='districts'?q.id==='district':true);
+ if(!voters.length)voters=rows;const total=voters.reduce((n,q)=>n+q.power,0)||1,need=clamp(st.fiscal.expense-st.fiscal.income,0,20),crown=clamp(.13+need*.01+(s.states.some(o=>atWar(s,f,o.id))?.04:0),.04,.35),preferred=body==='crown'?crown:voters.reduce((n,q)=>n+q.tax*q.power,0)/total;
+ const proposed=target??st.tax,support=body==='crown'?1:voters.reduce((n,q)=>n+(Math.abs(proposed-q.tax)<=Math.abs(st.tax-q.tax)+.015?q.power:0),0)/total;
+ return {body,preferred,support};
+}
+export function setTaxLaw(s,f,target){
+ if(!s.society?.architecture||!s.states[f]||!Number.isFinite(target)||target<0||target>.5)return 'Недопустимая ставка';
+ const vote=taxAssembly(s,f,target),st=s.states[f];if(vote.support<.5)return 'Казначейство отклонило ставку · '+Math.round(vote.support*100)+'%';
+ const previous=st.tax;st.tax=target;if(Math.abs(previous-target)>.005)polityEvent(s,f,'tax law',{previous,target,body:vote.body,support:vote.support});return 'Налоговая ставка принята';
+}
 export function politicalFactions(s,f){
- const groups=['peasants','artisans','merchants','landowners','clergy','military','scholars'],cs=s.cities.filter(c=>c.f===f&&c.society),a=s.society.architecture,issues={tax:[],autonomy:[],trade:[],centralization:[]},totals=Object.fromEntries(groups.map(g=>[g,0])),titles=Object.fromEntries(groups.map(g=>[g,0]));
- for(const t of Object.values(a.titles)){const p=t.owner.split(':');if(p[0]==='group'&&subjectFaction(s,t.owner)===f)titles[p[2]]++;}
- for(const c of cs)for(const q of c.society.cohorts)totals[q.id]+=q.pop*.01+q.cash*.05;
- for(const g of groups){const weight=totals[g]+titles[g]*.05,issue=g==='merchants'?'trade':g==='landowners'||g==='clergy'?'autonomy':g==='scholars'?'centralization':'tax';issues[issue].push({group:g,weight});}
+ const rows=constituency(s,f),st=s.states[f],issues={tax:[],autonomy:[],trade:[],centralization:[]};
+ for(const q of rows){if(q.tax<st.tax-.015)issues.tax.push({...q,weight:q.power*(st.tax-q.tax)});if(q.autonomy>.5)issues.autonomy.push({...q,weight:q.power*q.autonomy});else issues.centralization.push({...q,weight:q.power*(1-q.autonomy)});if(q.openTrade>.5)issues.trade.push({...q,weight:q.power*q.openTrade});}
  return Object.entries(issues).map(([issue,members])=>({issue,members,power:members.reduce((n,q)=>n+q.weight,0)}));
 }
 export function succeedRuler(s,f){
@@ -1018,7 +1044,7 @@ export function proposeConstitution(s,f,kind){
  const a=s.society?.architecture,g=a?.governments[f],profile=CONSTITUTIONS[kind],st=s.states[f];if(!g||!profile||g.law||governmentType(s,f)===kind)return 'Реформа недоступна';
  const cs=s.cities.filter(c=>c.f===f&&c.occupation<0);if(!cs.length)return 'Нет управляемых владений';
  const support=cs.reduce((n,c)=>n+charterSupport(s,c,profile.floor).total,0)/cs.length,cost=20+cs.length*8;
- if(st.gold<cost||support<.43)return 'Недостаточно средств или политической поддержки';
+ const body=g.institutions.legislature,voters=constituency(s,f).filter(q=>body==='lords'?['landowners','district'].includes(q.id):body==='merchants'?q.id==='merchants':body==='clergy'?q.id==='clergy':body==='districts'?q.id==='district':true),weight=voters.reduce((n,q)=>n+q.power,0)||1,approval=body==='crown'?1:voters.reduce((n,q)=>n+(Math.abs(profile.floor-q.autonomy)<=Math.abs(g.institutions.floor-q.autonomy)+.15?q.power:0),0)/weight;if(st.gold<cost||support<.43||approval<.5)return 'Недостаточно средств или политической поддержки';
  st.gold-=cost;for(const c of cs)c.cash+=cost/cs.length;st.budget.investment+=cost;
  g.law={kind,progress:0,consent:support};polityEvent(s,f,'constitution proposed',{kind,support});return 'Реформа принята к исполнению';
 }
@@ -1026,18 +1052,21 @@ function politicalArchitectureStep(s){
  const a=s.society.architecture;refreshTitles(s);
  const counts={};
  for(const t of Object.values(a.titles))if(t.kind==='land'&&s.admin[t.cell]>=0){const city=s.admin[t.cell];(counts[city]??={})[t.beneficiary]=(counts[city][t.beneficiary]||0)+s.development[t.cell];}
- for(const c of s.cities){const sub=registerDistrict(s,c),d=c.society;sub.overlord=crownId(c.f);sub.contract.retention=internalRetention(s,c);const g=a.governments[c.f];
+ for(const c of s.cities){const sub=registerDistrict(s,c),d=c.society;sub.overlord=crownId(c.f);sub.contract.retention=legalRetention(s,c);const g=a.governments[c.f];
  // Legal beneficiaries receive a bounded portion of actual market revenue, not generated rent.
  if(c.occupation<0){const row=counts[c.id]||{},total=Object.values(row).reduce((n,v)=>n+v,0),pool=Math.min(c.cash*.004,total*.025);if(total>0&&pool>0)for(const [id,weight] of Object.entries(row)){const pay=pool*weight/total;if(creditAccount(s,id,pay))c.cash-=pay;}}
  if(s.day%360===0&&c.occupation<0){const p=a.people[sub.person];if(p){p.age=Math.floor((s.day-p.born)/360);if(p.age>=65+hash(s.seed+':death:'+p.id)%21){p.alive=false;const heir=createPerson(s,c.f,'lord',sub.id,25,p.dynasty);sub.person=heir.id;polityEvent(s,c.f,'lord succession',{district:c.id,old:p.id,heir:heir.id});}}}
  if(d.pressure>.62)sub.arrears++;else sub.arrears=Math.max(0,sub.arrears-1);
- if(sub.arrears===3)polityEvent(s,c.f,'petition',{district:c.id,issue:'tax and autonomy'});
+ if(sub.arrears>=3&&!sub.dispute){sub.dispute={stage:'petition',started:s.day,requestedAutonomy:Math.min(.9,d.autonomy+.15)};polityEvent(s,c.f,'petition',{district:c.id,issue:'tax and autonomy'});}
+ if(sub.dispute?.stage==='petition'&&sub.arrears>=8&&d.pressure>.68){sub.dispute.stage='withholding';polityEvent(s,c.f,'tax withholding',{district:c.id});}
+ if(sub.dispute&&(d.pressure<.42||d.autonomy>=sub.dispute.requestedAutonomy-.001)){polityEvent(s,c.f,'petition settled',{district:c.id});sub.dispute=null;sub.arrears=0;}
+ if(sub.dispute&&!d.reform&&polAI(s,c.f)&&s.day%360===0&&d.autonomy<.82)requestCharter(s,c,sub.dispute.requestedAutonomy);
  if(s.day%360===0&&c.occupation<0){if(polAI(s,c.f)&&s.states.some(st=>atWar(s,c.f,st.id))&&g?.institutions.military==='lords')musterLevy(s,c);if(c.lastFoodRatio>.85&&!c.knowledge?.institutes?.school){const clergy=d.cohorts.find(q=>q.id==='clergy');if(clergy.cash>=INSTITUTES.school[1]){const st=s.states[c.f],fee=INSTITUTES.school[1];clergy.cash-=fee;st.gold+=fee;const msg=fundInstitute(s,c,'school');if(msg!=='Учреждение основано'){st.gold-=fee;clergy.cash+=fee;}else{st.budget.investment-=fee;polityEvent(s,c.f,'clergy school',{district:c.id});}}}}
  if(g&&c.colony?.kind==='overseas'&&c.colony.selfSufficiency>.8&&d.pressure>.52&&!d.reform&&d.autonomy<.75&&polAI(s,c.f))requestCharter(s,c,d.autonomy+.15);
  }
  for(const st of s.states){const g=a.governments[st.id];if(!g||st.defunct)continue;const cs=s.cities.filter(c=>c.f===st.id&&c.occupation<0);if(!cs.length)continue;
  if(g.law){const r=g.law,capacity=cs.reduce((n,c)=>n+clamp(c.lastFoodRatio*(.2+c.infra*.12),0,1),0)/cs.length;if(capacity<.15){polityEvent(s,st.id,'constitution failed',{kind:r.kind});g.law=null;}else{r.progress=Math.min(1,r.progress+capacity*r.consent*.12);if(r.progress>=1){g.institutions={...CONSTITUTIONS[r.kind]};polityEvent(s,st.id,'constitution enacted',{kind:r.kind});g.law=null;}}}
- if(s.day%360===0){for(const id of [g.ruler,g.heir]){const p=a.people[id];if(p)p.age=Math.floor((s.day-p.born)/360);}const ruler=a.people[g.ruler];if(ruler&&ruler.age>=60+hash(s.seed+':death:'+ruler.id)%25)succeedRuler(s,st.id);else if(ruler?.age>=18)g.regent=null;}
+ if(s.day%360===0){if(polAI(s,st.id)){const ideal=taxAssembly(s,st.id).preferred;const requested=clamp(st.tax+clamp(ideal-st.tax,-.04,.04),0,.5);if(Math.abs(requested-st.tax)>.005)setTaxLaw(s,st.id,requested);}for(const id of [g.ruler,g.heir]){const p=a.people[id];if(p)p.age=Math.floor((s.day-p.born)/360);}const ruler=a.people[g.ruler];if(ruler&&ruler.age>=60+hash(s.seed+':death:'+ruler.id)%25)succeedRuler(s,st.id);else if(ruler?.age>=18)g.regent=null;}
  }
 }
 export function politicalArchitectureSnapshot(s,f){
