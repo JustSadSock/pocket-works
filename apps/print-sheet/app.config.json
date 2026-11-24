@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "print-sheet",
+  "name": "Print Sheet",
+  "shortName": "Print Sheet",
+  "description": "Фотографии точного размера в сантиметрах: раскладка на A4, кадрирование, копии и PDF для печати.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-24",
+  "releaseDateTime": "2026-11-24T12:55:00+02:00",
+  "changelog": [
+    "Загрузка фотографий, индивидуальные размеры, автоматическая раскладка, предпросмотр и PDF A4 в масштабе 1:1."
+  ],
+  "status": "active",
+  "preset": "vanilla",
+  "accent": "#28674e",
+  "backgroundColor": "#e5e8df",
+  "themeColor": "#e5e8df",
+  "orientation": "any",
+  "cacheName": "print-sheet-v1.0.0",
+  "storageNamespace": "pocket-works:print-sheet",
+  "tags": [
+    "utility",
+    "photo",
+    "print",
+    "pdf",
+    "offline"
+  ],
+  "order": 466
+}
