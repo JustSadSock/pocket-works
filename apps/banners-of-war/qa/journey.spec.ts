@@ -1,0 +1,21 @@
+import {test,expect} from '@playwright/test';
+test('muster, deploy, issue orders, WEGO, replay and reload',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/banners-of-war/');await expect(page.locator('#start')).toBeEnabled();
+ await page.locator('#start').click();await expect(page.locator('#phase')).toContainText('Развёртывание');
+ await page.screenshot({path:test.info().outputPath('deployment.png')});
+ await page.locator('#confirm').click();await expect(page.locator('#phase')).toContainText('Планирование');
+ const c=page.locator('#map'),b=await c.boundingBox();if(!b)throw new Error('Map unavailable');
+ const k=Math.min(b.width/1400,b.height/900),x=(b.width-1400*k)/2,y=(b.height-900*k)/2;
+ await c.click({position:{x:x+380*k,y:y+163*k}});await expect(page.locator('#unitname')).toContainText('Копейщики');
+ await page.locator('[data-kind=move]').click();await c.click({position:{x:x+490*k,y:y+163*k}});
+ await expect(page.locator('#maphint')).toContainText('Приказ записан');
+ await page.screenshot({path:test.info().outputPath('orders.png')});
+ await page.locator('#confirm').click();await page.locator('#confirm').click();
+ await expect(page.locator('#playback')).toBeVisible();await page.locator('#pause').click();
+ await expect(page.locator('#pause')).toHaveText('Играть');await page.locator('#skip').click();
+ await expect(page.locator('#round')).toContainText('2');await page.locator('#replay').click();
+ await expect(page.locator('#phase')).toContainText('Просмотр повтора');await page.locator('#skip').click();
+ await page.reload();await expect(page.locator('#resume')).toBeVisible();await page.locator('#resume').click();await expect(page.locator('#round')).toContainText('2');
+ expect(errors).toEqual([]);
+});
