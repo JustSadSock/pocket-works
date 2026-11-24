@@ -6,3 +6,6 @@ if(!groups[kind]?.[shard])throw Error('Unknown QA group '+kind+' '+shard);
 for(const group of groups[kind][shard]){console.log('QA batch '+kind+' / '+group);const child=spawnSync(process.execPath,[fileURLToPath(new URL(entries[kind],import.meta.url)),String(group)],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
 
 if(kind==='balance'&&shard<5){const child=spawnSync(process.execPath,[fileURLToPath(new URL('balance-targeted.mjs',import.meta.url)),String(shard)],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
+
+if(kind==='balance'&&shard<5){const child=spawnSync(process.execPath,[fileURLToPath(new URL('discovery-experiment.mjs',import.meta.url)),String(shard)],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
+if(kind==='balance'&&shard===5){const child=spawnSync(process.execPath,[fileURLToPath(new URL('political-pressure.mjs',import.meta.url))],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
