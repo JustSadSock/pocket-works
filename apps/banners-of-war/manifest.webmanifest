@@ -1,0 +1,25 @@
+{
+  "id": "/apps/banners-of-war/",
+  "name": "Banners of War",
+  "short_name": "Banners",
+  "description": "Средневековая тактика WEGO: физические строи, рельеф, натиск и мораль полков.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#d8d5b8",
+  "theme_color": "#263b36",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
