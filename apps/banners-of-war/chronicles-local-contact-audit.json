@@ -1,0 +1,245 @@
+{
+  "scenario": "bannockburn",
+  "revision": "local-contact-withdrawal",
+  "time": 556,
+  "result": "win",
+  "power": [
+    257.7691832639821,
+    268.760821881102
+  ],
+  "losses": [
+    160.48671341592487,
+    159.22263594216554
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "time": 0,
+      "postures": [
+        "hold",
+        "assault"
+      ],
+      "power": [
+        1069.87,
+        1815.5999999999997
+      ]
+    },
+    {
+      "round": 2,
+      "time": 30,
+      "postures": [
+        "hold",
+        "assault"
+      ],
+      "power": [
+        1102.6652500000007,
+        1854.3261741750011
+      ]
+    },
+    {
+      "round": 3,
+      "time": 60,
+      "postures": [
+        "hold",
+        "assault"
+      ],
+      "power": [
+        1109.0769752373533,
+        1872.9027791148478
+      ]
+    },
+    {
+      "round": 4,
+      "time": 90,
+      "postures": [
+        "hold",
+        "assault"
+      ],
+      "power": [
+        1071.6092377603422,
+        1806.9216632660928
+      ]
+    },
+    {
+      "round": 5,
+      "time": 120,
+      "postures": [
+        "hold",
+        "assault"
+      ],
+      "power": [
+        1036.9785650714512,
+        1735.480048272628
+      ]
+    },
+    {
+      "round": 6,
+      "time": 150,
+      "postures": [
+        "maneuver",
+        "assault"
+      ],
+      "power": [
+        963.7598062221164,
+        1676.414909449295
+      ]
+    },
+    {
+      "round": 7,
+      "time": 180,
+      "postures": [
+        "maneuver",
+        "assault"
+      ],
+      "power": [
+        954.4455688405599,
+        1630.5412765600408
+      ]
+    },
+    {
+      "round": 8,
+      "time": 210,
+      "postures": [
+        "maneuver",
+        "assault"
+      ],
+      "power": [
+        929.520433870971,
+        1606.486932785305
+      ]
+    },
+    {
+      "round": 9,
+      "time": 240,
+      "postures": [
+        "maneuver",
+        "assault"
+      ],
+      "power": [
+        910.8658971319613,
+        1572.6019858539873
+      ]
+    },
+    {
+      "round": 10,
+      "time": 270,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        878.4661313619133,
+        1519.4234873908892
+      ]
+    },
+    {
+      "round": 11,
+      "time": 300,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        808.3229420772467,
+        1419.6722708819095
+      ]
+    },
+    {
+      "round": 12,
+      "time": 330,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        688.5253615812782,
+        1169.912715605959
+      ]
+    },
+    {
+      "round": 13,
+      "time": 360,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        550.5209012409258,
+        1059.1018034478116
+      ]
+    },
+    {
+      "round": 14,
+      "time": 390,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        460.3221854818448,
+        912.64412448739
+      ]
+    },
+    {
+      "round": 15,
+      "time": 420,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        392.3174069086457,
+        835.7236993065983
+      ]
+    },
+    {
+      "round": 16,
+      "time": 450,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        293.31173185698464,
+        690.4732973168938
+      ]
+    },
+    {
+      "round": 17,
+      "time": 480,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        358.5973046828682,
+        672.7313517108233
+      ]
+    },
+    {
+      "round": 18,
+      "time": 510,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        360.9196186068331,
+        556.6584357221562
+      ]
+    },
+    {
+      "round": 19,
+      "time": 540,
+      "postures": [
+        "reinforce",
+        "assault"
+      ],
+      "power": [
+        266.0234762992586,
+        417.4144051581209
+      ]
+    }
+  ],
+  "elapsedMs": 11296
+}
