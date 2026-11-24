@@ -10,6 +10,14 @@
       "tier": "smoke"
     },
     {
+      "id": "doctrines",
+      "kind": "node-test",
+      "files": [
+        "doctrine.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
       "id": "visual",
       "kind": "visual",
       "tier": "smoke",
