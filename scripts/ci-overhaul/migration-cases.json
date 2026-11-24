@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "id": "crown-and-marches",
+      "pr": 1354,
+      "run": 45425360477,
+      "base": "e0275d6d2971ddeaac02b3f93c7cd57ab0c788ac",
+      "head": "248a068d61ead10476049e3256a53d1dba122197",
+      "checkout": "39134fff1b12fc12ed91e28ade2268124faa2b1c",
+      "expected": 20
+    },
+    {
+      "id": "banners-of-war",
+      "pr": 1355,
+      "run": 45417302886,
+      "base": "e0275d6d2971ddeaac02b3f93c7cd57ab0c788ac",
+      "head": "d63f9721cd8366126bf5b1ded0dffc67ccef2933",
+      "checkout": "97bc7e976f28206b3cd614ea9a4c07920212de5c",
+      "expected": 19
+    },
+    {
+      "id": "maintenance",
+      "pr": 1357,
+      "run": 45305176239,
+      "base": "e0275d6d2971ddeaac02b3f93c7cd57ab0c788ac",
+      "head": "f9aacb95b703681ddf16d3d9d324bcab9c4a6a7c",
+      "checkout": "041fc92da267aa41e49218455263f4f4dfaedf29",
+      "expected": 11
+    }
+  ]
+}
