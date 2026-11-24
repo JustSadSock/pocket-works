@@ -56,3 +56,5 @@ dialog label{display:flex;flex-direction:column;gap:4px;margin:10px 0;font-size:
 .geo-chapters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.35rem}.geo-chapters button{text-align:left;min-height:44px;font-size:.85rem}
 
 #command-board{white-space:nowrap}#command-detail{font-size:.85rem;line-height:1.5;margin:.5rem 0;color:var(--muted,#64634d)}
+
+.command-tree{display:grid;gap:3px;padding:8px;border-left:2px solid #8c8164;margin:8px 0}.command-tree button{text-align:left;padding:7px 9px;font-size:.85rem}.command-tree button:disabled{opacity:1;background:#e3dbc2;font-weight:bold}.command-timing{display:grid;grid-template-columns:1fr 1fr;gap:8px}.command-timing input{width:100%;min-width:0}
