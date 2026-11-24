@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 2,
+  "status": "draft",
+  "product": "print-sheet",
+  "direction": {
+    "premise": "A small photographic print workshop with a paper proof that represents real physical dimensions.",
+    "composition": "A compact photo contact list and dimension controls face a separate A4 proof, stacked vertically on narrow screens.",
+    "shapeLanguage": "Rectangular photo thumbnails and paper rectangles use true proportions, thin rules and restrained square controls.",
+    "surfaceAndMaterial": "Uncoated white paper over a matte sage workbench distinguishes the printable surface from editing chrome.",
+    "paletteLogic": "Neutral green-tinted surround separates the white proof, with dark ink for controls and green for the upload and export actions.",
+    "typography": "System sans serif, small uppercase instrument labels and tabular dimensions establish a compact technical hierarchy.",
+    "signature": "Changing a centimetre dimension immediately recomposes the physical paper layout and page count.",
+    "distinction": "The real white sheet and per-photo measurements replace decorative game displays, maps and abstract dashboards."
+  },
+  "architecture": {
+    "spatialLayout": "document-spread",
+    "controlLocation": "side-rail",
+    "navigation": "none",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Assign dimensions to imported photographs and proof the exact layout of a physical A4 sheet before exporting.",
+    "physicalFeedback": "Buttons depress slightly and the paper recomposes immediately when a numerical dimension or copy count is committed.",
+    "spatialRationale": "Keep dimensions outside the physical proof so the preview remains readable; stack the editing list and paper on phones.",
+    "comparisons": [
+      {
+        "slug": "echolot",
+        "spatialDifference": "Two rectangular photo-editing and proofing surfaces replace the circular sonar instrument and physical navigation pad.",
+        "interactionDifference": "Users enter physical dimensions and export a static document rather than spending resources to explore a hidden grid."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "An ordered strip of photograph settings sits alongside discrete white paper rectangles, not a continuous interactive geography.",
+        "interactionDifference": "The sheet is recalculated from explicit dimensions, not through pausing and branching a simulated autonomous history."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "A typesetting proof of proportional A4 sheets replaces an immersive map bounded by a timeline and historical event panel.",
+        "interactionDifference": "Editing dimensions and print settings produces downloadable pages rather than navigating among historical events."
+      },
+      {
+        "slug": "tidepool",
+        "spatialDifference": "The workspace is composed of white portrait or landscape sheets instead of a colored matrix of coastal cells.",
+        "interactionDifference": "Users submit actual photographs and set exact centimetres rather than changing the ownership or color of cells."
+      },
+      {
+        "slug": "contour",
+        "spatialDifference": "The core spatial area is a measured rectangular paper proof beside thumbnail controls rather than a connected square puzzle grid.",
+        "interactionDifference": "Physical size inputs and repeat counts alter a print arrangement instead of turning electrical connections."
+      },
+      {
+        "slug": "single-track",
+        "spatialDifference": "Separate white sheets and a photo list replace a continuous train timetable and horizontal planning timeline.",
+        "interactionDifference": "The editing loop produces a physical print file rather than allocating departure times on a railway network."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "DOM and CSS percentage positions provide a responsive sheet proof while Canvas renders the same geometry at 300 dpi for PDF.",
+    "focalAsset": "Actual user photographs and procedural paper rectangles form the focal image; the icon is a hand-authored contact sheet SVG."
+  },
+  "motion": {
+    "character": "Precise immediate recomposition with restrained short opacity and press responses suited to a measuring tool.",
+    "action": "Changing the sheet orientation or photo size changes the measured rectangles and number of resulting pages.",
+    "anticipation": "The current numerical value and labeled control make the next edit explicit without decorative animation.",
+    "response": "The paper aspect and photograph rectangles update in the same input change handler without an animation queue.",
+    "followThrough": "The page count and physical dimensions remain visible after the new layout appears on the workbench.",
+    "interruption": "Each committed setting replaces the previous proof immediately; no old layout motion blocks further input.",
+    "reducedMotion": "The paper geometry and all numerical measurements remain readable with optional transition effects removed."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#marks"
+    },
+    "expectedChange": "The lines of cut-mark controls change state and subsequent photo proofs show cut edges.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
