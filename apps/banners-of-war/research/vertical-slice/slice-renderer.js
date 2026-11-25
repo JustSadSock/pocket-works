@@ -19,7 +19,7 @@ export function atlasTerrain(t){
  for(let z=0;z<=100;z+=10){g.beginPath();for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){let ps=[[i*step,j*step],[(i+1)*step,j*step],[(i+1)*step,(j+1)*step],[i*step,(j+1)*step]],hs=[height[j][i],height[j][i+1],height[j+1][i+1],height[j+1][i]],hits=[];for(let k=0;k<4;k++){let a=hs[k],b=hs[(k+1)%4];if((a<z)!==(b<z)){let v=(z-a)/(b-a),p=ps[k],q=ps[(k+1)%4];hits.push([p[0]+(q[0]-p[0])*v,p[1]+(q[1]-p[1])*v])}}for(let k=1;k<hits.length;k+=2){let a=hits[k-1],b=hits[k];if(!sample((a[0]+b[0])/2,(a[1]+b[1])/2).water){g.moveTo(...a);g.lineTo(...b)}}}g.stroke()}
  for(const f of t.fields||[]){g.save();g.translate(f.x,f.y);g.fillStyle="#bba76d3b";g.fillRect(-f.w/2,-f.h/2,f.w,f.h);for(let i=-f.h/2;i<f.h/2;i+=4)line(g,-f.w/2,i,f.w/2,i,"#776b4b2b",.8);g.restore()}
  if(t.road?.length){g.beginPath();t.road.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.lineCap="round";g.lineJoin="round";g.strokeStyle="#8b795344";g.lineWidth=5;g.stroke();g.strokeStyle="#e5cda0";g.lineWidth=2.5;g.stroke()}
- for(let y=7;y<E.H;y+=9)for(let x=7;x<E.W;x+=9){let n=noise(x,y),xx=x+(n-.5)*7,yy=y+(noise(y,x)-.5)*7,q=sample(xx,yy);if(!q.wood||n>.72)continue;let r=2.2+n*2.8;oval(g,xx+r*.65,yy+r*.7,r*1.35,r*.7,"#263e3b40");oval(g,xx,yy,r,r*.85,"#476d4d");oval(g,xx-r*.23,yy-r*.3,r*.72,r*.6,noise(x+3,y)>.5?"#718e58":"#638456");oval(g,xx-r*.42,yy-r*.39,r*.32,r*.31,"#a1b47a66")}
+ for(let y=7;y<E.H;y+=9)for(let x=7;x<E.W;x+=9){let n=noise(x,y),xx=x+(n-.5)*7,yy=y+(noise(y,x)-.5)*7,q=sample(xx,yy);if(!q.wood||n>.72)continue;let r=1.5+n*1.8;oval(g,xx+r*.65,yy+r*.7,r*1.35,r*.7,"#263e3b26");oval(g,xx,yy,r,r*.85,"#476d4d");oval(g,xx-r*.23,yy-r*.3,r*.72,r*.6,noise(x+3,y)>.5?"#718e58":"#638456");oval(g,xx-r*.42,yy-r*.39,r*.32,r*.31,"#a1b47a66")}
  for(const v of t.settlements||[])for(let i=0;i<5;i++){let x=v.x+Math.cos(i*2.4)*v.r*.55,y=v.y+Math.sin(i*2.4)*v.r*.55;if(!sample(x,y).village)continue;g.fillStyle="#52463850";g.fillRect(x+1,y+2,5,4);poly(g,[[x-3,y-2],[x+3,y-2],[x+3,y+2],[x-3,y+2]],"#c8b392","#786b57",.4);poly(g,[[x-3,y-2],[x,y-3.5],[x+3,y-2],[x+3,y+1],[x,y-.5],[x-3,y+1]],"#935c45")}
  for(let y=5;y<E.H;y+=6){let x=E.riverX(t,y);if(Number.isFinite(x)&&sample(x,y).water)line(g,x-5,y,x+4,y,"#d7e9df55",.55)}
  return c
@@ -42,7 +42,7 @@ export function interpolateFrame(a,b,t){
 }
 export class Battlefield{
  constructor(canvas){this.canvas=canvas;this.g=canvas.getContext("2d",{alpha:false});this.cam={z:1,x:0,y:0};this.layout={};this.terrain=null;this.terrainRef=null;this.stats={drawMs:0,sprites:0,visible:0};this.layer=false}
- resize(){const c=this.canvas,w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}const portrait=h>w&&w<780,top=portrait?155:62,bottom=portrait?114:30,right=!portrait&&h<550?95:0,aw=w-right-12,ah=h-top-bottom;
+ resize(){const c=this.canvas,w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}const portrait=h>w&&w<780,top=portrait?116:62,bottom=portrait?100:30,right=!portrait&&h<550?95:0,aw=w-right-12,ah=h-top-bottom;
  const base=Math.max(.1,Math.min(aw/(portrait?E.H:E.W),ah/(portrait?E.W:E.H)));this.layout={w,h,d,portrait,k:base*this.cam.z,cx:aw/2+6+this.cam.x,cy:top+ah/2+this.cam.y,base};return this.layout}
  project(p){let {k,cx,cy,portrait}=this.layout,x=p.x-E.W/2,y=p.y-E.H/2;return portrait?{x:cx-y*k,y:cy+x*k}:{x:cx+x*k,y:cy+y*k}}
  world(p,clipped=true){let {k,cx,cy,portrait}=this.layout,x=(p.x-cx)/k,y=(p.y-cy)/k,xx=(portrait?y:x)+E.W/2,yy=(portrait?-x:y)+E.H/2;return clipped?{x:clamp(xx,0,E.W),y:clamp(yy,0,E.H)}:{x:xx,y:yy}}
@@ -60,7 +60,21 @@ export class Battlefield{
  for(let j=0;j<shape.length;j++){const b=shape[j],q=sec[j],n=j===shape.length-1?remaining:Math.min(remaining,Math.round(b.n));remaining-=n;if(n<1)continue;let cols=Math.max(1,Math.min(n,Math.round(b.geometry.cols))),rows=Math.ceil(n/cols),limit=Math.max(1,Math.floor(budget/shape.length)),stride=Math.max(1,Math.ceil(n/limit));
  g.save();g.translate(b.x,b.y);g.rotate(b.a);g.globalAlpha=u.rout?.60:1;
  if(k<.36){g.strokeStyle=colors[u.side];g.lineWidth=Math.max(.75/k,b.geometry.d*.13);g.beginPath();for(let i=0;i<Math.min(4,rows);i++){let x=b.geometry.d/2-(i+.5)*b.geometry.d/Math.min(4,rows);g.moveTo(x,-b.geometry.w/2);g.lineTo(x,b.geometry.w/2)}g.stroke()}
- else{let loose=clamp((100-q.cohesion)/100,0,1),gap=b.geometry.gap||1.5;for(let i=0;i<n;i+=stride){let x=b.geometry.d/2-(Math.floor(i/cols)+.5)*b.geometry.d/rows,y=(i%cols+.5-cols/2)*b.geometry.w/cols,jitter=Math.min(gap*.4,loose*gap*.45);x+=(noise(i+u.id*19,j)-.5)*jitter;y+=(noise(j,i+u.id*7)-.5)*jitter;let march=Math.min(.19,(u.v||0)*.12)*Math.sin(time*7+i*1.8);x+=march;let size=t.horse?5:3.45;if(k<1.2)size=Math.max(size,1.8/k);g.drawImage(img,x-size/2,y-size/2,size,size);this.stats.sprites++}}
+ else{
+ let loose=clamp((100-q.cohesion)/100,0,1),gap=b.geometry.gap||1.5,points=[];
+ // Uniform two-dimensional samples cover the entire physical sector, not every nth row-major soldier.
+ let target=Math.min(n,limit),rCount=Math.max(1,Math.min(rows,Math.round(Math.sqrt(target*rows/cols)))),cCount=Math.max(1,Math.min(cols,Math.floor(target/rCount)));
+ for(let ri=0;ri<rCount;ri++)for(let ci=0;ci<cCount;ci++){let row=Math.min(rows-1,Math.floor((ri+.5)*rows/rCount)),col=Math.min(cols-1,Math.floor((ci+.5)*cols/cCount)),i=row*cols+col;if(i>=n)continue;
+ let x=b.geometry.d/2-(row+.5)*b.geometry.d/rows,y=(col+.5-cols/2)*b.geometry.w/cols,jitter=Math.min(gap*.4,loose*gap*.45);x+=(noise(i+u.id*19,j)-.5)*jitter;y+=(noise(j,i+u.id*7)-.5)*jitter;x+=Math.min(.19,(u.v||0)*.12)*Math.sin(time*7+i*1.8);points.push([x,y])}
+ if(k<2.3){
+  // Batched miniature silhouettes at tactical scale. Individual representatives are not headcounts.
+  let rx=Math.max(t.horse?1.3:.68,1.45/k),ry=Math.max(t.horse?.62:.48,.88/k);
+  g.beginPath();for(let [x,y] of points){g.moveTo(x+rx+.25,y+.22);g.ellipse(x+.25,y+.22,rx,ry,0,0,2*PI)}g.fillStyle="#29393290";g.fill();
+  g.beginPath();for(let [x,y] of points){g.moveTo(x+rx,y);g.ellipse(x,y,rx,ry,0,0,2*PI)}g.fillStyle=colors[u.side];g.fill();g.strokeStyle="#f0e3c6b0";g.lineWidth=.45/k;g.stroke();
+  g.beginPath();for(let [x,y] of points){g.moveTo(x,y-ry*.45);g.lineTo(x+rx*(u.type==="pike"?2.4:u.type==="spear"||t.horse?1.8:1.1),y-ry*.65)}g.strokeStyle=t.range?"#886d43":"#ddd6b7";g.lineWidth=.75/k;g.stroke()
+ }else for(let [x,y] of points){let size=t.horse?5.2:4.1;g.drawImage(img,x-size/2,y-size/2,size,size)}
+ this.stats.sprites+=points.length
+ }
  if(this.layer&&(q.contact>0||q.pressure>.1)){g.fillStyle="rgba(164,65,35,"+Math.min(.35,(q.pressure||.2)*.15)+")";g.fillRect(-b.geometry.d/2,-b.geometry.w/2,b.geometry.d,b.geometry.w)}g.restore()
  }
  }
@@ -71,13 +85,13 @@ export class Battlefield{
  let start=performance.now(),g=this.g,{w,h,k}=this.resize();this.stats={sprites:0,visible:0,drawMs:0};this.screenTransform();g.fillStyle="#1d3131";g.fillRect(0,0,w,h);if(!state)return;
  if(this.terrainRef!==state.terrain){this.terrainRef=state.terrain;this.terrain=atlasTerrain(state.terrain)}this.worldTransform();g.drawImage(this.terrain,0,0);
  if(o.deploy){g.fillStyle="#325d961a";g.fillRect(0,0,E.W*.4,E.H);this.path([{x:E.W*.4,y:0},{x:E.W*.4,y:E.H}],"#335a85",1.5,[7,5])}
- const visible=state.units.filter(u=>E.alive(u)&&this.visible(u,100));this.stats.visible=visible.length;const budget=Math.max(10,Math.min(k<.55?15:k<1.45?55:180,Math.floor(4200/Math.max(1,visible.length))));
+ const visible=state.units.filter(u=>E.alive(u)&&this.visible(u,100));this.stats.visible=visible.length;const budget=Math.max(8,Math.min(k<.55?24:k<1.9?65:180,Math.floor((k<1.9?2400:2600)/Math.max(1,visible.length))));
  for(const u of visible){this.regiment(u,budget,state.time);if(o.selected?.has(u.id))this.footprint(u,"#f7d687")}
  for(const shot of state.shots||[]){let t=clamp((state.time-shot.time)/1.5,0,1),x=shot.x+(shot.tx-shot.x)*t,y=shot.y+(shot.ty-shot.y)*t;this.path([{x:x-(shot.tx-shot.x)*.035,y:y-(shot.ty-shot.y)*.035},{x,y}],"#f6e3b8aa",1)}
  if(o.orders&&o.campaign){let C=o.campaign;for(const u of C.own()){let q=C.orders[u.id];if(!q)continue;let a=u;for(let [i,s] of [q,...(q.stages||[])].entries()){let p=s.path||[];if(p.length)this.arrow([a,...p],o.selected?.has(u.id)?"#ffdc92":"#e8e7c1a0");if(s.target!==undefined){let t=state.units.find(v=>v.id===s.target);if(t)this.arrow([a,t],"#f0ad80")}let dest=C.end(u,i);this.footprint(dest,i===o.stage?"#fff1b2":"#d7c59a");a=dest}}}
  if(o.preview?.length>1)this.path(o.preview,"#fff3b3",2,[4,3]);if(o.linePreview)for(const u of Object.values(o.linePreview))this.footprint(u,"#fff5c6");
- this.screenTransform();for(const u of visible)if(k<1.65||o.selected?.has(u.id))this.flag(u,o.selected?.has(u.id));this.screenTransform();
- for(const h of o.handles||[]){let p=this.project(h);oval(g,p.x,p.y,h.kind==="point"?8:10,h.kind==="point"?8:10,h.kind==="point"?"#163947":"#fff1d1","#25475b",1.5);g.fillStyle=h.kind==="point"?cream:"#25475b";g.font="bold 11px system-ui";g.textAlign="center";g.textBaseline="middle";g.fillText(h.kind==="point"?String(h.index+1):({center:"✥",rotate:"↻",spread:"↔",depth:"↕"}[h.kind]||"·"),p.x,p.y)}
+ this.screenTransform();for(const u of visible)if(k<.9||o.selected?.has(u.id))this.flag(u,o.selected?.has(u.id));this.screenTransform();
+ for(const h of o.handles||[]){let p=this.project(h);oval(g,p.x,p.y,h.kind==="point"?10:13,h.kind==="point"?10:13,h.kind==="point"?"#163947":"#fff1d1","#25475b",1.5);g.fillStyle=h.kind==="point"?cream:"#25475b";g.font="bold 13px system-ui";g.textAlign="center";g.textBaseline="middle";g.fillText(h.kind==="point"?String(h.index+1):({center:"✥",rotate:"↻",spread:"↔",depth:"↕"}[h.kind]||"·"),p.x,p.y)}
  if(o.selectionStroke?.length>1){g.strokeStyle="#fff3bf";g.fillStyle="#ffdf9130";g.lineWidth=1.4;g.beginPath();o.selectionStroke.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.closePath();g.fill();g.stroke()}
  this.stats.drawMs=performance.now()-start;return this.stats
  }
