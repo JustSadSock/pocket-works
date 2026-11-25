@@ -46,6 +46,7 @@ for(const [format,counts,historical] of [['2vAI',[2,0],false],['2v1',[2,1],true]
      if(!await cap.locator('#net-allied-seat').isVisible())await details.locator('summary').click();
      await cap.locator('#net-allied-seat').selectOption(String(team[j].seat));await cap.locator('#net-allied-groups').selectOption(groups[j].id);
      await cap.locator('#net-allied-assign').click();
+     await expect(cap.locator('#net-status')).toContainText('Сервер принял действие');
      await expect.poll(async()=>((await view(cap,room)).allied.members.find((m:any)=>m.seat===team[j].seat).groups),{timeout:10000}).toEqual([groups[j].id]);
     }
    }

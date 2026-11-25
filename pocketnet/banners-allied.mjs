@@ -50,7 +50,7 @@ export function allocate(r,s,actor,target,groups){
 // No stale draft survives a reassignment, and old authorities cannot reuse a sequence.
 export function transferAllied(r,s,actor,target,groups){
  let a=captain(r,actor),m=participant(r,target);
- check(r.phase==='planning'&&!r.members.some(v=>v.ready),'assignment_frozen');
+ check(r.phase==='planning'&&!r.members.some(v=>v.side===a.side&&v.ready),'assignment_frozen');
  check(a.side===m.side&&!m.captain,'invalid_assignment');
  let ids=selected(s,m.side,groups),claimed=r.members.filter(v=>v.side===m.side&&!v.captain&&v.id!==target).flatMap(v=>selected(s,m.side,v.groups));
  check(ids.length&&!ids.some(id=>claimed.includes(id)),'overlapping_assignment');
@@ -59,7 +59,7 @@ export function transferAllied(r,s,actor,target,groups){
 }
 export function handoffAllied(r,actor,target){
  let a=captain(r,actor),m=participant(r,target);
- check(r.phase==='lobby'||r.phase==='planning'&&!r.members.some(v=>v.ready),'delegation_frozen');
+ check(r.phase==='lobby'||r.phase==='planning'&&!r.members.some(v=>v.side===a.side&&v.ready),'delegation_frozen');
  check(a.id!==m.id&&a.side===m.side&&!m.ai&&m.groups.length>0,'invalid_delegation');
  a.captain=false;a.groups=[...m.groups];m.captain=true;m.groups=[];
  for(const v of r.members.filter(v=>v.side===a.side))v.draft={};
@@ -75,7 +75,7 @@ export function beginAllied(r,s){
 export function setAlliedAI(r,actor,target,on){
  let a=captain(r,actor),m=participant(r,target);
  check(typeof on==='boolean'&&a.side===m.side&&a.id!==m.id,'invalid_delegation');
- check(r.phase==='lobby'||r.phase==='planning'&&!r.members.some(v=>v.ready),'delegation_frozen');
+ check(r.phase==='lobby'||r.phase==='planning'&&!r.members.some(v=>v.side===a.side&&v.ready),'delegation_frozen');
  m.ai=on;m.draft={};r.revision++
 }
 function scopedOrders(r,s,m,input){

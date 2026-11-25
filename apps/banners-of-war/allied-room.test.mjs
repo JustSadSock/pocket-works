@@ -65,3 +65,18 @@ test('duel state still has its original wire shape and no allied record',async()
  const m=await createMatch(user(1),{seconds:60,landscape:'flat'},0,id);
  assert.equal(m.allied,undefined);assert.equal(viewMatch(m,user(1),0).allied,undefined);
 });
+
+test('opposing readiness and authority revision cannot cancel own unsealed planning',async()=>{
+ const {m,view,act}=await fixture('2v2',true);
+ for(let i=1;i<=4;i++)act(i,'accept',{checksum:m.checksum});
+ const oldRevision=view(3).allied.revision;
+ act(3,'ready',{round:1,orders:{}});
+ const blueRevision=view(1).allied.revision;
+ act(1,'handoff',{seat:1});
+ assert.equal(view(2).allied.role,'captain');
+ assert.ok(view(1).allied.revision>blueRevision);
+ assert.equal(view(3).allied.revision,oldRevision);
+ assert.equal(view(3).ready[1],true);
+ act(4,'ready',{round:1,revision:oldRevision,orders:{}});
+ assert.equal(m.allied.members[3].ready,true);
+});

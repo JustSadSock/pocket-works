@@ -1,0 +1,28 @@
+{
+  "protocol": "allied-personal-replay-load-v1",
+  "engine": "banners-engine-v1",
+  "commit": "ca65046c2928ef777561616ef71eced0aa1aaa94",
+  "environment": "isolated V8, not Worker or production; SHA checksum adapter used only in harness",
+  "metrics": {
+    "units": 60,
+    "format": "2v2",
+    "historical": true,
+    "wallMs": 2812,
+    "commonRowBytes": 490013,
+    "seatRowBytes": [
+      137878,
+      138747,
+      137878,
+      138747
+    ],
+    "clientViewBytes": [
+      19652,
+      17988,
+      19894,
+      18203
+    ],
+    "frames": 31,
+    "privateViewsDifferent": true,
+    "contact": 0
+  }
+}

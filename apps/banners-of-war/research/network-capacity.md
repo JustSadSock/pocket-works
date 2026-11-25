@@ -10,3 +10,6 @@ Cloudflare rate reference: https://developers.cloudflare.com/durable-objects/pla
 
 ## Real Worker parallel rooms
 PocketNet Edge 45499591664 passed on 74448ee: three concurrent independent 60-unit rooms, 506–545 ms room calculation, approximately 367 KB exported replay, 12 KB client view, ~1.99 seconds total. Local Wrangler, not production. Keep cap 60.
+
+## Four-player historical replay storage probe
+An isolated V8 60-unit Historical Command 2v2 round on ca65046 took 2812 ms wall time, stored a 490013-byte common row and four personal rows of 137878, 138747, 137878 and 138747 bytes. Client views: 19652, 17988, 19894 and 18203 bytes. 31 frames per replay, personal feeds differed, no row exceeded 1.9 MB. This first round had no contact (messenger delay); it is a storage/scope probe, not dense combat or production performance evidence. See allied-personal-replay-load-v1.json. Keep limit 60.

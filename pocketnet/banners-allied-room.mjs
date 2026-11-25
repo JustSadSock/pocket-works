@@ -8,6 +8,8 @@ import {createAlliedRoster,joinAllied,participant,nodes,scope,allocate,transferA
 
 const check=(ok,code)=>{if(!ok)throw Error(code)};
 const roster=m=>m.allied;
+const sideRevision=(r,side)=>r.sideRevision?.[side]??r.revision;
+function bumpAuthority(r,side,lobby=false){r.sideRevision??=[r.revision-1,r.revision-1];if(lobby){r.sideRevision[0]++;r.sideRevision[1]++}else r.sideRevision[side]++;}
 const seat=(r,i)=>{check(Number.isInteger(i)&&i>=0&&i<r.members.length,'invalid_seat');return r.members[i]};
 const member=(m,u)=>participant(roster(m),u.id);
 const finishedReveal=m=>m.phase==='finished'&&m.rules.reveal;
@@ -29,7 +31,7 @@ function assignmentTree(s){
 export async function createAlliedMatch(owner,payload,now,id){
  const r=createAlliedRoster(payload.alliedFormat,owner);
  const m=await createMatch(owner,payload,now,id);
- m.allied=r;m.alliedProtocol=1;
+ m.allied=r;m.alliedProtocol=1;r.sideRevision=[0,0];
  m.aiPolicy=payload.aiPolicy==='legacy'?'legacy':'modern';
  m.battle=validateScenarioProject(m.project).state;
  m.battle.fog=m.project.fog;
@@ -44,7 +46,7 @@ export function joinAlliedMatch(m,user,now,payload={}){
  let side=payload.side;
  if(side===undefined||side===null)side=[0,1].find(i=>r.members.filter(v=>v.side===i).length<r.capacity[i]);
  check(side===0||side===1,'room_full');
- joinAllied(r,user,side);r.members.at(-1).accepted=false;resetAccept(r);m.updatedAt=now;return side
+ joinAllied(r,user,side);bumpAuthority(r,side,true);r.members.at(-1).accepted=false;resetAccept(r);m.updatedAt=now;return side
 }
 function startPlanning(m,now){
  const r=roster(m);if(r.phase==='deployment')r.phase='lobby';
@@ -110,15 +112,15 @@ export function mutateAlliedMatch(m,user,p,now){
  check(Number.isInteger(p.seq)&&p.seq>0,'invalid_sequence');
  if(p.seq<=a.seq)return false;
  check(p.seq===a.seq+1,'sequence_gap');
- if(['allocate','transfer','handoff','delegate','accept','draft','ready'].includes(p.type))check(p.revision===r.revision,'authority_changed');
+ if(['allocate','transfer','handoff','delegate','accept','draft','ready'].includes(p.type))check(p.revision===sideRevision(r,a.side),'authority_changed');
  if(p.type==='allocate'||p.type==='transfer'){
   captain(m,user);const target=seat(r,p.seat);authorityClear(r,a.side);
   if(p.type==='allocate')allocate(r,m.battle,user.id,target.id,p.groups);else transferAllied(r,m.battle,user.id,target.id,p.groups);
-  if(m.phase==='lobby')resetAccept(r);
+  bumpAuthority(r,a.side,m.phase==='lobby');if(m.phase==='lobby')resetAccept(r);
  }else if(p.type==='handoff'){
-  captain(m,user);authorityClear(r,a.side);handoffAllied(r,user.id,seat(r,p.seat).id);if(m.phase==='lobby')resetAccept(r)
+  captain(m,user);authorityClear(r,a.side);handoffAllied(r,user.id,seat(r,p.seat).id);bumpAuthority(r,a.side,m.phase==='lobby');if(m.phase==='lobby')resetAccept(r)
  }else if(p.type==='delegate'){
-  captain(m,user);const t=seat(r,p.seat);check(empty(t.draft),'saved_orders_exist');setAlliedAI(r,user.id,t.id,p.on);if(m.phase==='lobby')resetAccept(r)
+  captain(m,user);const t=seat(r,p.seat);check(empty(t.draft),'saved_orders_exist');setAlliedAI(r,user.id,t.id,p.on);bumpAuthority(r,a.side,m.phase==='lobby');if(m.phase==='lobby')resetAccept(r)
  }else if(p.type==='accept'){
   check(m.phase==='lobby'&&full(r)&&assigned(m)&&p.checksum===m.checksum,'scenario_not_confirmed');
   a.accepted=true;
@@ -197,7 +199,7 @@ export function viewAlliedMatch(m,user,now,{terrain=false}={}){
  const base=viewMatch({...m,players,accepted,ready,draft:[{},{}],seq:[0,0]},user,now,{terrain});
  base.nextSeq=a.seq+1;base.draft=m.phase==='planning'?clone(a.draft):{};
  base.units=finishedReveal(m)?observedUnits(s,a.side,true):m.phase==='lobby'||m.phase==='deployment'?observedUnits(s,a.side,true).filter(u=>u.side===a.side):alliedUnits(m,a);
- const team=commandRosterView(r,s,a.id);team.seat=index;team.capacity=r.capacity.slice();team.full=full(r);team.assigned=assigned(m);team.canAccept=team.full&&team.assigned&&!a.accepted;
+ const team=commandRosterView(r,s,a.id);team.revision=sideRevision(r,a.side);team.seat=index;team.capacity=r.capacity.slice();team.full=full(r);team.assigned=assigned(m);team.canAccept=team.full&&team.assigned&&!a.accepted;
  team.readyCount=r.members.filter(v=>v.side===a.side&&(v.ai||(m.phase==='replay'?v.replayReady:v.ready))).length;
  team.members=team.members.map(v=>({...v,accepted:r.members[v.seat].accepted,ready:h&&!v.self&&m.phase!=='lobby'?undefined:(m.phase==='replay'?r.members[v.seat].replayReady:r.members[v.seat].ready)}));
  if(h)team.markers=team.markers.filter(v=>v.own||v.round<r.round); // historic dispatch arrives next planning round
