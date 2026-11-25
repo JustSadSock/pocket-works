@@ -9,11 +9,8 @@ async function setStyle(){playing=false;let t=performance.now(),meta=await fetch
  for(let kind of ['grass','sparse','road','stone']){let im=await image('/art-evidence/'+kind+'.png'),c=document.createElement('canvas');textures[kind]=[];for(let n of [16,32,64,128,256,512]){c.width=c.height=n;let ctx=c.getContext('2d');ctx.imageSmoothingQuality='high';ctx.drawImage(im,0,0,n,n);textures[kind].push({n,a:ctx.getImageData(0,0,n,n).data})}}
  for(let kind of ['tree1','tree2','tree3','bush']){let im=await image('/art-evidence/'+kind+'.png'),meta=await fetch('/art-evidence/'+kind+'.json').then(r=>r.json());treeAsset[kind]={im,meta}}
  cache.clear();cacheBytes=0;return {loadMs:atlas.loadMs,bytes:atlas.bytes,tree:!!treeAsset}}
-function project(x,y,z=0){let X=x-cam.x,Y=y-cam.y,terrain=scene.frames[0].terrain,F=scene.F,h0=cam.h0??(cam.h0=F.sample(terrain,cam.x,cam.y).h),h=F.sample(terrain,clamp(x,0,F.W),clamp(y,0,F.H)).h-h0;return {x:w/2-Y*cam.k,y:cv.clientHeight/2+(X*S-(h+z)*T)*cam.k}}
-// Snap the projected world grid and camera translation independently. For a fixed scale,
-// panning cannot change the relative integer positions inside a stationary physical row.
-function snapPoint(x,y){let F=scene.F,t=scene.frames[0].terrain,k=cam.k,h0=cam.h0??(cam.h0=F.sample(t,cam.x,cam.y).h),z=F.sample(t,clamp(x,0,F.W),clamp(y,0,F.H)).h;
- return {x:Math.round(-y*k)+Math.round(w/2+cam.y*k),y:Math.round((x*S-z*T)*k)+Math.round(h/2-(cam.x*S-h0*T)*k)}}
+function project(x,y,z=0){let F=scene.F,t=scene.frames[0].terrain,k=cam.k,alt=F.sample(t,clamp(x,0,F.W),clamp(y,0,F.H)).h;return {x:w/2+(-y-cam.u)*k,y:h/2+(x*S-(alt+z)*T-cam.v)*k}}
+function snapPoint(x,y){let F=scene.F,t=scene.frames[0].terrain,k=cam.k,z=F.sample(t,clamp(x,0,F.W),clamp(y,0,F.H)).h;return {x:Math.round(-y*k)+Math.round(w/2-cam.u*k),y:Math.round((x*S-z*T)*k)+Math.round(h/2-cam.v*k)}}
 function initTerrain(s){terrainTiles?.dispose();terrainTiles=new TerrainTiles(scene.F,s.terrain,textures,treeAsset)}
 async function prepareTerrain(pad=0){resize();let start=performance.now(),coarse={...cam,k:cam.k/2};let first=await terrainTiles.warm(coarse,w,h,d,0),current=await terrainTiles.warm(cam,w,h,d,pad);return {wallMs:performance.now()-start,first,current}}
 function landscape(s){let ground=terrainTiles.draw(g,cam,w,h,d,performance.now()<zoomUntil?zoomLevel:null),trees=[];if(cam.k>=1.1)for(let o of terrainTiles.vegetation(cam,w,h)){let p=project(o.x,o.y),k=cam.k*o.scale,asset=treeAsset[o.kind];if(!asset)continue;let m=asset.meta,span=m.height*k;if(p.x<-span||p.x>w+span||p.y<-span||p.y>h+span)continue;trees.push({p,k,kind:o.kind});let radius=Math.max(1,span*.29);g.fillStyle='#30342142';g.beginPath();g.ellipse(p.x+span*.32,p.y+span*.13,radius,radius*.38,.35,0,7);g.fill()}
@@ -55,6 +52,6 @@ function getScene(s,layout,C){
 export async function warmArt(s,layout,C){getScene(s,layout,C);let t=performance.now();let coarse=await terrainTiles.warm({...cam,k:cam.k/2},w,h,d),detail=await terrainTiles.warm(cam,w,h,d);return {wallMs:performance.now()-t,coarse,detail}}
 export function paintArt(s,layout,C){getScene(s,layout,C);let before=lastCam;motionKind=before&&Math.abs(before.k-cam.k)>1e-7?'zoom':before&&(before.x!==cam.x||before.y!==cam.y)?'pan':'none';moving=motionKind!=='none';
  if(motionKind==='zoom'){if(performance.now()>=zoomUntil)zoomLevel=terrainTiles.visible(before,w,h,d)[0]?.l;zoomUntil=performance.now()+180}
- lastCam={...cam};let use=policy==='batch'||policy==='auto'&&motionKind!=='zoom'&&(trials.batch<2&&drawSerial%8===3||trials.batch>1&&costs.batch<costs.direct*.92);drawSerial++;
+ lastCam={...cam};let use=policy==='batch'||policy==='auto'&&motionKind!=='zoom'&&(trials.batch<2&&drawSerial%8===3||trials.batch>1&&(drawSerial%90===12||costs.batch<costs.direct*.92&&drawSerial%90!==0));drawSerial++;
  let r=render(s,use),kind=use?'batch':'direct',cost=Math.max(0,r.drawMs-r.groundMs);costs[kind]=trials[kind]?costs[kind]*.85+cost*.15:cost;trials[kind]++;return {...r,policy,costs:{...costs},trials:{...trials},terrainLevel:r.terrain.level,zoomHold:performance.now()<zoomUntil}}
 export function pendingArt(){return (terrainTiles?.queue.size||0)+(performance.now()<zoomUntil?1:0)}

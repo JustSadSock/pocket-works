@@ -20,7 +20,7 @@ export class Battlefield{
  height(x,y){return this.state?this.F.sample(this.state.terrain,clamp(x,0,this.F.W),clamp(y,0,this.F.H)).h:0}
  project(p){let {k,cx,cy}=this.layout;return {x:cx-(p.y-this.F.H/2)*k,y:cy+((p.x-this.F.W/2)*S-(this.height(p.x,p.y)-this.height(this.F.W/2,this.F.H/2))*T)*k}}
  world(p,clip=true){let {k,cx,cy}=this.layout,y=this.F.H/2-(p.x-cx)/k,x=this.F.W/2+(p.y-cy)/(k*S),h0=this.height(this.F.W/2,this.F.H/2);for(let i=0;i<5;i++)x=this.F.W/2+((p.y-cy)/k+(this.height(x,y)-h0)*T)/S;return clip?{x:clamp(x,0,this.F.W),y:clamp(y,0,this.F.H)}:{x,y}}
- camera(){let p=this.world({x:this.layout.w/2,y:this.layout.h/2},false);return {...p,k:this.layout.k,mode:this.composition}}
+ camera(){let {w,h,cx,cy,k}=this.layout,p=this.world({x:w/2,y:h/2},false);return {...p,u:-this.F.H/2+(w/2-cx)/k,v:this.F.W/2*S-this.height(this.F.W/2,this.F.H/2)*T+(h/2-cy)/k,k,mode:this.composition}}
  zoom(f,p){let old=this.world(p,false);this.cam.z=clamp(this.cam.z*f,.8,45);this.resize();let q=this.project(old);this.cam.x+=p.x-q.x;this.cam.y+=p.y-q.y;this.resize()}
  setComposition(mode){if(!['A','C'].includes(mode))return false;this.composition=mode;if(mode==='A')this.fit();return true}
  fit(){this.cam={z:1,x:0,y:0};this.resize()}
