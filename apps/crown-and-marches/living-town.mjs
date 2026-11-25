@@ -1,0 +1,54 @@
+import {xx,yy,neighbors,hash} from './world.mjs';
+import {assetDimensions as dimensions} from './landscape-assets.mjs';
+const mix=(a,b,t)=>a+(b-a)*t,dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const segment=(x,y,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],t=clamp(((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);};
+const samples=(a,b,step=.045)=>{const n=Math.max(1,Math.ceil(dist(a,b)/step));return Array.from({length:n+1},(_,k)=>[mix(a[0],b[0],k/n),mix(a[1],b[1],k/n)]);};
+const segments=row=>row.slice(1).map((b,k)=>[row[k],b]);
+export function planLivingTown(m,city,network){
+ const x=xx(city.i)+.5,y=yy(city.i)+.5,origin=[x,y],pop=city.pop||0,port=city.port||0,fort=city.fort||0,level=pop>4200?4:pop>1600?3:pop>900?2:1,industry=(city.build||[]).slice(2).reduce((a,b)=>a+b,0),radius=[0,.82,1.2,1.65,2.25][level],seed=hash(city.name),buildings=[],roads=[],walls=[],piers=[],fields=[],missing=[];
+ const nearby=network.filter(l=>l.points.some(p=>dist(p,origin)<radius+2.5)).flatMap(l=>segments(l.points).map(([a,b])=>({a,b,w:l.width})));
+ const rawDry=(a,b,r=0)=>{const i=m.at(Math.floor(a),Math.floor(b));if(i<0||!m.known[i]||!m.m.land[i]||(m.land(a,b)??0)<.60)return false;return !nearby.some(l=>segment(a,b,l.a,l.b)<l.w/2+r+.017);};
+ const dryCache=new Map(),dry=(a,b,r=0)=>{const key=[Math.round(a*512),Math.round(b*512),Math.round(r*1000)].join(',');if(!dryCache.has(key))dryCache.set(key,rawDry(a,b,r));return dryCache.get(key);};
+ const footprint=(a,b,r)=>[[-1,-1],[-1,0],[-1,1],[0,-1],[0,0],[0,1],[1,-1],[1,0],[1,1]].every(([u,v])=>dry(a+u*r,b+v*r,.012));
+ const safeLine=(a,b,r=.018)=>samples(a,b).every(p=>dry(...p,r));
+ const candidates=[];for(let j=-18;j<=18;j++)for(let i=-18;i<=18;i++){const p=[x+i*.13,y+j*.13];if(dist(p,origin)<=radius+1.15&&dry(...p,.02))candidates.push(p);}candidates.sort((a,b)=>dist(a,origin)-dist(b,origin));
+ let center=candidates.find(p=>footprint(...p,.24))||candidates[0]||origin;
+ // Search a dry enclosure first. On narrow river peninsulas, a citadel is
+ // smaller than the entire urban area, leaving historically plausible suburbs.
+ let gate=null;
+ if(fort>=2){outer:for(const r of [1.18,.96,.76,.58,.43,.30])for(const p of candidates){if(dist(p,origin)>1.4||!footprint(...p,Math.min(.20,r*.4)))continue;
+ const ring=Array.from({length:36},(_,k)=>{const a=k*Math.PI*2/36;return [p[0]+Math.cos(a)*r,p[1]+Math.sin(a)*r*.82];});
+ if(!ring.every((a,k)=>safeLine(a,ring[(k+1)%ring.length],.043)))continue;
+ center=p;let gi=0;for(let k=1;k<ring.length;k++)if(dist(ring[k],origin)<dist(ring[gi],origin))gi=k;gate=ring[gi];ring.gate=gi;walls.push(ring);break outer;}
+ if(!walls.length)missing.push('fortification: no dry enclosure within settlement region');}
+ // Routing is a constrained BFS over a local grid, with endpoints on exact
+ // shore/road coordinates. All segments are checked, not merely the nodes.
+ const route=(start,end)=>{if(safeLine(start,end))return [start,end];const span=radius+1.9,step=.12,n=Math.ceil(span*2/step),coord=(u,v)=>[x-span+u*step,y-span+v*step],node=p=>[Math.round((p[0]-x+span)/step),Math.round((p[1]-y+span)/step)],key=(u,v)=>v*(n+1)+u,A=node(start),B=node(end);
+ if([...A,...B].some(v=>v<0||v>n)||!safeLine(start,coord(...A))||!safeLine(end,coord(...B)))return null;const first=key(...A),last=key(...B),queue=[first],prev=new Map([[first,-1]]);
+ for(let k=0;k<queue.length;k++){const cur=queue[k];if(cur===last)break;const u=cur%(n+1),v=Math.floor(cur/(n+1));for(const [du,dv] of [[1,0],[-1,0],[0,1],[0,-1]]){const U=u+du,V=v+dv,next=key(U,V);if(U<0||V<0||U>n||V>n||prev.has(next)||!safeLine(coord(u,v),coord(U,V)))continue;prev.set(next,cur);queue.push(next);}}
+ if(!prev.has(last))return null;const p=[end];for(let k=last;k!==-1;k=prev.get(k))p.push(coord(k%(n+1),Math.floor(k/(n+1))));p.push(start);p.reverse();const result=[p[0]];for(let k=1;k<p.length-1;k++)if(!safeLine(result.at(-1),p[k+1]))result.push(p[k]);result.push(end);return result;};
+ const append=p=>{if(p&&p.length>1){roads.push(p);return true;}return false;};
+ if(gate)append(route(center,gate));
+ // Waterfront before plots. Scan real shoreline cells near the city,
+ // including alternate banks, and require a reachable dry landing.
+ if(port){const shore=[];for(let j=-2;j<=2;j++)for(let i=-2;i<=2;i++){const id=m.at(Math.floor(x)+i,Math.floor(y)+j);if(id<0||!m.known[id]||!m.m.land[id])continue;for(const q of neighbors(id)){if(!m.known[q]||m.m.land[q])continue;const a=[xx(id)+.5,yy(id)+.5],dx=xx(q)-xx(id),dy=yy(q)-yy(id);for(const side of [0,-.23,.23]){const start=[a[0]-dy*side,a[1]+dx*side];let cross=null;for(let t=0;t<=1;t+=.025){const p=[start[0]+dx*t,start[1]+dy*t],l=m.land(...p);if(l!==null&&l<.51){cross=p;break;}}if(!cross)continue;const end=[cross[0]+dx*.28,cross[1]+dy*.28];if((m.land(...end)??1)>.43)continue;for(let back=.12;back<=.52;back+=.04){const land=[cross[0]-dx*back,cross[1]-dy*back];if(dry(...land,.026)){shore.push({land,shore:cross,end});break;}}}}}
+ shore.sort((a,b)=>dist(a.land,origin)-dist(b.land,origin));for(const p of shore.slice(0,45)){if(piers.some(q=>dist(q.shore,p.shore)<.27))continue;const path=route(gate||center,p.land);if(!path)continue;append(path);piers.push(p);if(piers.length>=port)break;}if(piers.length<port)missing.push('port: '+piers.length+'/'+port+' reachable waterfront sites');}
+ const strategic=neighbors(city.i).filter(i=>m.known[i]&&m.fresh[i]&&m.m.land[i]&&m.s.road[i]);for(const i of strategic){const p=[xx(i)+.5,yy(i)+.5];append(route(gate||center,p));}
+ // Market street and secondary lanes first; buildings occupy blocks between them.
+ const angle=strategic.length?Math.atan2(yy(strategic[0])+.5-y,xx(strategic[0])+.5-x):seed%8*Math.PI/4,co=Math.cos(angle),si=Math.sin(angle),world=(u,v)=>[center[0]+co*u-si*v,center[1]+si*u+co*v];
+ for(const [u,v] of [[radius,0],[-radius,0],[0,radius],[0,-radius]]){let target=world(u,v);if(!dry(...target,.02))target=candidates.find(p=>dist(p,target)<.35);if(target)append(route(center,target));}
+ if(level>=3)for(const v of [-.65,.65]){const a=world(-radius*.65,v),b=world(radius*.65,v);if(dry(...a,.02)&&dry(...b,.02))append(route(a,b));}
+ const streetSeg=roads.flatMap(segments),wallSeg=walls.flatMap(r=>r.map((a,k)=>[a,r[(k+1)%r.length]]));
+ const allowed=(p,r)=>footprint(...p,r)&&!buildings.some(b=>dist(p,[b.x,b.y])<b.r+r+.012)&&!streetSeg.some(([a,b])=>segment(...p,a,b)<r+.025)&&!wallSeg.some(([a,b])=>segment(...p,a,b)<r+.055);
+ const add=(type,p,variant=0)=>{const d=dimensions[type],r=Math.hypot(d[0],d[1])*.51;if(!allowed(p,r))return false;buildings.push({type,x:p[0],y:p[1],r,angle,variant});return true;};
+ const place=(type,desired)=>{for(const p of [...candidates].sort((a,b)=>dist(a,desired)-dist(b,desired)))if(dist(p,desired)<1.4&&add(type,p,(seed+buildings.length)%3))return true;return false;};
+ if(city.capital||fort>=3){if(!place('keep',world(-.38,-.30)))missing.push('keep: no dry footprint');if(!place('cathedral',world(.45,-.3)))missing.push('cathedral: no dry footprint');}
+ else if(level>=3)place('church',world(-.35,-.25));else if(level===1)place('chapel',world(-.35,-.25));
+ if(level>=2&&!place('market',world(.35,.35)))missing.push('market: no dry footprint');
+ for(const p of piers)place('warehouse',p.land);
+ let shops=0;const target=[0,6,18,34,65][level],slots=candidates.filter(p=>dist(p,center)<radius).sort((a,b)=>dist(a,center)-dist(b,center));
+ for(const p of slots){if(buildings.length>=target)break;const i=buildings.length,type=industry>shops&&dist(p,center)>.45?'shop':level>=3&&i%9===0?'warehouse':level===1&&i%3===0?'barn':i%3===0?'timber':'house';if(add(type,p,(seed+i)%3)&&type==='shop')shops++;}
+ if(level<=2)for(const p of candidates.filter(p=>dist(p,center)>.6)){if(fields.length>=5)break;if(allowed(p,.18)&&fields.every(f=>dist(p,[f.x,f.y])>.44))fields.push({x:p[0],y:p[1],angle});}
+ const valid=buildings.every(b=>footprint(b.x,b.y,b.r)&&!streetSeg.some(([a,c])=>segment(b.x,b.y,a,c)<b.r+.024)&&!wallSeg.some(([a,c])=>segment(b.x,b.y,a,c)<b.r+.054))&&buildings.every((a,i)=>buildings.slice(i+1).every(b=>Math.hypot(a.x-b.x,a.y-b.y)>=a.r+b.r))&&roads.every(r=>segments(r).every(([a,b])=>safeLine(a,b)))&&wallSeg.every(([a,b])=>safeLine(a,b,.043))&&piers.every(p=>(m.land(...p.end)??1)<.43&&roads.some(r=>dist(r.at(-1),p.land)<.001));
+ return {x,y,radius,city,center,buildings,roads,walls,piers,fields,valid,complete:valid&&!missing.length,missing};
+}
