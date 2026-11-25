@@ -4,8 +4,8 @@ import {model} from './geography-review.mjs';
 import {terrainMetrics} from './terrain-art-lab.mjs';
 const C=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),S=x=>{x=C(x);return x*x*(3-2*x)};
 const sleep=()=>new Promise(r=>setTimeout(r,0));
-export async function snapshot(s,cam){
- const begin=performance.now(),base=await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),m=model(s),w=base.cols,h=base.rows,res=base.detail,n=w*h,weight=new Float32Array(n),kind=new Uint8Array(n),anchor=new Uint8Array(n),channels=new Uint8Array(n),flow=new Float32Array(n),safe=new Uint8Array(m.known.length);let last=performance.now(),maxSlice=base.stats.maxSlice;
+export async function snapshot(s,cam,{bounds=null}={}){
+ const begin=performance.now(),base=await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true,boundsOverride:bounds}),m=model(s),w=base.cols,h=base.rows,res=base.detail,n=w*h,weight=new Float32Array(n),kind=new Uint8Array(n),anchor=new Uint8Array(n),channels=new Uint8Array(n),flow=new Float32Array(n),safe=new Uint8Array(m.known.length);let last=performance.now(),maxSlice=base.stats.maxSlice;
  for(let i=0;i<safe.length;i++){if(!m.known[i])continue;const visible=m.fresh[i];safe[i]=+(m.m.pass[i]||visible&&(s.road?.[i]||s.bridge?.[i]||s.admin?.[i]>=0&&m.cities.some(c=>c.i===i)));}
  const sites=m.cities.filter(c=>m.known[c.i]).map(c=>[c.i%m.width+.5,Math.floor(c.i/m.width)+.5]);
  for(let y=0;y<h;y++){for(let x=0;x<w;x++){const k=y*w+x,o=k*9,X=base.vertices[o],Y=base.vertices[o+1],i=m.at(Math.floor(X),Math.floor(Y)),land=base.vertices[o+7],river=base.vertices[o+8];anchor[k]=+(x%res===res/2&&y%res===res/2);

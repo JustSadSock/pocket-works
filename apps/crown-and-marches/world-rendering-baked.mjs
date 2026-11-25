@@ -6,8 +6,8 @@ function hash(x,y){let n=Math.imul(x+631,374761393)^Math.imul(y+289,668265263);n
 function noise(x,y){const i=Math.floor(x),j=Math.floor(y),u=S(x-i),v=S(y-j);return L(L(hash(i,j),hash(i+1,j),u),L(hash(i,j+1),hash(i+1,j+1),u),v);}
 const sleep=()=>new Promise(r=>setTimeout(r,0));
 function budget(){let last=performance.now(),max=0;return {async yield(){const now=performance.now();if(now-last>=6){max=Math.max(max,now-last);await sleep();last=performance.now();}},get max(){return Math.max(max,performance.now()-last);}};}
-export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=false,closeLOD=false}={}){
- const started=performance.now(),source=sourceOverride||await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),{vertices:v,elevations:z,cols:w,rows:h,detail:res}=source,b=budget(),pixels=new Uint8Array(w*h*4);
+export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=false,closeLOD=false,auditFields=false}={}){
+ const started=performance.now(),source=sourceOverride||await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),{vertices:v,elevations:z,cols:w,rows:h,detail:res}=source,b=budget(),pixels=new Uint8Array(w*h*4),normals=auditFields?new Float32Array(w*h*3):null,lighting=auditFields?new Float32Array(w*h*2):null,materials=auditFields?new Float32Array(w*h*3):null;
  // Normal and horizon fields are reconstructed from the actual height mesh.
  // Bilinear horizon lookup removes nearest-texel shadow striping.
  const at=(x,y)=>z[C(y,0,h-1)*w+C(x,0,w-1)],sample=(x,y)=>{const i=Math.floor(x),j=Math.floor(y),u=x-i,t=y-j;return L(L(at(i,j),at(i+1,j),u),L(at(i,j+1),at(i+1,j+1),u),t);};
@@ -26,7 +26,7 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  base=mix(base,talus,Math.max(rock,S((H-.49)/.13)*.55));base=mix(base,[225,221,203],S((H-.60)/.12)*S((nz-.35)/.55)*.65);
  const variation=geology?0:(broad-.5)*11+(med-.5)*8+(fine-.5)*5+(scree-.5)*rock*10;
  if(geology==='synthesis'){const steep=S((slope-.12)/.53),alpine=S((H-.43)/.22),curvature=(at(x+2,y)+at(x-2,y)+at(x,y+2)+at(x,y-2)-4*height),exposure=C((-nx-ny)*.35+.5),soil=mix([133,119,81],[93,125,76],wet),turf=mix(soil,[157,151,94],fert*.63),cliff=mix([115,113,104],[195,187,169],exposure),talus=mix([136,123,101],[179,168,143],S((curvature+.04)/.16));base=mix(turf,[57,83,50],forest*(1-alpine)*.84);base=mix(base,talus,alpine*S((slope-.03)/.44)*.78);base=mix(base,cliff,steep*(.55+.45*alpine));base=mix(base,[225,222,210],S((H-.66)/.14)*(1-steep*.72));}else if(geology){const steep=S((slope-.12)/.47),alpine=S((H-.40)/.23),exposure=C((nx+ny)*.35+.5),soil=mix([137,121,84],[83,117,71],wet),grass=mix(soil,[148,154,91],fert*.7),scree=mix([133,126,108],[190,179,151],exposure),cliff=mix([116,114,106],[205,198,179],exposure);base=mix(grass,[55,84,52],forest*(1-alpine)*.85);base=mix(base,scree,alpine*.72);base=mix(base,cliff,steep*(.35+.65*alpine));base=mix(base,[226,227,216],S((H-.68)/.12)*(1-steep*.65));}
- const direct=diff*(1-shadow*.88),ambient=.61-.12*S((H-.35)/.24);
+ const direct=diff*(1-shadow*.88),ambient=.61-.12*S((H-.35)/.24);if(auditFields){normals.set([nx,ny,nz],k*3);lighting.set([direct,ambient],k*2);materials.set(base,k*3);}
  col=base.map((v,i)=>v*(ambient+.58*direct)+variation+[2,5,10][i]*(1-direct));
  const bank=1-S((river-.005)/.15);col=mix(col,[91,119,78],bank*.32);
  if(land<.50){const shallow=S(land/.48),wave=(noise(wx*1.1,wy*6.2)-.5)*8;col=mix([38,78,95],[107,157,149],shallow).map(v=>v+wave);}
@@ -40,7 +40,7 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  // Source sampling is 8/cell; mesh is 2 or 4/cell and remains resident.
  const lods=[];for(const stride of (closeLOD?[4,2,1]:[4,2])){const cols=(w-1)/stride+1,rows=(h-1)/stride+1,vertices=new Float32Array(cols*rows*3),indices=new Uint32Array((cols-1)*(rows-1)*6);for(let y=0;y<rows;y++){for(let x=0;x<cols;x++){const i=(y*stride*w+x*stride)*9,o=(y*cols+x)*3;vertices[o]=v[i];vertices[o+1]=v[i+1];vertices[o+2]=v[i+2];if(x<cols-1&&y<rows-1){const a=y*cols+x,k=(y*(cols-1)+x)*6;indices.set([a,a+1,a+cols+1,a,a+cols+1,a+cols],k);}}await b.yield();}lods.push({vertices,indices,cols,rows});}
  const bytes=pixels.byteLength+lods.reduce((n,l)=>n+l.vertices.byteLength+l.indices.byteLength,0);
- return {bounds:source.bounds,center:source.center,width:w,height:h,detail:res,pixels,lods,stats:{...source.stats,ms:performance.now()-started+(sourceOverride?source.stats.ms:0),sourceMs:source.stats.ms,bakeMs,bakeSlice,maxSlice:Math.max(source.stats.maxSlice,b.max),triangles:lods.map(l=>l.indices.length/3),bytes,peakSourceBytes:source.stats.bytes}};
+ return {bounds:source.bounds,center:source.center,width:w,height:h,detail:res,pixels,lods,audit:auditFields?{normals,lighting,materials}:undefined,stats:{...source.stats,ms:performance.now()-started+(sourceOverride?source.stats.ms:0),sourceMs:source.stats.ms,bakeMs,bakeSlice,maxSlice:Math.max(source.stats.maxSlice,b.max),triangles:lods.map(l=>l.indices.length/3),bytes,peakSourceBytes:source.stats.bytes}};
 }
 const VS=`#version 300 es
 precision highp float;
