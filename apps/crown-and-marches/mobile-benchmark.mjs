@@ -45,12 +45,12 @@ try{
  for(const n of [500,1000,3000]){
  const config={seed:123,landscape:'plain',weather:'clear',sides:[0,1].map(side=>({ai:true,offsetX:side?-220:220,units:[{type:2,n:n*.3},{type:4,n:n*.1},{type:7,n:n*.1}]}))};
  let b=customBattle(config);for(let i=0;i<60&&b.winner===null;i++)battleTick(b,.1);if(b.winner!==null)b=customBattle(config);
- const sim=[],render=[],intervals=[];let acc=0,frames=0,ticks=0,start=performance.now(),last=start;
+ const sim=[],render=[],intervals=[],profile=[];let acc=0,frames=0,ticks=0,start=performance.now(),last=start;
  await new Promise(resolve=>{function frame(t){let delta=Math.min(.2,(t-last)/1000);if(frames)intervals.push(t-last);last=t;acc+=delta;
  while(acc>=.1&&b.winner===null){const now=performance.now();battleTick(b,.1);sim.push(performance.now()-now);acc-=.1;ticks++;if(ticks>200)break;}
- const now=performance.now();atlas.battle(b,camera,[],'high');render.push(performance.now()-now);frames++;
+ const now=performance.now();atlas.battle(b,camera,[],'high');render.push(performance.now()-now);profile.push({...atlas.metrics});frames++;
  if(t-start<3000&&ticks<200)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame);});
- const wall=performance.now()-start;report.push({soldiers:b.soldiers.length,frames,ticks,wallMs:Math.round(wall),fps:Number((frames*1000/wall).toFixed(1)),simMedian:percentile(sim,.5),simP95:percentile(sim,.95),renderMedian:percentile(render,.5),renderP95:percentile(render,.95),frameMean:intervals.reduce((n,q)=>n+q,0)/Math.max(1,intervals.length),frameP95:percentile(intervals,.95),frameP99:percentile(intervals,.99),simP99:percentile(sim,.99),renderP99:percentile(render,.99),casualties:b.soldiers.filter(p=>p.hp<=0).length});
+ const wall=performance.now()-start;report.push({soldiers:b.soldiers.length,frames,ticks,wallMs:Math.round(wall),fps:Number((frames*1000/wall).toFixed(1)),simMedian:percentile(sim,.5),simP95:percentile(sim,.95),renderMedian:percentile(render,.5),renderP95:percentile(render,.95),frameMean:intervals.reduce((n,q)=>n+q,0)/Math.max(1,intervals.length),frameP95:percentile(intervals,.95),frameP99:percentile(intervals,.99),simP99:percentile(sim,.99),renderP99:percentile(render,.99),casualties:b.soldiers.filter(p=>p.hp<=0).length,rendererProfile:Object.fromEntries(['spriteBuild','spriteComposite','spriteUpload','spriteDraw','spriteTotal'].map(k=>[k,{p95:percentile(profile.map(q=>q[k]||0),.95),max:Math.max(...profile.map(q=>q[k]||0))}])),lod:profile.at(-1)?.spriteLOD,builds:profile.reduce((n,q)=>n+(q.spriteBuilds||0),0)});
  }
  c.remove();return report;
  });

@@ -3,7 +3,7 @@ import {BW,BH} from './battle.mjs';
 const RGB=PALETTE.map(x=>[parseInt(x.slice(1,3),16),parseInt(x.slice(3,5),16),parseInt(x.slice(5,7),16)]);
 const mix=(a,b,t)=>a.map((v,k)=>v*(1-t)+b[k]*t);
 
-const grainAt=(x,y)=>((Math.imul(x+41,374761393)^Math.imul(y+73,668265263))>>>0)%1024/1024;
+const grainAt=(x,y)=>{let n=Math.imul(x+41,374761393)^Math.imul(y+73,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;};
 const fade=(x,a,b)=>clamp((x-a)/(b-a),0,1);
 // Join the actual frontier edges at their shared vertices; round only the drawn corner.
 function frontier(s,owner,visible){
@@ -17,7 +17,7 @@ function frontier(s,owner,visible){
  const path=new Path2D(),seen=new Set(),point=n=>[n%(W+1),Math.floor(n/(W+1))];
  for(let k=0;k<edges.length;k++){if(seen.has(k))continue;let [start,end]=edges[k];if(nodes.get(end).length!==2&&nodes.get(start).length===2)[start,end]=[end,start];const chain=[start,end];seen.add(k);
  while(nodes.get(end).length===2){const next=nodes.get(end).find(n=>!seen.has(n));if(next===undefined)break;seen.add(next);const edge=edges[next];end=edge[0]===end?edge[1]:edge[0];chain.push(end);}
- const pts=chain.map(point);path.moveTo(...pts[0]);for(let j=1;j<pts.length-1;j++){const [x,y]=pts[j],p=pts[j-1],n=pts[j+1];path.lineTo(x+(p[0]-x)*.28,y+(p[1]-y)*.28);path.quadraticCurveTo(x,y,x+(n[0]-x)*.28,y+(n[1]-y)*.28);}path.lineTo(...pts.at(-1));}
+ const pts=chain.map(point);path.moveTo(...pts[0]);for(let j=1;j<pts.length-1;j++){const [x,y]=pts[j],p=pts[j-1],n=pts[j+1];path.quadraticCurveTo(x,y,(x+n[0])*.5,(y+n[1])*.5);}path.lineTo(...pts.at(-1));}
  return path;
 }
 function realmNames(s,owner,visible){const groups=new Map();for(let i=0;i<N;i++){if(!visible(i)||!s.map.land[i])continue;const f=owner(i);if(f<0||!s.states[f])continue;let g=groups.get(f);if(!g)groups.set(f,g={cells:[],x:0,y:0});g.cells.push(i);g.x+=xx(i);g.y+=yy(i);}
@@ -39,12 +39,12 @@ function fieldSurface(canvas,b){
  const tile=(x,y)=>b.terrain[clamp(y,0,rows-1)*cols+clamp(x,0,cols-1)];
  const smooth=(x,y,key)=>{let u=x/20-.5,v=y/20-.5,i=Math.floor(u),j=Math.floor(v),p=u-i,q=v-j;p=p*p*(3-2*p);q=q*q*(3-2*q);const f=(x,y)=>+tile(x,y)[key]||0;return (f(i,j)*(1-p)+f(i+1,j)*p)*(1-q)+(f(i,j+1)*(1-p)+f(i+1,j+1)*p)*q;};
  const noise=(x,y,size)=>{const u=x/size,v=y/size,i=Math.floor(u),j=Math.floor(v),p=u-i,q=v-j;return (grainAt(i,j)*(1-p)+grainAt(i+1,j)*p)*(1-q)+(grainAt(i,j+1)*(1-p)+grainAt(i+1,j+1)*p)*q;};
- for(let y=0;y<BH;y++)for(let x=0;x<BW;x++){const t=tile(Math.floor(x/20),Math.floor(y/20)),h=smooth(x,y,'h'),shade=(smooth(x-8,y-8,'h')-h)*110,n=noise(x,y,79),m=noise(x+210,y+90,21),g=(grainAt(x,y)-.5)*12,forest=smooth(x,y,'forest'),water=smooth(x,y,'water'),road=smooth(x,y,'road'),field=smooth(x,y,'field');let rgb=[126+29*n,139+24*n,78+20*m];
+ for(let y=0;y<BH;y++)for(let x=0;x<BW;x++){const t=tile(Math.floor(x/20),Math.floor(y/20)),h=smooth(x,y,'h'),shade=(smooth(x-15,y-15,'h')-h)*310,n=noise(x,y,79),m=noise(x+210,y+90,21),g=(grainAt(x,y)-.5)*12,forest=smooth(x,y,'forest'),water=smooth(x,y,'water'),road=smooth(x,y,'road'),field=smooth(x,y,'field');let rgb=[126+29*n,139+24*n,78+20*m];
  if(forest>.15)rgb=mix(rgb,[76,103,58],forest*.8);
  if(field>.35)rgb=mix(rgb,[172,152,86],field*.7);
  if(road>.43)rgb=mix(rgb,[171,145,105],road*.9);
  if(water>.48&&!t.bridge)rgb=mix([70,116,122],[103,145,143],clamp((1-water)*1.6,0,1));
- const j=(y*BW+x)*4;for(let k=0;k<3;k++)d[j+k]=rgb[k]+shade+g+(m-.5)*14+h*13;d[j+3]=255;}
+ const j=(y*BW+x)*4;for(let k=0;k<3;k++)d[j+k]=rgb[k]+shade+g+(m-.5)*14 +h*65;d[j+3]=255;}
  c.putImageData(im,0,0);
  // Small irregular vegetation clusters, not one symbol per simulation cell.
  for(let i=0;i<b.terrain.length;i++){const t=b.terrain[i],x=i%50*20,y=Math.floor(i/50)*20;
@@ -112,7 +112,7 @@ for(const i of visible){const x=xx(i)+.5,y=yy(i)+.5,p=s.map.terrain[i],n=grainAt
 if((p===3||p===4)&&n<.48){let h=(p===4?.85:.48)*(.7+n),w=h*.75,dx=(n-.5)*.45;c.fillStyle='#615a4680';c.beginPath();c.moveTo(x-w,y+.3);c.lineTo(x+dx,y-h);c.lineTo(x+w,y+.3);c.quadraticCurveTo(x,y+.12,x-w,y+.3);c.fill();c.fillStyle='#e9d6aaad';c.beginPath();c.moveTo(x-w,y+.3);c.lineTo(x+dx,y-h);c.lineTo(x+dx*.3,y+.15);c.closePath();c.fill();}
 else if(p===2&&n<.36&&cam.zoom<=4){const forestNeighbors=neighbors(i).filter(j=>visibleCell(j)&&s.map.terrain[j]===2).length;for(let k=0;k<Math.min(5,2+forestNeighbors);k++){const z=grainAt(i,k),dx=(z-.5)*.8,dy=(grainAt(k,i)-.5)*.65,r=.10+z*.13;c.fillStyle='#38533a78';c.beginPath();c.ellipse(x+dx+.05,y+dy+.07,r*1.35,r*.8,0,0,Math.PI*2);c.fill();c.fillStyle=k%3?'#466942':'#789052';c.beginPath();c.ellipse(x+dx,y+dy,r,r*.85,0,0,Math.PI*2);c.fill();}}}
 c.restore();}
-c.lineCap='round';for(const wide of [false,true]){c.strokeStyle=wide?'#488b99':'#679eaa';c.lineWidth=Math.max((wide?1.25:.65)/scale,wide?.17:.08);c.beginPath();for(const i of visible){let d=s.map.down[i];if(!s.map.river[i]||d<0||((s.map.flow?.[i]||50)>190)!==wide)continue;let ax=xx(i)+.5,ay=yy(i)+.5,dx=xx(d)-xx(i),dy=yy(d)-yy(i),fraction=s.map.land[d]?1:.5,z=(hash(s.seed+'stream'+i)%17-8)/100;c.moveTo(ax,ay);c.quadraticCurveTo(ax+dx*fraction*.5-dy*z,ay+dy*fraction*.5+dx*z,ax+dx*fraction,ay+dy*fraction);}c.stroke();}
+c.lineCap='round';for(const wide of [false,true]){c.strokeStyle=wide?'#488b99':'#679eaa';c.lineWidth=Math.max((wide?1.25:.65)/scale,wide?.17:.08);c.beginPath();for(const i of visible){let d=s.map.down[i];if(!s.map.river[i]||d<0||!visibleCell(d)||((s.map.flow?.[i]||50)>190)!==wide)continue;let ax=xx(i)+.5,ay=yy(i)+.5,dx=xx(d)-xx(i),dy=yy(d)-yy(i),fraction=s.map.land[d]?1:.5,z=(hash(s.seed+'stream'+i)%17-8)/100;c.moveTo(ax,ay);c.quadraticCurveTo(ax+dx*fraction*.5-dy*z,ay+dy*fraction*.5+dx*z,ax+dx*fraction,ay+dy*fraction);}c.stroke();}
 if(cam.zoom>1.7){
  c.lineWidth=Math.max(.10,1.15/scale);c.strokeStyle='#614b36b0';c.beginPath();
  for(const i of visible)if(s.road[i])for(const j of neighbors(i))if(j>i&&s.road[j]){c.moveTo(xx(i)+.5,yy(i)+.5);c.lineTo(xx(j)+.5,yy(j)+.5);}c.stroke();
@@ -141,28 +141,40 @@ for(const city of (fog?observedCities(s,pf):s.cities)){if(!visibleCell(city.i))c
 for(const v of s.fleets||[]){if(!visibleCell(v.i)||fog&&v.f!==pf&&!fresh(v.i))continue;let x=cam.ox+(xx(v.i)+.5)*scale,y=cam.oy+(yy(v.i)+.5)*scale;c.fillStyle=PALETTE[v.f];c.strokeStyle=selection?.kind==='fleet'&&selection.id===v.id?'#fff2a7':'#e4e9d9';c.lineWidth=1.5;c.beginPath();const size=v.type>=6?13:v.type===3?11:9;c.moveTo(x-size,y+5);c.lineTo(x+size,y+5);c.lineTo(x+5,y+10);c.lineTo(x-5,y+10);c.closePath();c.fill();c.stroke();if(v.type===3){for(let j=-8;j<=8;j+=4){c.beginPath();c.moveTo(x+j,y+5);c.lineTo(x+j-3,y+13);c.stroke();}}else{for(let j=0;j<(v.type>=6?3:v.type>=4?2:1);j++){const dx=j*6-(v.type>=6?6:0);c.beginPath();c.moveTo(x+dx,y-10);c.lineTo(x+dx,y+4);c.lineTo(x+dx+5,y+1);c.closePath();c.fill();c.stroke();}}}for(const v of s.convoys||[]){if(!visibleCell(v.i))continue;let x=cam.ox+(xx(v.i)+.5)*scale,y=cam.oy+(yy(v.i)+.5)*scale;c.fillStyle='#c5ac76';c.fillRect(x-3,y-3,6,6);}for(const a of s.armies){if(a.fleet!=null||!visibleCell(a.i)||fog&&a.f!==pf&&!fresh(a.i))continue;let x=cam.ox+(xx(a.i)+.5)*scale,y=cam.oy+(yy(a.i)+.5)*scale-12;c.fillStyle=PALETTE[a.f];c.strokeStyle=selection?.kind==='army'&&selection.id===a.id?'#fff2a7':'#f4d3a6';c.lineWidth=1.5;c.fillRect(x-13,y-8,26,16);c.strokeRect(x-13,y-8,26,16);c.fillStyle='#fff';c.font='bold 10px system-ui';c.textAlign='center';c.fillText(strength(a),x,y+3)}
 for(const e of s.discovery?.expeditions||[]){if(fog&&e.f!==pf)continue;const x=cam.ox+(xx(e.i)+.5)*scale,y=cam.oy+(yy(e.i)+.5)*scale;c.fillStyle='#f0d18b';c.strokeStyle='#3e5149';c.lineWidth=1.5;c.beginPath();c.moveTo(x,y-6);c.lineTo(x+5,y+5);c.lineTo(x-5,y+5);c.closePath();c.fill();c.stroke();}if(selection?.kind==='cell'){let i=selection.id,x=cam.ox+(xx(i)+.5)*scale,y=cam.oy+(yy(i)+.5)*scale;c.strokeStyle='#fff0a5';c.lineWidth=2;c.beginPath();c.arc(x,y,8,0,Math.PI*2);c.stroke()}
 c.save();c.textAlign='center';c.textBaseline='middle';const inset=cam.insets||{};for(const l of labelQueue.sort((a,b)=>b.priority-a.priority)){c.font=(l.priority>=4||l.realm?'600 ':'')+l.size+'px Georgia';const width=c.measureText(l.name).width+8,height=l.size+6;for(const dy of [0,18,-18,36,-36]){const x=l.x,y=l.y+dy;if(x-width/2<(inset.left||0)||x+width/2>w-(inset.right||0)||y-height/2<(inset.top||0)||y+height/2>h-(inset.bottom||0))continue;if(labelsOccupied.some(q=>Math.abs(q.x-x)<(q.width+width)/2&&Math.abs(q.y-y)<(q.height+height)/2))continue;reserve(x,y,width,height);c.lineWidth=3;c.strokeStyle=l.realm?'#eadcb9':'#323a2c';c.fillStyle=l.realm?'#463a2a':'#fff0ce';c.strokeText(l.name,x,y);c.fillText(l.name,x,y);break;}}c.restore();this.metrics.map=performance.now()-started;}
- battle(b,cam,selected,quality){this.resize(quality);let c=this.ctx,w=this.width,h=this.height;this.fit(cam,true);cam.layout(w,h);if(this.lastBattle!==b){this.lastBattle=b;this.figures?.clear();fieldSurface(this.terrain,b);}
+ battle(b,cam,selected,quality){this.resize(quality);let c=this.ctx,w=this.width,h=this.height;this.fit(cam,true);cam.layout(w,h);if(this.lastBattle!==b){this.lastBattle=b;fieldSurface(this.terrain,b);this.terrainPixels=new Uint32Array(this.terrain.getContext('2d').getImageData(0,0,BW,BH).data.buffer);}
 c.fillStyle='#273b31';c.fillRect(0,0,w,h);c.save();c.translate(cam.ox,cam.oy);c.scale(cam.s,cam.s);c.drawImage(this.terrain,0,0);
 for(const g of b.units){if(!g.alive)continue;if(selected.includes(g.id)){c.strokeStyle='#ffeb9b';c.lineWidth=2/cam.s;c.setLineDash([5/cam.s,4/cam.s]);c.beginPath();c.ellipse(g.x,g.y,38,38,0,0,Math.PI*2);c.stroke();c.setLineDash([]);if(g.order!=='hold'&&g.order!=='defend'){const angle=Math.atan2(g.ty-g.y,g.tx-g.x),l=10/cam.s;c.beginPath();c.moveTo(g.x,g.y);c.lineTo(g.tx,g.ty);c.moveTo(g.tx-l*Math.cos(angle-.5),g.ty-l*Math.sin(angle-.5));c.lineTo(g.tx,g.ty);c.lineTo(g.tx-l*Math.cos(angle+.5),g.ty-l*Math.sin(angle+.5));c.stroke()}}}
 
-// Sprites are generated once for each silhouette, faction, orientation and animation phase.
-// At overview scale draw the same physical soldiers with low-detail atlas glyphs.
+// Single shared high-resolution sprite atlas; overview uses pre-rasterized
+// miniature pixels, composed onto the opaque terrain once per simulation tick.
 this.figures??=new Map();
-const visible=b.soldiers.filter(p=>p.state!=='escaped'&&p.state!=='captured'&&!(p.hp<=0&&quality==='low')&&p.x*cam.s+cam.ox>=-30&&p.x*cam.s+cam.ox<=w+30&&p.y*cam.s+cam.oy>=-30&&p.y*cam.s+cam.oy<=h+30);const detail=cam.s>=1.25&&quality!=='low'&&(visible.length<1000||cam.s>=2.2),phase=Math.floor(b.time*7)%4;
+const visible=b.soldiers.filter(p=>p.state!=='escaped'&&p.state!=='captured'&&!(p.hp<=0&&quality==='low')&&p.x*cam.s+cam.ox>=-30&&p.x*cam.s+cam.ox<=w+30&&p.y*cam.s+cam.oy>=-30&&p.y*cam.s+cam.oy<=h+30);
+const detail=cam.s>=1.5&&quality!=='low'&&visible.length<900,phase=Math.floor(b.time*7)%4;
+if(!this.figureAtlas){this.figureAtlas=document.createElement('canvas');this.figureAtlas.width=this.figureAtlas.height=2048;this.figureContext=this.figureAtlas.getContext('2d');this.figureScratch=document.createElement('canvas');this.figureScratch.width=this.figureScratch.height=24;this.figureRead=this.figureScratch.getContext('2d',{willReadFrequently:true});}
+const t0=performance.now();let builds=0,stamps=0;this.metrics.spriteBuild=0;this.metrics.spriteComposite=0;this.metrics.spriteUpload=0;this.metrics.spriteDraw=0;
 const sprite=(p,g)=>{
  const face=(Math.round(p.angle/(Math.PI/8))+16)%16,pose=p.hp<=0?'down':p.state==='shoot'?'shoot':p.hit>0?'hit':p.state==='block'?'block':p.state==='fight'?'fight':p.state==='move'||p.state==='flee'?'walk':'stand';
  const key=[p.type,g.f,face,pose,pose==='stand'||pose==='down'?0:phase].join(':');let a=this.figures.get(key);if(a)return a;
- a=document.createElement('canvas');a.width=a.height=48;const q=a.getContext('2d');q.translate(24,24);q.scale(2,2);figure(q,p,g,face,pose,phase);
- if(this.figures.size>=1200)this.figures.delete(this.figures.keys().next().value);this.figures.set(key,a);return a;
+ const started=performance.now(),slot=this.figures.size<625?this.figures.size:this.figures.values().next().value.slot;if(this.figures.size>=625)this.figures.delete(this.figures.keys().next().value);
+ const x=slot%25*80,y=Math.floor(slot/25)*80,q=this.figureContext;q.save();q.setTransform(1,0,0,1,0,0);q.clearRect(x,y,80,80);q.translate(x+40,y+40);q.scale(80/24,80/24);figure(q,p,g,face,pose,phase);q.restore();
+ const read=this.figureRead;read.clearRect(0,0,24,24);read.drawImage(this.figureAtlas,x,y,80,80,0,0,24,24);
+ const raw=read.getImageData(0,0,24,24).data,rows=[];for(let iy=0;iy<24;iy++){const row=[];for(let ix=0;ix<24;ix++){const i=(iy*24+ix)*4,A=raw[i+3];if(A<16)continue;row.push(ix-12,raw[i],raw[i+1],raw[i+2],A);}if(row.length)rows.push({dy:iy-12,pixels:new Uint8Array(row.map((z,i)=>i%5===0?z+12:z))});}
+ a={slot,x,y,rows};this.figures.set(key,a);builds++;this.metrics.spriteBuild+=performance.now()-started;return a;
 };
-if(detail){for(const p of visible)c.drawImage(sprite(p,b.units[p.g]),p.x-12,p.y-12,24,24);}
+if(detail){const started=performance.now();for(const p of visible){const a=sprite(p,b.units[p.g]);c.drawImage(this.figureAtlas,a.x,a.y,80,80,p.x-12,p.y-12,24,24);stamps++;}this.metrics.spriteDraw=performance.now()-started-this.metrics.spriteBuild;}
 else{
- if(!this.soldierLayer){this.soldierLayer=document.createElement('canvas');this.soldierLayer.width=BW;this.soldierLayer.height=BH;this.soldierContext=this.soldierLayer.getContext('2d');}
+ if(!this.soldierLayer){this.soldierLayer=document.createElement('canvas');this.soldierLayer.width=BW;this.soldierLayer.height=BH;this.soldierContext=this.soldierLayer.getContext('2d',{alpha:false});this.soldierPixels=this.soldierContext.createImageData(BW,BH);}
  const key=b.time+'|'+quality;
- if(this.soldierBattle!==b||this.soldierKey!==key){this.soldierBattle=b;this.soldierKey=key;const q=this.soldierContext;q.clearRect(0,0,BW,BH);for(const p of b.soldiers){if(p.state==='escaped'||p.state==='captured'||p.hp<=0&&quality==='low')continue;q.drawImage(sprite(p,b.units[p.g]),p.x-12,p.y-12,24,24);}}
- c.drawImage(this.soldierLayer,0,0);
+ if(this.soldierBattle!==b||this.soldierKey!==key){this.soldierBattle=b;this.soldierKey=key;
+ const pixels=new Uint32Array(this.soldierPixels.data.buffer);pixels.set(this.terrainPixels);
+ const started=performance.now();for(const p of b.soldiers){if(p.state==='escaped'||p.state==='captured'||p.hp<=0&&quality==='low')continue;const a=sprite(p,b.units[p.g]),x=Math.round(p.x)-12,y=Math.round(p.y);for(const row of a.rows){const yy=y+row.dy;if(yy<0||yy>=BH)continue;const offset=yy*BW+x,rr=row.pixels;for(let j=0;j<rr.length;j+=5){const xx=x+rr[j];if(xx<0||xx>=BW)continue;const i=offset+rr[j],alpha=rr[j+4],old=pixels[i];if(alpha>=250){pixels[i]=(0xff000000|(rr[j+3]<<16)|(rr[j+2]<<8)|rr[j+1])>>>0;}else{const inv=255-alpha,R=(rr[j+1]*alpha+(old&255)*inv+127)/255|0,G=(rr[j+2]*alpha+((old>>>8)&255)*inv+127)/255|0,B=(rr[j+3]*alpha+((old>>>16)&255)*inv+127)/255|0;pixels[i]=(0xff000000|(B<<16)|(G<<8)|R)>>>0;}}}stamps++;}
+ this.metrics.spriteComposite=performance.now()-started-this.metrics.spriteBuild;const upload=performance.now();this.soldierContext.putImageData(this.soldierPixels,0,0);this.metrics.spriteUpload=performance.now()-upload;}
+ const draw=performance.now();c.drawImage(this.soldierLayer,0,0);this.metrics.spriteDraw=performance.now()-draw;
 }
+this.metrics.spriteCount=stamps;this.metrics.spriteBuilds=builds;this.metrics.spriteLOD=detail?'detail':'overview';this.metrics.spriteTotal=performance.now()-t0;
+// Commands remain visible above the opaque composite.
+if(!detail)for(const g of b.units){if(!g.alive||!selected.includes(g.id))continue;c.strokeStyle='#ffeb9b';c.lineWidth=1.5/cam.s;c.setLineDash([5/cam.s,4/cam.s]);c.beginPath();c.ellipse(g.x,g.y,38,38,0,0,Math.PI*2);c.stroke();c.setLineDash([]);if(g.order!=='hold'&&g.order!=='defend'){c.beginPath();c.moveTo(g.x,g.y);c.lineTo(g.tx,g.ty);c.stroke();}}
 if(b.previewLine){const [a,z]=b.previewLine;c.strokeStyle='#ffe6aa';c.lineWidth=2/cam.s;c.setLineDash([6/cam.s,4/cam.s]);c.beginPath();c.moveTo(...a);c.lineTo(...z);c.stroke();c.setLineDash([]);}c.lineWidth=.65;c.strokeStyle='#f4e0aa';c.beginPath();for(const p of b.projectiles||[]){c.moveTo(p.x,p.y);c.lineTo(p.x-p.vx*.045,p.y-p.vy*.045);}c.stroke();
-c.restore();for(const g of b.units){if(!g.alive)continue;let x=cam.ox+g.x*cam.s,y=cam.oy+g.y*cam.s-24*cam.s;c.fillStyle=PALETTE[g.f];c.beginPath();c.moveTo(x-14,y-7);c.lineTo(x+14,y-7);c.lineTo(x+14,y+6);c.lineTo(x,y+9);c.lineTo(x-14,y+6);c.closePath();c.fill();c.strokeStyle=selected.includes(g.id)?'#fff0a5':'#e6d0a3';c.stroke();c.fillStyle='white';c.font='bold 10px system-ui';c.textAlign='center';c.fillText(g.alive,x,y+3)}
+c.restore();for(const g of b.units){if(!g.alive)continue;let x=cam.ox+g.x*cam.s,y=cam.oy+g.y*cam.s-24*cam.s;if(x<-30||x>w+30||y<-30||y>h+30)continue;const chosen=selected.includes(g.id);c.strokeStyle='#40372a';c.lineWidth=1.5;c.beginPath();c.moveTo(x-7,y+10);c.lineTo(x-7,y-9);c.stroke();c.fillStyle=PALETTE[g.f];c.beginPath();c.moveTo(x-6,y-9);c.quadraticCurveTo(x+1,y-12,x+11,y-7);c.lineTo(x+7,y-1);c.quadraticCurveTo(x,y-4,x-6,y-2);c.closePath();c.fill();c.strokeStyle=chosen?'#fff0a5':'#d6c59a';c.lineWidth=chosen?1.5:.7;c.stroke();if(chosen||cam.s<.55){c.font='600 10px system-ui';c.textAlign='center';c.strokeStyle='#292b22';c.lineWidth=2.5;c.strokeText(g.alive,x,y+12);c.fillStyle='#f6e8c7';c.fillText(g.alive,x,y+12)}}
 }
 }
