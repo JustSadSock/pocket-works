@@ -29,3 +29,16 @@ test('never issues successful receipts for failed, cancelled, missing or differe
  assert.throws(()=>makeShadowReceipt({source,environment,evidence:bytes(r),now}),/evidence/);
  assert.throws(()=>makeShadowReceipt({source,environment,evidence:Buffer.alloc(0),now}),/evidence/);
 });
+
+test('v2 binds actual mount digest and rejects missing or modified proofs',()=>{
+ const mounted={schema:1,digest:'7'.repeat(64),files:242,directories:11,bytes:1865271,productionAuthorization:false,reuse:false};
+ const sourceV2={...source,mountedInputs:mounted};
+ const environmentV2={...environment,contract:'readonly-offline-container-v2'};
+ const v2=makeShadowReceipt({source:sourceV2,environment:environmentV2,evidence,now});
+ assert.equal(compareShadowReceipt({receipt:v2,source:sourceV2,environment:environmentV2,evidence,now}).match,true);
+ assert.throws(()=>makeShadowReceipt({source,environment:environmentV2,evidence,now}),/mounted input proof/);
+ assert.throws(()=>makeShadowReceipt({source:sourceV2,environment,evidence,now}),/Legacy/);
+ for(const m of [{...mounted,digest:'bad'},{...mounted,files:0},{...mounted,reuse:true},{...mounted,bytes:0}])
+  assert.throws(()=>makeShadowReceipt({source:{...source,mountedInputs:m},environment:environmentV2,evidence,now}),/mounted input proof/);
+ assert.equal(compareShadowReceipt({receipt:v2,source:{...sourceV2,mountedInputs:{...mounted,digest:'8'.repeat(64)}},environment:environmentV2,evidence,now}).match,false);
+});

@@ -13,9 +13,19 @@ export function makeShadowReceipt({source,environment,evidence,now=Date.now()}){
    !SHA.test(source.commit??'')||!SHA.test(source.tree??'')||
    !Number.isSafeInteger(source.run)||source.run<1||!Number.isSafeInteger(source.attempt)||source.attempt<1||
    !['push','workflow_dispatch'].includes(source.event))throw Error('Untrusted source');
- if(!environment||environment.contract!=='readonly-offline-container-v1'||
+ if(!environment||!['readonly-offline-container-v1','readonly-offline-container-v2'].includes(environment.contract)||
    !HEX.test(environment.containerConfigDigest??'')||!HEX.test(environment.kernelDigest??'')||
    !HEX.test(environment.executionContractDigest??''))throw Error('Incomplete execution environment');
+ const v2=environment.contract==='readonly-offline-container-v2';
+ const mounted=source.mountedInputs;
+ if(v2){
+   if(!mounted||mounted.schema!==1||!HEX.test(mounted.digest??'')||
+      !Number.isSafeInteger(mounted.files)||mounted.files<1||
+      !Number.isSafeInteger(mounted.directories)||mounted.directories<1||
+      !Number.isSafeInteger(mounted.bytes)||mounted.bytes<1||mounted.bytes>64*1024*1024||
+      mounted.productionAuthorization!==false||mounted.reuse!==false)
+     throw Error('Missing or invalid mounted input proof');
+ }else if(Object.hasOwn(source,'mountedInputs'))throw Error('Legacy receipt cannot contain mounted proof');
  const fingerprint=environmentFingerprint(environment);
  if(!Buffer.isBuffer(evidence)||!evidence.length||evidence.length>2_000_000)throw Error('Invalid evidence bytes');
  const r=JSON.parse(evidence.toString('utf8'));

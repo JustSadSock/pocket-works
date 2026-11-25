@@ -30,12 +30,15 @@ export function comparePair(root,priorRun,currentRun,prior,current,now=Date.now(
  git(root,['merge-base','--is-ancestor',p.source.commit,c.source.commit]);
  const input=compareInputs(root,p.source.commit,c.source.commit,TASK);
  const environmentMatch=p.environmentFingerprint===c.environmentFingerprint;
+ const mountedProofs=p.environment.contract==='readonly-offline-container-v2'&&c.environment.contract==='readonly-offline-container-v2';
+ const mountedMatch=mountedProofs&&p.source.mountedInputs.digest===c.source.mountedInputs.digest;
  return {schema:1,mode:'authenticated-pair-shadow',priorRun:priorRun.id,currentRun:currentRun.id,
    priorCommit:p.source.commit,currentCommit:c.source.commit,inputMatch:input.inputMatch,
    environmentMatch,changedScopedPaths:input.changedScopedPaths??[],
    inputReason:input.reason,observedPriorMs:JSON.parse(prior.evidence.toString('utf8')).durationMs,
    observedCurrentMs:JSON.parse(current.evidence.toString('utf8')).durationMs,
-   potentialMatch:input.inputMatch&&environmentMatch,
+   mountedProofs,mountedMatch,
+   potentialMatch:input.inputMatch&&environmentMatch&&mountedMatch,
    decision:'execute',reuse:false,canSkip:false,productionAuthorization:false};
 }
 
