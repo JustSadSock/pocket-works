@@ -1,0 +1,846 @@
+{
+  "base": "a36812adb22e0703b059841ace11cda624e7630d",
+  "algorithm": "dual 32-bit byte rolling checksums",
+  "fixtures": [
+    {
+      "size": "standard",
+      "version": 1,
+      "shape": "classic",
+      "seed": "genesis-legacy-standard-classic",
+      "hashes": {
+        "height": "a9e499c8dcb9f495",
+        "moisture": "f94b548c02c75a86",
+        "fert": "6942646a11f79ed2",
+        "land": "922a769e8beb8ed7",
+        "terrain": "df510380d650afa6",
+        "river": "21a6d01b77b06be1",
+        "resource": "2a3fdb5578bf7f14",
+        "down": "474520647c3cc5e1"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 1,
+      "shape": "continents",
+      "seed": "genesis-legacy-standard-continents",
+      "hashes": {
+        "height": "4a305461a4df6246",
+        "moisture": "4a84df1a565c2acf",
+        "fert": "2f595739760b2a7f",
+        "land": "eea09c4196f961a8",
+        "terrain": "0ef84b80808aaed6",
+        "river": "d9c3f6f01c79d17c",
+        "resource": "5cb862fe07f37195",
+        "down": "6a37f39bde1931e1"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 1,
+      "shape": "archipelago",
+      "seed": "genesis-legacy-standard-archipelago",
+      "hashes": {
+        "height": "277521beeacb04ac",
+        "moisture": "2b5471732a3f30f6",
+        "fert": "97ed17f50c30ff80",
+        "land": "7b81688ece492f80",
+        "terrain": "c6acb06c8f855ec8",
+        "river": "d43835bf1e6e8b58",
+        "resource": "465fa6c7a540627d",
+        "down": "01dbb3fb90c001c2"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 1,
+      "shape": "inland-sea",
+      "seed": "genesis-legacy-standard-inland-sea",
+      "hashes": {
+        "height": "ab636ade6d1a6c68",
+        "moisture": "d0dac9eb1aa3ef70",
+        "fert": "a628502e00d70b19",
+        "land": "f54e08d8f5b47f14",
+        "terrain": "4720912c1fbb18e2",
+        "river": "6e42cd67522c4b06",
+        "resource": "ceecd4723a237f7f",
+        "down": "ec07a43aa1f5e596"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 1,
+      "shape": "isolated",
+      "seed": "genesis-legacy-standard-isolated",
+      "hashes": {
+        "height": "507ad5f0775df213",
+        "moisture": "eb27ebf277904997",
+        "fert": "2603773645848444",
+        "land": "396217479a99fe4c",
+        "terrain": "17ac0bc3a916d3c8",
+        "river": "ebc9e6522740389c",
+        "resource": "35148e4a7a614759",
+        "down": "1a14643a6af6102b"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 1,
+      "shape": "straits",
+      "seed": "genesis-legacy-standard-straits",
+      "hashes": {
+        "height": "a00452f726830ccf",
+        "moisture": "44075f4d98eb9b59",
+        "fert": "37ac625f851c15d1",
+        "land": "146ababa030e1d47",
+        "terrain": "d81434b5441dccd0",
+        "river": "fbca5ef3de53ba53",
+        "resource": "4f0f890e44f4bfca",
+        "down": "471ba6f8114d0a25"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 1,
+      "shape": "continent",
+      "seed": "genesis-legacy-standard-continent",
+      "hashes": {
+        "height": "7efa5dd0f26f3b1d",
+        "moisture": "30dbcee27421a472",
+        "fert": "6a8c9bd771595290",
+        "land": "cdabbb89def4d2df",
+        "terrain": "9be2a6152254252b",
+        "river": "96d2b7faf09914d5",
+        "resource": "a58e3aba68c1416d",
+        "down": "645a3ec9f6a3292d"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 2,
+      "shape": "classic",
+      "seed": "genesis-legacy-standard-classic",
+      "hashes": {
+        "height": "4a00232a115d6d25",
+        "moisture": "979db84a8e6cc905",
+        "fert": "d3d445ca9d9b42be",
+        "land": "922a769e8beb8ed7",
+        "terrain": "9a40c481418796f9",
+        "river": "25cdd6942f4a436f",
+        "resource": "b5207ce537529b36",
+        "down": "a7bc3582d7815d9c",
+        "flow": "39eb1ea796c117b0",
+        "basin": "bd3bcccc4750e5dc",
+        "temperature": "2b6ef6a8dcaf017b",
+        "ridge": "fe7325555d36c8c2",
+        "pass": "7fb979d9045ac5b9",
+        "delta": "2305414c4bb0dae5",
+        "coast": "20bf856c5fe9c29c",
+        "landmass": "8e41c36c75584199"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 2,
+      "shape": "continents",
+      "seed": "genesis-legacy-standard-continents",
+      "hashes": {
+        "height": "e1566b6d7e13f789",
+        "moisture": "01bc67af8aed9359",
+        "fert": "789087fb3ca92cf1",
+        "land": "eea09c4196f961a8",
+        "terrain": "81b9c2512fcd618c",
+        "river": "a75bbfe79c3cd5fc",
+        "resource": "45be1a3c7956f3cf",
+        "down": "d83d28e3a60725cf",
+        "flow": "342c9d1cd9dabbcf",
+        "basin": "a20cd968e32647ee",
+        "temperature": "3fff12626e0818dd",
+        "ridge": "58b775f82dc3c4dd",
+        "pass": "f4101dc5917f04e8",
+        "delta": "5b2655cf92a7b224",
+        "coast": "3e678fe9d8c572e5",
+        "landmass": "60e333e50bdd795e"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 2,
+      "shape": "archipelago",
+      "seed": "genesis-legacy-standard-archipelago",
+      "hashes": {
+        "height": "1d7640919be53959",
+        "moisture": "69f105a1a12543e4",
+        "fert": "08df3c4f8f7a588e",
+        "land": "7b81688ece492f80",
+        "terrain": "b8c743b61f18b5d3",
+        "river": "aa9137a4e356b4f2",
+        "resource": "ae6a373f8c732d3f",
+        "down": "b84495d3e9f42c10",
+        "flow": "5880f30e2d2066c9",
+        "basin": "7881addadef61948",
+        "temperature": "1918e2eb841c90b2",
+        "ridge": "3f267a2394806217",
+        "pass": "946c54010230918a",
+        "delta": "a9d2d7da671f5742",
+        "coast": "909a1e237a4a52b6",
+        "landmass": "161401467b7693c0"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 2,
+      "shape": "inland-sea",
+      "seed": "genesis-legacy-standard-inland-sea",
+      "hashes": {
+        "height": "186aebe61f437014",
+        "moisture": "da311bb7fd8be742",
+        "fert": "307dd55b978d79fa",
+        "land": "f54e08d8f5b47f14",
+        "terrain": "44445638d68f3193",
+        "river": "39da7390d1a952fe",
+        "resource": "5871f7f40423e652",
+        "down": "a0de893350ab034f",
+        "flow": "5d24824918d7cfa3",
+        "basin": "42fc1167b0762e9d",
+        "temperature": "da9756358c0eb18c",
+        "ridge": "1807cbe5d137388b",
+        "pass": "fbe46c48c2faf7c7",
+        "delta": "e72e54761bbb8efc",
+        "coast": "310caf9a723692f7",
+        "landmass": "99711a762c6c036b"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 2,
+      "shape": "isolated",
+      "seed": "genesis-legacy-standard-isolated",
+      "hashes": {
+        "height": "832de46ffd499e75",
+        "moisture": "67c8deb503babd72",
+        "fert": "4786180d078c88e1",
+        "land": "396217479a99fe4c",
+        "terrain": "bd0f74c4152691eb",
+        "river": "046ed7e0fdb4cd35",
+        "resource": "20b7455a3ebd35f3",
+        "down": "ba0d4c7db6f37340",
+        "flow": "fa32806bf57517ce",
+        "basin": "c454259f40531f20",
+        "temperature": "9db0b0773e7dc000",
+        "ridge": "8f82fb496a135284",
+        "pass": "78b014e85c834c3b",
+        "delta": "bf4725fbd5537520",
+        "coast": "cafc788ec435e517",
+        "landmass": "d47cea455049cb57"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 2,
+      "shape": "straits",
+      "seed": "genesis-legacy-standard-straits",
+      "hashes": {
+        "height": "2d23e49f0e0d88f3",
+        "moisture": "fb1de8506e12d8e1",
+        "fert": "5e93ea35ea22b3a7",
+        "land": "146ababa030e1d47",
+        "terrain": "863a3dbc50a31115",
+        "river": "3ca623771e25ec80",
+        "resource": "620f09e15dbd26f6",
+        "down": "29bab39e734a794c",
+        "flow": "8c9758faeb33f555",
+        "basin": "22ad791dc81dd9ea",
+        "temperature": "750ed2674a9006e1",
+        "ridge": "f2b6b87323404e30",
+        "pass": "d0fabbb27c92d21f",
+        "delta": "cfcca81efd7e08b2",
+        "coast": "bb41746625729025",
+        "landmass": "21ece6d0972396e1"
+      }
+    },
+    {
+      "size": "standard",
+      "version": 2,
+      "shape": "continent",
+      "seed": "genesis-legacy-standard-continent",
+      "hashes": {
+        "height": "c0fb2989b5cb5b5e",
+        "moisture": "7fba566882cd7f5e",
+        "fert": "74569d1bfb9e4f32",
+        "land": "cdabbb89def4d2df",
+        "terrain": "327e1994e012594c",
+        "river": "dbfbd79b3b8d0746",
+        "resource": "e7e9c8b2e5611630",
+        "down": "f1a77b6ceb5a8f18",
+        "flow": "77b140010337e24c",
+        "basin": "6bd8ffd183d0bcfa",
+        "temperature": "f2b5925cfad95e3a",
+        "ridge": "97e7532a4051fbba",
+        "pass": "d3bac8e83b07558c",
+        "delta": "d5764b37168a2e20",
+        "coast": "34dbc031611e2cad",
+        "landmass": "e8cd9cfdf48baf49"
+      }
+    },
+    {
+      "size": "large",
+      "version": 1,
+      "shape": "classic",
+      "seed": "genesis-legacy-large-classic",
+      "hashes": {
+        "height": "39a3bce6996c9f86",
+        "moisture": "8d634624f94750a9",
+        "fert": "cbd08acfeb95186b",
+        "land": "b8c7f42ac3a96980",
+        "terrain": "f9dcdd71cece538f",
+        "river": "3a21b57b4a59b1bd",
+        "resource": "9b79619b6b9f52a8",
+        "down": "75a7d4c51b83005e"
+      }
+    },
+    {
+      "size": "large",
+      "version": 1,
+      "shape": "continents",
+      "seed": "genesis-legacy-large-continents",
+      "hashes": {
+        "height": "39b798e8ceecb3a4",
+        "moisture": "ce92d407eec2e2d6",
+        "fert": "d6a2a38b1195e822",
+        "land": "03cdbc245358384c",
+        "terrain": "4ddb9334129891f0",
+        "river": "926ef95ea9872627",
+        "resource": "338cfa7feb977910",
+        "down": "7e8c4cea7355fb38"
+      }
+    },
+    {
+      "size": "large",
+      "version": 1,
+      "shape": "archipelago",
+      "seed": "genesis-legacy-large-archipelago",
+      "hashes": {
+        "height": "aa879bc44dd2190d",
+        "moisture": "df15947e3ac44513",
+        "fert": "0a7178d18b71e77d",
+        "land": "e0766b153a043e42",
+        "terrain": "bf34d144471bb95d",
+        "river": "5f78b0cd0ea337fe",
+        "resource": "0e5177e0c2303f96",
+        "down": "6754a1b3f2be260f"
+      }
+    },
+    {
+      "size": "large",
+      "version": 1,
+      "shape": "inland-sea",
+      "seed": "genesis-legacy-large-inland-sea",
+      "hashes": {
+        "height": "9421cb4c6f1d2bc2",
+        "moisture": "d015c7879fb0e62c",
+        "fert": "fa51d9281c8e9238",
+        "land": "720548c33cf2f728",
+        "terrain": "c1eca525ad08a22a",
+        "river": "0897a5a27f69b1b2",
+        "resource": "8f22a4d9d99346f7",
+        "down": "34fa9ad1a35ef4b6"
+      }
+    },
+    {
+      "size": "large",
+      "version": 1,
+      "shape": "isolated",
+      "seed": "genesis-legacy-large-isolated",
+      "hashes": {
+        "height": "cd84cb8081687bae",
+        "moisture": "f05ed9c28158f6eb",
+        "fert": "b6f7990971070ec6",
+        "land": "15bcaf88c37825eb",
+        "terrain": "656a3633735b4e6f",
+        "river": "d6aa7827a1bf4245",
+        "resource": "ad6a6f80b488f2d2",
+        "down": "7faad8dbe12a0603"
+      }
+    },
+    {
+      "size": "large",
+      "version": 1,
+      "shape": "straits",
+      "seed": "genesis-legacy-large-straits",
+      "hashes": {
+        "height": "6d7088125ee9c4bf",
+        "moisture": "dfe7e9d1a6227a2d",
+        "fert": "2eda7c5b02de3816",
+        "land": "9e1631d00dafde2d",
+        "terrain": "e98e42f6e5b0b449",
+        "river": "00ee777a35e9ed4b",
+        "resource": "836a897031729c89",
+        "down": "d2e88b8a14bc40d9"
+      }
+    },
+    {
+      "size": "large",
+      "version": 1,
+      "shape": "continent",
+      "seed": "genesis-legacy-large-continent",
+      "hashes": {
+        "height": "384720c978e36f11",
+        "moisture": "c01a5ceeaf1aa1c7",
+        "fert": "53a1e215bc725edc",
+        "land": "e8c53bffb3a65e6d",
+        "terrain": "2327a19a36af5813",
+        "river": "4ed1e72984fd72b1",
+        "resource": "0977f32aade715eb",
+        "down": "253942e7cc733c25"
+      }
+    },
+    {
+      "size": "large",
+      "version": 2,
+      "shape": "classic",
+      "seed": "genesis-legacy-large-classic",
+      "hashes": {
+        "height": "8c8848f353b1aa05",
+        "moisture": "11013bdb21682c3d",
+        "fert": "e68afb29221a371b",
+        "land": "b8c7f42ac3a96980",
+        "terrain": "7698bfad61b9d6ee",
+        "river": "db71d4527576c3e4",
+        "resource": "69600845e9c6fcbd",
+        "down": "e96ab7fd6661243d",
+        "flow": "6f9fb647fb47d339",
+        "basin": "6c8a8f9d548474f5",
+        "temperature": "5fb79906d245431d",
+        "ridge": "5096c7269408d39a",
+        "pass": "58cab3857cd67666",
+        "delta": "08845385db9b5e40",
+        "coast": "12084d740f312302",
+        "landmass": "1a15aa6bae69ef86"
+      }
+    },
+    {
+      "size": "large",
+      "version": 2,
+      "shape": "continents",
+      "seed": "genesis-legacy-large-continents",
+      "hashes": {
+        "height": "da7cf786c9629a50",
+        "moisture": "fe77ff043fbc77b9",
+        "fert": "3f12f7350cc140df",
+        "land": "03cdbc245358384c",
+        "terrain": "375ca58964ad10a5",
+        "river": "81b3f6ef167f259f",
+        "resource": "73a20a05779a2efd",
+        "down": "4b92b274675f6aa6",
+        "flow": "f69638c5c8d22c4c",
+        "basin": "b039569eb92dc5ff",
+        "temperature": "05f15f7af5d5c66f",
+        "ridge": "55002958d62fba45",
+        "pass": "dbb6ffd74a05b713",
+        "delta": "2f4581bac7be741a",
+        "coast": "74923b22436fa084",
+        "landmass": "273d664579be3300"
+      }
+    },
+    {
+      "size": "large",
+      "version": 2,
+      "shape": "archipelago",
+      "seed": "genesis-legacy-large-archipelago",
+      "hashes": {
+        "height": "096f3fc9426455d4",
+        "moisture": "f3e8a3f8c6c5e6a2",
+        "fert": "b3d4aa88a4862954",
+        "land": "e0766b153a043e42",
+        "terrain": "5349c1b7f3b35e19",
+        "river": "e0ca695d335fb430",
+        "resource": "2fa0c14fc65e9edd",
+        "down": "ae603fb41deb7407",
+        "flow": "24962ebe40d38a18",
+        "basin": "d62bb36a08a4f3bf",
+        "temperature": "f0b9554475c596ca",
+        "ridge": "e7e1ca1e91375e4b",
+        "pass": "8e79df20d2a32d4c",
+        "delta": "c787f235369b29ab",
+        "coast": "1bdc89bd371e22c6",
+        "landmass": "bee583d9ec507b2a"
+      }
+    },
+    {
+      "size": "large",
+      "version": 2,
+      "shape": "inland-sea",
+      "seed": "genesis-legacy-large-inland-sea",
+      "hashes": {
+        "height": "c30fa41c9d1f8100",
+        "moisture": "235f010680b5d232",
+        "fert": "c271cfee58c30489",
+        "land": "720548c33cf2f728",
+        "terrain": "7afadd72b9202246",
+        "river": "8e0bfba5592e8f6d",
+        "resource": "b832660a5a90edf0",
+        "down": "89419430571460f0",
+        "flow": "2b49307868d72fe2",
+        "basin": "83765a94f15bc5e5",
+        "temperature": "ef3d94ffbab70ca0",
+        "ridge": "cb1df94cd032fe56",
+        "pass": "c6b92d5b1f0ee5b1",
+        "delta": "a226d4051f0f2e18",
+        "coast": "9463cf0ed95c0d76",
+        "landmass": "129c65a74b1de247"
+      }
+    },
+    {
+      "size": "large",
+      "version": 2,
+      "shape": "isolated",
+      "seed": "genesis-legacy-large-isolated",
+      "hashes": {
+        "height": "528df6bb3d7d4a9b",
+        "moisture": "91945234b9d0f3c8",
+        "fert": "0eaf010d6b5ace10",
+        "land": "15bcaf88c37825eb",
+        "terrain": "b53ef00da6f08d2c",
+        "river": "a8cae9aef78aecb3",
+        "resource": "9a8281fbd5e89d8b",
+        "down": "d58a3d6f19a01e7c",
+        "flow": "85f1a92f0a7508b1",
+        "basin": "a17a667ef932ae3c",
+        "temperature": "917a2ea70bb9891c",
+        "ridge": "d597ecd509a3c9bf",
+        "pass": "7a3b36e8990f032f",
+        "delta": "8bde3b01b251da8a",
+        "coast": "18ba178e2452e208",
+        "landmass": "552fb62082276776"
+      }
+    },
+    {
+      "size": "large",
+      "version": 2,
+      "shape": "straits",
+      "seed": "genesis-legacy-large-straits",
+      "hashes": {
+        "height": "c5a24ec0e09b8ec5",
+        "moisture": "a03718189fa5955d",
+        "fert": "4ad44839a503d712",
+        "land": "9e1631d00dafde2d",
+        "terrain": "6c30b11663075e00",
+        "river": "434e1150d00c7c97",
+        "resource": "1f1666ddae12162d",
+        "down": "5d8a2150161b1832",
+        "flow": "414443f80cf8184c",
+        "basin": "9c7ffc00060e3bc0",
+        "temperature": "9b378ea094c4a458",
+        "ridge": "5bf38bdd61a58345",
+        "pass": "9d0622bacf68795f",
+        "delta": "c8c947c3e43019a7",
+        "coast": "48b97d305b39f11e",
+        "landmass": "6f81d6f8c6995069"
+      }
+    },
+    {
+      "size": "large",
+      "version": 2,
+      "shape": "continent",
+      "seed": "genesis-legacy-large-continent",
+      "hashes": {
+        "height": "54f608046a70bcd5",
+        "moisture": "2a882b803be62de0",
+        "fert": "e5c7b825a12260ae",
+        "land": "e8c53bffb3a65e6d",
+        "terrain": "60cfbb7b2da8f1bc",
+        "river": "968a87b22929328b",
+        "resource": "aeffe4f528f8be96",
+        "down": "9f28b16a19bf4c38",
+        "flow": "748d90f5e1d39389",
+        "basin": "9808825ccda2c1c5",
+        "temperature": "ef2acfd589fcacbf",
+        "ridge": "6089560d1ffe5328",
+        "pass": "4d6bc5ff286374b0",
+        "delta": "73d8ceeebad6f987",
+        "coast": "79ebf55dfef77f11",
+        "landmass": "407af8db345125d6"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 1,
+      "shape": "classic",
+      "seed": "genesis-legacy-huge-classic",
+      "hashes": {
+        "height": "4b362c6667ac21ee",
+        "moisture": "9fa6bd3d9667224d",
+        "fert": "309a07cb1a2a1671",
+        "land": "44cbe6e24eacbd86",
+        "terrain": "b401095fb35ff9f5",
+        "river": "69992a2421249543",
+        "resource": "b5f35f5715cd305f",
+        "down": "166d8ce7e5d9e369"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 1,
+      "shape": "continents",
+      "seed": "genesis-legacy-huge-continents",
+      "hashes": {
+        "height": "ca3ec34c13adf66d",
+        "moisture": "05af2aa8bda019fb",
+        "fert": "80be429376b8235e",
+        "land": "d58bc6d92572ab41",
+        "terrain": "805977583439af7f",
+        "river": "2f56678ea6ea4d4a",
+        "resource": "be408e0691be6bad",
+        "down": "8e9b467c432829bb"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 1,
+      "shape": "archipelago",
+      "seed": "genesis-legacy-huge-archipelago",
+      "hashes": {
+        "height": "a08299ed334afd43",
+        "moisture": "098393c122dd3472",
+        "fert": "31017ef5b51c80b5",
+        "land": "17cfd703f81e5207",
+        "terrain": "def6d90b07e54b71",
+        "river": "f6bf5cdedbe84d4e",
+        "resource": "b8356be051876083",
+        "down": "6892edb4e706b514"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 1,
+      "shape": "inland-sea",
+      "seed": "genesis-legacy-huge-inland-sea",
+      "hashes": {
+        "height": "6c12deffd79365c4",
+        "moisture": "ba50fbe106c48758",
+        "fert": "ab55e319ad00ca95",
+        "land": "fe75c1d071197a2c",
+        "terrain": "c1d9e1d7ffadc0d6",
+        "river": "77419b0706b8323d",
+        "resource": "fdb4c26561b34829",
+        "down": "6eee16d6e83612f0"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 1,
+      "shape": "isolated",
+      "seed": "genesis-legacy-huge-isolated",
+      "hashes": {
+        "height": "e0c9a73a7c9de3c3",
+        "moisture": "2e3512e92a8bebe4",
+        "fert": "4b4fddfb9720b69b",
+        "land": "b1a1013dd8bb6054",
+        "terrain": "2815d984ecdf4292",
+        "river": "862157b3651da6b3",
+        "resource": "b737ef994db88a05",
+        "down": "29792bbf23fae2c3"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 1,
+      "shape": "straits",
+      "seed": "genesis-legacy-huge-straits",
+      "hashes": {
+        "height": "0737b7809d4c15fc",
+        "moisture": "5c8a57019c34934d",
+        "fert": "92e6161b76274f83",
+        "land": "118b78628195831a",
+        "terrain": "76199cc73dd04cbb",
+        "river": "64ce6fa7071a419c",
+        "resource": "8f9e5d11af9f7a76",
+        "down": "96e1f0d2bdae224a"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 1,
+      "shape": "continent",
+      "seed": "genesis-legacy-huge-continent",
+      "hashes": {
+        "height": "373d17df8d5dcc92",
+        "moisture": "5562e45036b541c7",
+        "fert": "6f5e68e7778f51d1",
+        "land": "e1d728a584a34918",
+        "terrain": "4b78958ff8a07117",
+        "river": "db7e92f60d941663",
+        "resource": "523d0679caa194f7",
+        "down": "43ec85b7c4b1d4a5"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 2,
+      "shape": "classic",
+      "seed": "genesis-legacy-huge-classic",
+      "hashes": {
+        "height": "ed2b0328a356b03c",
+        "moisture": "bcb489660783cd9b",
+        "fert": "5d350d7195300871",
+        "land": "44cbe6e24eacbd86",
+        "terrain": "907cf64c44effb38",
+        "river": "bb7f289d5d5e2678",
+        "resource": "0d4bbd3ae63860ce",
+        "down": "715cfc140e27c84a",
+        "flow": "b06bb54d867d5770",
+        "basin": "7f142f707f11d2ae",
+        "temperature": "333e981e9e1fc667",
+        "ridge": "f7ef4ebd04482cce",
+        "pass": "fa27dba93824daf7",
+        "delta": "5a3a646f57eb5712",
+        "coast": "e752030f286c8d63",
+        "landmass": "c505017be7dbefb1"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 2,
+      "shape": "continents",
+      "seed": "genesis-legacy-huge-continents",
+      "hashes": {
+        "height": "5f33fb94246c1920",
+        "moisture": "2b15bef58f84e51a",
+        "fert": "c0fe62464f9d136c",
+        "land": "d58bc6d92572ab41",
+        "terrain": "b821b4303a5a7fc5",
+        "river": "884445953285e507",
+        "resource": "e3474765c55bd5fe",
+        "down": "0b51f8e142db8c8c",
+        "flow": "354c6feb01d4ba05",
+        "basin": "14d046ebcb5bf9b7",
+        "temperature": "00fa89f3ec5beaa0",
+        "ridge": "442c3e379fe2f797",
+        "pass": "40cd9c9117dfb18a",
+        "delta": "a5375903c1087358",
+        "coast": "4896340e11c2e939",
+        "landmass": "5624cad75ffb1e6b"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 2,
+      "shape": "archipelago",
+      "seed": "genesis-legacy-huge-archipelago",
+      "hashes": {
+        "height": "3fecbd022d755714",
+        "moisture": "7885cafa1b291de6",
+        "fert": "222f040822b2dafe",
+        "land": "17cfd703f81e5207",
+        "terrain": "ea26430d03b93cf4",
+        "river": "aa90df44b8162331",
+        "resource": "7f89d5c077996140",
+        "down": "57aa309df3ef1d2e",
+        "flow": "de6a6ec5bce695c2",
+        "basin": "d82ecd11f0a0c861",
+        "temperature": "f62077113316735b",
+        "ridge": "42b73055bae953cb",
+        "pass": "0948f3e6684fa39c",
+        "delta": "76412dee7da40810",
+        "coast": "413c5d8f586728c3",
+        "landmass": "66a1f956d2a592ce"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 2,
+      "shape": "inland-sea",
+      "seed": "genesis-legacy-huge-inland-sea",
+      "hashes": {
+        "height": "1d40163b8fbc371c",
+        "moisture": "54bfb75cc65d11b4",
+        "fert": "d30a2c2259b0249d",
+        "land": "fe75c1d071197a2c",
+        "terrain": "c86235c2de0822b7",
+        "river": "705847572d8793aa",
+        "resource": "dd321f1105fe64c1",
+        "down": "0cce06bb6c0015f9",
+        "flow": "cfba5fdefb48853f",
+        "basin": "b7cf874d56431e1a",
+        "temperature": "523d0981c6426dc8",
+        "ridge": "a198f4efb88d9f5f",
+        "pass": "2cc782483c6bb1cc",
+        "delta": "693a6d383a36e61a",
+        "coast": "7691236ec1f38069",
+        "landmass": "7870158e0b23d6d0"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 2,
+      "shape": "isolated",
+      "seed": "genesis-legacy-huge-isolated",
+      "hashes": {
+        "height": "5e5688d633ceb914",
+        "moisture": "ff1b7127785a7778",
+        "fert": "a6d59dc74dd44809",
+        "land": "b1a1013dd8bb6054",
+        "terrain": "4766cfeb530de0ab",
+        "river": "126bf6bfcbe36df2",
+        "resource": "87ae18f58211d5f4",
+        "down": "cb40501ed64679e7",
+        "flow": "76045bc29c00ee5c",
+        "basin": "76dca20154f375b5",
+        "temperature": "49b5870afec47cf6",
+        "ridge": "b14f8541ba6b6fdf",
+        "pass": "3b52e31d4d3d7780",
+        "delta": "b0c635cdd622d1bc",
+        "coast": "f29f328df20171da",
+        "landmass": "78a5a6899bd8b3bc"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 2,
+      "shape": "straits",
+      "seed": "genesis-legacy-huge-straits",
+      "hashes": {
+        "height": "79cb71d78a87f1de",
+        "moisture": "eb629a0627c7cc83",
+        "fert": "7bffb5770630331a",
+        "land": "118b78628195831a",
+        "terrain": "57da562bceeb0249",
+        "river": "b8d242a16788fa97",
+        "resource": "12df4f6f5ed67042",
+        "down": "dccc2742b28fc271",
+        "flow": "fcd81da760d2bc35",
+        "basin": "038983f0960f2ebd",
+        "temperature": "c9420fa3bc1829cf",
+        "ridge": "6430fcbf56259dd1",
+        "pass": "480a333e1cccad9a",
+        "delta": "fdd1fe4bc881c0c0",
+        "coast": "43ea1c11c7c61f79",
+        "landmass": "f025bedf03f2e22c"
+      }
+    },
+    {
+      "size": "huge",
+      "version": 2,
+      "shape": "continent",
+      "seed": "genesis-legacy-huge-continent",
+      "hashes": {
+        "height": "d9a8e4db940d0e0f",
+        "moisture": "e1c3b59b8fedf5fd",
+        "fert": "8ace0b9cec0729bb",
+        "land": "e1d728a584a34918",
+        "terrain": "ef98aa68a351a92b",
+        "river": "af193eed6a5f1345",
+        "resource": "b179aadcc81f29d2",
+        "down": "9533717b8d59921f",
+        "flow": "102c596113b5344a",
+        "basin": "9fe422ab6a2d3532",
+        "temperature": "ec29d12e0a1de817",
+        "ridge": "a1e240249f3bbbb7",
+        "pass": "5c5ec7ffac77e92a",
+        "delta": "3cf7387f99c81d87",
+        "coast": "a93a21b31c51b8d5",
+        "landmass": "9977a6a81c35101a"
+      }
+    }
+  ]
+}
