@@ -169,6 +169,23 @@
         "{output}"
       ],
       "tier": "deep"
+    },
+    {
+      "id": "vertical-slice-core",
+      "kind": "node-test",
+      "files": [
+        "research/vertical-slice/slice-core.test.mjs",
+        "research/vertical-slice/standalone.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "vertical-slice-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/vertical-slice.spec.ts"
+      ],
+      "tier": "smoke"
     }
   ]
 }

@@ -40,7 +40,7 @@ export function interpolateFrame(a,b,t){
 }
 export class Battlefield{
  constructor(canvas){this.canvas=canvas;this.g=canvas.getContext("2d",{alpha:false});this.cam={z:1,x:0,y:0};this.layout={};this.terrain=null;this.terrainRef=null;this.stats={drawMs:0,sprites:0,visible:0};this.layer=false}
- resize(){const c=this.canvas,w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}const portrait=h>w&&w<780,top=62,bottom=portrait?98:30,right=!portrait&&h<550?100:0,aw=w-right-12,ah=h-top-bottom;
+ resize(){const c=this.canvas,w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}const portrait=h>w&&w<780,top=portrait?155:62,bottom=portrait?114:30,right=!portrait&&h<550?95:0,aw=w-right-12,ah=h-top-bottom;
  const base=Math.max(.1,Math.min(aw/(portrait?E.H:E.W),ah/(portrait?E.W:E.H)));this.layout={w,h,d,portrait,k:base*this.cam.z,cx:aw/2+6+this.cam.x,cy:top+ah/2+this.cam.y,base};return this.layout}
  project(p){let {k,cx,cy,portrait}=this.layout,x=p.x-E.W/2,y=p.y-E.H/2;return portrait?{x:cx-y*k,y:cy+x*k}:{x:cx+x*k,y:cy+y*k}}
  world(p,clipped=true){let {k,cx,cy,portrait}=this.layout,x=(p.x-cx)/k,y=(p.y-cy)/k,xx=(portrait?y:x)+E.W/2,yy=(portrait?-x:y)+E.H/2;return clipped?{x:clamp(xx,0,E.W),y:clamp(yy,0,E.H)}:{x:xx,y:yy}}

@@ -1,0 +1,39 @@
+import {test,expect} from '@playwright/test';
+import {writeFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+const url='/apps/banners-of-war/research/vertical-slice/';
+const state=(p:any)=>p.evaluate(()=> (window as any).sliceQA.state());
+const point=(p:any,x:number,y:number)=>p.evaluate(([x,y]:number[])=>(window as any).sliceQA.project({x,y}),[x,y]);
+async function clickMap(p:any,x:number,y:number){let q=await point(p,x,y);await p.mouse.click(q.x,q.y)}
+async function drag(p:any,ps:number[][],button:'left'|'right'='left'){let a=await point(p,...ps[0] as [number,number]);await p.mouse.move(a.x,a.y);await p.mouse.down({button});for(let [x,y] of ps.slice(1)){let q=await point(p,x,y);await p.mouse.move(q.x,q.y,{steps:8})}await p.mouse.up({button})}
+async function handle(p:any,kind:string,delta:{x:number,y:number}){let h=await p.evaluate((k:string)=>(window as any).sliceQA.handles().find((h:any)=>h.kind===k),kind);expect(h).toBeTruthy();await p.mouse.move(h.screen.x,h.screen.y);await p.mouse.down();await p.mouse.move(h.screen.x+delta.x,h.screen.y+delta.y,{steps:8});await p.mouse.up()}
+async function snap(page:any,info:any,n:string){await page.waitForTimeout(100);await page.screenshot({path:info.outputPath(n+'.png')})}
+test.use({video:'on'});
+test('vertical slice: actual deployment, spatial orders, complete engine campaign and event replay',async({page},info)=>{
+ test.setTimeout(240000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.waitForFunction(()=>!!(window as any).sliceQA);
+ await snap(page,info,'01-menu');await page.locator('#start').click();await expect(page.locator('#phase')).toHaveText('Развёртывание');
+ await page.locator('[data-group=foot]').click();await expect.poll(async()=>(await state(page)).selected.length).toBe(4);
+ await page.locator('[data-tool=front]').click();await drag(page,[[305,225],[305,535]]);await expect.poll(async()=>(await state(page)).units.filter((u:any)=>u.id<4).every((u:any)=>Math.abs(u.x-305)<8)).toBe(true);await snap(page,info,'02-deployment');
+ await page.locator('#undo').click();await expect.poll(async()=>(await state(page)).units[0].x).toBe(380);await page.locator('#redo').click();
+ await page.locator('#commit').click();await expect(page.locator('#phase')).toHaveText('Замысел');await page.locator('#clear').click();
+ const u=(await state(page)).units[0];let p=await point(page,u.x,u.y);if(info.project.name.includes('mobile'))await page.touchscreen.tap(p.x,p.y);else await page.mouse.click(p.x,p.y);await expect.poll(async()=>(await state(page)).selected.length).toBe(1);
+ await page.locator('#focus').click();await snap(page,info,'03-close-miniatures');await page.locator('#fit').click();await page.locator('[data-group=foot]').click();
+ await page.locator('[data-tool=front]').click();await drag(page,[[520,220],[520,540]]);await expect.poll(async()=>Object.keys((await state(page)).orders).length).toBe(4);let before=await state(page);await snap(page,info,'04-front');
+ await handle(page,'center',{x:12,y:0});await expect.poll(async()=>JSON.stringify((await state(page)).orders)).not.toBe(JSON.stringify(before.orders));await page.locator('#undo').click();await expect.poll(async()=>JSON.stringify((await state(page)).orders)).toBe(JSON.stringify(before.orders));await page.locator('#redo').click();
+ await page.locator('#brace').click();await expect.poll(async()=>(await state(page)).orders[0].stages[0].kind).toBe('brace');
+ await page.locator('#stageAdd').click();await page.locator('[data-condition=time]').click();await page.locator('#threshold').fill('12');await page.locator('#stageKind').selectOption('move');await page.locator('#setStage').click();await drag(page,[[590,420],[650,500],[740,500]]);await expect.poll(async()=>(await state(page)).orders[0].stages.length).toBe(2);expect((await state(page)).orders[0].stages[1].when).toBe('time');await snap(page,info,'05-multi-stage');
+ await page.locator('#fold').click();await page.locator('#form').selectOption('column');await expect.poll(async()=>(await state(page)).orders[0].stages[1].form).toBe('column');await page.locator('#fold').click();
+ await page.locator('[data-group=horse]').click();await page.locator('[data-tool=route]').click();await drag(page,[[560,650],[680,500],[850,600]]);await expect.poll(async()=>Object.keys((await state(page)).orders).length).toBeGreaterThan(4);await snap(page,info,'06-tactical');
+ await page.locator('[data-group=army]').click();await expect.poll(async()=>(await state(page)).selected.length).toBe(9);await snap(page,info,'07-army');
+ let count=0;while(count<12&&(await state(page)).phase==='plan'){await page.locator('#commit').click();await page.locator('#execute').click();await expect(page.locator('#phase')).toHaveText('Исполнение',{timeout:45000});let s=await state(page);expect(s.history.at(-1).frames).toBeGreaterThan(2);if(count===0){await page.locator('#playPause').click();await page.locator('#scrub').fill(String(s.time/2));await snap(page,info,'08-execution');await page.locator('#playPause').click();await page.waitForTimeout(2500)}await page.locator('#next').click();count++}
+ await expect(page.locator('#phase')).toHaveText('Итог сражения');await expect(page.locator('#report')).toBeVisible();let s=await state(page);expect(s.result).toBeTruthy();expect(s.history.length).toBe(count);expect(s.time).toBeLessThanOrEqual(360.01);await snap(page,info,'09-result');
+ const event=page.locator('#eventList button').first();if(await event.count()){await event.click();await expect(page.locator('#phase')).toHaveText('Повтор');await snap(page,info,'10-event-replay');await page.locator('#next').click();await expect(page.locator('#report')).toBeVisible()}
+ await writeFile(info.outputPath('campaign-metrics.json'),JSON.stringify(s,null,2));expect(errors).toEqual([]);
+});
+test('responsive compact battlefield and standalone without network',async({page,context},info)=>{
+ test.setTimeout(90000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url+'standalone.html');await page.waitForFunction(()=>!!(window as any).sliceQA);await context.setOffline(true);await page.locator('#start').click();let results=[];for(const [w,h] of [[390,844],[844,390],[820,1180],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.locator('#fit').click();await page.waitForTimeout(150);let s=await state(page);results.push({w,h,coverage:s.coverage,selected:0});await page.locator('[data-group=foot]').click();await page.waitForTimeout(100);let a=await state(page);results.push({w,h,coverage:a.coverage,selected:4});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);await snap(page,info,'responsive-'+w+'x'+h);await page.locator('#clear').click()}
+ await page.locator('#commit').click();await page.locator('#commit').click();await page.locator('#execute').click();await expect(page.locator('#phase')).toHaveText('Исполнение',{timeout:45000});expect((await state(page)).history[0].frames).toBeGreaterThan(2);await page.locator('#next').click();await expect(page.locator('#phase')).toHaveText('Замысел');await writeFile(info.outputPath('coverage.json'),JSON.stringify(results,null,2));expect(errors).toEqual([]);
+});
+test('render stress 20, 60, 100 and 158 actual engine regiments',async({page},info)=>{
+ test.setTimeout(300000);await page.goto(url);await page.waitForFunction(()=>!!(window as any).sliceQA);await page.locator('#start').click();const data=[];for(const n of [20,60,100,158]){let r=await page.evaluate(n=>(window as any).sliceQA.benchmark(n),n);expect(r.count).toBe(n);expect(r.results.length).toBe(3);expect(r.results.every((x:any)=>Number.isFinite(x.fps)&&x.fps>0&&x.drawMs>=0)).toBe(true);data.push(r)}await writeFile(info.outputPath('render-stress.json'),JSON.stringify(data,null,2));
+});
