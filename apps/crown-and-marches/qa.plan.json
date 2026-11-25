@@ -149,6 +149,12 @@
       "tier": "smoke"
     },
     {
+      "id": "geography-review",
+      "kind": "browser-node",
+      "entry": "geography-review-qa.mjs",
+      "tier": "smoke"
+    },
+    {
       "id": "living-lands",
       "kind": "visual",
       "tier": "smoke",
