@@ -53,13 +53,26 @@ jobs:
           test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Restore verified bake outputs for unchanged model inputs
+        id: bake-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.BOW_ART_OUTPUT }}
+          key: bow-formation-bake-15050357382-${{ hashFiles('apps/banners-of-war/research/formation-art/bake.py', 'apps/banners-of-war/research/formation-art/pack.py') }}
       - name: Bake eight directions with common ground anchor
+        if: steps.bake-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p "$BOW_ART_OUTPUT"
           source="$(find /tmp/bow-source -name spearman.blend -type f -print -quit)"
           test -n "$source"
           "$BLENDER" --background --disable-autoexec "$source" --python-exit-code 1 --python apps/banners-of-war/research/formation-art/bake.py
           python3 apps/banners-of-war/research/formation-art/pack.py
+      - name: Retain completed validated bake independently from terrain
+        if: steps.bake-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.BOW_ART_OUTPUT }}
+          key: ${{ steps.bake-cache.outputs.cache-primary-key }}
       - name: Prepare licensed natural materials through Art Forge
         run: python3 apps/banners-of-war/research/formation-art/nature.py
       - name: Capture physical battle and matched renderer measurements

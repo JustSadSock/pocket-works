@@ -13,9 +13,12 @@ def get(url,limit=25000000):
 jobs=[];sources=[]
 for kind,id in [("grass","leafy_grass"),("sparse","sparse_grass"),("road","grass_path_2"),("stone","aerial_grass_rock")]:
     data=json.loads(get("https://api.polyhaven.com/files/"+id))
-    maps=data.get("diff") or data.get("albedo")
-    if not maps:raise ValueError("Missing diffuse "+id)
-    variants=maps["1k"];entry=variants.get("jpg") or variants.get("png")
+    # Poly Haven uses both human-readable channel labels ("Diffuse") and short ids.
+    maps=next((v for k,v in data.items() if k.lower().replace("_","").replace(" ","") in {"diff","diffuse","albedo","color","colour","col","basecolor"} and isinstance(v,dict)),None)
+    if not maps:raise ValueError("Missing diffuse "+id+"; available channels: "+str(list(data)))
+    variants=maps.get("1k") or maps.get("2k") or {}
+    entry=variants.get("jpg") or variants.get("png")
+    if not entry or not isinstance(entry.get("url"),str):raise ValueError("No supported diffuse export "+id)
     raw=get(entry["url"]);f=work/(kind+".source")
     f.write_bytes(raw);im=Image.open(f).convert("RGBA");im.save(work/(kind+".png"))
     recipe={"size":list(im.size),"layers":[{"input":kind+".png"}]}
