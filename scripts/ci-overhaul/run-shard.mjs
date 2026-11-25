@@ -56,7 +56,7 @@ export async function executeShard(root,shard,{buildBundle=null}={}) {
     const work=join(temp,'checkout');
     const dest=join(artifacts,task.key);
     mkdirSync(dest,{recursive:true});
-    let failure=null, run=null, cleanup=null;
+    let failure=null, failureKind=null, run=null, cleanup=null;
     const startedAt=new Date().toISOString();
     const taskStart=performance.now(), phases={};
     let phase='checkout', phaseStart=taskStart;
@@ -91,38 +91,58 @@ export async function executeShard(root,shard,{buildBundle=null}={}) {
       next('collectEvidence');
       const evidence=join(work,'qa-artifacts',task.key);
       if(existsSync(evidence)) cpSync(evidence,dest,{recursive:true});
-      if(!run.success) throw Error('Legacy runner failed: '+JSON.stringify(run));
       const report=JSON.parse(readFileSync(join(dest,'result.json'),'utf8'));
       const reportedTask=Object.fromEntries(Object.keys(task).map(k=>[k,report[k]]));
-      if(report.schema!==1 || report.success!==true || identity(reportedTask)!==identity(task) || (verified&&report.buildMode!=='same-run-prebuilt'))
-        throw Error('Missing, mismatched or failed legacy evidence');
-    } catch(e) { failure=e.message; }
+      if(report.schema!==1 || identity(reportedTask)!==identity(task) || (verified&&report.buildMode!=='same-run-prebuilt'))
+        throw Error('Missing or mismatched legacy evidence');
+      if(!run.success) {
+        // Only a normal, completed nonzero test exit can be retried.
+        // Spawn errors, timeout, killed runner, invalid reports and build errors fail the job.
+        if(run.code===1&&!run.signal&&!run.expired&&!run.error&&report.success===false&&
+           Number.isSafeInteger(report.exitCode)&&report.exitCode>0&&report.signal===null&&
+           report.timedOut===false&&!report.error) failureKind='test';
+        throw Error('Legacy runner failed: '+JSON.stringify(run));
+      }
+      if(report.success!==true||report.exitCode!==0||report.signal!==null||report.timedOut!==false||report.error)
+        throw Error('Contradictory successful legacy evidence');
+    } catch(e) { failure=e.message; failureKind??='infrastructure'; }
     finally {
       next('cleanup');
       if(existsSync(work)) {
         cleanup=await command('git',['worktree','remove','--force',work],{cwd:root,timeoutMs:120000});
-        if(!cleanup.success) failure=(failure?failure+'; ':'')+'Worktree cleanup failed';
+        if(!cleanup.success) { failure=(failure?failure+'; ':'')+'Worktree cleanup failed'; failureKind='infrastructure'; }
       }
       rmSync(temp,{recursive:true,force:true});
     }
     if(failure) {
       const resultFile=join(dest,'result.json');
       if(existsSync(resultFile)) cpSync(resultFile,join(dest,'legacy-result.json'));
-      writeFileSync(resultFile,JSON.stringify({schema:1,...task,success:false,startedAt,finishedAt:new Date().toISOString(),error:failure},null,2));
+      writeFileSync(resultFile,JSON.stringify({schema:1,...task,success:false,startedAt,finishedAt:new Date().toISOString(),error:failure,failureKind},null,2));
     }
     next('done');
     const telemetry={schema:1,key:task.key,pool:shard.pool,success:!failure,totalMs:Math.round(performance.now()-taskStart),phases};
     writeFileSync(join(dest,'executor-timing.json'),JSON.stringify(telemetry,null,2),{flag:'wx'});
-    results.push({key:task.key,success:!failure,error:failure});
+    results.push({key:task.key,success:!failure,error:failure,failureKind});
     console.log((failure?'FAIL ':'PASS ')+task.key+(failure?': '+failure:''));
   }
   return {schema:1,shard:shard.id,results,success:results.length===shard.tasks.length&&results.every(t=>t.success)};
+}
+
+// A completed test failure is data, not an executor crash. Only opt-in
+// workflow steps may accept it, and the final controller must still pass.
+export function shardExitCode(report,recordFailures=false){
+  if(!report||!Array.isArray(report.results)||!report.results.length||
+     new Set(report.results.map(r=>r.key)).size!==report.results.length||
+     report.results.some(r=>typeof r.success!=='boolean'||
+       (r.success ? r.failureKind!==null||r.error!==null : !r.error||!['test','infrastructure'].includes(r.failureKind)))||
+     report.success!==report.results.every(r=>r.success))return 1;
+  return report.success||recordFailures&&report.results.every(r=>r.success||r.failureKind==='test')?0:1;
 }
 
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   try {
     const report=await executeShard(ROOT,JSON.parse(process.env.PW_QA_SHARD||''),{buildBundle:process.env.PW_QA_BUILD_BUNDLE||null});
     console.log(JSON.stringify(report));
-    if(!report.success)process.exitCode=1;
+    process.exitCode=shardExitCode(report,process.env.PW_QA_RECORD_TEST_FAILURES==='1');
   }catch(e){console.error(e);process.exitCode=1;}
 }

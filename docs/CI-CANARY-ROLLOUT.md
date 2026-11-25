@@ -25,3 +25,5 @@ uses fixed six-worker pools and reports measured phase durations.
 
 Historical evidence: integrated run 45483925251 (180/180), independent replay
 45485063517 (50/50), rollback drill 45498339187, protected receipt lab 45490754186.
+
+Executor hardening: the live workflow records completed nonzero test exits for bounded retry only. Invalid evidence, crashes, timeouts, dependency/build errors and cleanup failures fail the runner job, preventing the final audit from authorizing a successful candidate. This change does not enable the production migration.
