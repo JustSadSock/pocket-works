@@ -165,7 +165,7 @@
       "args": [
         "{output}"
       ],
-      "tier": "smoke"
+      "tier": "deep"
     }
   ]
 }

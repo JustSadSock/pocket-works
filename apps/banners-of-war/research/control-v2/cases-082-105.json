@@ -1,0 +1,4544 @@
+{
+  "protocol": "paired-control-v2",
+  "engineCommit": "8ce73ccc09880eefe53b1e69028c5cb0c2fe6f7d",
+  "sourceRun": 45499591776,
+  "sourceArtifact": 14969383349,
+  "results": [
+    {
+      "factor": "historical-style",
+      "suite": "command",
+      "seed": 47,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": true,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "cautious"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          439.20000000000005,
+          120
+        ],
+        [
+          1,
+          643,
+          484.6,
+          120
+        ],
+        [
+          2,
+          645.8,
+          532.1,
+          120
+        ],
+        [
+          3,
+          645.4,
+          577.8,
+          120
+        ],
+        [
+          4,
+          644.7,
+          622.1,
+          120
+        ],
+        [
+          5,
+          643.5,
+          670.7,
+          120
+        ],
+        [
+          6,
+          645.1,
+          715.5,
+          120
+        ],
+        [
+          7,
+          646,
+          760.7,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          760.8,
+          120
+        ],
+        [
+          101,
+          757,
+          715.4,
+          120
+        ],
+        [
+          102,
+          754.2,
+          667.9,
+          120
+        ],
+        [
+          103,
+          754.6,
+          622.2,
+          120
+        ],
+        [
+          104,
+          755.3,
+          577.9,
+          120
+        ],
+        [
+          105,
+          756.5,
+          529.3,
+          120
+        ],
+        [
+          106,
+          754.9,
+          484.5,
+          120
+        ],
+        [
+          107,
+          754,
+          439.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 0,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "challenger": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-1.25",
+      "suite": "material",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1248,
+      "ratioActual": 1.2380952380952381,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.29999999999995,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          589.6,
+          438.9,
+          120
+        ],
+        [
+          9,
+          590.7,
+          484.6,
+          120
+        ],
+        [
+          10,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.04413829787234044,
+      "score": -0.030745101363770587,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.030745101363770587,
+      "contact": 798.75,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.6056663296556498,
+        "loss": 152.2510819798768,
+        "fatigue": 6.619500825190049,
+        "strain": 26.993533428888647,
+        "morale": 72.30866337669657,
+        "cohesion": 78.43635575532191,
+        "contacts": 399.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.6126979982344537,
+        "loss": 171.12385406782164,
+        "fatigue": 10.363360677802609,
+        "strain": 21.862768280540354,
+        "morale": 70.36366002966143,
+        "cohesion": 75.82692968152512,
+        "contacts": 399.5,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-3",
+      "suite": "material",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 2928,
+      "ratioActual": 2.9047619047619047,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.29999999999995,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          589.6,
+          438.9,
+          120
+        ],
+        [
+          9,
+          590.7,
+          484.6,
+          120
+        ],
+        [
+          10,
+          588.5,
+          531.9,
+          120
+        ],
+        [
+          11,
+          591.1,
+          575.1,
+          120
+        ],
+        [
+          12,
+          589.2,
+          621.5,
+          120
+        ],
+        [
+          13,
+          590.3,
+          667.2,
+          120
+        ],
+        [
+          14,
+          589.4,
+          716.7,
+          120
+        ],
+        [
+          15,
+          591.2,
+          761.9,
+          120
+        ],
+        [
+          16,
+          536.9,
+          437.20000000000005,
+          120
+        ],
+        [
+          17,
+          534.4,
+          486.1,
+          120
+        ],
+        [
+          18,
+          533.1,
+          529.9,
+          120
+        ],
+        [
+          19,
+          536.4,
+          575.7,
+          120
+        ],
+        [
+          20,
+          534.1,
+          624.5,
+          120
+        ],
+        [
+          21,
+          536,
+          670.8,
+          120
+        ],
+        [
+          22,
+          535.9,
+          713.6,
+          120
+        ],
+        [
+          23,
+          534.8,
+          761.4,
+          120
+        ],
+        [
+          24,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.7523902439024391,
+      "score": -0.8358450630364745,
+      "result": "challenger",
+      "reason": "combat-readiness",
+      "policyBScore": 0.8358450630364745,
+      "contact": 834.25,
+      "rounds": 6,
+      "time": 163.75,
+      "reference": {
+        "power": 0.14986702906889685,
+        "loss": 116.10306760709344,
+        "fatigue": 15.790501594745798,
+        "strain": 17.5893075127912,
+        "morale": 28.319534667821895,
+        "cohesion": 40.65898156502332,
+        "contacts": 417.75,
+        "routs": 6,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.9054841017738426,
+        "loss": 63.925514970133094,
+        "fatigue": 5.321554750706864,
+        "strain": 0.6631029700781355,
+        "morale": 89.02385129041951,
+        "cohesion": 98.72926114349345,
+        "contacts": 416.5,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-policy-1.5",
+      "suite": "material",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1488,
+      "ratioActual": 1.4761904761904763,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.3,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          810.4,
+          761.1,
+          120
+        ],
+        [
+          109,
+          809.3,
+          715.4,
+          120
+        ],
+        [
+          110,
+          811.5,
+          668.1,
+          120
+        ],
+        [
+          111,
+          808.9,
+          624.9,
+          120
+        ],
+        [
+          112,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.6297884615384617,
+      "score": -0.701609924021542,
+      "result": "challenger",
+      "reason": "combat-readiness",
+      "policyBScore": -0.701609924021542,
+      "contact": 1166.5,
+      "rounds": 7,
+      "time": 181,
+      "reference": {
+        "power": 0.12910260501646856,
+        "loss": 187.63523397502036,
+        "fatigue": 14.822185048543547,
+        "strain": 26.588232390061762,
+        "morale": 24.986898063456756,
+        "cohesion": 28.67979044958425,
+        "contacts": 583.75,
+        "routs": 7,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.6525975388190545,
+        "loss": 108.94263555131826,
+        "fatigue": 8.521827254842261,
+        "strain": 17.12106362505699,
+        "morale": 73.02177938060565,
+        "cohesion": 70.5938667937568,
+        "contacts": 582.75,
+        "routs": 1,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-policy-2",
+      "suite": "material",
+      "seed": 47,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1968,
+      "ratioActual": 1.9523809523809523,
+      "initialPositions": [
+        [
+          0,
+          644,
+          439.20000000000005,
+          120
+        ],
+        [
+          1,
+          643,
+          484.6,
+          120
+        ],
+        [
+          2,
+          645.8,
+          532.1,
+          120
+        ],
+        [
+          3,
+          645.4,
+          577.8,
+          120
+        ],
+        [
+          4,
+          644.7,
+          622.1,
+          120
+        ],
+        [
+          5,
+          643.5,
+          670.7,
+          120
+        ],
+        [
+          6,
+          645.1,
+          715.5,
+          120
+        ],
+        [
+          7,
+          646,
+          760.7,
+          120
+        ],
+        [
+          8,
+          591.6,
+          437.1,
+          120
+        ],
+        [
+          9,
+          589.7,
+          484.29999999999995,
+          120
+        ],
+        [
+          10,
+          588,
+          533,
+          120
+        ],
+        [
+          11,
+          591.6,
+          577.5,
+          120
+        ],
+        [
+          12,
+          590.1,
+          621.1,
+          120
+        ],
+        [
+          13,
+          588.6,
+          669.7,
+          120
+        ],
+        [
+          14,
+          590.1,
+          713.6,
+          120
+        ],
+        [
+          15,
+          591.8,
+          760.3,
+          120
+        ],
+        [
+          16,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          760.8,
+          120
+        ],
+        [
+          101,
+          757,
+          715.4,
+          120
+        ],
+        [
+          102,
+          754.2,
+          667.9,
+          120
+        ],
+        [
+          103,
+          754.6,
+          622.2,
+          120
+        ],
+        [
+          104,
+          755.3,
+          577.9,
+          120
+        ],
+        [
+          105,
+          756.5,
+          529.3,
+          120
+        ],
+        [
+          106,
+          754.9,
+          484.5,
+          120
+        ],
+        [
+          107,
+          754,
+          439.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.6838387096774194,
+      "score": -0.7173703211185751,
+      "result": "challenger",
+      "reason": "combat-readiness",
+      "policyBScore": 0.7173703211185751,
+      "contact": 1097.25,
+      "rounds": 5,
+      "time": 133,
+      "reference": {
+        "power": 0.14993568583055233,
+        "loss": 178.10274238095178,
+        "fatigue": 12.91089586226088,
+        "strain": 29.741322031922763,
+        "morale": 21.101228585626323,
+        "cohesion": 35.681274905498434,
+        "contacts": 521.5,
+        "routs": 7,
+        "blocked": 6,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.6392331783441939,
+        "loss": 140.98292304229727,
+        "fatigue": 11.6985170437111,
+        "strain": 13.749848204791832,
+        "morale": 80.61844694761585,
+        "cohesion": 63.36555169365722,
+        "contacts": 575.75,
+        "routs": 1,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "organization",
+      "suite": "material",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": true,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.3,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 0,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "challenger": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-policy",
+      "suite": "terrain",
+      "seed": 47,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge-elevation-only",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          439.20000000000005,
+          120
+        ],
+        [
+          1,
+          643,
+          484.6,
+          120
+        ],
+        [
+          2,
+          645.8,
+          532.1,
+          120
+        ],
+        [
+          3,
+          645.4,
+          577.8,
+          120
+        ],
+        [
+          4,
+          644.7,
+          622.1,
+          120
+        ],
+        [
+          5,
+          643.5,
+          670.7,
+          120
+        ],
+        [
+          6,
+          645.1,
+          715.5,
+          120
+        ],
+        [
+          7,
+          646,
+          760.7,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          760.8,
+          120
+        ],
+        [
+          101,
+          757,
+          715.4,
+          120
+        ],
+        [
+          102,
+          754.2,
+          667.9,
+          120
+        ],
+        [
+          103,
+          754.6,
+          622.2,
+          120
+        ],
+        [
+          104,
+          755.3,
+          577.9,
+          120
+        ],
+        [
+          105,
+          756.5,
+          529.3,
+          120
+        ],
+        [
+          106,
+          754.9,
+          484.5,
+          120
+        ],
+        [
+          107,
+          754,
+          439.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": -0.666376615423714,
+      "result": "challenger",
+      "reason": "time-limit",
+      "policyBScore": 0.666376615423714,
+      "contact": 1102,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.21545238033824848,
+        "loss": 193.99701005391677,
+        "fatigue": 20.116428797577235,
+        "strain": 23.87127273157808,
+        "morale": 45.516531213929056,
+        "cohesion": 41.80518789902581,
+        "contacts": 572,
+        "routs": 4,
+        "blocked": 4,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.7326817822214213,
+        "loss": 169.82988748000736,
+        "fatigue": 5.475570454859209,
+        "strain": 4.218761446478712,
+        "morale": 84.09167176770751,
+        "cohesion": 96.5842818199369,
+        "contacts": 530,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "reserve",
+      "suite": "tactics",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.3,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 0.013269162258854677,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.013269162258854677,
+      "contact": 103,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.862811898700174,
+        "loss": 7.496299369670993,
+        "fatigue": 2.046430722026382,
+        "strain": 2.25204543679604,
+        "morale": 84.28886352096472,
+        "cohesion": 92.71199975530912,
+        "contacts": 51.5,
+        "routs": 0,
+        "blocked": 967,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.8038378442163755,
+        "loss": 5.29715688476405,
+        "fatigue": 3.689383361682756,
+        "strain": 2.6460667350934353,
+        "morale": 79.14250633237617,
+        "cohesion": 94.70761893304125,
+        "contacts": 51.5,
+        "routs": 1,
+        "blocked": 1043.5,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "historical-style",
+      "suite": "command",
+      "seed": 91,
+      "mirror": false,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": true,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "cautious"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644.1,
+          439.1,
+          120
+        ],
+        [
+          1,
+          643.5,
+          483.1,
+          120
+        ],
+        [
+          2,
+          643.1,
+          531.7,
+          120
+        ],
+        [
+          3,
+          645.3,
+          575,
+          120
+        ],
+        [
+          4,
+          646.2,
+          624.2,
+          120
+        ],
+        [
+          5,
+          643.3,
+          667.2,
+          120
+        ],
+        [
+          6,
+          645,
+          715,
+          120
+        ],
+        [
+          7,
+          646.1,
+          762.7,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          755.9,
+          760.9,
+          120
+        ],
+        [
+          101,
+          756.5,
+          716.9,
+          120
+        ],
+        [
+          102,
+          756.9,
+          668.3,
+          120
+        ],
+        [
+          103,
+          754.7,
+          625,
+          120
+        ],
+        [
+          104,
+          753.8,
+          575.8,
+          120
+        ],
+        [
+          105,
+          756.7,
+          532.8,
+          120
+        ],
+        [
+          106,
+          755,
+          485,
+          120
+        ],
+        [
+          107,
+          753.9,
+          437.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 0,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "challenger": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-1.25",
+      "suite": "material",
+      "seed": 47,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1248,
+      "ratioActual": 1.2380952380952381,
+      "initialPositions": [
+        [
+          0,
+          644,
+          439.20000000000005,
+          120
+        ],
+        [
+          1,
+          643,
+          484.6,
+          120
+        ],
+        [
+          2,
+          645.8,
+          532.1,
+          120
+        ],
+        [
+          3,
+          645.4,
+          577.8,
+          120
+        ],
+        [
+          4,
+          644.7,
+          622.1,
+          120
+        ],
+        [
+          5,
+          643.5,
+          670.7,
+          120
+        ],
+        [
+          6,
+          645.1,
+          715.5,
+          120
+        ],
+        [
+          7,
+          646,
+          760.7,
+          120
+        ],
+        [
+          8,
+          591.6,
+          437.1,
+          120
+        ],
+        [
+          9,
+          589.7,
+          484.29999999999995,
+          120
+        ],
+        [
+          10,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          760.8,
+          120
+        ],
+        [
+          101,
+          757,
+          715.4,
+          120
+        ],
+        [
+          102,
+          754.2,
+          667.9,
+          120
+        ],
+        [
+          103,
+          754.6,
+          622.2,
+          120
+        ],
+        [
+          104,
+          755.3,
+          577.9,
+          120
+        ],
+        [
+          105,
+          756.5,
+          529.3,
+          120
+        ],
+        [
+          106,
+          754.9,
+          484.5,
+          120
+        ],
+        [
+          107,
+          754,
+          439.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.04413829787234044,
+      "score": -0.04143421702617919,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.04143421702617919,
+      "contact": 803.5,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.5255773588118916,
+        "loss": 155.26694584223213,
+        "fatigue": 6.948782221905275,
+        "strain": 26.901895747494727,
+        "morale": 67.63101969685806,
+        "cohesion": 66.80214917272984,
+        "contacts": 402.25,
+        "routs": 1,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.5909499351284442,
+        "loss": 167.3877022124447,
+        "fatigue": 10.74294867594367,
+        "strain": 21.72811221002112,
+        "morale": 70.97258164988234,
+        "cohesion": 69.80494517690539,
+        "contacts": 401.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-3",
+      "suite": "material",
+      "seed": 47,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 2928,
+      "ratioActual": 2.9047619047619047,
+      "initialPositions": [
+        [
+          0,
+          644,
+          439.20000000000005,
+          120
+        ],
+        [
+          1,
+          643,
+          484.6,
+          120
+        ],
+        [
+          2,
+          645.8,
+          532.1,
+          120
+        ],
+        [
+          3,
+          645.4,
+          577.8,
+          120
+        ],
+        [
+          4,
+          644.7,
+          622.1,
+          120
+        ],
+        [
+          5,
+          643.5,
+          670.7,
+          120
+        ],
+        [
+          6,
+          645.1,
+          715.5,
+          120
+        ],
+        [
+          7,
+          646,
+          760.7,
+          120
+        ],
+        [
+          8,
+          591.6,
+          437.1,
+          120
+        ],
+        [
+          9,
+          589.7,
+          484.29999999999995,
+          120
+        ],
+        [
+          10,
+          588,
+          533,
+          120
+        ],
+        [
+          11,
+          591.6,
+          577.5,
+          120
+        ],
+        [
+          12,
+          590.1,
+          621.1,
+          120
+        ],
+        [
+          13,
+          588.6,
+          669.7,
+          120
+        ],
+        [
+          14,
+          590.1,
+          713.6,
+          120
+        ],
+        [
+          15,
+          591.8,
+          760.3,
+          120
+        ],
+        [
+          16,
+          535.6,
+          440.5,
+          120
+        ],
+        [
+          17,
+          535.7,
+          487,
+          120
+        ],
+        [
+          18,
+          536.5,
+          532.2,
+          120
+        ],
+        [
+          19,
+          533.8,
+          576.8,
+          120
+        ],
+        [
+          20,
+          535.6,
+          624.6,
+          120
+        ],
+        [
+          21,
+          536.6,
+          670.9,
+          120
+        ],
+        [
+          22,
+          534.9,
+          713.5,
+          120
+        ],
+        [
+          23,
+          536,
+          760.2,
+          120
+        ],
+        [
+          24,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          760.8,
+          120
+        ],
+        [
+          101,
+          757,
+          715.4,
+          120
+        ],
+        [
+          102,
+          754.2,
+          667.9,
+          120
+        ],
+        [
+          103,
+          754.6,
+          622.2,
+          120
+        ],
+        [
+          104,
+          755.3,
+          577.9,
+          120
+        ],
+        [
+          105,
+          756.5,
+          529.3,
+          120
+        ],
+        [
+          106,
+          754.9,
+          484.5,
+          120
+        ],
+        [
+          107,
+          754,
+          439.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.7523902439024391,
+      "score": -0.7899976572590759,
+      "result": "challenger",
+      "reason": "combat-readiness",
+      "policyBScore": 0.7899976572590759,
+      "contact": 1065.25,
+      "rounds": 4,
+      "time": 117.75,
+      "reference": {
+        "power": 0.14186397888625404,
+        "loss": 153.45072281672856,
+        "fatigue": 11.270372417874073,
+        "strain": 31.030329839667154,
+        "morale": 27.8537801562926,
+        "cohesion": 39.63930774922416,
+        "contacts": 529,
+        "routs": 6,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.7657713113194653,
+        "loss": 127.43237167878368,
+        "fatigue": 7.959391955334143,
+        "strain": 7.929897801395578,
+        "morale": 77.84957416683348,
+        "cohesion": 88.38946070069552,
+        "contacts": 536.25,
+        "routs": 2,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-policy-1.5",
+      "suite": "material",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1488,
+      "ratioActual": 1.4761904761904763,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.29999999999995,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          589.6,
+          438.9,
+          120
+        ],
+        [
+          9,
+          590.7,
+          484.6,
+          120
+        ],
+        [
+          10,
+          588.5,
+          531.9,
+          120
+        ],
+        [
+          11,
+          591.1,
+          575.1,
+          120
+        ],
+        [
+          12,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.6297884615384617,
+      "score": -0.701609924021542,
+      "result": "challenger",
+      "reason": "combat-readiness",
+      "policyBScore": -0.701609924021542,
+      "contact": 1166.5,
+      "rounds": 7,
+      "time": 181,
+      "reference": {
+        "power": 0.12910260501646859,
+        "loss": 187.63523397502018,
+        "fatigue": 14.82218504854355,
+        "strain": 26.588232390061716,
+        "morale": 24.986898063456792,
+        "cohesion": 28.67979044958425,
+        "contacts": 583.75,
+        "routs": 7,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.6525975388190545,
+        "loss": 108.9426355513182,
+        "fatigue": 8.521827254842261,
+        "strain": 17.121063625056983,
+        "morale": 73.02177938060564,
+        "cohesion": 70.5938667937568,
+        "contacts": 582.75,
+        "routs": 1,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-policy-2",
+      "suite": "material",
+      "seed": 91,
+      "mirror": false,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1968,
+      "ratioActual": 1.9523809523809523,
+      "initialPositions": [
+        [
+          0,
+          644.1,
+          439.1,
+          120
+        ],
+        [
+          1,
+          643.5,
+          483.1,
+          120
+        ],
+        [
+          2,
+          643.1,
+          531.7,
+          120
+        ],
+        [
+          3,
+          645.3,
+          575,
+          120
+        ],
+        [
+          4,
+          646.2,
+          624.2,
+          120
+        ],
+        [
+          5,
+          643.3,
+          667.2,
+          120
+        ],
+        [
+          6,
+          645,
+          715,
+          120
+        ],
+        [
+          7,
+          646.1,
+          762.7,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          755.9,
+          760.9,
+          120
+        ],
+        [
+          101,
+          756.5,
+          716.9,
+          120
+        ],
+        [
+          102,
+          756.9,
+          668.3,
+          120
+        ],
+        [
+          103,
+          754.7,
+          625,
+          120
+        ],
+        [
+          104,
+          753.8,
+          575.8,
+          120
+        ],
+        [
+          105,
+          756.7,
+          532.8,
+          120
+        ],
+        [
+          106,
+          755,
+          485,
+          120
+        ],
+        [
+          107,
+          753.9,
+          437.29999999999995,
+          120
+        ],
+        [
+          108,
+          809.4,
+          760.2,
+          120
+        ],
+        [
+          109,
+          809.8,
+          715.6,
+          120
+        ],
+        [
+          110,
+          810.3,
+          668,
+          120
+        ],
+        [
+          111,
+          810.4,
+          621.9,
+          120
+        ],
+        [
+          112,
+          809.2,
+          577.1,
+          120
+        ],
+        [
+          113,
+          809.9,
+          531.3,
+          120
+        ],
+        [
+          114,
+          811.4,
+          485.79999999999995,
+          120
+        ],
+        [
+          115,
+          808.7,
+          440.4,
+          120
+        ],
+        [
+          116,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.6838387096774194,
+      "score": -0.7117786608183997,
+      "result": "challenger",
+      "reason": "time-limit",
+      "policyBScore": -0.7117786608183997,
+      "contact": 1070,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.1771632081290861,
+        "loss": 153.3784291209069,
+        "fatigue": 19.999748616461737,
+        "strain": 17.640264908282937,
+        "morale": 27.39241716754413,
+        "cohesion": 26.066621540182748,
+        "contacts": 531.75,
+        "routs": 4,
+        "blocked": 25,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.6343885792715797,
+        "loss": 68.09033379070067,
+        "fatigue": 12.559588312112723,
+        "strain": 8.891980804875981,
+        "morale": 83.40572876829019,
+        "cohesion": 50.4742600678978,
+        "contacts": 538.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-policy",
+      "suite": "terrain",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge-elevation-only",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.29999999999995,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": -0.6294809952465439,
+      "result": "challenger",
+      "reason": "time-limit",
+      "policyBScore": 0.6294809952465439,
+      "contact": 1303.25,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.2015222211387883,
+        "loss": 205.24237338394374,
+        "fatigue": 18.977547178357064,
+        "strain": 27.923156887094294,
+        "morale": 30.76806802860665,
+        "cohesion": 37.566969802542474,
+        "contacts": 673,
+        "routs": 5,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.5547710889012051,
+        "loss": 162.9480896110668,
+        "fatigue": 11.551471719139693,
+        "strain": 19.758958967769036,
+        "morale": 75.71830121067798,
+        "cohesion": 77.56825345070212,
+        "contacts": 630.25,
+        "routs": 1,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "reserve",
+      "suite": "tactics",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.29999999999995,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": -0.013269162258854703,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.013269162258854703,
+      "contact": 103,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.8038378442163754,
+        "loss": 5.297156884764064,
+        "fatigue": 3.689383361682756,
+        "strain": 2.6460667350934353,
+        "morale": 79.14250633237617,
+        "cohesion": 94.70761893304123,
+        "contacts": 51.5,
+        "routs": 1,
+        "blocked": 1043.5,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.862811898700174,
+        "loss": 7.496299369670993,
+        "fatigue": 2.046430722026382,
+        "strain": 2.2520454367960405,
+        "morale": 84.28886352096472,
+        "cohesion": 92.71199975530912,
+        "contacts": 51.5,
+        "routs": 0,
+        "blocked": 967,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "reserve",
+      "suite": "tactics",
+      "seed": 11,
+      "mirror": true,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.29999999999995,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 0.013269162258854855,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.013269162258854855,
+      "contact": 103,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.8628118987001746,
+        "loss": 7.4962993696706235,
+        "fatigue": 2.0464307220263835,
+        "strain": 2.252045436796015,
+        "morale": 84.2888635209648,
+        "cohesion": 92.71199975530912,
+        "contacts": 51.5,
+        "routs": 0,
+        "blocked": 967,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.8038378442163753,
+        "loss": 5.297156884763794,
+        "fatigue": 3.689383361682758,
+        "strain": 2.6460667350934255,
+        "morale": 79.14250633237619,
+        "cohesion": 94.70761893304126,
+        "contacts": 51.5,
+        "routs": 1,
+        "blocked": 1043.5,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-1.25",
+      "suite": "material",
+      "seed": 91,
+      "mirror": false,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1248,
+      "ratioActual": 1.2380952380952381,
+      "initialPositions": [
+        [
+          0,
+          644.1,
+          439.1,
+          120
+        ],
+        [
+          1,
+          643.5,
+          483.1,
+          120
+        ],
+        [
+          2,
+          643.1,
+          531.7,
+          120
+        ],
+        [
+          3,
+          645.3,
+          575,
+          120
+        ],
+        [
+          4,
+          646.2,
+          624.2,
+          120
+        ],
+        [
+          5,
+          643.3,
+          667.2,
+          120
+        ],
+        [
+          6,
+          645,
+          715,
+          120
+        ],
+        [
+          7,
+          646.1,
+          762.7,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          755.9,
+          760.9,
+          120
+        ],
+        [
+          101,
+          756.5,
+          716.9,
+          120
+        ],
+        [
+          102,
+          756.9,
+          668.3,
+          120
+        ],
+        [
+          103,
+          754.7,
+          625,
+          120
+        ],
+        [
+          104,
+          753.8,
+          575.8,
+          120
+        ],
+        [
+          105,
+          756.7,
+          532.8,
+          120
+        ],
+        [
+          106,
+          755,
+          485,
+          120
+        ],
+        [
+          107,
+          753.9,
+          437.29999999999995,
+          120
+        ],
+        [
+          108,
+          809.4,
+          760.2,
+          120
+        ],
+        [
+          109,
+          809.8,
+          715.6,
+          120
+        ],
+        [
+          110,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.04413829787234044,
+      "score": -0.04102885299961174,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.04102885299961174,
+      "contact": 805.25,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.5182113783170669,
+        "loss": 155.65184091544404,
+        "fatigue": 6.889122162453977,
+        "strain": 26.829647475110555,
+        "morale": 65.053286871578,
+        "cohesion": 67.67266332019025,
+        "contacts": 403.75,
+        "routs": 1,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.5833721039382934,
+        "loss": 168.3366225109027,
+        "fatigue": 10.708762547169494,
+        "strain": 21.743308503158435,
+        "morale": 68.53468883604695,
+        "cohesion": 70.35670766549059,
+        "contacts": 401.5,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-1.25",
+      "suite": "material",
+      "seed": 91,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1248,
+      "ratioActual": 1.2380952380952381,
+      "initialPositions": [
+        [
+          0,
+          644.1,
+          439.1,
+          120
+        ],
+        [
+          1,
+          643.5,
+          483.1,
+          120
+        ],
+        [
+          2,
+          643.1,
+          531.7,
+          120
+        ],
+        [
+          3,
+          645.3,
+          575,
+          120
+        ],
+        [
+          4,
+          646.2,
+          624.2,
+          120
+        ],
+        [
+          5,
+          643.3,
+          667.2,
+          120
+        ],
+        [
+          6,
+          645,
+          715,
+          120
+        ],
+        [
+          7,
+          646.1,
+          762.7,
+          120
+        ],
+        [
+          8,
+          590.6,
+          439.79999999999995,
+          120
+        ],
+        [
+          9,
+          590.2,
+          484.4,
+          120
+        ],
+        [
+          10,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          755.9,
+          760.9,
+          120
+        ],
+        [
+          101,
+          756.5,
+          716.9,
+          120
+        ],
+        [
+          102,
+          756.9,
+          668.3,
+          120
+        ],
+        [
+          103,
+          754.7,
+          625,
+          120
+        ],
+        [
+          104,
+          753.8,
+          575.8,
+          120
+        ],
+        [
+          105,
+          756.7,
+          532.8,
+          120
+        ],
+        [
+          106,
+          755,
+          485,
+          120
+        ],
+        [
+          107,
+          753.9,
+          437.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.04413829787234044,
+      "score": -0.04102885299961174,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0.04102885299961174,
+      "contact": 805.25,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.5182113783170667,
+        "loss": 155.65184091544432,
+        "fatigue": 6.889122162453976,
+        "strain": 26.829647475110562,
+        "morale": 65.05328687157798,
+        "cohesion": 67.67266332019025,
+        "contacts": 403.75,
+        "routs": 1,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.5833721039382933,
+        "loss": 168.33662251090288,
+        "fatigue": 10.708762547169496,
+        "strain": 21.74330850315845,
+        "morale": 68.53468883604693,
+        "cohesion": 70.3567076654906,
+        "contacts": 401.5,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-3",
+      "suite": "material",
+      "seed": 91,
+      "mirror": true,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 2928,
+      "ratioActual": 2.9047619047619047,
+      "initialPositions": [
+        [
+          0,
+          644.1,
+          439.1,
+          120
+        ],
+        [
+          1,
+          643.5,
+          483.1,
+          120
+        ],
+        [
+          2,
+          643.1,
+          531.7,
+          120
+        ],
+        [
+          3,
+          645.3,
+          575,
+          120
+        ],
+        [
+          4,
+          646.2,
+          624.2,
+          120
+        ],
+        [
+          5,
+          643.3,
+          667.2,
+          120
+        ],
+        [
+          6,
+          645,
+          715,
+          120
+        ],
+        [
+          7,
+          646.1,
+          762.7,
+          120
+        ],
+        [
+          8,
+          590.6,
+          439.79999999999995,
+          120
+        ],
+        [
+          9,
+          590.2,
+          484.4,
+          120
+        ],
+        [
+          10,
+          589.7,
+          532,
+          120
+        ],
+        [
+          11,
+          589.6,
+          578.1,
+          120
+        ],
+        [
+          12,
+          590.8,
+          622.9,
+          120
+        ],
+        [
+          13,
+          590.1,
+          668.7,
+          120
+        ],
+        [
+          14,
+          588.6,
+          714.2,
+          120
+        ],
+        [
+          15,
+          591.3,
+          759.6,
+          120
+        ],
+        [
+          16,
+          533.1,
+          439.20000000000005,
+          120
+        ],
+        [
+          17,
+          533.6,
+          485.4,
+          120
+        ],
+        [
+          18,
+          535.2,
+          532.9,
+          120
+        ],
+        [
+          19,
+          535.9,
+          578.6,
+          120
+        ],
+        [
+          20,
+          536.5,
+          621.2,
+          120
+        ],
+        [
+          21,
+          535.1,
+          668.9,
+          120
+        ],
+        [
+          22,
+          533.2,
+          713.3,
+          120
+        ],
+        [
+          23,
+          533.9,
+          762.8,
+          120
+        ],
+        [
+          24,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          755.9,
+          760.9,
+          120
+        ],
+        [
+          101,
+          756.5,
+          716.9,
+          120
+        ],
+        [
+          102,
+          756.9,
+          668.3,
+          120
+        ],
+        [
+          103,
+          754.7,
+          625,
+          120
+        ],
+        [
+          104,
+          753.8,
+          575.8,
+          120
+        ],
+        [
+          105,
+          756.7,
+          532.8,
+          120
+        ],
+        [
+          106,
+          755,
+          485,
+          120
+        ],
+        [
+          107,
+          753.9,
+          437.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.7523902439024391,
+      "score": -0.8122619458700666,
+      "result": "challenger",
+      "reason": "combat-readiness",
+      "policyBScore": 0.8122619458700666,
+      "contact": 851,
+      "rounds": 4,
+      "time": 117.75,
+      "reference": {
+        "power": 0.14650774907218833,
+        "loss": 124.75308797470976,
+        "fatigue": 11.714858254333759,
+        "strain": 22.04302879049373,
+        "morale": 22.80669195997863,
+        "cohesion": 35.56314899884946,
+        "contacts": 407,
+        "routs": 7,
+        "blocked": 21.75,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.8338789723161255,
+        "loss": 77.87674297833092,
+        "fatigue": 7.702423475579276,
+        "strain": 4.861391573488203,
+        "morale": 85.04169629120736,
+        "cohesion": 87.27260852267112,
+        "contacts": 444,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-policy-1.5",
+      "suite": "material",
+      "seed": 47,
+      "mirror": false,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1488,
+      "ratioActual": 1.4761904761904763,
+      "initialPositions": [
+        [
+          0,
+          644,
+          439.2,
+          120
+        ],
+        [
+          1,
+          643,
+          484.6,
+          120
+        ],
+        [
+          2,
+          645.8,
+          532.1,
+          120
+        ],
+        [
+          3,
+          645.4,
+          577.8,
+          120
+        ],
+        [
+          4,
+          644.7,
+          622.1,
+          120
+        ],
+        [
+          5,
+          643.5,
+          670.7,
+          120
+        ],
+        [
+          6,
+          645.1,
+          715.5,
+          120
+        ],
+        [
+          7,
+          646,
+          760.7,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          760.8,
+          120
+        ],
+        [
+          101,
+          757,
+          715.4,
+          120
+        ],
+        [
+          102,
+          754.2,
+          667.9,
+          120
+        ],
+        [
+          103,
+          754.6,
+          622.2,
+          120
+        ],
+        [
+          104,
+          755.3,
+          577.9,
+          120
+        ],
+        [
+          105,
+          756.5,
+          529.3,
+          120
+        ],
+        [
+          106,
+          754.9,
+          484.5,
+          120
+        ],
+        [
+          107,
+          754,
+          439.29999999999995,
+          120
+        ],
+        [
+          108,
+          808.4,
+          762.9,
+          120
+        ],
+        [
+          109,
+          810.3,
+          715.7,
+          120
+        ],
+        [
+          110,
+          812,
+          667,
+          120
+        ],
+        [
+          111,
+          808.4,
+          622.5,
+          120
+        ],
+        [
+          112,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.6297884615384617,
+      "score": -0.712320229820639,
+      "result": "challenger",
+      "reason": "combat-readiness",
+      "policyBScore": -0.712320229820639,
+      "contact": 1152.75,
+      "rounds": 7,
+      "time": 191.75,
+      "reference": {
+        "power": 0.1388779336571093,
+        "loss": 182.8285362127183,
+        "fatigue": 15.325634504875772,
+        "strain": 24.36249706477737,
+        "morale": 26.876043070034566,
+        "cohesion": 28.516730655670067,
+        "contacts": 566.75,
+        "routs": 6,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.6991432561815707,
+        "loss": 87.40980678251134,
+        "fatigue": 9.314777533725497,
+        "strain": 16.68031070684472,
+        "morale": 81.68832894345489,
+        "cohesion": 70.02571476501454,
+        "contacts": 586,
+        "routs": 0,
+        "blocked": 1,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-policy-2",
+      "suite": "material",
+      "seed": 91,
+      "mirror": true,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1968,
+      "ratioActual": 1.9523809523809523,
+      "initialPositions": [
+        [
+          0,
+          644.1,
+          439.1,
+          120
+        ],
+        [
+          1,
+          643.5,
+          483.1,
+          120
+        ],
+        [
+          2,
+          643.1,
+          531.7,
+          120
+        ],
+        [
+          3,
+          645.3,
+          575,
+          120
+        ],
+        [
+          4,
+          646.2,
+          624.2,
+          120
+        ],
+        [
+          5,
+          643.3,
+          667.2,
+          120
+        ],
+        [
+          6,
+          645,
+          715,
+          120
+        ],
+        [
+          7,
+          646.1,
+          762.7,
+          120
+        ],
+        [
+          8,
+          590.6,
+          439.79999999999995,
+          120
+        ],
+        [
+          9,
+          590.2,
+          484.4,
+          120
+        ],
+        [
+          10,
+          589.7,
+          532,
+          120
+        ],
+        [
+          11,
+          589.6,
+          578.1,
+          120
+        ],
+        [
+          12,
+          590.8,
+          622.9,
+          120
+        ],
+        [
+          13,
+          590.1,
+          668.7,
+          120
+        ],
+        [
+          14,
+          588.6,
+          714.2,
+          120
+        ],
+        [
+          15,
+          591.3,
+          759.6,
+          120
+        ],
+        [
+          16,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          755.9,
+          760.9,
+          120
+        ],
+        [
+          101,
+          756.5,
+          716.9,
+          120
+        ],
+        [
+          102,
+          756.9,
+          668.3,
+          120
+        ],
+        [
+          103,
+          754.7,
+          625,
+          120
+        ],
+        [
+          104,
+          753.8,
+          575.8,
+          120
+        ],
+        [
+          105,
+          756.7,
+          532.8,
+          120
+        ],
+        [
+          106,
+          755,
+          485,
+          120
+        ],
+        [
+          107,
+          753.9,
+          437.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.6838387096774194,
+      "score": -0.7117786608183997,
+      "result": "challenger",
+      "reason": "time-limit",
+      "policyBScore": -0.7117786608183997,
+      "contact": 1070,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.17716320812908665,
+        "loss": 153.37842912090633,
+        "fatigue": 19.99974861646174,
+        "strain": 17.64026490828292,
+        "morale": 27.39241716754422,
+        "cohesion": 26.066621540182794,
+        "contacts": 531.75,
+        "routs": 4,
+        "blocked": 25,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.6343885792715798,
+        "loss": 68.09033379070019,
+        "fatigue": 12.559588312112723,
+        "strain": 8.891980804875983,
+        "morale": 83.4057287682902,
+        "cohesion": 50.4742600678978,
+        "contacts": 538.25,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "numbers-policy-3",
+      "suite": "material",
+      "seed": 91,
+      "mirror": true,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 1,
+      "challengerSide": 0,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 2928,
+      "ratioActual": 2.9047619047619047,
+      "initialPositions": [
+        [
+          0,
+          644.1,
+          439.1,
+          120
+        ],
+        [
+          1,
+          643.5,
+          483.1,
+          120
+        ],
+        [
+          2,
+          643.1,
+          531.7,
+          120
+        ],
+        [
+          3,
+          645.3,
+          575,
+          120
+        ],
+        [
+          4,
+          646.2,
+          624.2,
+          120
+        ],
+        [
+          5,
+          643.3,
+          667.2,
+          120
+        ],
+        [
+          6,
+          645,
+          715,
+          120
+        ],
+        [
+          7,
+          646.1,
+          762.7,
+          120
+        ],
+        [
+          8,
+          590.6,
+          439.79999999999995,
+          120
+        ],
+        [
+          9,
+          590.2,
+          484.4,
+          120
+        ],
+        [
+          10,
+          589.7,
+          532,
+          120
+        ],
+        [
+          11,
+          589.6,
+          578.1,
+          120
+        ],
+        [
+          12,
+          590.8,
+          622.9,
+          120
+        ],
+        [
+          13,
+          590.1,
+          668.7,
+          120
+        ],
+        [
+          14,
+          588.6,
+          714.2,
+          120
+        ],
+        [
+          15,
+          591.3,
+          759.6,
+          120
+        ],
+        [
+          16,
+          533.1,
+          439.20000000000005,
+          120
+        ],
+        [
+          17,
+          533.6,
+          485.4,
+          120
+        ],
+        [
+          18,
+          535.2,
+          532.9,
+          120
+        ],
+        [
+          19,
+          535.9,
+          578.6,
+          120
+        ],
+        [
+          20,
+          536.5,
+          621.2,
+          120
+        ],
+        [
+          21,
+          535.1,
+          668.9,
+          120
+        ],
+        [
+          22,
+          533.2,
+          713.3,
+          120
+        ],
+        [
+          23,
+          533.9,
+          762.8,
+          120
+        ],
+        [
+          24,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          755.9,
+          760.9,
+          120
+        ],
+        [
+          101,
+          756.5,
+          716.9,
+          120
+        ],
+        [
+          102,
+          756.9,
+          668.3,
+          120
+        ],
+        [
+          103,
+          754.7,
+          625,
+          120
+        ],
+        [
+          104,
+          753.8,
+          575.8,
+          120
+        ],
+        [
+          105,
+          756.7,
+          532.8,
+          120
+        ],
+        [
+          106,
+          755,
+          485,
+          120
+        ],
+        [
+          107,
+          753.9,
+          437.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": -0.7523902439024391,
+      "score": -0.785686967158174,
+      "result": "challenger",
+      "reason": "time-limit",
+      "policyBScore": -0.785686967158174,
+      "contact": 1109.25,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.173956794026758,
+        "loss": 146.92136364999078,
+        "fatigue": 19.022247483307048,
+        "strain": 12.829613740564792,
+        "morale": 38.956013180746,
+        "cohesion": 23.487412378593373,
+        "contacts": 543.75,
+        "routs": 6,
+        "blocked": 14,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.7639425504744308,
+        "loss": 65.1036041969167,
+        "fatigue": 13.678186421414367,
+        "strain": 3.63880451930775,
+        "morale": 86.71210912962103,
+        "cohesion": 71.039400899999,
+        "contacts": 565.5,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "factor": "ridge-policy",
+      "suite": "terrain",
+      "seed": 47,
+      "mirror": false,
+      "swapPolicies": true,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "ridge-elevation-only",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          439.2,
+          120
+        ],
+        [
+          1,
+          643,
+          484.6,
+          120
+        ],
+        [
+          2,
+          645.8,
+          532.1,
+          120
+        ],
+        [
+          3,
+          645.4,
+          577.8,
+          120
+        ],
+        [
+          4,
+          644.7,
+          622.1,
+          120
+        ],
+        [
+          5,
+          643.5,
+          670.7,
+          120
+        ],
+        [
+          6,
+          645.1,
+          715.5,
+          120
+        ],
+        [
+          7,
+          646,
+          760.7,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          760.8,
+          120
+        ],
+        [
+          101,
+          757,
+          715.4,
+          120
+        ],
+        [
+          102,
+          754.2,
+          667.9,
+          120
+        ],
+        [
+          103,
+          754.6,
+          622.2,
+          120
+        ],
+        [
+          104,
+          755.3,
+          577.9,
+          120
+        ],
+        [
+          105,
+          756.5,
+          529.3,
+          120
+        ],
+        [
+          106,
+          754.9,
+          484.5,
+          120
+        ],
+        [
+          107,
+          754,
+          439.29999999999995,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": -0.5728969666806322,
+      "result": "challenger",
+      "reason": "time-limit",
+      "policyBScore": -0.5728969666806322,
+      "contact": 1083,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.326901356158007,
+        "loss": 118.05415012567732,
+        "fatigue": 21.480086267093043,
+        "strain": 10.177579715550928,
+        "morale": 61.860411837610485,
+        "cohesion": 35.41565218345093,
+        "contacts": 537.5,
+        "routs": 3,
+        "blocked": 15,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.428665652516372,
+        "loss": 98.0862348120807,
+        "fatigue": 22.084338143124455,
+        "strain": 9.247299693653968,
+        "morale": 63.58023032186822,
+        "cohesion": 66.09125542117218,
+        "contacts": 545.5,
+        "routs": 5,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    }
+  ],
+  "errors": []
+}

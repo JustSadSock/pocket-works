@@ -1,0 +1,337 @@
+{
+  "protocol": "paired-control-v2",
+  "engineCommit": "8ce73ccc09880eefe53b1e69028c5cb0c2fe6f7d",
+  "sourceRun": 45499591776,
+  "sourceArtifact": 14969383349,
+  "artifactSha256": "b41ff3f1faa936afbe4e9b8bd129237bec14b4481143b8477b24c64b219b8d30",
+  "completed": 174,
+  "expected": 174,
+  "groups": {
+    "standard-control": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 6,
+      "noContact": 0,
+      "contactSeconds": 4836,
+      "reasons": {
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "legacy-control": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 6,
+      "noContact": 0,
+      "contactSeconds": 7698,
+      "reasons": {
+        "time-limit": 4,
+        "combat-readiness": 2
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "historical-control": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 6,
+      "noContact": 6,
+      "contactSeconds": 0,
+      "reasons": {
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "historical-contact-control": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 6,
+      "noContact": 0,
+      "contactSeconds": 838,
+      "reasons": {
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "legacy-modern": {
+      "trials": 12,
+      "reference": 4,
+      "challenger": 4,
+      "draw": 4,
+      "noContact": 0,
+      "contactSeconds": 15442,
+      "reasons": {
+        "time-limit": 12
+      },
+      "policyWins": {
+        "legacy": 8,
+        "modern": 0,
+        "draw": 4
+      }
+    },
+    "historical-style": {
+      "trials": 12,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 12,
+      "noContact": 12,
+      "contactSeconds": 0,
+      "reasons": {
+        "time-limit": 12
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "historical-style-contact": {
+      "trials": 12,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 12,
+      "noContact": 0,
+      "contactSeconds": 1676,
+      "reasons": {
+        "time-limit": 12
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "numbers-1.25": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 6,
+      "noContact": 0,
+      "contactSeconds": 4815,
+      "reasons": {
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "numbers-1.5": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 6,
+      "draw": 0,
+      "noContact": 0,
+      "contactSeconds": 7175.5,
+      "reasons": {
+        "time-limit": 4,
+        "combat-readiness": 2
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "numbers-2": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 6,
+      "draw": 0,
+      "noContact": 0,
+      "contactSeconds": 7129.5,
+      "reasons": {
+        "combat-readiness": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "numbers-3": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 6,
+      "draw": 0,
+      "noContact": 0,
+      "contactSeconds": 5501,
+      "reasons": {
+        "combat-readiness": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "numbers-policy-1.25": {
+      "trials": 12,
+      "reference": 0,
+      "challenger": 8,
+      "draw": 4,
+      "noContact": 0,
+      "contactSeconds": 16375.5,
+      "reasons": {
+        "combat-readiness": 8,
+        "time-limit": 4
+      },
+      "policyWins": {
+        "legacy": 2,
+        "modern": 6,
+        "draw": 4
+      }
+    },
+    "numbers-policy-1.5": {
+      "trials": 12,
+      "reference": 0,
+      "challenger": 12,
+      "draw": 0,
+      "noContact": 0,
+      "contactSeconds": 13527.5,
+      "reasons": {
+        "combat-readiness": 12
+      },
+      "policyWins": {
+        "legacy": 6,
+        "modern": 6,
+        "draw": 0
+      }
+    },
+    "numbers-policy-2": {
+      "trials": 12,
+      "reference": 0,
+      "challenger": 12,
+      "draw": 0,
+      "noContact": 0,
+      "contactSeconds": 12968,
+      "reasons": {
+        "combat-readiness": 8,
+        "time-limit": 4
+      },
+      "policyWins": {
+        "legacy": 6,
+        "modern": 6,
+        "draw": 0
+      }
+    },
+    "numbers-policy-3": {
+      "trials": 12,
+      "reference": 0,
+      "challenger": 12,
+      "draw": 0,
+      "noContact": 0,
+      "contactSeconds": 12774,
+      "reasons": {
+        "combat-readiness": 6,
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 6,
+        "modern": 6,
+        "draw": 0
+      }
+    },
+    "equipment": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 6,
+      "noContact": 0,
+      "contactSeconds": 4762,
+      "reasons": {
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "organization": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 6,
+      "noContact": 6,
+      "contactSeconds": 0,
+      "reasons": {
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "ridge-control": {
+      "trials": 6,
+      "reference": 0,
+      "challenger": 2,
+      "draw": 4,
+      "noContact": 0,
+      "contactSeconds": 3936,
+      "reasons": {
+        "time-limit": 6
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    },
+    "ridge-policy": {
+      "trials": 12,
+      "reference": 6,
+      "challenger": 6,
+      "draw": 0,
+      "noContact": 0,
+      "contactSeconds": 14451,
+      "reasons": {
+        "time-limit": 12
+      },
+      "policyWins": {
+        "legacy": 4,
+        "modern": 8,
+        "draw": 0
+      }
+    },
+    "reserve": {
+      "trials": 12,
+      "reference": 0,
+      "challenger": 0,
+      "draw": 12,
+      "noContact": 0,
+      "contactSeconds": 1598,
+      "reasons": {
+        "time-limit": 12
+      },
+      "policyWins": {
+        "legacy": 0,
+        "modern": 0,
+        "draw": 0
+      }
+    }
+  },
+  "missing": []
+}
