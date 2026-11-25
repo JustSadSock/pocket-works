@@ -9,6 +9,7 @@ import {checkRun} from './verified-cross-commit.mjs';
 import {compareInputs} from './verified-input-impact.mjs';
 import {verdict} from './canary-evidence.mjs';
 const sha=/^[0-9a-f]{40}$/;
+export const REPLAY_WORKFLOW='.github/workflows/verified-reuse-replay.yml';
 const git=(root,args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
 const fallback=reason=>({schema:1,decision:'execute',reason,productionAuthorization:false});
 export function admitTrial(root,priorRun,bundle,target,environment,now=Date.now()){
