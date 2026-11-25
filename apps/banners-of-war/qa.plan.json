@@ -74,7 +74,8 @@
       "kind": "playwright",
       "tier": "smoke",
       "files": [
-        "qa/journey.spec.ts"
+        "qa/journey.spec.ts",
+        "qa/overhaul.spec.ts"
       ]
     },
     {

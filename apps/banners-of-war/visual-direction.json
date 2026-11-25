@@ -56,6 +56,11 @@
         "slug": "kaskad-patterns",
         "spatialDifference": "The map holds two colored armies and a contextual ledger rather than adjacent mathematical specimens.",
         "interactionDifference": "An ordered unit trajectory is resolved by a timed tactical engine instead of editing discrete automaton rules."
+      },
+      {
+        "slug": "pereves",
+        "spatialDifference": "Pereves uses a suspended sculpture and a discrete weight tray in an open exhibition. Banners is a continuous physical battlefield with an explicitly separate planning overlay.",
+        "interactionDifference": "Pereves places masses in fixed lever slots and shows equilibrium; Banners selects regiments, draws world-coordinate paths and evaluates a simultaneous turn without teleported units."
       }
     ]
   },

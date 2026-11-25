@@ -12,6 +12,11 @@
       "slug": "palimpsest-atlas",
       "evidence": "apps/palimpsest-atlas/visual-direction.json; architecture and composition reviewed; screenshots not available for comparison",
       "lesson": "A permanent timeline beneath an inset map serves documented history but duplicates the earlier Banners layout; keep the world continuous beneath contextual controls."
+    },
+    {
+      "slug": "pereves",
+      "evidence": "apps/pereves/visual-direction.json and README.md reviewed 2026-11-25",
+      "lesson": "Maintain a single dominant physical scene, but distinguish temporary tactical drafts from committed physical changes; do not transplant the sculpture's discrete placement interaction."
     }
   ],
   "references": [
