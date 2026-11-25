@@ -11,6 +11,7 @@ const APP_SHELL = [
   './styles.css',
   './app.js',
   './world.mjs',
+  './world-genesis.mjs',
   './battle.mjs',
   './render.mjs',
   './geography-review.mjs',
