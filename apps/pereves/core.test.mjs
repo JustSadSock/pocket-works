@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {levels,slots,pieces,payload,valid,evaluate,place,solve} from './core.mjs';
+for(const l of levels)test(l.name+' has a solvable arrangement',()=>{let p={};for(const [id,s] of Object.entries(solve(l)))p=place(l,p,id,s);assert.ok(evaluate(l,p).win);assert.ok(!evaluate(l,{}).win);assert.ok(valid(l,p));});
+test('occupied slots swap and can be cleared',()=>{const l=levels[0];let p=place(l,{},'0-0',-1);p=place(l,p,'0-1',2);p=place(l,p,'0-0',2);assert.deepEqual(p,{'0-0':2,'0-1':-1});p=place(l,p,'0-0',null);assert.deepEqual(p,{'0-1':-1});});
+test('reserved child anchor and invalid state',()=>{const l=levels[1];assert.deepEqual(place(l,{},'0-0',-2),{});assert.equal(valid(l,{'0-0':1,'0-1':1}),false);assert.equal(evaluate(l,{}).torque[0],-12);assert.equal(payload(l),6)});
