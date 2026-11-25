@@ -7,7 +7,7 @@ pages={};entries={};W=1024;H=1024
 page=Image.new("RGBA",(W,H));x=y=row=0;idx=0
 for name,record in frames.items():
     im=Image.open(out/(name+".png")).convert("RGBA")
-    mask=Image.open(out/(name+"-body.png")).convert("RGBA")
+    mask=Image.open(out/record.get("bodyMask",name+"-body.png")).convert("RGBA")
     box=im.getchannel("A").getbbox();body=mask.getchannel("A").getbbox()
     if not box or not body:raise ValueError("empty render "+name)
     l,t,r,b=box;l=max(0,l-2);t=max(0,t-2);r=min(im.width,r+2);b=min(im.height,b+2)
@@ -16,8 +16,8 @@ for name,record in frames.items():
     if y+ch>H:
         page.save(out/f"page-{idx}.png",optimize=True);pages[str(idx)]={"width":W,"height":H};idx+=1;page=Image.new("RGBA",(W,H));x=y=row=0
     page.paste(crop,(x,y))
-    side,heading,pose=name.split("-")
-    entries[f"{side}:{heading}:{pose}"]={"page":idx,"rect":[x,y,cw,ch],"anchor":[record["anchor"][0]-l,record["anchor"][1]-t],"ppm":record["pixelsPerMetre"],"bodyHeight":body[3]-body[1],"alphaBounds":list(box),"weaponBounds":record["weaponBounds"]}
+    parts=name.split("-")
+    entries[":".join(parts)]={"page":idx,"rect":[x,y,cw,ch],"anchor":[record["anchor"][0]-l,record["anchor"][1]-t],"ppm":record["pixelsPerMetre"],"bodyHeight":body[3]-body[1],"bodyWorldHeight":record["bodyWorldHeight"],"alphaBounds":list(box),"weaponBounds":record["weaponBounds"]}
     x+=cw;row=max(row,ch)
 page.save(out/f"page-{idx}.png",optimize=True);pages[str(idx)]={"width":W,"height":H}
 # Pack page files per army style only (same epoch); source sizes and anchor remain explicit.

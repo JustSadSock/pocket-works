@@ -63,5 +63,12 @@ for side in [0,1]:
             for o in weapon:o.hide_render=True
             sc.render.filepath=str(out/(name+"-body.png"));bpy.ops.render.render(write_still=True)
             for o in weapon:o.hide_render=False
-            records[name]={"anchor":anchor,"pixelsPerMetre":256/cam.data.ortho_scale,"weaponBounds":tips}
+            records[name]={"anchor":anchor,"pixelsPerMetre":256/cam.data.ortho_scale,"weaponBounds":tips,"bodyWorldHeight":max(v.z for v in body_pts)-min(v.z for v in body_pts)}
+            if frame in [1,21]:
+                # Restricted veteran shield finish; shared mesh, no new troop type.
+                color=(.20,.29,.34) if side==0 else (.37,.23,.10)
+                for i,f in [(0,.6),(1,1.3)]:ramp.color_ramp.elements[i].color=(*(x*f for x in color),1)
+                sc.render.filepath=str(out/(name+"-v.png"));bpy.ops.render.render(write_still=True)
+                records[name+"-v"]={**records[name],"bodyMask":name+"-body.png"}
+                team(side)
 (out/"frames.json").write_text(json.dumps({"frames":records,"groundZ":z0,"elevation":60,"orthoScale":cam.data.ortho_scale}))
