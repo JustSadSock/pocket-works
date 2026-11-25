@@ -27,6 +27,7 @@ Cloudflare Workers Builds is the only production hosting path.
 - Worker configuration: `wrangler.jsonc`.
 - Worker name: `pocket-works`.
 - Production source of truth: the latest successful Cloudflare deployment from `main`.
+- Verify actual publication using the Cloudflare Deployment Monitor workflow and `docs/CLOUDFLARE-MONITOR.md`. Inspect fresh sanitized snapshots and active version-to-commit mappings; do not equate GitHub CI with deployment.
 - Application agents must not add, configure, reference or depend on alternative hosting providers.
 - Hosting changes are platform work and must not be bundled into an application PR.
 - Do not push intermediate app revisions or test-only commits to `main`. Use an isolated branch and one squash-merge per validated release. Emergency fixes may use an expedited PR but never bypass the PocketNet release preflight.

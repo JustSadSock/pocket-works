@@ -1,0 +1,41 @@
+name: Cloudflare Deployment Monitor
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - '.github/workflows/cloudflare-monitor.yml'
+      - 'scripts/cloudflare-monitor.py'
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cloudflare-monitor-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 scripts/cloudflare-monitor.py --self-test
+  monitor:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    environment: cloudflare-monitor
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read sanitized Cloudflare deployment snapshot
+        env:
+          CF_READ_TOKEN: ${{ secrets.CF_READ_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_WORKER_NAME: ${{ secrets.CF_WORKER_NAME }}
+        run: python3 scripts/cloudflare-monitor.py

@@ -6,7 +6,7 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { RaceGame } from './race-game';
 
-const version = '3.2.1';
+const version = '3.2.2';
 const appName = 'ПЕТЛЯ 17';
 const namespace = 'pocket-works:petlya-17';
 
@@ -14,14 +14,7 @@ installMobileRuntime();
 registerEnhancedUpdate({
   appName,
   version,
-  releaseNotes: [
-    'Исправлен сбой загрузки VertexData is not defined при создании 3D-кузовов.',
-    'Перед выпуском теперь выполняется строгая проверка TypeScript.',
-    'Пересобран прибрежный автодром: дорожное полотно, разметка, поребрики, ограждения и порт.',
-    'Болиды и кокпит детализированы, освобождён обзор трассы.',
-    'Новая кинематографичная камера меню, карта и подсказки к поворотам.',
-    'Загрузка завершается по готовности двух отрисованных кадров.'
-  ]
+  releaseNotes: ["Ускорение, руление и гоночный таймер сохраняют игровой темп при снижении частоты кадров.","Автоматическое качество графики учитывает фактическую частоту кадров.","Добавлены регрессионные проверки физики при 4–120 FPS и длительных паузах."]
 });
 
 const canvas = document.querySelector<HTMLCanvasElement>('#renderCanvas');

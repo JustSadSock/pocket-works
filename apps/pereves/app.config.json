@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "pereves",
+  "name": "ПЕРЕВЕС",
+  "shortName": "Перевес",
+  "description": "Уравновесь кинетические скульптуры, размещая грузы на подвесных перекладинах.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-25",
+  "releaseDateTime": "2026-11-25T11:43:00+02:00",
+  "changelog": [
+    "Четыре механические головоломки: распределение грузов, двойные подвесы, реальные моменты сил.",
+    "Отмена, сохранение каждой скульптуры, адаптивная сцена и офлайн PWA."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#5543a0",
+  "backgroundColor": "#e6e3ef",
+  "themeColor": "#e6e3ef",
+  "orientation": "any",
+  "cacheName": "pereves-v1.0.0",
+  "storageNamespace": "pocket-works:pereves",
+  "tags": [
+    "puzzle",
+    "physics",
+    "sculpture",
+    "wildcard",
+    "offline"
+  ],
+  "order": 466
+}

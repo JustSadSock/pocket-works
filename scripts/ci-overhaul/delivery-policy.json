@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "enabled": true,
+  "allowResultReuse": false,
+  "allowImpactSkipping": false
+}
