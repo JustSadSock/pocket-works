@@ -10,6 +10,7 @@ on:
       - 'scripts/ci-overhaul/verified-cross-commit*'
       - 'scripts/ci-overhaul/verified-mounted-inputs*'
       - 'scripts/ci-overhaul/verified-reuse-admission*'
+      - '.github/workflows/verified-reuse-replay.yml'
       - 'scripts/ci-overhaul/verified-offline-task.sh'
       - '.github/workflows/verified-cross-commit.yml'
       - 'apps/axis-pals/**'
