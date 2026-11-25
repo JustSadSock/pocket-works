@@ -1087,6 +1087,7 @@ export function societySandbox(config={}){
  s.sandboxKind='society';s.sandboxConfig={...config};
  for(const st of s.states)if(Number.isFinite(config.tax))st.tax=clamp(config.tax,0,.5);
  for(const c of s.cities){const d=c.society;if(Number.isFinite(config.privateWealth)){const desired=clamp(config.privateWealth,0,.8)*(c.cash+d.cohorts.reduce((n,q)=>n+q.cash,0)),current=d.cohorts.reduce((n,q)=>n+q.cash,0);if(desired>current){const delta=Math.min(c.cash,desired-current);c.cash-=delta;for(const q of d.cohorts)q.cash+=delta*q.pop/Math.max(1,c.pop);}else if(current>0){for(const q of d.cohorts)q.cash*=desired/current;c.cash+=current-desired;}}}
+ if(config.scenario&&config.scenario!=='ordinary')prepareCivilScenario(s,config.scenario);
  return s;
 }
 export function societySample(s){
@@ -1207,6 +1208,7 @@ export function formCivilSide(s,id,{peaceful=false,publicShare=0}={}){
  const old=s.states[q.parent];st.gold=old.gold*publicShare;old.gold-=st.gold;for(let k=0;k<17;k++){st.reserves[k]=old.reserves[k]*publicShare;old.reserves[k]-=st.reserves[k];}
  const a=s.society.architecture,g=a.governments[st.id],person=a.people[q.claimant??a.subjects[localId(cs[0])].person];if(person){a.people[g.ruler].alive=false;g.ruler=person.id;}
  q.transferredArmies=transferDistricts(s,q.parent,st.id,q.districts);
+ if(!peaceful)for(const c of cs){const fee=c.society.localTreasury*.3;c.society.localTreasury-=fee;st.gold+=fee;}
  if(peaceful){q.status='resolved';q.outcome='independence';civilStage(s,q,'settlement');return st.id;}
  civilStage(s,q,'alternative centre');reveal(s,st.id,target.i,1);
  beginWar(s,st.id,q.parent,[target.i]);const war=s.wars.find(w=>w.status==='active'&&w.f===st.id&&w.enemy===q.parent);if(!war)throw Error('Civil war could not start');war.civil=q.id;war.reason='civil '+q.goal;q.war=war.conflict;civilStage(s,q,'war');return st.id;
@@ -1217,7 +1219,7 @@ export function reuniteRealms(s,parent,side,{claimant=null}={}){
  for(const w of s.wars.filter(w=>w.status==='active'&&[w.f,w.enemy].includes(side)))concludeWhitePeace(s,w,'civil settlement');
  transferDistricts(s,side,parent,s.cities.filter(c=>c.f===side).map(c=>c.id),true);
  resolveStateExtinction(s,side,parent);
- const g=a.governments[parent],h=a.governments[side];if(claimant!=null&&a.people[claimant]?.alive){g.ruler=claimant;g.regent=null;g.legitimacy=.55;a.people[claimant].f=parent;}
+ const g=a.governments[parent],h=a.governments[side];if(claimant!=null&&a.people[claimant]?.alive){g.ruler=claimant;g.regent=null;g.legitimacy=.55;const person=a.people[claimant];person.f=parent;person.role='ruler';person.office=crownId(parent);for(const sub of Object.values(a.subjects))if(sub.person===claimant)sub.person=createPerson(s,parent,'lord',sub.id,25,person.dynasty).id;const heir=a.people[h.heir];if(heir?.alive){g.heir=heir.id;heir.f=parent;}}
  h.closed=s.day;delete s.states[side].provisional;if(s.playerFaction===side)s.playerFaction=parent;
  q.status='resolved';q.outcome=claimant!=null?'claimant victory':'reunion';civilStage(s,q,'settlement');return true;
 }
@@ -1226,7 +1228,7 @@ export function settleCivilCase(s,id,outcome){
  if(outcome==='concessions'&&q.side==null){const cs=s.cities.filter(c=>q.districts.includes(c.id)&&c.f===q.parent);if(!cs.length)return 'Нет владений';const cost=cs.reduce((n,c)=>n+8+Math.abs(q.requestedAutonomy-c.society.autonomy)*80+10,0);if(s.states[q.parent].gold<cost)return 'Недостаточно средств для уступок';
  for(const c of cs)if(!c.society.reform)requestCharter(s,c,Math.min(q.requestedAutonomy,c.society.autonomy+.25),10);if(!cs.every(c=>c.society.reform||c.society.autonomy>=q.requestedAutonomy-.01))return 'Не все владения согласны';civilStage(s,q,'negotiation');return 'Уступки согласованы, ожидается исполнение';}
  if(outcome==='independence'){if(q.goal!=='independence')return 'Требуется мандат на независимость';if(q.side==null)return formCivilSide(s,id,{peaceful:true})!=null?'Независимость признана':'Отделение недоступно';for(const w of s.wars.filter(w=>w.status==='active'&&w.civil===id))concludeWhitePeace(s,w,'independence');delete s.states[q.side].provisional;q.status='resolved';q.outcome='independence';civilStage(s,q,'settlement');return 'Независимость признана';}
- if(q.side==null)return 'Нет вооружённой стороны';if(outcome==='claimant'&&q.goal!=='succession')return 'Нет претендента';
+ if(q.side==null)return 'Нет вооружённой стороны';if(outcome==='claimant'&&(q.goal!=='succession'||!s.society.architecture.people[q.claimant]?.alive))return 'Нет живого претендента';
  if(['reunion','claimant','autonomy'].includes(outcome)){if(!reuniteRealms(s,q.parent,q.side,{claimant:outcome==='claimant'?q.claimant:null}))return 'Урегулирование недоступно';if(outcome==='autonomy')for(const c of s.cities.filter(c=>q.districts.includes(c.id)))if(!c.society.reform)requestCharter(s,c,Math.min(q.requestedAutonomy,c.society.autonomy+.25),5);return 'Гражданский конфликт урегулирован';}return 'Неизвестные условия';
 }
 export function supportCivilSide(s,id,donor,amount){
@@ -1259,3 +1261,32 @@ function civilConflictStep(s){
  if(reg.cases.length>80){const old=reg.cases.filter(q=>q.status!=='active').slice(0,reg.cases.length-80);reg.archive.push(...old.map(q=>({id:q.id,parent:q.parent,side:q.side,goal:q.goal,outcome:q.outcome,started:q.started,ended:q.updated})));reg.cases=reg.cases.filter(q=>!old.includes(q));reg.archive=reg.archive.slice(-200);}
 }
 export function civilCases(s,f=null){return s.society?.architecture?.civil?.cases.filter(q=>f==null||q.parent===f||q.side===f)||[];}
+
+export function prepareCivilScenario(s,scenario='succession'){
+ if(!['petition','succession','independence','reform'].includes(scenario))throw Error('Неизвестный политический сценарий');
+ const parent=s.playerFaction??0,c=s.cities.find(q=>q.f===parent&&q.capital),old=s.states[parent];if(!c)throw Error('Нет столицы');
+ const i=Array.from(s.admin.keys()).find(i=>s.admin[i]===c.id&&s.adminAccess[i]&&dist(i,c.i)>=4&&s.cities.every(q=>dist(i,q.i)>=4));
+ if(i==null)throw Error('Для этого seed нет подходящего округа');
+ const result=splitDistrict(s,c,i);if(!result.startsWith('Округ разделён'))throw Error(result);
+ const district=s.cities.find(q=>q.f===parent&&q.i===i);societyDistrict(s,district);ensureCommunities(s,district);refreshTitles(s);
+ const money=Math.min(old.gold,60);old.gold-=money;district.society.localTreasury+=money;
+ const goal=scenario==='petition'?'autonomy':scenario==='reform'?'constitution':scenario;
+ const q=proposeCivilCase(s,parent,[district.id],goal);if(!q)throw Error('Не удалось подготовить конфликт');
+ if(scenario==='succession'||scenario==='independence'){
+ const msg=musterLevy(s,district);if(!msg.startsWith('Нанято'))throw Error('Сценарий требует реального контингента: '+msg);
+ civilStage(s,q,'resistance');const side=formCivilSide(s,q.id);if(side==null)throw Error('Недостаточно ресурсов для формирования стороны');
+ }
+ return q;
+}
+export function civilPeaceTerms(s,q){
+ if(q.side==null)return {concessions:true,independence:q.goal==='independence'};
+ const parent=s.cities.find(c=>c.f===q.parent&&c.capital),base=s.cities.find(c=>c.f===q.side&&c.capital);
+ const p=s.states[q.parent],b=s.states[q.side],warDays=s.day-q.updated,force=f=>s.armies.filter(a=>a.f===f).reduce((n,a)=>n+strength(a)*a.organization,0),ours=force(q.parent),theirs=force(q.side);
+ const exhausted=warDays>=120&&(p.gold<20||b.gold<20)&&Math.abs(ours-theirs)<Math.max(100,(ours+theirs)*.4);
+ return {reunion:base?.occupation===q.parent||theirs===0&&ours>=60||exhausted,claimant:q.goal==='succession'&&(parent?.occupation===q.side||ours===0&&theirs>=60),autonomy:base?.occupation===q.parent||parent?.occupation===q.side||exhausted,independence:q.goal==='independence'&&(parent?.occupation===q.side||exhausted||ours===0&&theirs>=60)};
+}
+export function offerCivilPeace(s,id,actor,outcome){
+ const q=civilCases(s).find(q=>q.id===id&&q.status==='active');if(!q||![q.parent,q.side].includes(actor))return 'Нет полномочий';
+ if(q.side!=null&&!civilPeaceTerms(s,q)[outcome])return 'Условия пока не приняты: противник сохраняет способность сопротивляться';
+ return settleCivilCase(s,id,outcome);
+}
