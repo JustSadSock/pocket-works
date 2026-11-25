@@ -56,3 +56,33 @@
 .goal progress{width:100%;height:8px;accent-color:#d3b580}.border-preview{display:block;background:#32413c;width:100%;height:auto;max-height:130px}
 .compact-controls button{min-height:34px;font-size:11px}.grand-ui #panel select,.grand-ui #panel input[type=range]{width:100%;min-height:40px}
 @media(max-width:650px) and (orientation:portrait){.grand-ui #panel{max-height:39%;padding:10px}.grand-ui #layers{max-height:44px}.grand-ui #stats{align-items:center;gap:4px}.grand-ui .city-summary{gap:6px}.city-summary b{font-size:22px}.grand-ui #dock button{font-size:11px}}
+
+/* The Marcher's atlas: dark ink and warm vellum, separate from the geographic surface. */
+:root{--ink:#f0e5cf;--edge:#786951;--accent:#d6b77c}
+#hud,#dock{background:linear-gradient(180deg,#302e29,#242822);border-color:#857352}
+#hud .brand b{font-family:Georgia,serif;letter-spacing:1.6px}
+#panel{background:linear-gradient(145deg,#f0e2c4,#d9c9a7);color:#3f3529;border:1px solid #8a7250;box-shadow:0 8px 26px #211b1759,inset 0 0 0 3px #f5e7ca66}
+#panel .panelhead h2{color:#3d3024;font-weight:700;font-size:23px}
+#panel .muted,#panel .city-summary>div,#panel .crown-summary>div,#panel .dispatch small,#panel .history-entry small{color:#695b45}
+#panel .section,#panel .rows b,#panel .city-summary b,#panel .crown-summary b{color:#493720}
+#panel .rule,#panel .entry,#panel .city-tabs,#panel .dispatch,#panel .goal,#panel .history-entry{border-color:#9c896966}
+#panel .rule{background:#9c896966}
+#panel button,#panel input,#panel select{color:#483b2a;background:#e6d5b5;border-color:#a18b65}
+#panel button.on,#panel button:active{color:#fff0cd;background:#66563e;border-color:#66563e}
+#panel button:disabled{opacity:.55}#panel a{color:#483b2a}
+#panel .econ-chart{color:#493720}#panel .city-summary>div,#panel .crown-summary>div{border-color:#a38452}
+#panel .actions{gap:6px}#panel .city-tabs button{font-family:Georgia,serif}
+#panel .panelhead{border-bottom:1px solid #a18b6555;padding-bottom:6px}
+#layers button,#zoom button,#dock button{background:#302e27;border-color:#8a795a}
+#layers button.on,#dock button.on,#zoom button.on{background:#d6b77c;color:#30271c}
+#modalbody:not(:has(.lab-sides)){border:3px double #b39a6a;background:linear-gradient(150deg,#39372d,#242923)}
+#modalbody [data-act="new"],#modalbody [data-act="labstart"],#modalbody [data-act="navalstart"]{background:#d6b77c;color:#30271c;font-weight:700}
+@media(max-width:650px) and (orientation:portrait){
+ #notice{bottom:auto;top:calc(env(safe-area-inset-top) + 152px);max-width:calc(100vw - 112px);font-size:12px;padding:5px 8px;left:8px;transform:none;text-align:left}
+ .battlehud #notice{top:calc(env(safe-area-inset-top) + 105px)}
+ #panel,.grand-ui #panel{max-height:35%;padding:9px}
+ #panel .panelhead h2{font-size:20px}
+ #panel .city-summary,#panel .crown-summary{padding:4px 0 6px;gap:5px}
+ #panel .city-summary b,#panel .crown-summary b{font-size:19px}
+ #panel .city-tabs{margin-bottom:5px}
+}
