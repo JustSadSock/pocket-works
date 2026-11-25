@@ -1,0 +1,45 @@
+name: Verified Mounted Inputs Shadow
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verified-mounted-inputs.yml'
+      - 'scripts/ci-overhaul/verified-mounted-inputs*'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/verified-mounted-inputs.test.mjs
+      - name: Verify actual mount and execute the unchanged pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="$RUNNER_TEMP/mounted-source"
+          out="$RUNNER_TEMP/mounted-output"
+          mkdir -p "$src" "$out"
+          git archive HEAD apps/axis-pals shared scripts package.json package-lock.json | tar -xf - -C "$src"
+          mkdir "$src/qa-artifacts"
+          node scripts/ci-overhaul/verified-mounted-inputs.mjs normalize "$GITHUB_WORKSPACE" "$(git rev-parse HEAD)" "$src" > "$RUNNER_TEMP/mounted-before.json"
+          expected="$(jq -er .digest "$RUNNER_TEMP/mounted-before.json")"
+          [[ "$expected" =~ ^[0-9a-f]{64}$ ]]
+          docker pull node:22-bookworm-slim
+          image="$(docker image inspect --format '{{index .RepoDigests 0}}' node:22-bookworm-slim)"
+          [[ "$image" =~ @sha256:[0-9a-f]{64}$ ]]
+          task='{"key":"axis-pals-rules","app":"axis-pals","suite":"rules","kind":"node-test","seed":null,"install":false}'
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=64m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp -e "PW_QA_TASK=$task" -e "EXPECTED_MOUNT_DIGEST=$expected" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$out,dst=/work/qa-artifacts" -w /work "$image" sh -ec '
+            node --input-type=module -e "import {mountedFingerprint} from \"./scripts/ci-overhaul/verified-mounted-inputs.mjs\"; const m=mountedFingerprint(process.cwd()); if(m.digest!==process.env.EXPECTED_MOUNT_DIGEST)throw Error(\"Container mount differs from host\"); console.log(JSON.stringify(m))"
+            exec node scripts/universal-qa/run.mjs
+          '
+          node scripts/ci-overhaul/verified-mounted-inputs.mjs measure "$src" > "$RUNNER_TEMP/mounted-after.json"
+          cmp "$RUNNER_TEMP/mounted-before.json" "$RUNNER_TEMP/mounted-after.json"
+          jq -e '.success == true and .exitCode == 0 and .signal == null and .timedOut == false' "$out/axis-pals-rules/result.json"
+          echo 'Actual mount verified before and after full pilot; reuse remains disabled.' >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/mounted-before.json" >> "$GITHUB_STEP_SUMMARY"
