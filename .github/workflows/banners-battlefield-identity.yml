@@ -53,68 +53,60 @@ jobs:
               f=list(root.rglob(n));assert len(f)==1,n;shutil.copyfile(f[0],out/n)
           for p in root.rglob('page-*.png'):shutil.copyfile(p,out/p.name)
           PY
-      - name: Prepare verified Blender
+      - name: Install review sheet dependencies
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends python3-pil xz-utils fonts-dejavu-core libgl1 libx11-6 libxi6 libxrender1
-          cd /tmp
-          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          verified=false
-          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
-            rm -f "$archive" blender.sha256
-            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
-               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
-               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
-              verified=true
-              break
-            fi
-          done
-          test "$verified" = true
-          tar -xf "$archive"
-          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
-      - name: Reuse in-flight source bake without cancelling it
+          apt-get install -y --no-install-recommends python3-pil fonts-dejavu-core
+      - name: Wait for original complete production artifact
+        id: original
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 - <<'PY'
           import json,os,time,urllib.request
-          url="https://api.github.com/repos/JustSadSock/pocket-works/actions/runs/45698329968/jobs"
-          request=urllib.request.Request(url,headers={"Authorization":"Bearer "+os.environ["GH_TOKEN"],"Accept":"application/vnd.github+json"})
-          for i in range(160):
-              with urllib.request.urlopen(request,timeout=30) as r: jobs=json.load(r)["jobs"]
-              done=False
-              for j in jobs:
-                  if j["status"]=="completed" or any(s["name"]=="Save verified source renders" and s["status"]=="completed" for s in j.get("steps",[])):done=True
-              if done:break
+          base="https://api.github.com/repos/JustSadSock/pocket-works/actions/runs/45698329968"
+          headers={"Authorization":"Bearer "+os.environ["GH_TOKEN"],"Accept":"application/vnd.github+json"}
+          def get(url):
+              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=30) as r:return json.load(r)
+          for i in range(240):
+              artifacts=get(base+"/artifacts")["artifacts"]
+              matches=[a for a in artifacts if a["name"]=="banners-battlefield-identity" and not a["expired"]]
+              if matches:
+                  with open(os.environ["GITHUB_OUTPUT"],"a") as f:f.write("artifact_id="+str(matches[0]["id"])+"\n")
+                  break
+              if get(base)["status"]=="completed":raise RuntimeError("Original production finished without an artifact")
               time.sleep(15)
+          else:raise TimeoutError("Original production artifact not published")
           PY
-      - name: Restore unchanged troop bake
-        id: troop-cache
-        uses: actions/cache/restore@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: |
-            ${{ env.BOW_ART_OUTPUT }}/sword
-            ${{ env.BOW_ART_OUTPUT }}/archer
-            ${{ env.BOW_ART_OUTPUT }}/knight
-            ${{ env.BOW_ART_OUTPUT }}/lightHorse
-            ${{ env.BOW_ART_OUTPUT }}/horse-forge-index.json
-            ${{ env.BOW_ART_OUTPUT }}/horse-provenance.json
-          key: bow-battlefield-troops-15050357382-${{ hashFiles('apps/banners-of-war/research/battlefield-identity/troop-bake.py', 'apps/banners-of-war/research/battlefield-identity/prepare.py', 'apps/banners-of-war/research/battlefield-identity/horse-author.py') }}
-      - name: Forge horse and bake limited troop variants
-        if: steps.troop-cache.outputs.cache-hit != 'true'
-        run: python3 apps/banners-of-war/research/battlefield-identity/prepare.py
-      - name: Save verified source renders
-        if: steps.troop-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ env.BOW_ART_OUTPUT }}/sword
-            ${{ env.BOW_ART_OUTPUT }}/archer
-            ${{ env.BOW_ART_OUTPUT }}/knight
-            ${{ env.BOW_ART_OUTPUT }}/lightHorse
-            ${{ env.BOW_ART_OUTPUT }}/horse-forge-index.json
-            ${{ env.BOW_ART_OUTPUT }}/horse-provenance.json
-          key: ${{ steps.troop-cache.outputs.cache-primary-key }}
+          github-token: ${{ github.token }}
+          run-id: 45698329968
+          artifact-ids: ${{ steps.original.outputs.artifact_id }}
+          path: /tmp/bow-original-production
+      - name: Verify and restore every original troop render
+        run: |
+          python3 - <<'PY'
+          import os,json,shutil
+          from pathlib import Path
+          from PIL import Image
+          root=Path('/tmp/bow-original-production');out=Path(os.environ['BOW_ART_OUTPUT'])
+          for k in ['sword','archer','knight','lightHorse']:
+              matches=list(root.rglob(k+'/frames.json'))
+              assert len(matches)==1,(k,matches)
+              folder=matches[0].parent
+              entries=json.loads(matches[0].read_text())['frames']
+              expected={f'{s}-{h}-{f}' for s in range(2) for h in range(8) for f in [1,5,9,13,17,21,25,29,33,37]}
+              assert expected.issubset(entries),(k,expected-set(entries))
+              for name in entries:
+                  with Image.open(folder/(name+'.png')) as im:
+                      im.verify()
+              shutil.copytree(folder,out/k,dirs_exist_ok=True)
+              print(k,len(entries),'original renders verified')
+          for n in ['horse-forge-index.json','horse-provenance.json']:
+              matches=list(root.rglob(n));assert len(matches)==1,n
+              shutil.copyfile(matches[0],out/n)
+          PY
       - name: Pack mixed atlas and harmonize bush foliage
         run: |
           python3 apps/banners-of-war/research/battlefield-identity/pack.py
