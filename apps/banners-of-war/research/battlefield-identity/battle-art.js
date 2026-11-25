@@ -2,8 +2,8 @@ import {E} from '../../engine.js';
 import {TerrainTiles,renderHeight} from './terrain-tiles.js';
 let cv,g;const S=Math.sin(Math.PI/3),T=Math.cos(Math.PI/3),clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),mix=(a,b,t)=>a+(b-a)*t,smooth=(a,b,x)=>{let t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)},hash=(x,y)=>{let n=Math.imul(x|0,374761393)+Math.imul(y|0,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296};
 let moving=false,motionKind='none',lastCam=null,policy='auto',costs={direct:0,batch:0},trials={direct:0,batch:0},drawSerial=0,terrainKey=null,zoomLevel=null,zoomUntil=0;let atlas,style='A',textures={},treeAsset={},terrainTiles=null,scene,frame=0,cam,ground,playing=false,batch=true,stats={},last=0,w,h,d,cache=new Map(),cacheBytes=0;
-const cap=8*1024*1024,scaledCap=24*1024*1024;let scaledCache=new Map(),scaledBytes=0,scaleHits=0,scaleMisses=0,scaleMs=0;
-let cadence=new Map(),previousDraw=null;
+const cap=24*1024*1024,scaledCap=24*1024*1024;let scaledCache=new Map(),scaledBytes=0,scaleHits=0,scaleMisses=0,scaleMs=0;
+let cadence=new Map(),previousDraw=null,compositionLayer=null;
 function resize(){g.setTransform(d,0,0,d,0,0)}
 const image=url=>new Promise((ok,no)=>{let i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(Error('Missing '+url));i.src=url});
 async function setStyle(){playing=false;let t=performance.now(),meta=await fetch('/art-evidence/mixed-atlas.json').then(r=>{if(!r.ok)throw Error('Missing baked atlas');return r.json()});let pages=await Promise.all(Object.keys(meta.pages).map(i=>image('/art-evidence/page-'+i+'.png')));atlas={pages,meta,loadMs:performance.now()-t,bytes:pages.reduce((n,p)=>n+p.width*p.height*4,0)};
@@ -17,7 +17,7 @@ function initTerrain(s){terrainTiles?.dispose();terrainTiles=new TerrainTiles(sc
 async function prepareTerrain(pad=0){resize();let start=performance.now(),coarse={...cam,k:cam.k/2};let first=await terrainTiles.warm(coarse,w,h,d,0),current=await terrainTiles.warm(cam,w,h,d,pad);return {wallMs:performance.now()-start,first,current}}
 function landscape(s){let ground=terrainTiles.draw(g,cam,w,h,d,performance.now()<zoomUntil?zoomLevel:null),trees=[];if(cam.k>=1.1)for(let o of terrainTiles.vegetation(cam,w,h)){let p=project(o.x,o.y),k=cam.k*o.scale,asset=treeAsset[o.kind];if(!asset)continue;let m=asset.meta,span=m.height*k;if(p.x<-span||p.x>w+span||p.y<-span||p.y>h+span)continue;trees.push({p,k,kind:o.kind});let radius=Math.max(1,span*.29);g.fillStyle='#30342142';g.beginPath();g.ellipse(p.x+span*.32,p.y+span*.13,radius,radius*.38,.35,0,7);g.fill()}
  return {trees,ground}}
-function tree(t){let {p,k,kind}=t,{im,meta}=treeAsset[kind],s=k/meta.ppm;g.drawImage(im,p.x-meta.anchor[0]*s,p.y-meta.anchor[1]*s,im.width*s,im.height*s)}
+function tree(t,ctx=g){let {p,k,kind}=t,{im,meta}=treeAsset[kind],s=k/meta.ppm;ctx.drawImage(im,p.x-meta.anchor[0]*s,p.y-meta.anchor[1]*s,im.width*s,im.height*s)}
 // Contact uses the exact engine sector pair intersection, then a ray to the enemy sector rectangle.
 function contactMap(s,F){let m=new Map(),us=s.units.filter(u=>F.alive(u)&&u.contact>0);for(let a of us){let aa=F.bodies(a),reach=F.spec(a).reach||0;for(let b of us){if(a.side===b.side||F.dist(a,b)>Math.max(F.dims(a).w,F.dims(b).w)+Math.max(F.dims(a).d,F.dims(b).d)+reach+8)continue;let bb=F.bodies(b),h=F.sectorContact(a,b,reach,aa,bb);if(!h)continue;for(let [i,j,width] of h.parts){let key=a.id+':'+i,list=m.get(key)||[];list.push({enemy:bb[j],width,depth:h.depth});m.set(key,list)}}}return m}
 function nearestTo(p,b){let c=Math.cos(b.a),s=Math.sin(b.a),dx=p.x-b.x,dy=p.y-b.y,f=dx*c+dy*s,l=-dx*s+dy*c,F=clamp(f,-b.geometry.d/2,b.geometry.d/2),L=clamp(l,-b.geometry.w/2,b.geometry.w/2);return {x:b.x+F*c-L*s,y:b.y+F*s+L*c}}
@@ -47,7 +47,7 @@ function extent(o){let e=atlas.meta.entries[o.key],s=o.scale;return {l:o.x-e.anc
 function cacheRow(row){let boxes=row.map(extent),minX=Math.floor(Math.min(...boxes.map(o=>o.l))),minY=Math.floor(Math.min(...boxes.map(o=>o.t))),maxX=Math.ceil(Math.max(...boxes.map(o=>o.r))),maxY=Math.ceil(Math.max(...boxes.map(o=>o.b))),W=maxX-minX,H=maxY-minY;if(W<1||H<1||W*H*4*d*d>cap/3)return false;
  let key=d+'|'+W+'|'+H+'|'+row.map(o=>[o.key,o.x-minX,o.y-minY,o.scale].join(',')).join(';'),item=cache.get(key);
  if(item){cache.delete(key);cache.set(key,item);stats.hits++}
- else{if(moving&&(motionKind==='zoom'||stats.missMs>=1.5)){stats.bypass=(stats.bypass||0)+1;return false}let t=performance.now();stats.misses++;let c=document.createElement('canvas');c.width=Math.round(W*d);c.height=Math.round(H*d);let ctx=c.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.imageSmoothingEnabled=g.imageSmoothingEnabled;ctx.imageSmoothingQuality=g.imageSmoothingQuality;for(let o of row)blit(ctx,o,minX,minY);item={c,bytes:c.width*c.height*4};while(cacheBytes+item.bytes>cap&&cache.size){let id=cache.keys().next().value;cacheBytes-=cache.get(id).bytes;cache.delete(id);stats.evictions++}cache.set(key,item);cacheBytes+=item.bytes;stats.prepBlits+=row.length;stats.missMs+=performance.now()-t}
+ else{if(moving&&stats.missMs>=(motionKind==='zoom'?2.5:1.5)){stats.bypass=(stats.bypass||0)+1;return false}let t=performance.now();stats.misses++;let c=document.createElement('canvas');c.width=Math.round(W*d);c.height=Math.round(H*d);let ctx=c.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.imageSmoothingEnabled=g.imageSmoothingEnabled;ctx.imageSmoothingQuality=g.imageSmoothingQuality;for(let o of row)blit(ctx,o,minX,minY);item={c,bytes:c.width*c.height*4};while(cacheBytes+item.bytes>cap&&cache.size){let id=cache.keys().next().value;cacheBytes-=cache.get(id).bytes;cache.delete(id);stats.evictions++}cache.set(key,item);cacheBytes+=item.bytes;stats.prepBlits+=row.length;stats.missMs+=performance.now()-t}
  g.drawImage(item.c,minX,minY,W,H);stats.drawCalls++;return true}
 const geometryCache=new Map();let geometryBytes=0;
 function geometry(s,F){let cacheable=Object.isFrozen(s);let prior=cacheable?geometryCache.get(s):null;if(prior){geometryCache.delete(s);geometryCache.set(s,prior);return {...prior,cached:true,geometryMs:0,contactMs:0}}
@@ -75,12 +75,12 @@ function render(s,mode='direct',environmentOnly=false){let start=performance.now
  }}}
  }
  stats.positionMs=performance.now()-profileStart-stats.geometryMs-stats.contactMs;
- if(k>=8){g.fillStyle='#292c202f';g.beginPath();for(let it of items)if(it.o){let p=it.o;g.moveTo(p.x+k*.50,p.y+k*.17);g.ellipse(p.x+k*.24,p.y+k*.17,k*.30,k*.105,.25,0,Math.PI*2)}g.fill()}let sortStart=performance.now();items.sort((a,b)=>a.y-b.y);stats.sortMs=performance.now()-sortStart;let composeStart=performance.now();for(let i=0;i<items.length;){let it=items[i];if(it.tree){tree(it.tree);i++;continue}let end=i+1;if(mode==='batch'&&it.eligible&&motionKind!=='zoom')while(end<items.length&&items[end].eligible&&items[end].group===it.group)end++;if(end===i+1){if(mode==='scaled')blitScaled(g,it.o);else blit(g,it.o);stats.drawCalls++;i++;continue}let run=items.slice(i,end).map(x=>x.o);if(!cacheRow(run))for(let o of run){blit(g,o);stats.drawCalls++}i=end}
+ if(k>=8){g.fillStyle='#292c202f';g.beginPath();for(let it of items)if(it.o){let p=it.o;g.moveTo(p.x+k*.50,p.y+k*.17);g.ellipse(p.x+k*.24,p.y+k*.17,k*.30,k*.105,.25,0,Math.PI*2)}g.fill()}let sortStart=performance.now();items.sort((a,b)=>a.y-b.y);stats.sortMs=performance.now()-sortStart;let composeStart=performance.now(),target=g;if(mode==='layer'){let W=Math.round(w*d),H=Math.round(h*d);if(!compositionLayer||compositionLayer.width!==W||compositionLayer.height!==H){compositionLayer=document.createElement('canvas');compositionLayer.width=W;compositionLayer.height=H}target=compositionLayer.getContext('2d',{willReadFrequently:true});target.setTransform(d,0,0,d,0,0);target.clearRect(0,0,w,h);target.imageSmoothingEnabled=g.imageSmoothingEnabled;target.imageSmoothingQuality=g.imageSmoothingQuality}for(let i=0;i<items.length;){let it=items[i];if(it.tree){tree(it.tree,target);i++;continue}let end=i+1;if(mode==='batch'&&it.eligible)while(end<items.length&&items[end].eligible&&items[end].group===it.group)end++;if(end===i+1){if(mode==='scaled')blitScaled(target,it.o);else blit(target,it.o);stats.drawCalls++;i++;continue}let run=items.slice(i,end).map(x=>x.o);if(!cacheRow(run))for(let o of run){blit(g,o);stats.drawCalls++}i=end}if(mode==='layer'){g.drawImage(compositionLayer,0,0,w,h);stats.drawCalls++}
  for(let f of flags){let {p,k}=f,ht=Math.max(5,k*1.8),wd=Math.max(4,k*.85);g.strokeStyle='#57432e';g.lineWidth=Math.max(.7,k*.075);g.beginPath();g.moveTo(p.x,p.y);g.lineTo(p.x,p.y-ht);g.stroke();g.fillStyle=f.side?'#97432e':'#315776';g.beginPath();g.moveTo(p.x,p.y-ht);g.lineTo(p.x+wd,p.y-ht+ht*.12);g.lineTo(p.x+wd*.88,p.y-ht*.48);g.lineTo(p.x,p.y-ht*.58);g.fill();g.strokeStyle='#dec89a';g.lineWidth=Math.max(.6,k*.04);g.beginPath();g.moveTo(p.x+wd*.13,p.y-ht*.94);g.lineTo(p.x+wd*.77,p.y-ht*.85);g.stroke()}
  stats.composeMs=performance.now()-composeStart;stats={...stats,drawMs:performance.now()-start,cacheBytes,camera:{...cam},time:s.time,mode,motion:motionKind,scaleHits,scaleMisses,scaleMs,scaledBytes};return stats}
 
 export async function initArt(canvas){cv=canvas;g=canvas.getContext('2d',{alpha:false});await setStyle();return {canvas:atlas.pages[0]}}
-export function setArtPolicy(p){if(!['auto','direct','batch','scaled'].includes(p))throw Error('Unknown renderer policy');policy=p;previousDraw=null;costs={direct:0,batch:0};trials={direct:0,batch:0}}
+export function setArtPolicy(p){if(!['auto','direct','batch','scaled','layer'].includes(p))throw Error('Unknown renderer policy');policy=p;previousDraw=null;costs={direct:0,batch:0};trials={direct:0,batch:0}}
 function getScene(s,layout,C){
  w=layout.w;h=layout.h;d=layout.d;cam={...C};let F=E.forState(s),key=s.seed+'|'+F.W+'|'+F.H+'|'+s.terrain.kind;
  if(!scene||terrainKey!==key){terrainKey=key;scene={F,frames:[s]};geometryCache.clear();cadence.clear();previousDraw=null;scaledCache.clear();scaledBytes=0;initTerrain(s);lastCam=null;zoomLevel=null;zoomUntil=0;cache.clear();cacheBytes=0}
@@ -93,11 +93,11 @@ export function paintArt(s,layout,C){getScene(s,layout,C);let before=lastCam;mot
  // RAF-to-RAF time includes deferred Canvas raster and compositing, unlike JS submit time.
  // Ignore paused/idle frames and scene changes; learn only from adjacent active draws.
  if(previousDraw&&previousDraw.bucket===bucket){let ms=now-previousDraw.at;if(ms>=4&&ms<120){let samples=cadence.get(bucket)||{},p=samples[previousDraw.mode]||{ms:0,n:0};p.ms=p.n?p.ms*.84+ms*.16:ms;p.n++;samples[previousDraw.mode]=p;cadence.set(bucket,samples)}}
- let choices=motionKind==='zoom'?['direct','scaled']:['direct','batch','scaled'],learned=cadence.get(bucket)||{},mode=policy;
+ let choices=['direct','batch','layer'],learned=cadence.get(bucket)||{},mode=policy;
  if(policy==='auto'){
   let unknown=choices.find(m=>(learned[m]?.n||0)<3);
   mode=unknown||choices.reduce((best,m)=>learned[m].ms<learned[best].ms?m:best,choices[0]);
-  if(!unknown&&drawSerial%120===37)mode=choices[(choices.indexOf(mode)+1)%choices.length];
+  if(!unknown&&drawSerial%180===37){let contender=choices.filter(m=>m!==mode&&learned[m].ms<=learned[mode].ms*1.12)[0];if(contender)mode=contender}
  }
  drawSerial++;let r=render(s,mode),cost=Math.max(0,r.drawMs-r.groundMs);costs[mode]=trials[mode]?costs[mode]*.85+cost*.15:cost;trials[mode]=(trials[mode]||0)+1;
  previousDraw={at:now,bucket,mode};return {...r,policy,costs:{...costs},trials:{...trials},cadence:JSON.parse(JSON.stringify(learned)),terrainLevel:r.terrain.level,zoomHold:performance.now()<zoomUntil}}
