@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "bbf7d46adc28c5d365b97845c42700781456ea65",
+    "revision": "131a4eb2978eb01ebd58d23a896397d555680c96",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "b1fa8017cd7e8ce8f587bb986de6e8f7c0819c56b83e1e0bbdfe4540cc42917a",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "bbf7d46adc28c5d365b97845c42700781456ea65",
-    "lastAttemptAt": "2026-10-26T09:05:49.692Z",
+    "lastAttemptRevision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "lastAttemptAt": "2026-11-25T13:10:39.946Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -22,7 +22,7 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "natyazhenie": {
-    "revision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
+    "revision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
     "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
@@ -30,8 +30,12 @@
     "sha256": "190bf1202430bb95be5a95b9b03fcd23e0701f444c39e0ff15834c79949217dd",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
-    "lastAttemptAt": "2026-10-13T12:40:00.907Z"
+    "lastAttemptRevision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
+    "lastAttemptAt": "2026-11-25T13:18:01.398Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "komnatka": {
     "revision": "010393a4bea783184e69cd13c2e2cfeaa678ba4e",
@@ -68,28 +72,28 @@
   "blind-pals": {
     "note": "existing cover rated higher",
     "status": "preserved",
-    "lastAttemptRevision": "12252b96c0defcbbd8df4fdec54f00ee336c4928",
-    "lastAttemptAt": "2026-11-06T11:02:41.932Z",
+    "lastAttemptRevision": "de256f2e5ed682751e6ec0e4fa086656a5f21d29",
+    "lastAttemptAt": "2026-11-25T13:18:12.478Z",
     "captureEngine": "safe-gameplay-v3"
   },
   "lipki": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "6d28906ddefa8eeda71089cfe2505a209a3b4395",
-    "lastAttemptAt": "2026-11-06T11:02:54.002Z",
+    "lastAttemptAt": "2026-11-25T13:18:24.442Z",
     "diagnostic": {
       "bestScore": 48,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 23149,
-        "variance": 25.48680945222067,
-        "entropy": 1.975657825266305,
-        "edgeDensity": 0.11532738095238096,
-        "colorfulness": 27.16943359375,
-        "centerDetail": 18.966013859750383,
-        "meanLight": 206.25487827148666
+        "bytes": 23147,
+        "variance": 25.48844546602799,
+        "entropy": 1.975563009725204,
+        "edgeDensity": 0.11520337301587301,
+        "colorfulness": 27.167724609375,
+        "centerDetail": 18.999248904493246,
+        "meanLight": 206.25692421875243
       },
       "gameplayEntry": {
         "started": true,
@@ -114,22 +118,32 @@
     "sha256": "8830bb570d07611683a49d930c9ecc9a546f91069615feb9e11dad04455fb520",
     "imageVersion": 2,
     "status": "preserved",
-    "lastAttemptRevision": "8b7ba282c9a213ea581e607609fd9e6c17fce396",
-    "lastAttemptAt": "2026-11-06T11:03:06.031Z",
+    "lastAttemptRevision": "890f376ff1c69e68ef577a29f32b8019851cd7d1",
+    "lastAttemptAt": "2026-11-25T13:18:36.411Z",
     "note": "existing cover rated higher",
     "captureEngine": "safe-gameplay-v3"
   },
   "styk": {
-    "revision": "7dd224b2e88fac1c1a9a34064c2b8f73b699ed00",
-    "qualityScore": 60,
+    "revision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "qualityScore": 71,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "f80e684ba84e2c263c57dbd35b65d2a056ab20b5e96fdd89988ebf7564942a29",
+    "sha256": "fa32594faa60b4eae65b5c20640aba232da62c536ac15af5cfabff328ff4e161",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "7dd224b2e88fac1c1a9a34064c2b8f73b699ed00",
-    "lastAttemptAt": "2026-10-13T12:41:11.225Z"
+    "lastAttemptRevision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "lastAttemptAt": "2026-11-25T13:18:48.467Z",
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "НАЧАТЬ СРАЖЕНИЕ",
+        "id": "start",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "pepelny-dozor": {
     "revision": "01dc37214a71eca098501b2794f8e27699030886",
@@ -163,20 +177,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "f1970ded338c614d46d4b879fafca73babbce423",
-    "lastAttemptAt": "2026-11-06T11:03:17.974Z",
+    "lastAttemptAt": "2026-11-25T13:19:00.377Z",
     "diagnostic": {
       "bestScore": 50,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 36931,
-        "variance": 30.3422615731133,
-        "entropy": 1.8396138622187077,
-        "edgeDensity": 0.12748015873015872,
-        "colorfulness": 24.933349609375,
-        "centerDetail": 24.408397602971274,
-        "meanLight": 217.53440161133022
+        "bytes": 36936,
+        "variance": 30.343153735064433,
+        "entropy": 1.840390370076006,
+        "edgeDensity": 0.12760416666666666,
+        "colorfulness": 24.93798828125,
+        "centerDetail": 24.41194063107234,
+        "meanLight": 217.53441435547091
       },
       "gameplayEntry": {
         "started": true,
@@ -254,8 +268,8 @@
   "flagpost": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-11-06T11:03:28.870Z",
+    "lastAttemptRevision": "5fcfdbb093faefadebb58761dd49401e800df8b3",
+    "lastAttemptAt": "2026-11-25T13:19:11.225Z",
     "diagnostic": {
       "bestScore": 64,
       "qualityReasons": [
@@ -274,21 +288,21 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/flagpost/?pw-cover=1&pw_release=1.1.2&pw_fp=9d8c3e0d8275ab04a61031cf"
+      "url": "http://127.0.0.1:4173/apps/flagpost/?pw-cover=1&pw_release=1.1.2&pw_fp=f68a5cef804788c94782a992"
     },
     "captureEngine": "safe-gameplay-v3"
   },
   "jam-tape": {
-    "revision": "fed8b4001b0e5aae8ff9e0da00ff04a2267f0bc2",
+    "revision": "de256f2e5ed682751e6ec0e4fa086656a5f21d29",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "80ada270afc9f6a69864b34fab2fed167ee38161da3506d3aa344bcef562bf68",
+    "sha256": "66a5baf6b04ee6e5e9c7d51b829a9658e843ca3e29fc1a80f88a97d0479db096",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "fed8b4001b0e5aae8ff9e0da00ff04a2267f0bc2",
-    "lastAttemptAt": "2026-10-24T08:17:05.354Z",
+    "lastAttemptRevision": "de256f2e5ed682751e6ec0e4fa086656a5f21d29",
+    "lastAttemptAt": "2026-11-25T13:11:44.077Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
@@ -413,16 +427,20 @@
     "diagnostic": null
   },
   "petlya-17": {
-    "revision": "f677c4713bbbc38a27e2a679beac6e796aea0036",
+    "revision": "a4975b57755435cdb84ca6eab074d2bbe98dc199",
     "qualityScore": 82,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "3b0c2edcbe68b8d2a2c2c43df98dc575d98c48921005c2d80324fe340794be24",
+    "sha256": "01f4354da91e866b3d7dc23cfdc742277141956264449f4e5eb391180032b240",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "f677c4713bbbc38a27e2a679beac6e796aea0036",
-    "lastAttemptAt": "2026-10-13T12:39:37.922Z"
+    "lastAttemptRevision": "a4975b57755435cdb84ca6eab074d2bbe98dc199",
+    "lastAttemptAt": "2026-11-25T13:17:50.407Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "mechanica": {
     "revision": "0967d606d71d887fbc3837cd34d7b0619b805e75",
@@ -437,16 +455,16 @@
     "lastAttemptAt": "2026-10-13T12:44:22.313Z"
   },
   "cantica-glass": {
-    "revision": "e14127439ab061e5466195855813869631f282bb",
+    "revision": "131a4eb2978eb01ebd58d23a896397d555680c96",
     "qualityScore": 68,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "aa5207a263c6a1c2918bd1351c69977780571ad2992bbf6828c2781aabfbda9e",
+    "sha256": "37f53d4e5a1474e882cd87fe710fa7afc519e35c21285e58885ca85d83a26f4e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "e14127439ab061e5466195855813869631f282bb",
-    "lastAttemptAt": "2026-10-22T08:47:08.698Z",
+    "lastAttemptRevision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "lastAttemptAt": "2026-11-25T13:12:29.905Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
@@ -484,9 +502,37 @@
     "shot": 0,
     "sha256": "d4087620fca844ee75d6a2f5a46402d2b8f2cab21274a88957bf35d6dd0a30ef",
     "imageVersion": 2,
-    "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:45:06.319Z"
+    "status": "failed",
+    "lastAttemptRevision": "8029e3ded378eed5fb3624942281e72329f4c4ec",
+    "lastAttemptAt": "2026-11-25T13:19:23.171Z",
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 36,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 19531,
+        "variance": 20.45558465784145,
+        "entropy": 1.7468774337509612,
+        "edgeDensity": 0.043774801587301584,
+        "colorfulness": 20.04345703125,
+        "centerDetail": 24.763732918792623,
+        "meanLight": 33.554544433593996
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "НАЧАТЬ ЭКСПЕДИЦИЮ ↗",
+            "id": "startBtn",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/perigee/?pw-cover=1&pw_release=1.0.1&pw_fp=d6811cc4dd39cd406a5b4d23"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "afterhours-arena": {
     "revision": "262dc1ad3b232ef62730a51e8aded2e7dcdbf310",
@@ -516,7 +562,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "b3475e4b44c74da1645a99b9fac6fccf5afc4ef9",
-    "lastAttemptAt": "2026-11-06T11:03:39.750Z",
+    "lastAttemptAt": "2026-11-25T13:19:33.988Z",
     "diagnostic": {
       "bestScore": 47,
       "qualityReasons": [
@@ -540,19 +586,23 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "inkfall": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "b7914d967f10a796d816df3c03c0c2f4f0c2464e",
     "qualityScore": 75,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "965bed746f06ede84891ba64b320deea0e0c5477a43da6a5922456f32bbd5f90",
+    "sha256": "1a133acf8a9e4edbe3c34c883759d651b01f6be5dbc03ed5678343743d549d8e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:45:50.014Z"
+    "lastAttemptRevision": "b7914d967f10a796d816df3c03c0c2f4f0c2464e",
+    "lastAttemptAt": "2026-11-25T13:19:44.968Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "rasklad": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "22a20a400435bb8ba72711e76add8966b5ae44ff",
     "qualityScore": 68,
     "visionScore": null,
     "prepared": false,
@@ -560,8 +610,12 @@
     "sha256": "f761d5583084d54f86a243ca0afb2fa32ddfa5cde7033dfd8cc3a9f2e9da4890",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:46:00.836Z"
+    "lastAttemptRevision": "22a20a400435bb8ba72711e76add8966b5ae44ff",
+    "lastAttemptAt": "2026-11-25T13:19:55.804Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "corvus-yard": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -603,7 +657,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:03:51.535Z",
+    "lastAttemptAt": "2026-11-25T13:20:07.537Z",
     "diagnostic": {
       "bestScore": 64,
       "qualityReasons": [
@@ -635,27 +689,27 @@
   "zastava": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "e3ac351167942f9e3ff052ae385ef4f1cc86006e",
-    "lastAttemptAt": "2026-11-06T11:04:16.923Z",
+    "lastAttemptRevision": "0645225da62909f983425d28ad415353fd9c5d43",
+    "lastAttemptAt": "2026-11-25T13:20:28.053Z",
     "diagnostic": {
       "bestScore": 49,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 20881,
-        "variance": 26.097071108331004,
+        "bytes": 20891,
+        "variance": 26.09737628541877,
         "entropy": 2.00832963425245,
         "edgeDensity": 0.10677083333333333,
-        "colorfulness": 9.340087890625,
+        "colorfulness": 9.34130859375,
         "centerDetail": 32.52070551216674,
-        "meanLight": 42.81759501953092
+        "meanLight": 42.818277783202795
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/zastava/?pw-cover=1&pw_release=1.2.0&pw_fp=6dd7c92042e2ca95f8998a40"
+      "url": "http://127.0.0.1:4173/apps/zastava/?pw-cover=1&pw_release=1.2.0&pw_fp=0ae75621988e0d1e187d5520"
     },
     "captureEngine": "safe-gameplay-v3"
   },
@@ -675,7 +729,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:04:28.937Z",
+    "lastAttemptAt": "2026-11-25T13:20:39.973Z",
     "diagnostic": {
       "bestScore": 60,
       "qualityReasons": [
@@ -708,7 +762,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "660f87254e3eb0ead556787e22068a0a4cf45857",
-    "lastAttemptAt": "2026-11-06T11:04:39.850Z",
+    "lastAttemptAt": "2026-11-25T13:20:50.820Z",
     "diagnostic": {
       "bestScore": 57,
       "qualityReasons": [
@@ -734,8 +788,8 @@
   "arena-shift": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "e3ac351167942f9e3ff052ae385ef4f1cc86006e",
-    "lastAttemptAt": "2026-11-06T11:04:54.127Z",
+    "lastAttemptRevision": "0645225da62909f983425d28ad415353fd9c5d43",
+    "lastAttemptAt": "2026-11-25T13:21:06.646Z",
     "diagnostic": {
       "bestScore": 39,
       "qualityReasons": [
@@ -755,34 +809,34 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/arena-shift/?pw-cover=1&pw_release=1.0.1&pw_fp=f557ad6a36a2ad6a4a2dd332"
+      "url": "http://127.0.0.1:4173/apps/arena-shift/?pw-cover=1&pw_release=1.0.1&pw_fp=20c5cd083e86ed34377f89ee"
     },
     "captureEngine": "safe-gameplay-v3"
   },
   "rivet": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "e3ac351167942f9e3ff052ae385ef4f1cc86006e",
-    "lastAttemptAt": "2026-11-06T11:05:08.951Z",
+    "lastAttemptRevision": "0645225da62909f983425d28ad415353fd9c5d43",
+    "lastAttemptAt": "2026-11-25T13:21:28.602Z",
     "diagnostic": {
       "bestScore": 59,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 10383,
-        "variance": 51.30051577001921,
-        "entropy": 1.4746879257326129,
-        "edgeDensity": 0.0662202380952381,
-        "colorfulness": 3.655517578125,
-        "centerDetail": 81.78256956288106,
-        "meanLight": 24.676601855468828
+        "bytes": 10441,
+        "variance": 51.298874538749395,
+        "entropy": 1.4754290031076465,
+        "edgeDensity": 0.06634424603174603,
+        "colorfulness": 3.6552734375,
+        "centerDetail": 81.78136897703072,
+        "meanLight": 24.674561279296956
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/rivet/?pw-cover=1&pw_release=1.0.0&pw_fp=e6b15123b85586207a190cbe"
+      "url": "http://127.0.0.1:4173/apps/rivet/?pw-cover=1&pw_release=1.0.0&pw_fp=162a8251839704380f94638f"
     },
     "captureEngine": "safe-gameplay-v3"
   },
@@ -802,7 +856,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "31809da807c350caa0ce5c877d09ebf3f3126caa",
-    "lastAttemptAt": "2026-11-06T11:05:21.061Z",
+    "lastAttemptAt": "2026-11-25T13:21:40.648Z",
     "diagnostic": {
       "bestScore": 2,
       "qualityReasons": [
@@ -837,7 +891,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:05:35.828Z",
+    "lastAttemptAt": "2026-11-25T13:21:55.314Z",
     "diagnostic": {
       "bestScore": 18,
       "qualityReasons": [
@@ -883,7 +937,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:05:47.611Z",
+    "lastAttemptAt": "2026-11-25T13:22:07.031Z",
     "diagnostic": {
       "bestScore": 29,
       "qualityReasons": [
@@ -915,8 +969,8 @@
   "crumple-yard": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "83dd179e077e94f60eb43cf52a49a09e0daa2433",
-    "lastAttemptAt": "2026-11-05T11:05:23.050Z",
+    "lastAttemptRevision": "a219becdfff9ffc620a8c039f85601e8da831c8d",
+    "lastAttemptAt": "2026-11-25T13:12:48.103Z",
     "captureEngine": "safe-gameplay-v3",
     "diagnostic": {
       "bestScore": 49,
@@ -924,13 +978,13 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 23475,
-        "variance": 30.99938327948485,
-        "entropy": 1.7694422649277777,
-        "edgeDensity": 0.10962301587301587,
-        "colorfulness": 12.69677734375,
-        "centerDetail": 14.062286315689795,
-        "meanLight": 133.33149829102072
+        "bytes": 23451,
+        "variance": 30.99496498781813,
+        "entropy": 1.7648607390926254,
+        "edgeDensity": 0.10875496031746032,
+        "colorfulness": 12.680908203125,
+        "centerDetail": 14.101983850582855,
+        "meanLight": 133.34142817383324
       },
       "gameplayEntry": {
         "started": true,
@@ -942,7 +996,7 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/crumple-yard/?pw-cover=1&pw_release=1.4.0&pw_fp=8ba10230798a45b102b9a4de"
+      "url": "http://127.0.0.1:4173/apps/crumple-yard/?pw-cover=1&pw_release=1.6.0&pw_fp=a8156c2ceee9942919a36937"
     }
   },
   "formica-colony": {
@@ -984,20 +1038,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "915244e418afdd50a9523b823db552485c84fb1f",
-    "lastAttemptAt": "2026-11-06T11:05:58.528Z",
+    "lastAttemptAt": "2026-11-25T13:22:17.915Z",
     "diagnostic": {
       "bestScore": 31,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 14722,
-        "variance": 20.365278673211208,
-        "entropy": 0.3694987100778096,
-        "edgeDensity": 0.038070436507936505,
-        "colorfulness": 22.4306640625,
-        "centerDetail": 27.996730512974093,
-        "meanLight": 224.70375205077767
+        "bytes": 14675,
+        "variance": 20.784428936398314,
+        "entropy": 0.3414232652502739,
+        "edgeDensity": 0.034102182539682536,
+        "colorfulness": 21.901123046875,
+        "centerDetail": 28.890219475507475,
+        "meanLight": 224.7609836914026
       },
       "gameplayEntry": {
         "started": false,
@@ -1011,20 +1065,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:06:17.130Z",
+    "lastAttemptAt": "2026-11-25T13:22:33.974Z",
     "diagnostic": {
-      "bestScore": 66,
+      "bestScore": 67,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 22934,
-        "variance": 51.38124810565685,
-        "entropy": 1.824190074854092,
-        "edgeDensity": 0.08234126984126984,
-        "colorfulness": 11.16455078125,
-        "centerDetail": 69.93827428636193,
-        "meanLight": 176.70565278320439
+        "bytes": 23031,
+        "variance": 51.20609288531798,
+        "entropy": 1.8447449502227824,
+        "edgeDensity": 0.08258928571428571,
+        "colorfulness": 11.1708984375,
+        "centerDetail": 69.81689676098736,
+        "meanLight": 176.83799389648567
       },
       "gameplayEntry": {
         "started": false,
@@ -1050,7 +1104,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:06:36.908Z",
+    "lastAttemptAt": "2026-11-25T13:22:52.125Z",
     "diagnostic": {
       "bestScore": 23,
       "qualityReasons": [
@@ -1083,7 +1137,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:06:54.437Z",
+    "lastAttemptAt": "2026-11-25T13:23:06.963Z",
     "diagnostic": {
       "bestScore": 30,
       "qualityReasons": [
@@ -1112,20 +1166,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:07:06.442Z",
+    "lastAttemptAt": "2026-11-25T13:23:18.846Z",
     "diagnostic": {
       "bestScore": 74,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 26094,
-        "variance": 88.18439996260402,
-        "entropy": 1.9474318655014746,
-        "edgeDensity": 0.0998263888888889,
-        "colorfulness": 19.004150390625,
+        "bytes": 26090,
+        "variance": 88.19214797935543,
+        "entropy": 1.9459039059894407,
+        "edgeDensity": 0.09945436507936507,
+        "colorfulness": 18.998779296875,
         "centerDetail": 56.96402386490174,
-        "meanLight": 113.7233148437515
+        "meanLight": 113.73560224609525
       },
       "gameplayEntry": {
         "started": true,
@@ -1145,19 +1199,19 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:07:24.582Z",
+    "lastAttemptAt": "2026-11-25T13:23:33.810Z",
     "diagnostic": {
       "bestScore": 26,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 15223,
-        "variance": 16.912321478226545,
+        "bytes": 15220,
+        "variance": 16.910377528982806,
         "entropy": 0.35246755651504613,
         "edgeDensity": 0.024057539682539684,
         "colorfulness": 10.30029296875,
-        "centerDetail": 28.970540196806457,
+        "centerDetail": 28.966766848187156,
         "meanLight": 27.269112207030584
       },
       "gameplayEntry": {
@@ -1172,7 +1226,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:08:12.616Z",
+    "lastAttemptAt": "2026-11-25T13:24:07.820Z",
     "diagnostic": {
       "bestScore": 42,
       "qualityReasons": [
@@ -1199,7 +1253,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:08:47.953Z",
+    "lastAttemptAt": "2026-11-25T13:24:25.201Z",
     "diagnostic": {
       "bestScore": 21,
       "qualityReasons": [
@@ -1251,7 +1305,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:09:09.242Z",
+    "lastAttemptAt": "2026-11-25T13:24:42.413Z",
     "diagnostic": {
       "bestScore": 17,
       "qualityReasons": [
@@ -1276,34 +1330,42 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "miniature-lab": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "b1c03f1429c5902ca380723ed95a5039d7e922b3",
     "qualityScore": 77,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "6f462a523aed1b460658ff62af9aea3eb633b105f5977860e3c36c321efa6e74",
+    "sha256": "6c04aceb9d054246fbe344d964bb21e1ee31beea5f6f252f9a05746f4fe3d4aa",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:53:58.323Z"
+    "lastAttemptRevision": "b1c03f1429c5902ca380723ed95a5039d7e922b3",
+    "lastAttemptAt": "2026-11-25T13:24:53.364Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "toy-lens": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "b1c03f1429c5902ca380723ed95a5039d7e922b3",
     "qualityScore": 77,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "c17601ac8abc147fcc14852359805349228436e9ed532d13cd08f821802c54db",
+    "sha256": "98eafa653873c3511034393e54ea19fee9b21b41143d8b855e5262aea89f0e16",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:54:09.155Z"
+    "lastAttemptRevision": "b1c03f1429c5902ca380723ed95a5039d7e922b3",
+    "lastAttemptAt": "2026-11-25T13:25:04.195Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "power-anatomy": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "d9f86cfc2a92b488fcd6e0cad324ea6910de8768",
-    "lastAttemptAt": "2026-11-06T11:09:20.238Z",
+    "lastAttemptAt": "2026-11-25T13:25:14.942Z",
     "diagnostic": {
       "bestScore": 57,
       "qualityReasons": [
@@ -1327,22 +1389,26 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "munchkin-level-forge": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "qualityScore": 83,
+    "revision": "6ac2b78d821ee01070e0467e486ee5c090857e5b",
+    "qualityScore": 85,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "c98aa86cafcae354e5670fbc7a03079e385e2c60a9a103111085db90645b8e4a",
+    "sha256": "64acd154192b3c5924ee546b07951b5543950252524e7641e3c9427c065d2fe7",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:54:30.877Z"
+    "lastAttemptRevision": "6ac2b78d821ee01070e0467e486ee5c090857e5b",
+    "lastAttemptAt": "2026-11-25T13:25:25.837Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "iev-disput": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "f5a12abc3ef1d7651c92fa1df1b4dcb79b0bcab7",
-    "lastAttemptAt": "2026-11-06T11:09:31.822Z",
+    "lastAttemptAt": "2026-11-25T13:25:36.591Z",
     "diagnostic": {
       "bestScore": 44,
       "qualityReasons": [
@@ -1366,7 +1432,7 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "scriptorium": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "d0883af09fd308201786d03ac1a60c147e3fd5f7",
     "qualityScore": 82,
     "visionScore": null,
     "prepared": false,
@@ -1374,14 +1440,18 @@
     "sha256": "c3d999d765c1f768d6039bcd3cd86659193e95ccbeba7fc87787e6390d1bb8c0",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:54:52.469Z"
+    "lastAttemptRevision": "d0883af09fd308201786d03ac1a60c147e3fd5f7",
+    "lastAttemptAt": "2026-11-25T13:25:47.424Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "perelist": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:09:42.684Z",
+    "lastAttemptAt": "2026-11-25T13:25:58.238Z",
     "diagnostic": {
       "bestScore": 32,
       "qualityReasons": [
@@ -1407,8 +1477,8 @@
   "kvarta": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:09:54.437Z",
+    "lastAttemptRevision": "d0883af09fd308201786d03ac1a60c147e3fd5f7",
+    "lastAttemptAt": "2026-11-25T13:26:09.976Z",
     "diagnostic": {
       "bestScore": 72,
       "qualityReasons": [
@@ -1433,27 +1503,31 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/kvarta/?pw-cover=1&pw_release=1.1.0&pw_fp=70e547be97245fc1e7745e4c"
+      "url": "http://127.0.0.1:4173/apps/kvarta/?pw-cover=1&pw_release=1.1.0&pw_fp=b235e1e0a22ea832a6d42c20"
     },
     "captureEngine": "safe-gameplay-v3"
   },
   "rivals-roulette": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "22a20a400435bb8ba72711e76add8966b5ae44ff",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "f1e4bc9964b62673690aa9502e9473ec272f0edcc122269d322c2c05ce754416",
+    "sha256": "5502b04cbef89437d9cc8bc6ab12891ef2269e98a8a985f097ff8db5d3b2567e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:55:28.209Z"
+    "lastAttemptRevision": "22a20a400435bb8ba72711e76add8966b5ae44ff",
+    "lastAttemptAt": "2026-11-25T13:26:20.778Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "chancellery": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:10:05.339Z",
+    "lastAttemptAt": "2026-11-25T13:26:31.658Z",
     "diagnostic": {
       "bestScore": 62,
       "qualityReasons": [
@@ -1480,7 +1554,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:10:17.086Z",
+    "lastAttemptAt": "2026-11-25T13:26:43.356Z",
     "diagnostic": {
       "bestScore": 67,
       "qualityReasons": [
@@ -1512,8 +1586,8 @@
   "witness-of-era": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:10:27.869Z",
+    "lastAttemptRevision": "d0883af09fd308201786d03ac1a60c147e3fd5f7",
+    "lastAttemptAt": "2026-11-25T13:27:01.710Z",
     "diagnostic": {
       "bestScore": 72,
       "qualityReasons": [
@@ -1532,7 +1606,7 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/witness-of-era/?pw-cover=1&pw_release=1.0.1&pw_fp=0696efb026bde58d724914af"
+      "url": "http://127.0.0.1:4173/apps/witness-of-era/?pw-cover=1&pw_release=1.0.1&pw_fp=0c37f6ad9f19b538c3e9ed86"
     },
     "captureEngine": "safe-gameplay-v3"
   },
@@ -1540,7 +1614,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:10:39.803Z",
+    "lastAttemptAt": "2026-11-25T13:27:13.639Z",
     "diagnostic": {
       "bestScore": 54,
       "qualityReasons": [
@@ -1608,20 +1682,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "4a4e398eebe4ef4c048c61951278750aa61769c7",
-    "lastAttemptAt": "2026-11-06T11:10:50.968Z",
+    "lastAttemptAt": "2026-11-25T13:27:24.771Z",
     "diagnostic": {
       "bestScore": 40,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 29817,
-        "variance": 33.91315722052361,
-        "entropy": 1.5631620602877707,
-        "edgeDensity": 0.07539682539682539,
-        "colorfulness": 16.998779296875,
-        "centerDetail": 4.948440991678529,
-        "meanLight": 29.033962695312923
+        "bytes": 29804,
+        "variance": 33.91298318961672,
+        "entropy": 1.562528698528101,
+        "edgeDensity": 0.07552083333333333,
+        "colorfulness": 17.000244140625,
+        "centerDetail": 4.951888137109049,
+        "meanLight": 29.034697656250422
       },
       "gameplayEntry": {
         "started": false,
@@ -1632,7 +1706,7 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "forma": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "fe77c1aec6c610ca14a948b14661ff51691238d0",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -1640,8 +1714,12 @@
     "sha256": "5874971b8253a46214474a18bbe1833cf094245189352e66ff55b6070ce06309",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:56:54.841Z"
+    "lastAttemptRevision": "fe77c1aec6c610ca14a948b14661ff51691238d0",
+    "lastAttemptAt": "2026-11-25T13:27:35.658Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "rival-forge": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -1659,7 +1737,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:11:02.055Z",
+    "lastAttemptAt": "2026-11-25T13:27:46.723Z",
     "diagnostic": {
       "bestScore": 69,
       "qualityReasons": [
@@ -1686,7 +1764,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:11:16.294Z",
+    "lastAttemptAt": "2026-11-25T13:28:00.932Z",
     "diagnostic": {
       "bestScore": 39,
       "qualityReasons": [
@@ -1731,7 +1809,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:11:27.115Z",
+    "lastAttemptAt": "2026-11-25T13:28:11.719Z",
     "diagnostic": {
       "bestScore": 44,
       "qualityReasons": [
@@ -1769,8 +1847,8 @@
   "kalibr": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "0d7082c1da3a158271be6324b0f00d1d0681c306",
-    "lastAttemptAt": "2026-11-05T11:05:44.779Z",
+    "lastAttemptRevision": "8029e3ded378eed5fb3624942281e72329f4c4ec",
+    "lastAttemptAt": "2026-11-25T13:14:30.381Z",
     "diagnostic": {
       "bestScore": 24,
       "qualityReasons": [
@@ -1790,7 +1868,7 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/kalibr/?pw-cover=1&pw_release=2.0.1&pw_fp=32d09139bfba5956f289079d"
+      "url": "http://127.0.0.1:4173/apps/kalibr/?pw-cover=1&pw_release=2.0.1&pw_fp=1f6a7c18148c96f2dd345342"
     },
     "captureEngine": "safe-gameplay-v3"
   },
@@ -1798,7 +1876,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "394cdd9bf058ac22e351414f713a2e3c7c683fe4",
-    "lastAttemptAt": "2026-11-06T11:11:48.427Z",
+    "lastAttemptAt": "2026-11-25T13:28:25.274Z",
     "diagnostic": {
       "bestScore": 30,
       "qualityReasons": [
@@ -1824,8 +1902,8 @@
   "nulevoy-etazh": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:11:59.414Z",
+    "lastAttemptRevision": "b7914d967f10a796d816df3c03c0c2f4f0c2464e",
+    "lastAttemptAt": "2026-11-25T13:28:36.117Z",
     "diagnostic": {
       "bestScore": 65,
       "qualityReasons": [
@@ -1844,7 +1922,7 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/nulevoy-etazh/?pw-cover=1&pw_release=1.0.0&pw_fp=774e849a0033c956a6183050"
+      "url": "http://127.0.0.1:4173/apps/nulevoy-etazh/?pw-cover=1&pw_release=1.0.0&pw_fp=2099a69764bd84971d8056fe"
     },
     "captureEngine": "safe-gameplay-v3"
   },
@@ -1864,7 +1942,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:12:10.333Z",
+    "lastAttemptAt": "2026-11-25T13:28:47.018Z",
     "diagnostic": {
       "bestScore": 70,
       "qualityReasons": [
@@ -1903,7 +1981,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:12:21.164Z",
+    "lastAttemptAt": "2026-11-25T13:28:57.818Z",
     "diagnostic": {
       "bestScore": 54,
       "qualityReasons": [
@@ -1930,7 +2008,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:12:32.116Z",
+    "lastAttemptAt": "2026-11-25T13:29:08.735Z",
     "diagnostic": {
       "bestScore": 72,
       "qualityReasons": [
@@ -1980,7 +2058,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:12:42.978Z",
+    "lastAttemptAt": "2026-11-25T13:29:19.565Z",
     "diagnostic": {
       "bestScore": 60,
       "qualityReasons": [
@@ -2007,20 +2085,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:12:53.968Z",
+    "lastAttemptAt": "2026-11-25T13:29:30.552Z",
     "diagnostic": {
       "bestScore": 59,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 43876,
-        "variance": 42.76877429350623,
-        "entropy": 1.6315696604871919,
+        "bytes": 44812,
+        "variance": 43.36075501605442,
+        "entropy": 1.6422710304517407,
         "edgeDensity": 0.15166170634920634,
-        "colorfulness": 30.182861328125,
-        "centerDetail": 34.079027576956186,
-        "meanLight": 215.48865815430594
+        "colorfulness": 30.459716796875,
+        "centerDetail": 32.341392746667246,
+        "meanLight": 215.1610646484463
       },
       "gameplayEntry": {
         "started": false,
@@ -2058,20 +2136,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:13:05.999Z",
+    "lastAttemptAt": "2026-11-25T13:29:42.435Z",
     "diagnostic": {
       "bestScore": 60,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 41616,
-        "variance": 47.55925574116438,
-        "entropy": 1.436290273863092,
-        "edgeDensity": 0.14347718253968253,
-        "colorfulness": 19.095458984375,
-        "centerDetail": 40.220206646937626,
-        "meanLight": 215.85180161132618
+        "bytes": 42071,
+        "variance": 47.43391439812459,
+        "entropy": 1.4388168200481966,
+        "edgeDensity": 0.14558531746031747,
+        "colorfulness": 19.083740234375,
+        "centerDetail": 40.223872378087215,
+        "meanLight": 215.84614985351408
       },
       "gameplayEntry": {
         "started": true,
@@ -2091,20 +2169,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:13:16.829Z",
+    "lastAttemptAt": "2026-11-25T13:29:53.216Z",
     "diagnostic": {
       "bestScore": 62,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 36417,
-        "variance": 66.88218932537028,
-        "entropy": 1.9758817266877724,
-        "edgeDensity": 0.1474454365079365,
-        "colorfulness": 22.666748046875,
-        "centerDetail": 22.849665279401947,
-        "meanLight": 192.03406772460536
+        "bytes": 36406,
+        "variance": 66.91287521766769,
+        "entropy": 1.9793112504717405,
+        "edgeDensity": 0.1494295634920635,
+        "colorfulness": 22.68359375,
+        "centerDetail": 23.13488446538862,
+        "meanLight": 191.98998593749596
       },
       "gameplayEntry": {
         "started": false,
@@ -2154,20 +2232,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:13:28.565Z",
+    "lastAttemptAt": "2026-11-25T13:30:04.933Z",
     "diagnostic": {
       "bestScore": 69,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 46646,
-        "variance": 68.64717220892813,
-        "entropy": 1.6110200773145968,
+        "bytes": 46676,
+        "variance": 68.64752520881157,
+        "entropy": 1.61182986629635,
         "edgeDensity": 0.15736607142857142,
-        "colorfulness": 17.404541015625,
-        "centerDetail": 80.8921808448965,
-        "meanLight": 198.67791938476591
+        "colorfulness": 17.4033203125,
+        "centerDetail": 80.89445336205975,
+        "meanLight": 198.67880849609404
       },
       "gameplayEntry": {
         "started": true,
@@ -2187,7 +2265,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:13:50.996Z",
+    "lastAttemptAt": "2026-11-25T13:30:16.651Z",
     "diagnostic": {
       "bestScore": 73,
       "qualityReasons": [
@@ -2219,8 +2297,8 @@
   "chronatlas": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "7e8efdb0cc110d2bff676c849ebc4ee974ca3344",
-    "lastAttemptAt": "2026-11-06T11:14:01.943Z",
+    "lastAttemptRevision": "22a20a400435bb8ba72711e76add8966b5ae44ff",
+    "lastAttemptAt": "2026-11-25T13:30:27.497Z",
     "diagnostic": {
       "bestScore": 57,
       "qualityReasons": [
@@ -2239,7 +2317,7 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/chronatlas/?pw-cover=1&pw_release=2.1.0&pw_fp=f16091eb44c1e06077c91ee1"
+      "url": "http://127.0.0.1:4173/apps/chronatlas/?pw-cover=1&pw_release=2.1.0&pw_fp=dd73e03402a3643796157e08"
     },
     "captureEngine": "safe-gameplay-v3"
   },
@@ -2283,20 +2361,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:14:13.097Z",
+    "lastAttemptAt": "2026-11-25T13:30:38.481Z",
     "diagnostic": {
-      "bestScore": 66,
+      "bestScore": 67,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 33780,
-        "variance": 50.71092502279374,
-        "entropy": 1.1043781765131044,
-        "edgeDensity": 0.13306051587301587,
-        "colorfulness": 32.7451171875,
-        "centerDetail": 50.62436825617269,
-        "meanLight": 209.5859410156228
+        "bytes": 33662,
+        "variance": 50.694223624740985,
+        "entropy": 1.144346274411601,
+        "edgeDensity": 0.13293650793650794,
+        "colorfulness": 32.75341796875,
+        "centerDetail": 50.53920653191232,
+        "meanLight": 209.51339106445047
       },
       "gameplayEntry": {
         "started": false,
@@ -2310,20 +2388,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:14:24.017Z",
+    "lastAttemptAt": "2026-11-25T13:30:49.348Z",
     "diagnostic": {
-      "bestScore": 58,
+      "bestScore": 57,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 46011,
-        "variance": 36.258693985169394,
-        "entropy": 1.783729591933049,
-        "edgeDensity": 0.1548859126984127,
-        "colorfulness": 36.716796875,
-        "centerDetail": 32.742446218540316,
-        "meanLight": 198.31850502929802
+        "bytes": 45513,
+        "variance": 34.97983124769028,
+        "entropy": 1.6804782961701539,
+        "edgeDensity": 0.1388888888888889,
+        "colorfulness": 37.989501953125,
+        "centerDetail": 32.182177297217876,
+        "meanLight": 196.58369902343867
       },
       "gameplayEntry": {
         "started": false,
@@ -2373,20 +2451,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:14:34.843Z",
+    "lastAttemptAt": "2026-11-25T13:31:00.163Z",
     "diagnostic": {
       "bestScore": 69,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 45119,
-        "variance": 63.3779462597534,
+        "bytes": 45108,
+        "variance": 63.378002978031866,
         "entropy": 1.5819601924901106,
         "edgeDensity": 0.1579861111111111,
-        "colorfulness": 18.834228515625,
+        "colorfulness": 18.833984375,
         "centerDetail": 77.67972419209258,
-        "meanLight": 199.3097516113233
+        "meanLight": 199.30987431640142
       },
       "gameplayEntry": {
         "started": false,
@@ -2421,16 +2499,20 @@
     "lastAttemptAt": "2026-10-13T13:04:06.029Z"
   },
   "linii-vetra": {
-    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "revision": "b7914d967f10a796d816df3c03c0c2f4f0c2464e",
     "qualityScore": 71,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "aaccc41de8f2daef4dc37abdf1d5b4784e7cf87c0d5ac07a7cb9b36af6b4d3f9",
+    "sha256": "2bac28b378c0a2a7f393059430708731a0d1603e1dc849acc70cb0600bb22a68",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:04:17.044Z"
+    "lastAttemptRevision": "b7914d967f10a796d816df3c03c0c2f4f0c2464e",
+    "lastAttemptAt": "2026-11-25T13:31:11.217Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "kordon": {
     "revision": "7bcbf0199d99d15eff48f1552aa9656049424d67",
@@ -2448,7 +2530,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "bec1404feb037740369a26bc4cc6ca674d3e7a6c",
-    "lastAttemptAt": "2026-11-06T11:14:45.645Z",
+    "lastAttemptAt": "2026-11-25T13:31:21.997Z",
     "diagnostic": {
       "bestScore": 72,
       "qualityReasons": [
@@ -2475,7 +2557,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:14:56.526Z",
+    "lastAttemptAt": "2026-11-25T13:31:40.294Z",
     "diagnostic": {
       "bestScore": 71,
       "qualityReasons": [
@@ -2502,7 +2584,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b7035ef0af780478964aa107726c4e7c00a67ad",
-    "lastAttemptAt": "2026-11-06T11:15:07.328Z",
+    "lastAttemptAt": "2026-11-25T13:31:51.079Z",
     "diagnostic": {
       "bestScore": 70,
       "qualityReasons": [
@@ -2529,7 +2611,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "6c465cdc5eca810f01fa9517aabe3cb1b05f3b6c",
-    "lastAttemptAt": "2026-11-06T11:15:19.148Z",
+    "lastAttemptAt": "2026-11-25T13:32:02.874Z",
     "diagnostic": {
       "bestScore": 60,
       "qualityReasons": [
@@ -2566,15 +2648,17 @@
     "shot": 0,
     "sha256": "7f43b628589c85282a535f86f088ac408df9eacd42f41de76280a5e56909e892",
     "imageVersion": 2,
-    "status": "published",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:05:21.831Z"
+    "status": "preserved",
+    "lastAttemptRevision": "b1c03f1429c5902ca380723ed95a5039d7e922b3",
+    "lastAttemptAt": "2026-11-25T13:32:14.634Z",
+    "note": "existing cover rated higher",
+    "captureEngine": "safe-gameplay-v3"
   },
   "vektor": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:15:29.904Z",
+    "lastAttemptAt": "2026-11-25T13:32:25.340Z",
     "diagnostic": {
       "bestScore": 65,
       "qualityReasons": [
@@ -2624,7 +2708,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7bc56c31c5716280751e358c094c97271c77fd59",
-    "lastAttemptAt": "2026-11-06T11:15:45.649Z",
+    "lastAttemptAt": "2026-11-25T13:32:40.866Z",
     "diagnostic": {
       "bestScore": 43,
       "qualityReasons": [
@@ -2656,20 +2740,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:15:56.623Z",
+    "lastAttemptAt": "2026-11-25T13:32:51.774Z",
     "diagnostic": {
       "bestScore": 49,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 38433,
-        "variance": 32.926701093701425,
+        "bytes": 38312,
+        "variance": 32.92719262901919,
         "entropy": 1.933160347464969,
-        "edgeDensity": 0.13603670634920634,
+        "edgeDensity": 0.1359126984126984,
         "colorfulness": 18.28369140625,
-        "centerDetail": 22.083169925031093,
-        "meanLight": 29.003109814453364
+        "centerDetail": 22.08858106004801,
+        "meanLight": 29.00321333007836
       },
       "gameplayEntry": {
         "started": false,
@@ -2707,7 +2791,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "0d43923304113463c5966bc26a517bffabaf5032",
-    "lastAttemptAt": "2026-11-06T11:16:07.543Z",
+    "lastAttemptAt": "2026-11-25T13:33:02.662Z",
     "diagnostic": {
       "bestScore": 66,
       "qualityReasons": [
@@ -2733,10 +2817,10 @@
   "shpilka": {
     "note": "No frame passed image-content checks",
     "status": "published",
-    "lastAttemptRevision": "21bb0bff5a7bd4465e27b1e5d7f9c65968052177",
-    "lastAttemptAt": "2026-10-20T08:43:33.637Z",
-    "revision": "21bb0bff5a7bd4465e27b1e5d7f9c65968052177",
-    "qualityScore": 80,
+    "lastAttemptRevision": "0914678e5f3068cacf46fc5a26ceb0b10c5bc04d",
+    "lastAttemptAt": "2026-11-25T13:13:57.582Z",
+    "revision": "0914678e5f3068cacf46fc5a26ceb0b10c5bc04d",
+    "qualityScore": 77,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -2749,7 +2833,7 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "0dfcdbf079a10362b93ef652b241d4186a2d0ece4cad5d47452721440ad05fff",
+    "sha256": "5f376ea61fa6a29aae58670ebd9489ab3ea02a1e3d28d6f44f40f7bf944317ed",
     "imageVersion": 2,
     "captureEngine": "safe-gameplay-v3"
   },
@@ -2769,20 +2853,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:16:20.495Z",
+    "lastAttemptAt": "2026-11-25T13:33:15.227Z",
     "diagnostic": {
       "bestScore": 68,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 34062,
-        "variance": 54.29856700780016,
+        "bytes": 34073,
+        "variance": 54.29740148285475,
         "entropy": 1.94725511923622,
         "edgeDensity": 0.15773809523809523,
-        "colorfulness": 16.613037109375,
+        "colorfulness": 16.61767578125,
         "centerDetail": 49.804544050794284,
-        "meanLight": 36.523748242186834
+        "meanLight": 36.52597299804621
       },
       "gameplayEntry": {
         "started": true,
@@ -2860,7 +2944,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7abe0d2730f30bed1ec5d32b04c8de73db777a5c",
-    "lastAttemptAt": "2026-11-06T11:16:31.286Z",
+    "lastAttemptAt": "2026-11-25T13:33:25.971Z",
     "diagnostic": {
       "bestScore": 48,
       "qualityReasons": [
@@ -2887,20 +2971,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "be40590ef43b4eccaded1704be44da501b3a86fe",
-    "lastAttemptAt": "2026-11-06T11:16:43.408Z",
+    "lastAttemptAt": "2026-11-25T13:33:37.979Z",
     "diagnostic": {
-      "bestScore": 30,
+      "bestScore": 27,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 43700,
-        "variance": 16.485072074474697,
-        "entropy": 1.1188842049169387,
-        "edgeDensity": 0.041666666666666664,
-        "colorfulness": 25.10498046875,
-        "centerDetail": 16.833256974967505,
-        "meanLight": 221.78803862304267
+        "bytes": 42318,
+        "variance": 12.782127084706147,
+        "entropy": 1.0212691706228323,
+        "edgeDensity": 0.0339781746031746,
+        "colorfulness": 25.038330078125,
+        "centerDetail": 17.308176800906825,
+        "meanLight": 222.58868803710408
       },
       "gameplayEntry": {
         "started": true,
@@ -2932,7 +3016,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:16:57.197Z",
+    "lastAttemptAt": "2026-11-25T13:33:50.455Z",
     "diagnostic": {
       "bestScore": 67,
       "qualityReasons": [
@@ -2982,20 +3066,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "988034b2015e893e95d5ef53cf5301c950376f24",
-    "lastAttemptAt": "2026-11-06T11:17:09.247Z",
+    "lastAttemptAt": "2026-11-25T13:34:02.408Z",
     "diagnostic": {
-      "bestScore": 31,
+      "bestScore": 32,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 26706,
-        "variance": 18.099124545855478,
-        "entropy": 1.7973723163421482,
-        "edgeDensity": 0.05493551587301587,
-        "colorfulness": 5.116455078125,
-        "centerDetail": 14.539514698100975,
-        "meanLight": 22.69408969726497
+        "bytes": 27349,
+        "variance": 19.19783987836131,
+        "entropy": 1.8238492909660853,
+        "edgeDensity": 0.060887896825396824,
+        "colorfulness": 5.135986328125,
+        "centerDetail": 14.540963404710153,
+        "meanLight": 23.07479135742123
       },
       "gameplayEntry": {
         "started": true,
@@ -3020,23 +3104,23 @@
     "sha256": "54eb398ac7bafd27fe2e89ee9af9efbf616f416c156595a06a84362419a3d5e7",
     "imageVersion": 2,
     "status": "failed",
-    "lastAttemptRevision": "f6fd0f4d109b2be072d840f66063fb41e809ef28",
-    "lastAttemptAt": "2026-11-05T11:07:00.822Z",
+    "lastAttemptRevision": "3b6ab47d802b3768ca521721d614b9cde93433e4",
+    "lastAttemptAt": "2026-11-25T13:16:08.873Z",
     "note": "No frame passed image-content checks",
     "captureEngine": "safe-gameplay-v3",
     "diagnostic": {
-      "bestScore": 35,
+      "bestScore": 36,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 24981,
-        "variance": 17.672943984862712,
-        "entropy": 1.4679654724963922,
-        "edgeDensity": 0.06646825396825397,
-        "colorfulness": 15.4306640625,
-        "centerDetail": 6.9529961202052375,
-        "meanLight": 105.28163525391165
+        "bytes": 25249,
+        "variance": 17.868306410879462,
+        "entropy": 1.5063258117354135,
+        "edgeDensity": 0.07180059523809523,
+        "colorfulness": 15.46044921875,
+        "centerDetail": 6.9887420295236975,
+        "meanLight": 105.07885712891188
       },
       "gameplayEntry": {
         "started": true,
@@ -3048,14 +3132,14 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/otves/?pw-cover=1&pw_release=1.6.0&pw_fp=3b00e00d24429e891af62fb5"
+      "url": "http://127.0.0.1:4173/apps/otves/?pw-cover=1&pw_release=1.6.0&pw_fp=8dd5894d55afe1dc21cd0ea7"
     }
   },
   "kromka": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "e5d8df24dceda10dda4a2751174634eac1465f4e",
-    "lastAttemptAt": "2026-11-06T11:17:20.204Z",
+    "lastAttemptAt": "2026-11-25T13:34:13.323Z",
     "diagnostic": {
       "bestScore": 71,
       "qualityReasons": [
@@ -3082,20 +3166,20 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "9f58bec8f3a01f71a82244c09c896a2cf242c33e",
-    "lastAttemptAt": "2026-11-06T11:17:35.280Z",
+    "lastAttemptAt": "2026-11-25T13:34:26.903Z",
     "diagnostic": {
       "bestScore": 55,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 24420,
-        "variance": 37.83605049398674,
-        "entropy": 1.5464805035387146,
+        "bytes": 24457,
+        "variance": 37.855064150198885,
+        "entropy": 1.56901783747172,
         "edgeDensity": 0.07353670634920635,
-        "colorfulness": 11.487060546875,
-        "centerDetail": 65.88595503153846,
-        "meanLight": 22.47970263671908
+        "colorfulness": 11.486083984375,
+        "centerDetail": 65.92203162953632,
+        "meanLight": 22.525272656250355
       },
       "gameplayEntry": {
         "started": false,
@@ -3109,7 +3193,7 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-11-06T11:17:46.455Z",
+    "lastAttemptAt": "2026-11-25T13:34:38.005Z",
     "diagnostic": {
       "bestScore": 66,
       "qualityReasons": [
@@ -3133,7 +3217,7 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "dvor-football": {
-    "revision": "60f172eec0cf8e5e797172d171653c32cb5d5e7c",
+    "revision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
     "qualityScore": 84,
     "visionScore": null,
     "prepared": false,
@@ -3141,12 +3225,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "ff27e2d9b2ba10ac1b16d6149bc9ded009c8f92357057985c231d77234e8406b",
+    "sha256": "4f36ad8af38a852cb99297b8213f17c6befacb2dd270ffa22e9e030b4048362e",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "60f172eec0cf8e5e797172d171653c32cb5d5e7c",
-    "lastAttemptAt": "2026-10-13T15:42:17.315Z"
+    "lastAttemptRevision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
+    "lastAttemptAt": "2026-11-25T13:17:33.203Z"
   },
   "last-tile-duel": {
     "revision": "dfb29614a12952e9158daac2af9016f1a092ab91",
@@ -3165,7 +3249,7 @@
     "lastAttemptAt": "2026-10-23T08:44:53.655Z"
   },
   "shevel": {
-    "revision": "384e3ee423d745021eaf80a477785382eb421d1a",
+    "revision": "88061ca01862553e89eb83c1d139196107c792fe",
     "qualityScore": 77,
     "visionScore": null,
     "prepared": false,
@@ -3173,12 +3257,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "78102d99247128428b9e69177224e1a81a8e98fa70039e27810277136684d98c",
+    "sha256": "9b2ee844d50e387343d11d8e1bb9cb04bc0d5266a3d62a7e3fd2e4e4fa008f49",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "384e3ee423d745021eaf80a477785382eb421d1a",
-    "lastAttemptAt": "2026-10-13T22:04:26.341Z"
+    "lastAttemptRevision": "88061ca01862553e89eb83c1d139196107c792fe",
+    "lastAttemptAt": "2026-11-25T13:17:22.146Z"
   },
   "flotiliya": {
     "note": "No frame passed image-content checks",
@@ -3188,13 +3272,13 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 44533,
-        "variance": 44.72921332421785,
+        "bytes": 44541,
+        "variance": 44.7292135370074,
         "entropy": 1.3805395084669525,
         "edgeDensity": 0.16431051587301587,
-        "colorfulness": 39.781005859375,
-        "centerDetail": 53.161344372950566,
-        "meanLight": 57.3118433593753
+        "colorfulness": 39.78173828125,
+        "centerDetail": 53.16024422686624,
+        "meanLight": 57.31161811523468
       },
       "gameplayEntry": {
         "started": false,
@@ -3205,7 +3289,7 @@
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "19617f295fb80e284bed1e4df1f55b4442298648",
-    "lastAttemptAt": "2026-11-05T11:07:22.833Z",
+    "lastAttemptAt": "2026-11-25T13:17:00.247Z",
     "revision": "ccb647535c08e0372ae72c39c19b1d9baba10c70",
     "qualityScore": 64,
     "visionScore": null,
@@ -3228,7 +3312,7 @@
     "imageVersion": 2
   },
   "ne-tem-golosom": {
-    "revision": "68f1f6e243b6080c60d77c2fb52d172981087768",
+    "revision": "3b6ab47d802b3768ca521721d614b9cde93433e4",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -3246,11 +3330,11 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "68f1f6e243b6080c60d77c2fb52d172981087768",
-    "lastAttemptAt": "2026-11-01T10:35:23.079Z"
+    "lastAttemptRevision": "3b6ab47d802b3768ca521721d614b9cde93433e4",
+    "lastAttemptAt": "2026-11-25T13:09:43.836Z"
   },
   "living-history": {
-    "revision": "cb1bcfc8a5f9ef197adcbdca44d9984944b013f5",
+    "revision": "131a4eb2978eb01ebd58d23a896397d555680c96",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -3258,12 +3342,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b6926c17a66f937d5e92e991fbcf0b3394a4c9222562ca351856aedb5f214371",
+    "sha256": "a3f9e477e795597765416848bcd011735f5680c3af33a2f54830da10b24d3b96",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "cb1bcfc8a5f9ef197adcbdca44d9984944b013f5",
-    "lastAttemptAt": "2026-10-20T08:43:44.615Z"
+    "lastAttemptRevision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "lastAttemptAt": "2026-11-25T13:14:08.623Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3285,28 +3369,28 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.2.0&pw_fp=e86d6193a1bd6be8ddbc9323"
+      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.2.0&pw_fp=38ff0d0787c1a424120c36fa"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "b14fa3951b3d9643e465e3659cf50d872da937b4",
-    "lastAttemptAt": "2026-11-06T11:02:30.848Z"
+    "lastAttemptRevision": "2101805ca05649f60dee921862fa6ec0d1f5f915",
+    "lastAttemptAt": "2026-11-25T13:17:11.270Z"
   },
   "oskolki": {
-    "revision": "5bd6b125d60059beca391659370485e7681bb4a4",
-    "qualityScore": 77,
+    "revision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
+    "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "39277737f795dbed0270735da154d4c6c93f783aab10d0e06a02986423602f3b",
+    "sha256": "c227ced0308bf0bcc0c1505e29913d719b47c5a3a7f20af56c49a428fe17dad3",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "5bd6b125d60059beca391659370485e7681bb4a4",
-    "lastAttemptAt": "2026-10-15T16:54:14.106Z"
+    "lastAttemptRevision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
+    "lastAttemptAt": "2026-11-25T13:16:49.198Z"
   },
   "art-cabinet": {
     "note": "No frame passed image-content checks",
@@ -3330,16 +3414,16 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3e75d60e1fed0bd383259f5f15add985ff66c301",
-    "lastAttemptAt": "2026-10-18T11:17:37.312Z",
-    "revision": "3e75d60e1fed0bd383259f5f15add985ff66c301",
+    "lastAttemptRevision": "5aac4732d2164c97155d5d96c3e9147881eca5bf",
+    "lastAttemptAt": "2026-11-25T13:16:27.286Z",
+    "revision": "5aac4732d2164c97155d5d96c3e9147881eca5bf",
     "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "shot": 0,
-    "sha256": "d8a8d6d44f14adb155ed82bf6242a6f315ec8a86b126aac4e16f8cb6a14c2a86",
+    "sha256": "d7753d25d8d66066f84e2ce5870ef62ad01b49fb2ec74c82fc8dfb8b6c09ab09",
     "imageVersion": 2
   },
   "bozhe-ne-tak": {
@@ -3347,10 +3431,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "809859be8cb2207b5336291c7dc88b842fcf4dd6",
-    "lastAttemptAt": "2026-10-23T08:42:13.633Z",
-    "revision": "809859be8cb2207b5336291c7dc88b842fcf4dd6",
-    "qualityScore": 63,
+    "lastAttemptRevision": "0e574a63fb13e7c1e09dd219be429f377e3038d8",
+    "lastAttemptAt": "2026-11-25T13:12:18.694Z",
+    "revision": "0e574a63fb13e7c1e09dd219be429f377e3038d8",
+    "qualityScore": 64,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3362,7 +3446,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "7e479c1e9beb51007f6d7bfeacaf192934041b60eb24e9a17561c7f6bdf1acae",
+    "sha256": "98c8d806a333bf0ac0a598b743cf4ebf3e8a064a82289ef2d64674d68fed5dee",
     "imageVersion": 2
   },
   "meat-exe": {
@@ -3373,24 +3457,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39880,
-        "variance": 52.12736106234867,
-        "entropy": 2.0196863390720803,
-        "edgeDensity": 0.11768353174603174,
-        "colorfulness": 29.257080078125,
-        "centerDetail": 60.55969079143952,
-        "meanLight": 40.81382138671904
+        "bytes": 39994,
+        "variance": 52.283149289227225,
+        "entropy": 2.029589487740304,
+        "edgeDensity": 0.11941964285714286,
+        "colorfulness": 29.174560546875,
+        "centerDetail": 60.627073312193914,
+        "meanLight": 40.881478173828434
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.5&pw_fp=15e5d208cfa6600c1743f9aa"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.5&pw_fp=e3cfef4b7dbec58bec99e7f6"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a3b9759668f64008d69396c58ddf72b0a78512cd",
-    "lastAttemptAt": "2026-11-05T11:05:34.051Z"
+    "lastAttemptRevision": "2101805ca05649f60dee921862fa6ec0d1f5f915",
+    "lastAttemptAt": "2026-11-25T13:13:22.689Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3401,27 +3485,27 @@
       ],
       "metrics": {
         "bytes": 22628,
-        "variance": 49.908273466262784,
+        "variance": 49.908382331791444,
         "entropy": 1.1771610982859548,
         "edgeDensity": 0.09387400793650794,
         "colorfulness": 8.328369140625,
-        "centerDetail": 68.10806175080057,
-        "meanLight": 210.30948544922668
+        "centerDetail": 68.10887208040305,
+        "meanLight": 210.30992182617982
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/tyaga-duel/?pw-cover=1&pw_release=1.1.0&pw_fp=15ccbb360217c56fe78719ac"
+      "url": "http://127.0.0.1:4173/apps/tyaga-duel/?pw-cover=1&pw_release=1.1.0&pw_fp=32ee61baffce7299da4e900b"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "c941fcfdf0ff8b5945ca0655009415c99726326f",
-    "lastAttemptAt": "2026-11-05T11:07:11.778Z"
+    "lastAttemptRevision": "6508c5fd2553df8a098ece32e247052f6ec55959",
+    "lastAttemptAt": "2026-11-25T13:16:38.299Z"
   },
   "axis-pals": {
-    "revision": "48ad133c8dccd6aae6eb949f2493dbab5c274592",
-    "qualityScore": 70,
+    "revision": "de256f2e5ed682751e6ec0e4fa086656a5f21d29",
+    "qualityScore": 71,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3434,12 +3518,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "cfa817a12eae3671103eb78fde1e51b8e444122366909861bb77e97577a0390c",
+    "sha256": "7f3e838dc92d0a713a3779958cc74e8f6cab72c8f943f41785cb5bd2255c2f8e",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "48ad133c8dccd6aae6eb949f2493dbab5c274592",
-    "lastAttemptAt": "2026-10-23T08:41:40.391Z"
+    "lastAttemptRevision": "de256f2e5ed682751e6ec0e4fa086656a5f21d29",
+    "lastAttemptAt": "2026-11-25T13:12:06.928Z"
   },
   "trafficity": {
     "revision": "ac20ec94ecc2b60b1d0338fe207eccc7c643e323",
@@ -3507,11 +3591,11 @@
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "3249e6b41f73b66ad254d0307d196646c2c42bdb",
-    "lastAttemptAt": "2026-11-05T11:06:15.861Z",
+    "lastAttemptAt": "2026-11-25T13:15:00.546Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
-    "revision": "73d61aef2d71839768ac3f897f6a22d9daffae6f",
+    "revision": "0914678e5f3068cacf46fc5a26ceb0b10c5bc04d",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -3519,20 +3603,20 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "7f14a924236be0c467d294fb87ade80f46fc53382d7482576926089b44454bf7",
+    "sha256": "a170f33c5b38919f7f9aed4fb9e5e7ff481248b1c97f021f5a7f70d1924726a6",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "73d61aef2d71839768ac3f897f6a22d9daffae6f",
-    "lastAttemptAt": "2026-10-26T09:06:00.662Z"
+    "lastAttemptRevision": "0914678e5f3068cacf46fc5a26ceb0b10c5bc04d",
+    "lastAttemptAt": "2026-11-25T13:10:50.846Z"
   },
   "not-dead-yet": {
     "note": "existing cover rated higher",
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "1cad8215924ac1967ea5f20aa10cd1bc26e121bc",
-    "lastAttemptAt": "2026-11-05T11:06:03.036Z",
+    "lastAttemptRevision": "9e70900071baf4ed99879b77a5c5237087c5992a",
+    "lastAttemptAt": "2026-11-25T13:14:47.868Z",
     "revision": "9ee0a9961d1ba0fc99448975be4023a2d624f513",
     "qualityScore": 71,
     "visionScore": null,
@@ -3550,7 +3634,7 @@
     "imageVersion": 2
   },
   "crossline-5x5": {
-    "revision": "bd5e5c420f6ab34c9185545f01dfd04c19683afa",
+    "revision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3562,12 +3646,12 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "bd5e5c420f6ab34c9185545f01dfd04c19683afa",
-    "lastAttemptAt": "2026-10-18T19:20:51.934Z"
+    "lastAttemptRevision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
+    "lastAttemptAt": "2026-11-25T13:15:52.077Z"
   },
   "perekos": {
-    "revision": "7385aaffb19dc8127c70c4bddfc6be7a95bbd0c4",
-    "qualityScore": 79,
+    "revision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
+    "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3580,12 +3664,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "91992c1fe8a6bc489d26400371c96d77205e1d9c09da8534ab72fc5e32cd5bcc",
+    "sha256": "6b98e5515e4d33e9b72dccc649f0fbfb284e476109373e9593a3a7dd77d3b3f1",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "7385aaffb19dc8127c70c4bddfc6be7a95bbd0c4",
-    "lastAttemptAt": "2026-10-25T08:33:42.283Z"
+    "lastAttemptRevision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
+    "lastAttemptAt": "2026-11-25T13:11:21.227Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3605,7 +3689,7 @@
     "imageVersion": 2
   },
   "cavitation-lab": {
-    "revision": "340ded2117143e4fce08b598e5346e550d2293ad",
+    "revision": "0e574a63fb13e7c1e09dd219be429f377e3038d8",
     "qualityScore": 79,
     "visionScore": null,
     "prepared": false,
@@ -3613,12 +3697,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b2636babd01657bb9f4b999b1ab3c9b8df82a9c75ef699373a73f0d1ca3cf901",
+    "sha256": "30f29a63e06bae5acdfc05a180272cdc68dc7d4ce3f345ceea1e7e572e0d4aae",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "340ded2117143e4fce08b598e5346e550d2293ad",
-    "lastAttemptAt": "2026-10-19T10:40:14.184Z"
+    "lastAttemptRevision": "0e574a63fb13e7c1e09dd219be429f377e3038d8",
+    "lastAttemptAt": "2026-11-25T13:14:19.668Z"
   },
   "petri-forge": {
     "note": "No frame passed image-content checks",
@@ -3651,18 +3735,18 @@
       }
     ],
     "diagnostic": {
-      "bestScore": 71,
+      "bestScore": 69,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 28986,
-        "variance": 99.28237872655883,
-        "entropy": 2.0550649362767324,
-        "edgeDensity": 0.08916170634920635,
-        "colorfulness": 18.6484375,
-        "centerDetail": 47.10026184744661,
-        "meanLight": 145.0482563964864
+        "bytes": 27515,
+        "variance": 99.4025838010466,
+        "entropy": 2.019832173589674,
+        "edgeDensity": 0.08134920634920635,
+        "colorfulness": 18.5126953125,
+        "centerDetail": 46.67770175333389,
+        "meanLight": 145.81167797851768
       },
       "gameplayEntry": {
         "started": true,
@@ -3674,15 +3758,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/blockies/?pw-cover=1&pw_release=0.5.17&pw_fp=0645e9e48efba653d5374dcf"
+      "url": "http://127.0.0.1:4173/apps/blockies/?pw-cover=1&pw_release=0.5.17&pw_fp=aa3b2998fe61e0437153e0c0"
     },
     "shot": 0,
     "sha256": "191a7abe88a94565a5c14a7c5b3d0666de349ce935ad6969a444bea437b2ed69",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "0aeb7bc18b0ab0dfafe4a25a2bd306f17b3c4614",
-    "lastAttemptAt": "2026-11-05T11:04:42.635Z",
+    "lastAttemptRevision": "5aac4732d2164c97155d5d96c3e9147881eca5bf",
+    "lastAttemptAt": "2026-11-25T13:10:28.077Z",
     "note": "No frame passed image-content checks"
   },
   "katana-echo": {
@@ -3690,10 +3774,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "6848de3c180f8204462c1422697e102f6ee4f4f2",
-    "lastAttemptAt": "2026-10-23T08:42:37.263Z",
-    "revision": "6848de3c180f8204462c1422697e102f6ee4f4f2",
-    "qualityScore": 51,
+    "lastAttemptRevision": "abb994929d63a82845202611452faab57fb071c4",
+    "lastAttemptAt": "2026-11-25T13:13:00.236Z",
+    "revision": "abb994929d63a82845202611452faab57fb071c4",
+    "qualityScore": 53,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3704,25 +3788,25 @@
         "score": 92
       }
     ],
-    "shot": 0,
-    "sha256": "7f3b5d2e2b7b08d483a18faee4fd1b113bd16dd5bf87f2c663b20032c90d1904",
+    "shot": 1,
+    "sha256": "5896601ad76ef7b8d1f53d2a306e5a30fa601723cd265aa002e4f035f4200223",
     "imageVersion": 2
   },
   "mini-car-3d": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 35,
+      "bestScore": 36,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 16951,
-        "variance": 22.31732805274426,
-        "entropy": 1.5598248210774375,
-        "edgeDensity": 0.06547619047619048,
-        "colorfulness": 15.71142578125,
-        "centerDetail": 12.851746298761315,
-        "meanLight": 25.024656591798085
+        "bytes": 17054,
+        "variance": 23.16100287325262,
+        "entropy": 1.5642456597874324,
+        "edgeDensity": 0.06671626984126984,
+        "colorfulness": 15.625732421875,
+        "centerDetail": 12.856281734864611,
+        "meanLight": 25.21223017578249
       },
       "gameplayEntry": {
         "started": false,
@@ -3733,16 +3817,16 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/mini-car-3d/?pw-cover=1&pw_release=0.1.0&pw_fp=689d7658377369ce36144616"
+      "url": "http://127.0.0.1:4173/apps/mini-car-3d/?pw-cover=1&pw_release=0.1.0&pw_fp=4f38ec1595346d37825f78fd"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "fed707cd07a6d13464f1144c456d36cf32954a18",
-    "lastAttemptAt": "2026-11-05T11:06:31.897Z"
+    "lastAttemptRevision": "abb994929d63a82845202611452faab57fb071c4",
+    "lastAttemptAt": "2026-11-25T13:15:16.533Z"
   },
   "skyforge-relay": {
-    "revision": "17306a5f165b40899e9dd965645bb1c0b936d67e",
-    "qualityScore": 68,
+    "revision": "abb994929d63a82845202611452faab57fb071c4",
+    "qualityScore": 70,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3759,16 +3843,16 @@
       }
     ],
     "diagnostic": null,
-    "shot": 0,
-    "sha256": "2d406a53f03974556572a9542cb08a8b7b79d591a5276e17be5c049854938b62",
+    "shot": 2,
+    "sha256": "4ba219f6b678c0eb19af5daacd6287ae3d184a6528296f9c962b66354d32eec0",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "17306a5f165b40899e9dd965645bb1c0b936d67e",
-    "lastAttemptAt": "2026-10-19T10:16:24.287Z"
+    "lastAttemptRevision": "abb994929d63a82845202611452faab57fb071c4",
+    "lastAttemptAt": "2026-11-25T13:15:29.520Z"
   },
   "space-run": {
-    "revision": "6848de3c180f8204462c1422697e102f6ee4f4f2",
+    "revision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
     "qualityScore": 56,
     "visionScore": null,
     "prepared": false,
@@ -3782,15 +3866,15 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "8f89f2bff24f5b618a0e78cb351a147c00b0a9dc53825ad29ba8fb63c09fdd5d",
+    "sha256": "38d70c012de02f6cd7ce2af52479e36c440a4c4cfae62f23d4c9444533472c99",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "6848de3c180f8204462c1422697e102f6ee4f4f2",
-    "lastAttemptAt": "2026-10-23T08:43:21.581Z"
+    "lastAttemptRevision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
+    "lastAttemptAt": "2026-11-25T13:13:45.589Z"
   },
   "trace-mosaic": {
-    "revision": "8b7ba282c9a213ea581e607609fd9e6c17fce396",
+    "revision": "131a4eb2978eb01ebd58d23a896397d555680c96",
     "qualityScore": 64,
     "visionScore": null,
     "prepared": false,
@@ -3798,16 +3882,16 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "f1bb55114a0ecc0749803dd902eb3408aee93e4b008361489ce07b7108c7b1a9",
+    "sha256": "2d308744885c1a0916ecd390e5bdeef79371da668b356556a0e37e72dfad2251",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "8b7ba282c9a213ea581e607609fd9e6c17fce396",
-    "lastAttemptAt": "2026-10-23T08:42:58.884Z",
+    "lastAttemptRevision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "lastAttemptAt": "2026-11-25T13:13:33.575Z",
     "note": "existing cover rated higher"
   },
   "crown-laws": {
-    "revision": "0c51466a6ac1ad9b7c2f523d692538376706abbe",
+    "revision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
     "qualityScore": 68,
     "visionScore": null,
     "prepared": false,
@@ -3821,12 +3905,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b58002c164088627837e618c0f77c055314a946699e42aea2d93b534e22b547e",
+    "sha256": "feff8a3b4e2c97fce264acf7483e94c169461f6cc00f6689908f8be15ad5bcf9",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "0c51466a6ac1ad9b7c2f523d692538376706abbe",
-    "lastAttemptAt": "2026-10-24T08:16:54.475Z"
+    "lastAttemptRevision": "7891c19b63d811e0a48eeb9f956c6ab17dbe1488",
+    "lastAttemptAt": "2026-11-25T13:11:33.197Z"
   },
   "throne-three": {
     "note": "No frame passed image-content checks",
@@ -3854,15 +3938,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/throne-three/?pw-cover=1&pw_release=0.1.0&pw_fp=7e3bc40935b7941a591facf7"
+      "url": "http://127.0.0.1:4173/apps/throne-three/?pw-cover=1&pw_release=0.1.0&pw_fp=201c2ed832194d7d372f29cc"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "0fdcf5c63e8f960a5dbc7626ea2f8472a2e8f741",
-    "lastAttemptAt": "2026-11-05T11:06:43.667Z"
+    "lastAttemptRevision": "abb994929d63a82845202611452faab57fb071c4",
+    "lastAttemptAt": "2026-11-25T13:15:41.270Z"
   },
   "shock-lab": {
-    "revision": "c44c1c9225ba2be86b4e629b7b051e9f358e0de1",
+    "revision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
     "qualityScore": 63,
     "visionScore": null,
     "prepared": false,
@@ -3870,39 +3954,29 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "58394f75b127c35732aeb65c2b09815e1756758b23b38460eae3b48771a1d501",
+    "sha256": "274816584b869488f25007e23cddc9a489cbfd40d2bb30345b212c7fc1ce0ac2",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "c44c1c9225ba2be86b4e629b7b051e9f358e0de1",
-    "lastAttemptAt": "2026-10-20T08:42:36.267Z"
+    "lastAttemptRevision": "8fc4758ac120319fd3b0c03e4d3f922088736a7d",
+    "lastAttemptAt": "2026-11-25T13:13:11.380Z"
   },
   "rivals-field-notes": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 72,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 46577,
-        "variance": 97.8671176768324,
-        "entropy": 1.9958542023052386,
-        "edgeDensity": 0.20535714285714285,
-        "colorfulness": 11.642333984375,
-        "centerDetail": 88.10017636092317,
-        "meanLight": 149.1348424316377
-      },
-      "gameplayEntry": {
-        "started": false,
-        "actions": []
-      },
-      "url": "http://127.0.0.1:4173/apps/rivals-field-notes/?pw-cover=1&pw_release=1.1.0&pw_fp=2a5b24451aee55b4041cfd94"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "9f189c9d33c34b3cea75fda6d7851d8033b54042",
-    "lastAttemptAt": "2026-11-05T11:05:04.351Z"
+    "lastAttemptRevision": "88061ca01862553e89eb83c1d139196107c792fe",
+    "lastAttemptAt": "2026-11-25T13:08:57.631Z",
+    "revision": "88061ca01862553e89eb83c1d139196107c792fe",
+    "qualityScore": 73,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "shot": 0,
+    "sha256": "576abb256accdf1fcadfddb601cc925e85f66b973f75b3ba02ae9a363b815562",
+    "imageVersion": 2
   },
   "billiard-lab": {
     "revision": "7e484507fe02933eae62645550c03c40db855c2a",
@@ -3917,25 +3991,25 @@
     "imageVersion": 2,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "356834dcad97b1a24f96f9376156617fa7eb9947",
-    "lastAttemptAt": "2026-11-05T11:04:53.556Z",
+    "lastAttemptRevision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "lastAttemptAt": "2026-11-25T13:11:54.978Z",
     "note": "existing cover rated higher"
   },
   "black-bazaar": {
-    "revision": "629f8777b7daea159c57188b0bed6f2339069200",
-    "qualityScore": 82,
+    "revision": "88061ca01862553e89eb83c1d139196107c792fe",
+    "qualityScore": 83,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b44d4894149b3f25b218fa662b47a3a6336e46fcb8dd5091cf23330e0a1f32c1",
+    "sha256": "60647b03fb08018e1df33a0f3cd09fbd2995d7f9dab00c329f77573ee3145b4c",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "629f8777b7daea159c57188b0bed6f2339069200",
-    "lastAttemptAt": "2026-10-26T09:06:11.577Z"
+    "lastAttemptRevision": "88061ca01862553e89eb83c1d139196107c792fe",
+    "lastAttemptAt": "2026-11-25T13:11:01.712Z"
   },
   "ne-zhmi": {
     "revision": "60f55c408090f666871c7f08f0dd305c4ae30bf7",
@@ -3979,12 +4053,12 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/tihiy-kadr/?pw-cover=1&pw_release=1.9.0&pw_fp=f1d9ff2382be33ab1eb88d59"
+      "url": "http://127.0.0.1:4173/apps/tihiy-kadr/?pw-cover=1&pw_release=1.9.0&pw_fp=0366cbc46706ab08678aab08"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "e67ecb2f7a34246289dea984dac7ba4a94b054f7",
-    "lastAttemptAt": "2026-11-05T11:04:20.104Z"
+    "lastAttemptRevision": "0e574a63fb13e7c1e09dd219be429f377e3038d8",
+    "lastAttemptAt": "2026-11-25T13:10:05.563Z"
   },
   "shest-hodov": {
     "note": "No frame passed image-content checks",
@@ -4006,12 +4080,12 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/shest-hodov/?pw-cover=1&pw_release=1.1.0&pw_fp=1d818dfdb3e219fdc0f4fb6e"
+      "url": "http://127.0.0.1:4173/apps/shest-hodov/?pw-cover=1&pw_release=1.1.0&pw_fp=ae63840e0700a6ca403ec666"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "0e1f4b2c5ed7d88c54682ea0c03610ca49b18b5f",
-    "lastAttemptAt": "2026-11-05T11:04:30.835Z"
+    "lastAttemptRevision": "b884af4fb0a6bf4d20d9ba7da704127e12e9633b",
+    "lastAttemptAt": "2026-11-25T13:10:16.294Z"
   },
   "chernye-znamena": {
     "revision": "9daaa0172123283f0172e953b7694329ef56cda4",
@@ -4048,24 +4122,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 40379,
-        "variance": 92.41363671957306,
-        "entropy": 2.0803967085033377,
+        "bytes": 40392,
+        "variance": 92.41935945628892,
+        "entropy": 2.07879920379832,
         "edgeDensity": 0.14434523809523808,
-        "colorfulness": 14.56640625,
+        "colorfulness": 14.564697265625,
         "centerDetail": 70.88956561840784,
-        "meanLight": 151.53687426757259
+        "meanLight": 151.5405338378851
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/print-forge/?pw-cover=1&pw_release=1.0.0&pw_fp=62ab033c2c3d676f953cdd2e"
+      "url": "http://127.0.0.1:4173/apps/print-forge/?pw-cover=1&pw_release=1.0.0&pw_fp=b3eec5fbf630ca04c0f763d1"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "e100f2fd2d2fcfe604d5cc2ed727e5e50f4d1b58",
-    "lastAttemptAt": "2026-11-05T11:04:09.272Z"
+    "lastAttemptRevision": "39367573fe9d5de71e039c21e473e640e55ee0b2",
+    "lastAttemptAt": "2026-11-25T13:09:54.729Z"
   },
   "rose-ranking-15": {
     "revision": "12e83cdcc5933a2cf487ad722536b7b2987b5fe4",
@@ -4098,5 +4172,341 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "d3f1d671d233593b94a7f5019c990174d7456308",
     "lastAttemptAt": "2026-11-06T11:02:19.691Z"
+  },
+  "pereves": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 42,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 29670,
+        "variance": 27.984740446463352,
+        "entropy": 1.7838549612274779,
+        "edgeDensity": 0.10119047619047619,
+        "colorfulness": 14.87548828125,
+        "centerDetail": 10.159261415562396,
+        "meanLight": 219.81683510742104
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/pereves/?pw-cover=1&pw_release=1.0.0&pw_fp=75de3f0e13735c7d764752e3"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "e9c921c1b846ea6a932462362ca5aa13ecf4d7b1",
+    "lastAttemptAt": "2026-11-25T13:06:44.419Z"
+  },
+  "echolot": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 52,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 41079,
+        "variance": 30.819416102157707,
+        "entropy": 1.60026428745868,
+        "edgeDensity": 0.14719742063492064,
+        "colorfulness": 47.246826171875,
+        "centerDetail": 17.357440651971352,
+        "meanLight": 50.65443037109432
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/echolot/?pw-cover=1&pw_release=1.0.0&pw_fp=67045c9fddbc4e2511ee33bb"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "327ebcdc3f32eb1120d7164f5113746c0e5cd92e",
+    "lastAttemptAt": "2026-11-25T13:06:55.169Z"
+  },
+  "emergent-kingdoms": {
+    "revision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "qualityScore": 63,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "▶",
+        "id": "play",
+        "score": 80
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "6cf7f595fcf32a9e3b981c1b3d80d3535b1263c63d10db8bdb6dc56e180475a6",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "131a4eb2978eb01ebd58d23a896397d555680c96",
+    "lastAttemptAt": "2026-11-25T13:07:07.087Z"
+  },
+  "palimpsest-atlas": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 51,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 41459,
+        "variance": 27.94926786585089,
+        "entropy": 1.6043640493684852,
+        "edgeDensity": 0.12487599206349206,
+        "colorfulness": 32.53857421875,
+        "centerDetail": 30.425838015016314,
+        "meanLight": 217.4400283691449
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/palimpsest-atlas/?pw-cover=1&pw_release=0.5.0&pw_fp=4e8458278edaa3e8119e6b61"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "6508c5fd2553df8a098ece32e247052f6ec55959",
+    "lastAttemptAt": "2026-11-25T13:07:17.936Z"
+  },
+  "tidepool": {
+    "revision": "9e70900071baf4ed99879b77a5c5237087c5992a",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "3aab29bb4fb8b6de1e0323cd4ea7578834ce59fdd4149ba03b9e7147a18a985d",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "9e70900071baf4ed99879b77a5c5237087c5992a",
+    "lastAttemptAt": "2026-11-25T13:07:28.684Z"
+  },
+  "contour": {
+    "revision": "9e70900071baf4ed99879b77a5c5237087c5992a",
+    "qualityScore": 57,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "0fb5da739fab23b5bee61cd0616fa3baf54e1162e385a1dcfadfa14bdb1c314e",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "9e70900071baf4ed99879b77a5c5237087c5992a",
+    "lastAttemptAt": "2026-11-25T13:07:39.434Z"
+  },
+  "single-track": {
+    "revision": "bd4af932b82b8665d6ab7b411a3111076ccbc357",
+    "qualityScore": 62,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "ff8ee3d2cc3cd0e3f4c42266fef54fbe7c5f6bb607940ed0debf146212a43bc6",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "bd4af932b82b8665d6ab7b411a3111076ccbc357",
+    "lastAttemptAt": "2026-11-25T13:07:50.167Z"
+  },
+  "kaskad-patterns": {
+    "revision": "1ff38ef3c343a276c30f4d25a888e4e5a5f3e8cb",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "f0d0c0e3df3687d6ec6b1610902a96edfe90f34077c7421fa6401c36efbaf489",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "1ff38ef3c343a276c30f4d25a888e4e5a5f3e8cb",
+    "lastAttemptAt": "2026-11-25T13:08:01.119Z"
+  },
+  "glyad": {
+    "revision": "825f221e7bc31858b78f4995c800763e1a685973",
+    "qualityScore": 69,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "41ed117028a4e2ed8ed04c12d5d6fac38f0c236dc264dc0ab76bcd186ae8d9a4",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "825f221e7bc31858b78f4995c800763e1a685973",
+    "lastAttemptAt": "2026-11-25T13:08:11.950Z"
+  },
+  "skol-siege": {
+    "revision": "24a8df610e4ba990e8bbda2910b8f8c6e67b860c",
+    "qualityScore": 71,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "НАЧАТЬ ОСАДУ →",
+        "id": "begin",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "824eeaf3e5bc2772898cb3b8c357477a43954cd99e05a080a05d98e525f19bc1",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "24a8df610e4ba990e8bbda2910b8f8c6e67b860c",
+    "lastAttemptAt": "2026-11-25T13:08:24.052Z"
+  },
+  "press": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 69,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 33975,
+        "variance": 73.6603939485285,
+        "entropy": 1.9910017576654608,
+        "edgeDensity": 0.13343253968253968,
+        "colorfulness": 9.38232421875,
+        "centerDetail": 64.57564658322532,
+        "meanLight": 203.9408302246131
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/press/?pw-cover=1&pw_release=1.1.0&pw_fp=4b5fa8e9ef49c86e1986b2bb"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "48b5bf0a1dd199db0ef94abcb25407f6488c1114",
+    "lastAttemptAt": "2026-11-25T13:08:34.899Z"
+  },
+  "bzyn": {
+    "revision": "0e574a63fb13e7c1e09dd219be429f377e3038d8",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "ПУСК ↗",
+        "id": "fireButton",
+        "score": 62
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "b1ea71f6734866bf0210a3479526391ca8bd0322fdafce3ea831f6cd0c78bf2f",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "0e574a63fb13e7c1e09dd219be429f377e3038d8",
+    "lastAttemptAt": "2026-11-25T13:08:46.802Z"
+  },
+  "folkarium": {
+    "revision": "27f68bb21e2caf1246c69548389a9c608a496aff",
+    "qualityScore": 69,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "▶ Слушать",
+        "id": "playBtn",
+        "score": 62
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "0a2b2c4a5fcf7169c35fce672a5b835c394eeeb0ecf192cc71fb6c8290072f86",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "27f68bb21e2caf1246c69548389a9c608a496aff",
+    "lastAttemptAt": "2026-11-25T13:09:09.465Z"
+  },
+  "sin-guion": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 49,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 33110,
+        "variance": 29.103042449826678,
+        "entropy": 1.7239613288289193,
+        "edgeDensity": 0.1355406746031746,
+        "colorfulness": 6.708251953125,
+        "centerDetail": 38.28285199907528,
+        "meanLight": 231.65023823241486
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Начать тренировку",
+            "id": "",
+            "score": 104
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/sin-guion/?pw-cover=1&pw_release=1.0.0&pw_fp=2e462160fe799309c8b2dfb9"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "59918adb23c3a6680aed4e47426141ef2bf3e371",
+    "lastAttemptAt": "2026-11-25T13:09:21.147Z"
+  },
+  "rivals-dna": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 67,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 39173,
+        "variance": 52.388459202092605,
+        "entropy": 1.8420227204730113,
+        "edgeDensity": 0.15749007936507936,
+        "colorfulness": 10.82275390625,
+        "centerDetail": 68.05438784333244,
+        "meanLight": 219.0030791015703
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/rivals-dna/?pw-cover=1&pw_release=1.0.0&pw_fp=259de64b57a6570cab67975c"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "b403989944fc869511cebed739d5d91b9c71389e",
+    "lastAttemptAt": "2026-11-25T13:09:31.896Z"
   }
 }
