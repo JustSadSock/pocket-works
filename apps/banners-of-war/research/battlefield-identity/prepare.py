@@ -19,5 +19,5 @@ source=next(Path("/tmp/bow-source").rglob("spearman.blend"))
 from concurrent.futures import ThreadPoolExecutor
 def bake(kind):
     env=dict(os.environ,BOW_TROOP=kind,BOW_HORSE=str(work/"public/horse.glb"))
-    subprocess.run([os.environ["BLENDER"],"--background","--disable-autoexec",str(source),"--threads","2","--python-exit-code","1","--python",str(Path(__file__).with_name("troop-bake.py"))],env=env,check=True,timeout=1500)
-with ThreadPoolExecutor(max_workers=2) as pool:list(pool.map(bake,["sword","archer","knight","lightHorse"]))
+    subprocess.run([os.environ["BLENDER"],"--background","--disable-autoexec",str(source),"--threads","2","--python-exit-code","1","--python",str(Path(__file__).with_name("troop-bake.py"))],env=env,check=True,timeout=2400)
+with ThreadPoolExecutor(max_workers=2) as pool:list(pool.map(bake,(["spear"] if os.environ.get("BOW_MOTION_REV")=="1" else [])+["sword","archer","knight","lightHorse"]))

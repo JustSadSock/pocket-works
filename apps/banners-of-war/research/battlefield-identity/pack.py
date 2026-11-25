@@ -3,8 +3,12 @@ from pathlib import Path
 from PIL import Image,ImageDraw
 out=Path(os.environ["BOW_ART_OUTPUT"]);meta=json.loads((out/"formation-atlas.json").read_text())
 # Keep accepted spear pages unchanged. Namespaced keys and additional compact pages per troop.
-meta["entries"]={"spear:"+k:v for k,v in meta["entries"].items()};idx=max(map(int,meta["pages"]))+1
-for kind in ["sword","archer","knight","lightHorse"]:
+extended=os.environ.get("BOW_MOTION_REV")=="1"
+if extended:
+    meta["entries"]={};meta["pages"]={};idx=0
+else:
+    meta["entries"]={"spear:"+k:v for k,v in meta["entries"].items()};idx=max(map(int,meta["pages"]))+1
+for kind in (["spear"] if extended else [])+["sword","archer","knight","lightHorse"]:
     frames=json.loads((out/kind/"frames.json").read_text())["frames"];page=Image.new("RGBA",(1024,1024));x=y=row=0
     def flush():
         global idx,page,x,y,row

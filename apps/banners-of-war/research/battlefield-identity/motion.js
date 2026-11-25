@@ -3,14 +3,14 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const hash=(x,y=0)=>{let n=Math.imul(x|0,374761393)+Math.imul(y|0,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296};
 export const mounted=u=>['knight','lightHorse','guard'].includes(u.type);
 export function annotateMotionFrames(frames,prior=new Map()){
- let accum=new Map(prior),last=new Map(),prevTime=null,shots=new Map();
+ let accum=new Map(prior),last=new Map(),prevTime=null,shots=new Map(),contactEnd=new Map();
  return frames.map(s=>{
   for(let a of s.shots||[])if(a.time<=s.time)shots.set(a.id,Math.max(shots.get(a.id)??-Infinity,a.time));
   let units=s.units.map(u=>{
    let p=last.get(u.id),distance=accum.get(u.id)||0;
    if(p&&s.time>=prevTime)distance+=Math.hypot(u.x-p.x,u.y-p.y);
-   accum.set(u.id,distance);last.set(u.id,u);
-   return {...u,motionDistance:distance,motionShotTime:shots.get(u.id)??-1e6};
+   if(p?.contact>0&&!(u.contact>0))contactEnd.set(u.id,s.time);accum.set(u.id,distance);last.set(u.id,u);
+   return {...u,motionDistance:distance,motionShotTime:shots.get(u.id)??-1e6,motionContactEnd:contactEnd.get(u.id)??-1e6};
   });
   prevTime=s.time;return {...s,units};
  });
@@ -37,7 +37,9 @@ export function motionPose(u,q,row,rows,s,seed,contact,extended=false){
   if(q.pressure>1.1||u.order?.kind==='brace'||u.order?.kind==='hold')return 21;
   return timeCycle(horse?1.35:1.15,attack);
  }
- if(horse&&u.order?.kind==='charge'&&v>1.25)return cycle(u.type==='lightHorse'?3.2:2.75,fast);
+ if(extended&&s.time-(u.motionContactEnd??-1e6)<.55&&s.time>=(u.motionContactEnd??-1e6)&&v<.3)return 61;
+ if(horse&&u.order?.kind==='charge'&&v>2.7)return cycle(u.type==='lightHorse'?3.2:2.75,fast);
+ if(horse&&extended&&u.order?.kind==='charge'&&v<.2)return 57;
  if(v>.18){
   if(horse&&v>2.7)return cycle(2.75,fast);
   if(horse&&extended&&v>1.35)return cycle(2.05,[65,69,73,77]);

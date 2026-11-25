@@ -7,7 +7,7 @@ export function audible(F,s,u){return F.alive(u)&&!u.pendingArrival&&(!s.fog||u.
 export function soundEvents(F,s,cam,prior,dt){
  const events=[],next=new Map(),t=s.time;
  for(let u of s.units){if(!audible(F,s,u))continue;
-  let d=Math.hypot(u.x-cam.x,u.y-cam.y),gain=clamp(1-d/540,0,1)**1.7*Math.min(1,Math.sqrt(u.n/90)),pan=clamp((cam.axis==='wide'?u.x-cam.x:cam.y-u.y)/200,-1,1),p=prior.get(u.id),horse=F.spec(u).horse>0;
+  let d=Math.hypot(u.x-cam.x,u.y-cam.y),gain=clamp(1-d/540,0,1)**1.7*Math.min(1,Math.sqrt(u.n/90))*clamp((cam.k??1)/.8,.28,1),pan=clamp((cam.axis==='wide'?u.x-cam.x:cam.y-u.y)/200,-1,1),p=prior.get(u.id),horse=F.spec(u).horse>0;
   let gait=horse?(u.v>3?3.8:u.v>1.4?2.5:1.4):clamp(u.v*1.75,.65,3.8),stride=Math.floor((u.motionDistance??t*Math.abs(u.v||0))/(horse?1.5:.68)),beat=Math.floor(t*2);
   let state={stride,beat,order:u.order?.kind,rout:!!u.rout};next.set(u.id,state);if(gain<.025||!p)continue;
   const add=(kind,strength=1,variant=beat)=>events.push({kind,gain:gain*strength,pan,variant:Math.floor(hash(u.id,variant)*4),id:u.id});

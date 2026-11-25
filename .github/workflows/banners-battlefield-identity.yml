@@ -120,3 +120,105 @@ jobs:
           path: quality-artifacts/banners-battlefield-identity
           if-no-files-found: error
           retention-days: 14
+
+  living-motion:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    env:
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/banners-living-motion
+      BLENDER_VERSION: '5.2.1'
+      BOW_MOTION_REV: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate full physical campaign
+        run: |
+          node apps/banners-of-war/research/battlefield-identity/physical.test.mjs
+          node apps/banners-of-war/research/battlefield-identity/composition.test.mjs
+          node apps/banners-of-war/research/battlefield-identity/living.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45672121448
+          artifact-ids: 15050357382
+          path: /tmp/bow-source
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45693373840
+          artifact-ids: 15059369113
+          path: /tmp/bow-art-baseline
+      - name: Restore accepted assets
+        run: |
+          mkdir -p "$BOW_ART_OUTPUT"
+          python3 - <<'PY'
+          import os,shutil
+          from pathlib import Path
+          root=Path('/tmp/bow-art-baseline');out=Path(os.environ['BOW_ART_OUTPUT'])
+          names=['formation-atlas.json','grass.png','sparse.png','road.png','stone.png','terrain-provenance.json']+[f'{k}.{s}' for k in ['tree1','tree2','tree3','bush'] for s in ['png','json']]
+          for n in names:
+              f=list(root.rglob(n));assert len(f)==1,n;shutil.copyfile(f[0],out/n)
+          for p in root.rglob('page-*.png'):shutil.copyfile(p,out/p.name)
+          PY
+      - name: Prepare verified Blender
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil xz-utils fonts-dejavu-core ffmpeg libgl1 libx11-6 libxi6 libxrender1
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          verified=false
+          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" blender.sha256
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          test "$verified" = true
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Bake revised five-role motion candidate
+        run: |
+          python3 -m py_compile apps/banners-of-war/research/battlefield-identity/{troop-bake,prepare,pack,motion-sheet}.py
+          python3 apps/banners-of-war/research/battlefield-identity/prepare.py
+      - name: Pack mixed atlas and harmonize bush foliage
+        run: |
+          python3 apps/banners-of-war/research/battlefield-identity/pack.py
+          python3 apps/banners-of-war/research/battlefield-identity/review-sheet.py
+          python3 - <<'PY'
+          from PIL import Image
+          import os
+          from pathlib import Path
+          p=Path(os.environ['BOW_ART_OUTPUT'])/'bush.png'
+          im=Image.open(p).convert('RGBA')
+          pixels=[]
+          for r,g,b,a in im.getdata():
+              if a and r>g*1.13 and r>b*1.15:
+                  lum=.35*r+.5*g+.15*b
+                  r,g,b=int(lum*.83),int(lum*1.10),int(lum*.67)
+              pixels.append((r,g,b,a))
+          im.putdata(pixels);im.save(p)
+          PY
+      - name: Retain original motion sheets
+        run: python3 apps/banners-of-war/research/battlefield-identity/motion-sheet.py
+      - name: Play real campaign and compare mixed rendering
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/battlefield-identity/capture.mjs
+      - name: Retain independent evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banners-living-motion
+          path: quality-artifacts/banners-living-motion
+          if-no-files-found: error
+          retention-days: 14
