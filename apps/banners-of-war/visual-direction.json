@@ -61,6 +61,11 @@
         "slug": "pereves",
         "spatialDifference": "Pereves uses a suspended sculpture and a discrete weight tray in an open exhibition. Banners is a continuous physical battlefield with an explicitly separate planning overlay.",
         "interactionDifference": "Pereves places masses in fixed lever slots and shows equilibrium; Banners selects regiments, draws world-coordinate paths and evaluates a simultaneous turn without teleported units."
+      },
+      {
+        "slug": "petlya-17",
+        "spatialDifference": "Petlya-17 uses a low Babylon.js cockpit with a central road horizon, peripheral speed and lap instruments. Banners of War uses a top-down spatial map, local army framing, minimap and collapsible command ledger rather than a driver's perspective.",
+        "interactionDifference": "Petlya-17 continuously controls one car through steering, braking and throttle. Banners of War draws multi-regiment plans, edits geometric footprints and executes simultaneous fixed-duration orders."
       }
     ]
   },

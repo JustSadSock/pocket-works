@@ -38,7 +38,7 @@ export function interpolateFrame(a,b,t){
  })};
 }
 export class Battlefield{
- constructor(canvas){this.canvas=canvas;this.g=canvas.getContext("2d",{alpha:false});this.cam={z:1,x:0,y:0};this.layout={};this.terrain=null;this.terrainRef=null;this.stats={drawMs:0,sprites:0,visible:0};this.layer=false;this.atlas=miniatureAtlas();this.backend="canvas";this.batch=null;this.tilt=1;this.samples=[];this.terrainCache=new WeakMap();this.formationCache=new Map();this.tileCache=new Map();this.tileBytes=0;this.canvasMode="tiles";this.composition="C";this.F=E}
+ constructor(canvas){this.canvas=canvas;this.g=canvas.getContext("2d",{alpha:false});this.cam={z:1,x:0,y:0};this.layout={};this.terrain=null;this.terrainRef=null;this.stats={drawMs:0,sprites:0,visible:0};this.layer=false;this.atlas=miniatureAtlas();this.backend="canvas";this.batch=null;this.tilt=1;this.samples=[];this.terrainCache=new WeakMap();this.formationCache=new Map();this.tileCache=new Map();this.tileBytes=0;this.canvasMode=/AppleWebKit/i.test(navigator.userAgent)&&(!/Chrome|Chromium|Edg\//i.test(navigator.userAgent)||/iPhone|iPad|iPod/i.test(navigator.userAgent))?"legacy":"tiles";this.preferredCanvasMode=this.canvasMode;this.autoCanvas=true;this.slowFrames=0;this.composition="C";this.F=E}
  resize(){const c=this.canvas,w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}const portrait=h>w&&w<780,top=portrait?116:62,bottom=portrait?100:30,right=!portrait&&h<550?95:0,aw=w-right-12,ah=h-top-bottom;
  const base=Math.max(.1,Math.min(aw/(portrait?this.F.H:this.F.W),ah/(portrait?this.F.W:this.F.H)));this.layout={w,h,d,portrait,k:base*this.cam.z,cx:aw/2+6+this.cam.x,cy:top+ah/2+this.cam.y,base};return this.layout}
  project(p){let {k,cx,cy,portrait}=this.layout,x=p.x-this.F.W/2,y=p.y-this.F.H/2;return portrait?{x:cx-y*k,y:cy+x*k*this.tilt}:{x:cx+x*k,y:cy+y*k*this.tilt}}
@@ -121,6 +121,6 @@ export class Battlefield{
  this.screenTransform();for(const u of visible)if(k<.8||k<1.6&&o.selected?.has(u.id))this.flag(u,o.selected?.has(u.id));this.screenTransform();
  for(const h of o.handles||[]){let p=this.project(h);oval(g,p.x,p.y,h.kind==="point"?10:13,h.kind==="point"?10:13,h.kind==="point"?"#163947":"#fff1d1","#25475b",1.5);g.fillStyle=h.kind==="point"?cream:"#25475b";g.font="bold 13px system-ui";g.textAlign="center";g.textBaseline="middle";g.fillText(h.kind==="point"?String(h.index+1):({center:"✥",rotate:"↻",spread:"↔",depth:"↕"}[h.kind]||"·"),p.x,p.y)}
  if(o.selectionStroke?.length>1){g.strokeStyle="#fff3bf";g.fillStyle="#ffdf9130";g.lineWidth=1.4;g.beginPath();o.selectionStroke.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.closePath();g.fill();g.stroke()}
- this.stats.drawMs=performance.now()-start;return this.stats
+ this.stats.drawMs=performance.now()-start;this.stats.canvasMode=this.canvasMode;if(this.autoCanvas&&this.backend==="canvas"&&this.canvasMode==="tiles"&&this.samples.length>=500){this.slowFrames=this.stats.drawMs>45?this.slowFrames+1:0;if(this.slowFrames>=4){this.preferredCanvasMode=this.canvasMode="legacy";this.tileCache.clear();this.tileBytes=0}}return this.stats
  }
 }
