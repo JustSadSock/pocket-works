@@ -4,7 +4,7 @@ const mix=(a,b,t)=>a+(b-a)*t,dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]),clamp=(
 const segment=(x,y,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],t=clamp(((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);};
 const samples=(a,b,step=.045)=>{const n=Math.max(1,Math.ceil(dist(a,b)/step));return Array.from({length:n+1},(_,k)=>[mix(a[0],b[0],k/n),mix(a[1],b[1],k/n)]);};
 const segments=row=>row.slice(1).map((b,k)=>[row[k],b]);
-export async function planLivingTown(m,city,network){
+export async function planLivingTown(m,city,network,{fabric=false}={}){
  const begin=performance.now();let slice=begin,maxSlice=0;const yieldIf=async()=>{const now=performance.now();if(now-slice>7){maxSlice=Math.max(maxSlice,now-slice);await new Promise(r=>setTimeout(r,0));slice=performance.now();}};const X=i=>i%m.width,Y=i=>Math.floor(i/m.width),adj=i=>[[X(i)-1,Y(i)],[X(i)+1,Y(i)],[X(i),Y(i)-1],[X(i),Y(i)+1]].map(p=>m.at(...p)).filter(i=>i>=0);
  const x=X(city.i)+.5,y=Y(city.i)+.5,origin=[x,y],pop=city.pop||0,port=city.port||0,fort=city.fort||0,level=pop>4200?4:pop>1600?3:pop>900?2:1,industry=(city.build||[]).slice(2).reduce((a,b)=>a+b,0),radius=[0,.82,1.2,1.65,2.25][level],seed=hash(city.name),buildings=[],roads=[],walls=[],piers=[],fields=[],missing=[];
  const nearby=network.filter(l=>l.points.some(p=>dist(p,origin)<radius+2.5)).flatMap(l=>segments(l.points).map(([a,b])=>({a,b,w:l.width})));
@@ -18,7 +18,8 @@ export async function planLivingTown(m,city,network){
  // smaller than the entire urban area, leaving historically plausible suburbs.
  let gate=null;
  if(fort>=2){outer:for(const r of [1.18,.96,.76,.58,.43,.30])for(const p of candidates){await yieldIf();if(dist(p,origin)>1.4||!footprint(...p,Math.min(.20,r*.4)))continue;
- const ring=Array.from({length:36},(_,k)=>{const a=k*Math.PI*2/36;return [p[0]+Math.cos(a)*r,p[1]+Math.sin(a)*r*.82];});
+ let ring=Array.from({length:36},(_,k)=>{const a=k*Math.PI*2/36;return [p[0]+Math.cos(a)*r,p[1]+Math.sin(a)*r*.82];});
+ if(fabric){const radial=[];for(let k=0;k<12;k++){const a=k*Math.PI*2/12;let d=r*(.92+.11*Math.sin(a*3+seed%7));for(let f=1.28;f>=.72;f-=.08){const R=d*f,q=[p[0]+Math.cos(a)*R,p[1]+Math.sin(a)*R*.86];if(safeLine(p,q,.055)){d=R;break;}}radial.push(d);}const proposed=Array.from({length:36},(_,k)=>{const a=k*Math.PI*2/36,i=Math.floor(k/3),d=mix(radial[i],radial[(i+1)%12],(k%3)/3);return [p[0]+Math.cos(a)*d,p[1]+Math.sin(a)*d*.86];});if(proposed.every((a,k)=>safeLine(a,proposed[(k+1)%36],.055)))ring=proposed;}
  if(!ring.every((a,k)=>safeLine(a,ring[(k+1)%ring.length],.043)))continue;
  center=p;let gi=0;for(let k=1;k<ring.length;k++)if(dist(ring[k],origin)<dist(ring[gi],origin))gi=k;gate=ring[gi];ring.gate=gi;walls.push(ring);break outer;}
  if(!walls.length)missing.push('fortification: no dry enclosure within settlement region');}
@@ -43,16 +44,21 @@ export async function planLivingTown(m,city,network){
  for(const [u,v] of [[radius*.68,0],[-radius*.68,0],[0,radius*.68],[0,-radius*.68]]){let target=world(u,v);if(!dry(...target,.02))target=candidates.find(p=>dist(p,target)<.35);if(target)append(await connected(target));}
  if(level>=3)for(const v of [-.55,.55]){const a=world(-radius*.38,v),b=world(radius*.38,v);if(dry(...a,.02))append(await connected(a));if(dry(...b,.02))append(await connected(b));}
  const streetSeg=roads.flatMap(segments),wallSeg=walls.flatMap(r=>r.map((a,k)=>[a,r[(k+1)%r.length]]));
- const allowed=(p,r)=>footprint(...p,r)&&!buildings.some(b=>dist(p,[b.x,b.y])<b.r+r+.012)&&!streetSeg.some(([a,b])=>segment(...p,a,b)<r+.025)&&!wallSeg.some(([a,b])=>segment(...p,a,b)<r+.055);
- const add=(type,p,variant=0)=>{const d=dimensions[type],r=Math.hypot(d[0],d[1])*.51;if(!allowed(p,r))return false;let localAngle=angle,best=Infinity;for(const [a,b] of streetSeg){const d=segment(...p,a,b);if(d<best){best=d;localAngle=Math.atan2(b[1]-a[1],b[0]-a[0])+Math.PI/2;}}buildings.push({type,x:p[0],y:p[1],r,angle:localAngle,variant});return true;};
+ const plazaRadius=fabric&&level>=2?.16+level*.025:0;
+ const allowed=(p,r)=>footprint(...p,r)&&(!plazaRadius||dist(p,center)>=plazaRadius+r)&&!buildings.some(b=>dist(p,[b.x,b.y])<b.r+r+.012)&&!streetSeg.some(([a,b])=>segment(...p,a,b)<r+.025)&&!wallSeg.some(([a,b])=>segment(...p,a,b)<r+.055);
+ const add=(type,p,variant=0)=>{const d=dimensions[type],r=Math.hypot(d[0],d[1])*(fabric&&type==='cathedral'?.61:.51);if(!allowed(p,r))return false;let localAngle=angle,best=Infinity;for(const [a,b] of streetSeg){const d=segment(...p,a,b);if(d<best){best=d;localAngle=Math.atan2(b[1]-a[1],b[0]-a[0])+Math.PI/2;}}buildings.push({type,x:p[0],y:p[1],r,angle:localAngle,variant});return true;};
  const place=(type,desired)=>{for(const p of [...candidates].sort((a,b)=>dist(a,desired)-dist(b,desired)))if(dist(p,desired)<1.4&&add(type,p,(seed+buildings.length)%3))return true;return false;};
  if(city.capital||fort>=3){if(!place('keep',world(-.38,-.30)))missing.push('keep: no dry footprint');if(!place('cathedral',world(.45,-.3)))missing.push('cathedral: no dry footprint');}
  else if(level>=3)place('church',world(-.35,-.25));else if(level===1)place('chapel',world(-.35,-.25));
  if(level>=2&&!place('market',world(.35,.35)))missing.push('market: no dry footprint');
  for(const p of piers)place('warehouse',p.land);
- let shops=0;const target=[0,6,18,34,65][level],slots=candidates.filter(p=>dist(p,center)<radius).sort((a,b)=>dist(a,center)-dist(b,center));
+ let shops=0;const target=[0,6,18,34,65][level];
+ // Burgage frontages: reserve a line of buildable plots along existing streets,
+ // with a second (courtyard) rank where the actual dry terrain permits it.
+ const frontage=[];if(fabric){for(const [a,b] of streetSeg){const len=dist(a,b);if(len<.08)continue;const dx=(b[0]-a[0])/len,dy=(b[1]-a[1])/len,n=Math.max(1,Math.floor(len/.24));for(let k=0;k<n;k++){const u=(k+.5)/n,x=mix(a[0],b[0],u),y=mix(a[1],b[1],u);for(const sign of [-1,1])for(const depth of [.17,.39]){if(depth>.2&&level<3)continue;const p=[x-dy*depth*sign,y+dx*depth*sign];if(dist(p,center)<radius&&dry(...p,.02))frontage.push(p);}}await yieldIf();}}
+ const slots=[...frontage.sort((a,b)=>dist(a,center)-dist(b,center)),...candidates.filter(p=>dist(p,center)<radius).sort((a,b)=>dist(a,center)-dist(b,center))];
  for(const p of slots){await yieldIf();if(buildings.length>=target)break;const i=buildings.length,type=industry>shops&&dist(p,center)>.45?'shop':level>=3&&i%9===0?'warehouse':level===1&&i%3===0?'barn':i%3===0?'timber':'house';if(add(type,p,(seed+i)%3)&&type==='shop')shops++;}
- if(level<=2)for(const p of candidates.filter(p=>dist(p,center)>.6)){if(fields.length>=5)break;if(allowed(p,.18)&&fields.every(f=>dist(p,[f.x,f.y])>.44))fields.push({x:p[0],y:p[1],angle});}
+ if(!fabric&&level<=2)for(const p of candidates.filter(p=>dist(p,center)>.6)){if(fields.length>=5)break;if(allowed(p,.18)&&fields.every(f=>dist(p,[f.x,f.y])>.44))fields.push({x:p[0],y:p[1],angle});}
  const valid=buildings.every(b=>footprint(b.x,b.y,b.r)&&!streetSeg.some(([a,c])=>segment(b.x,b.y,a,c)<b.r+.024)&&!wallSeg.some(([a,c])=>segment(b.x,b.y,a,c)<b.r+.054))&&buildings.every((a,i)=>buildings.slice(i+1).every(b=>Math.hypot(a.x-b.x,a.y-b.y)>=a.r+b.r))&&roads.every(r=>segments(r).every(([a,b])=>streetSafe(a,b)))&&wallSeg.every(([a,b])=>safeLine(a,b,.043))&&piers.every(p=>(m.land(...p.end)??1)<.43&&roads.some(r=>dist(r.at(-1),p.land)<.001));
- return {x,y,radius,city,center,buildings,roads,walls,piers,fields,valid,complete:valid&&!missing.length,missing,layoutMs:performance.now()-begin,maxSlice:Math.max(maxSlice,performance.now()-slice)};
+ return {x,y,radius,city,center,buildings,roads,walls,piers,fields,plazaRadius,valid,complete:valid&&!missing.length,missing,layoutMs:performance.now()-begin,maxSlice:Math.max(maxSlice,performance.now()-slice)};
 }
