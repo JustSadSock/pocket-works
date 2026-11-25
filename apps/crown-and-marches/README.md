@@ -85,3 +85,61 @@ The main campaign and independent Diplomacy Sandbox share the political engine. 
 22 connected knowledge nodes, nine areas, settlement-local invention/diffusion/adoption, seven funded institution types; adoption affects real agricultural/industrial production, recruitment and siege construction. Geography is separated into authoritative terrain and faction charts; physical surveys consume existing resources and carry people, and colony founding transfers the existing population and cargo. Known sea routes use depth, seasonal wind and storm costs. Eight ship types, technology-gated construction, upkeep and individual tactical hulls in Custom Naval Battle; strategic encounters apply losses back to the campaign. Discovery Sandbox is a fifth isolated laboratory with JSON exports and save/restore. Old laboratories remain explicitly opt-in legacy modes.
 
 QA: 13 new controlled discovery cases; 20×50-year and 5×200-year autonomous runs registered in existing mandatory batches, plus four political pressure cases and Chromium/WebKit discovery/naval journeys. Candidate is not a claim of balance or release. Limits: 2–6 factions and fixed 192×128 world, incomplete overseas administrative autonomy, trade hubs/transshipment and fully historical land weapon differentiation; fog/archive is approximate. No merge/deployment until mandatory checks pass.
+
+
+## 0.8.0 — Lords & Subjects (development candidate)
+
+The validated baseline at 97d7522 completed the four workflows and all 25 social runs (3,500 simulated years), as confirmed in the project handoff. The society-300-4 accounting investigation found the first old-algorithm breach on day 99,852, grain consumption. Old maximum 1.89058e-5; compensated maximum 2.66661e-6; unchanged tolerance 1e-5. Both 300-year audit trajectories completed. This is the baseline evidence, not a claim that later engine changes have passed all long runs.
+
+District reforms now reserve actual treasury funds before acceptance, pay implementation expenses from escrow, refund unused balances to the current sovereign, suspend during famine and persist through save/load, succession and territorial transfer. Coalition concessions preflight total cost. Territorial contact requires adjacent administered land; land reconnaissance searches reachable frontier through known cells and records supply blockers. No hidden global resource intelligence or arbitrary war frequency.
+
+### Political acceptance matrix
+
+The following maps the original 14 requirements and additional 12 scenarios to controlled regression cases in discovery.test.mjs unless otherwise specified. These are engine fixtures, not equivalent to 26 end-to-end player sessions.
+
+| # | Scenario | Evidence (test title or identifying excerpt) |
+|---|---|---|
+| 1 | Feudal centralization | funded centralization and cancellation preserve money; constitution has delayed implementation; local autonomy falls, distinct from abolishing feudal military authority |
+| 2 | Overtaxation and resistance | sustained taxation and food crisis organize lord coalition against the crown |
+| 3 | Merchant privileges | merchant treasury can reject higher tariffs and approve trade privileges |
+| 4 | War losses and legitimacy | real casualties reduce ruling legitimacy and household support (controlled recorded-loss fixture) |
+| 5 | Contested succession | displaced dynastic heir can become the explicit claimant in a succession petition |
+| 6 | Dynastic union | dynastic union through succession keeps two realms distinct and resolves shared ruler death |
+| 7 | Peaceful autonomy | negotiated autonomy funds administration through escrow and completes without war |
+| 8 | Material civil war | civil war transfers real service ranges; prepared society campaign can enter civil conflict without inventing material resources |
+| 9 | Secession and conservation | secession expands all realm structures beyond six with no duplicate assets |
+| 10 | Cultural/religious coexistence | religious reform funds a real coexistence of rites; expedition and founding retain mixed culture and religion |
+| 11 | Religious education | clergy funds an actual school and research advances without new money; trade transfers knowledge without automatic adoption |
+| 12 | Urban wealth and political change | urban capital changes constitutional options through actual constituency power |
+| 13 | Colonial autonomy | colonial charter funds implementation and enacts autonomy |
+| 14 | Situational institutional differences | central crown and feudal lord military authority differ; treasury institutions have different actual tax decisions |
+| A1 | Concessions without war | negotiated autonomy funds administration through escrow and completes without war |
+| A2 | Multiple-lord coalition | sustained taxation and food crisis organize lord coalition against the crown |
+| A3 | Competing heirs | dynastic nomination preserves the displaced heir; displaced dynastic heir can become the explicit claimant |
+| A4 | Real army defection | civil war transfers real service ranges and preserves legal sovereignty until settlement |
+| A5 | Assets at secession | secession expands all realm structures beyond six with no duplicate assets |
+| A6 | Ruler replaced without fragmentation | civil war transfers real service ranges and preserves legal sovereignty until settlement (succession resolution) |
+| A7 | Overseas self-government | colonial charter funds implementation and enacts autonomy |
+| A8 | Foreign intervention | foreign military intervention shares civil conflict and is closed by independence settlement |
+| A9 | Reunification | voluntary reunion is negotiated rather than a free annexation |
+| A10 | Deterministic civil-war reload | civil-war state in secession/war regression cases and existing discovery browser journey |
+| A11 | Repeated divisions and reunions | historic realm identifiers cross the former 64 limit; separation and reunion never reuse historical realm id |
+| A12 | Extinction obligations | balance.test.mjs: complete territorial defeat retains people, material stocks, gold and archives obligations |
+
+The current discovery/society file has 69 cases passing direct execution with an assertion adapter. Native and browser QA on the final revision are still required. The fixtures demonstrate mechanisms under controlled conditions, not spontaneous frequency or long-horizon equilibrium.
+
+## The Grand Campaign — 0.9.0 development in progress
+
+Main campaign enables all existing layers at creation and migrates older campaign saves. The six labs remain distinct. World selection supports independent faction counts and classic, continents, archipelago, islands, inland sea, peninsula and pangaea presets as defined in the engine. Preview shows the actual generated terrain and initial realm positions. The active world uses shared geometry bindings: switch with activateWorld(state) when using low-level APIs across multiple differently sized worlds.
+
+| Map | Cells | Initial maximum | 120-day step p95/p99 | Save characters | Serialize/restore |
+|---|---:|---:|---:|---:|---:|
+| Standard | 24,576 | 6 | 21/25 ms | 1,309,284 | 67/472 ms |
+| Large | 49,152 | 12 | 45/63 ms | 3,226,769 | 172/864 ms |
+| Huge | 102,400 | 20 | 80/103 ms | 8,240,936 | 427/1,838 ms |
+
+Measurements on fc548fa, direct V8 execution, fixed grand-regression seed, continents, maximum factions, 120 days; not browser or physical-phone frame timings. All restored simulation hashes matched, material/money error below 1e-5. No contacts arose on that short seed; this does not settle the international isolation question. Large and huge remain experimental. Historical IDs are never recycled, retired grand-campaign charts are freed; 63 actual separations/reunions crossed the former 64-realm limit. Current cap 128 is imposed by signed-byte ownership; dense diplomacy remains bounded, not unlimited.
+
+Campaign saves use IndexedDB with primary and previous snapshot in a single transaction, format 2 wrapper, legacy localStorage migration, fallback, manual export/import, periodic saves and recovery. Browser termination can interrupt an asynchronous last-minute save, so the previous committed snapshot is essential. Laboratory storage stays separate. Eight delegation areas share the existing economy/army/research/administrative rules; public input procurement uses real funds and cargo.
+
+New Chromium/WebKit journeys exercise three map sizes, selection, actual UI actions and IndexedDB reload. They are not six long role-specific playthroughs. Remaining gates: browser validation of new campaign, campaign goals and tutorial, unified explanations/chronicle, visual/audio integration, six target playthroughs, 100/300/500-year integrated experiments, performance and balance, production packaging, main integration and confirmed Cloudflare/Launcher availability. Version metadata remains 0.8.0 experimental until 0.9.0 meets its acceptance criteria. No production release is implied.
