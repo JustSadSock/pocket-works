@@ -74,3 +74,22 @@ test('render stress 20, 60, 100 and 158 actual engine regiments',async({page},in
  }await writeFile(info.outputPath('lab-evidence.json'),JSON.stringify(evidence,null,2));
  for(const [id,scale,count] of [['bannockburn','historical',60],['zama','expanded',158]] as const){const size=await page.evaluate(async({id,scale})=>{const {E}=await import('/apps/banners-of-war/engine.js'),{createHistorical}=await import('/apps/banners-of-war/chronicles.js'),s=createHistorical(E,id,{scale});(window as any).sliceQA.evidence(s,id==='zama'?'Замa · историческая численность, условная графика':'Бэннокбёрн · историческая численность',1);return s.units.length},{id,scale});expect(size).toBe(count);await snap(page,info,'historical-'+count)}await page.evaluate(()=>{delete (window as any).__sliceClip;(window as any).sliceQA.clearEvidence()});
 });
+
+test('isolated reference scenes: actual engine states, matched comparison, independent art review',async({page},info)=>{
+ test.skip(info.project.name!=='desktop-chromium','Dedicated reference scene capture at 1440 × 900');
+ test.setTimeout(180000);await page.setViewportSize({width:1440,height:900});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/banners-of-war/research/art-direction-reset/standalone.html');
+ await page.waitForFunction(()=>!!(window as any).referenceQA&&(window as any).referenceQA.stats().sprites>0,{},{timeout:90000});
+ await page.evaluate(()=>document.body.classList.add('clean'));let records:any[]=[];
+ for(const id of ['infantry','charge','ford','zama']){
+  let m=await page.evaluate(id=>(window as any).referenceQA.load(id),id);expect(m.measure.peakContact).toBeGreaterThan(0);if(id==='zama')expect(m.measure.count).toBe(158);
+  let settings=[];for(const close of [false,true]){
+   let a=await page.evaluate(close=>(window as any).referenceQA.view('C',close),close);expect(a.sprites).toBeGreaterThan(0);let name='reference-'+id+'-'+(close?'close':'tactical');await snap(page,info,name);
+   let b=await page.evaluate(()=>(window as any).referenceQA.compare(true));await snap(page,info,name+'-dd90cbf');await page.evaluate(()=>(window as any).referenceQA.compare(false));settings.push({close,current:a,baseline:b})
+  }
+  await page.evaluate(()=> (window as any).referenceQA.view('C',false));
+  let motion=await page.evaluate(async best=>{let qa=(window as any).referenceQA,out=[];for(let i=Math.max(0,best-12);i<=Math.min(qa.frames()-1,best+24);i++){await new Promise(r=>requestAnimationFrame(r));out.push(qa.show(i))}return out},m.best);expect(motion.length).toBeGreaterThan(2);records.push({...m,settings,motion});
+ }
+ await writeFile(info.outputPath('art-direction-reset-measurements.json'),JSON.stringify(records,null,2));await writeFile(info.outputPath('art-direction-reset.html'),await readFile(resolve('apps/banners-of-war/research/art-direction-reset/standalone.html')));expect(errors).toEqual([]);
+});
