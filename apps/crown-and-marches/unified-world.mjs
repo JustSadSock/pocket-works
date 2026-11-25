@@ -25,7 +25,7 @@ function height(m,x,y){
 }
 function graphCheck(t){
  const rows=t.roads,edges=rows.flatMap(segments),near=p=>edges.some(([a,b])=>dist(...p,a,b)<.035),reached=new Set(),points=[t.center];
- let changed=true;while(changed){changed=false;for(let i=0;i<rows.length;i++){if(reached.has(i))continue;const row=rows[i];if(!points.some(p=>segments(row).some(([a,b])=>dist(...p,a,b)<.036)))continue;reached.add(i);points.push(...row,...segments(row).flatMap(([a,b])=>Array.from({length:Math.max(1,Math.ceil(Math.hypot(a[0]-b[0],a[1]-b[1])/.10))},(_,i,arr)=>[L(a[0],b[0],i/arr.length),L(a[1],b[1],i/arr.length)])));changed=true;}}
+ let changed=true;while(changed){changed=false;for(let i=0;i<rows.length;i++){if(reached.has(i))continue;const row=rows[i];if(!points.some(p=>segments(row).some(([a,b])=>dist(...p,a,b)<.036)))continue;reached.add(i);points.push(...row,...segments(row).flatMap(([a,b])=>Array.from({length:Math.max(1,Math.ceil(Math.hypot(a[0]-b[0],a[1]-b[1])/.10))},(_,i)=>[L(a[0],b[0],i/Math.max(1,Math.ceil(Math.hypot(a[0]-b[0],a[1]-b[1])/.10))),L(a[1],b[1],i/Math.max(1,Math.ceil(Math.hypot(a[0]-b[0],a[1]-b[1])/.10)))])));changed=true;}}
  const mandatory=[...t.walls.map(r=>({type:'gate',p:r[r.gate??0]})),...t.piers.map(p=>({type:'port',p:p.land}))];
  return {roads:rows.length,connected:reached.size,mandatory:mandatory.map(o=>({type:o.type,connected:near(o.p)&&[...reached].some(i=>segments(rows[i]).some(([a,b])=>dist(...o.p,a,b)<.035))}))};
 }

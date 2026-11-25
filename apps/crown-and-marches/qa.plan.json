@@ -151,7 +151,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "urban-fabric-qa.mjs",
+      "entry": "unified-world-qa.mjs",
       "tier": "smoke"
     },
     {
