@@ -130,7 +130,7 @@ The current discovery/society file has 69 cases passing direct execution with an
 
 ## The Grand Campaign — 0.9.0 development in progress
 
-Main campaign enables all existing layers at creation and migrates older campaign saves. The six labs remain distinct. World selection supports independent faction counts and classic, continents, archipelago, islands, inland sea, peninsula and pangaea presets as defined in the engine. Preview shows the actual generated terrain and initial realm positions. The active world uses shared geometry bindings: switch with activateWorld(state) when using low-level APIs across multiple differently sized worlds.
+Main campaign enables all existing layers at creation and migrates older campaign saves. The six labs remain distinct. World selection supports independent faction counts and classic, continent, continents, archipelago, inland sea, isolated and straits presets as defined in the engine. Preview shows the actual generated terrain and initial realm positions. The active world uses shared geometry bindings: switch with activateWorld(state) when using low-level APIs across multiple differently sized worlds.
 
 | Map | Cells | Initial maximum | 120-day step p95/p99 | Save characters | Serialize/restore |
 |---|---:|---:|---:|---:|---:|
