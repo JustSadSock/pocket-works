@@ -155,7 +155,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "genesis-living-qa.mjs",
+      "entry": "genesis-contour-qa.mjs",
       "tier": "smoke"
     },
     {
