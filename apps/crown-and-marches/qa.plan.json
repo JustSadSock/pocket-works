@@ -151,7 +151,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "world-rendering-qa.mjs",
+      "entry": "world-rendering-baked-qa.mjs",
       "tier": "smoke"
     },
     {

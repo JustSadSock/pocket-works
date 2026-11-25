@@ -14,22 +14,31 @@ function sampleHeight(m,x,y){const u=x-.5,v=y-.5,i=Math.floor(u),j=Math.floor(v)
  const lith=(x,y)=>{const a=1-Math.abs(2*noise(x*1.8+y*.4,y*1.25)-1),b=1-Math.abs(2*noise(x*4.2+y*.9,y*3.1+19)-1);return a*a*.74+b*b*.26;};
  const correction=lerp(lerp(lith(i+.5,j+.5),lith(i+1.5,j+.5),a),lerp(lith(i+.5,j+1.5),lith(i+1.5,j+1.5),a),b);
  return clamp(f+(lith(x,y)-correction)*Math.min(.055,range*.32)*gate,Math.min(p,q,r,s),Math.max(p,q,r,s));}
+// Slope-limited Hermite reconstruction. The derivative is shared across cells
+// and zero at actual extrema; the simulation's height anchors are untouched.
+function smoothHeight(m,x,y){
+ const u=x-.5,v=y-.5,i=Math.floor(u),j=Math.floor(v),a=u-i,b=v-j,mid=m.sample(x,y,'height')??0;
+ const get=(x,y)=>{const k=m.at(x,y);return k>=0&&m.known[k]?m.m.height[k]:mid;};
+ const cubic=(p,q,r,s,t)=>{const d=r-q,prev=q-p,next=s-r,tangent=(a,b)=>a*b>0?2*a*b/(a+b):0,A=tangent(prev,d),B=tangent(d,next);return q+t*(A+t*(3*d-2*A-B+t*(A+B-2*d)));};
+ const rows=[];for(let k=-1;k<=2;k++)rows.push(cubic(get(i-1,j+k),get(i,j+k),get(i+1,j+k),get(i+2,j+k),a));
+ const anchors=[get(i,j),get(i+1,j),get(i,j+1),get(i+1,j+1)];return clamp(cubic(...rows,b),Math.min(...anchors),Math.max(...anchors));
+}
 export const vertical=h=>Math.max(0,h-.12)*3.1+Math.max(0,h-.34)*19+Math.max(0,h-.48)*9;
-export async function prepareTerrain(s,cam,{width=1280,height=800,detail=8}={}){
+export async function prepareTerrain(s,cam,{width=1280,height=800,detail=8,heightStyle='original',textureOnly=false}={}){
  const start=performance.now(),m=model(s),network=livingRivers(m),x0=Math.max(0,Math.floor(cam.x-width/cam.s*.7-6)),y0=Math.max(0,Math.floor(cam.y-height/cam.s*.95-12)),x1=Math.min(m.width,Math.ceil(cam.x+width/cam.s*.7+6)),y1=Math.min(m.height,Math.ceil(cam.y+height/cam.s*.95+12));
- const buckets=new Map();let last=performance.now(),maxSlice=0;const yieldIf=async()=>{const n=performance.now();if(n-last>=6){maxSlice=Math.max(maxSlice,n-last);await pause();last=performance.now();}};
+ const buckets=new Map();let last=performance.now(),maxSlice=last-start;const yieldIf=async()=>{const n=performance.now();if(n-last>=6){maxSlice=Math.max(maxSlice,n-last);await pause();last=performance.now();}};
  for(const e of network){const w=clamp(.025+.025*Math.log2(Math.max(1,m.m.flow[e.i]/58)),.025,.145);for(let k=1;k<e.points.length;k++){const a=e.points[k-1],b=e.points[k];if(Math.max(a[0],b[0])<x0-1||Math.min(a[0],b[0])>x1+1||Math.max(a[1],b[1])<y0-1||Math.min(a[1],b[1])>y1+1)continue;for(let y=Math.floor(Math.min(a[1],b[1])-.45);y<=Math.floor(Math.max(a[1],b[1])+.45);y++)for(let x=Math.floor(Math.min(a[0],b[0])-.45);x<=Math.floor(Math.max(a[0],b[0])+.45);x++){const key=x+','+y;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push({a,b,w});}}await yieldIf();}
- const cols=(x1-x0)*detail+1,rows=(y1-y0)*detail+1,n=cols*rows,vertices=new Float32Array(n*9),elevations=new Float32Array(n),indices=new Uint32Array((cols-1)*(rows-1)*6);let minH=Infinity,maxH=-Infinity,minZ=Infinity,maxZ=-Infinity,anchorError=0,landCount=0,mountainCount=0;
+ const cols=(x1-x0)*detail+1,rows=(y1-y0)*detail+1,n=cols*rows,vertices=new Float32Array(n*9),elevations=new Float32Array(n),indices=new Uint32Array(textureOnly?0:(cols-1)*(rows-1)*6);let minH=Infinity,maxH=-Infinity,minZ=Infinity,maxZ=-Infinity,anchorError=0,landCount=0,mountainCount=0;
  // Material channels: source height, moisture, fertility, forest, land
  // coverage, river distance, and known mask. Actual Z is a separate channel.
- for(let j=0;j<rows;j++){for(let i=0;i<cols;i++){const x=Math.min(m.width-.0001,x0+i/detail),y=Math.min(m.height-.0001,y0+j/detail),k=j*cols+i,o=k*9,cell=m.at(Math.floor(x),Math.floor(y)),land=livingLand(m,x,y),known=land!==null&&cell>=0,h=known?sampleHeight(m,x,y):0;
+ for(let j=0;j<rows;j++){for(let i=0;i<cols;i++){const x=Math.min(m.width-.0001,x0+i/detail),y=Math.min(m.height-.0001,y0+j/detail),k=j*cols+i,o=k*9,cell=m.at(Math.floor(x),Math.floor(y)),land=livingLand(m,x,y),known=land!==null&&cell>=0,h=known?(heightStyle==='smooth'?smoothHeight(m,x,y):sampleHeight(m,x,y)):0;
  let river=1;if(known)for(const e of buckets.get(Math.floor(x)+','+Math.floor(y))||[])river=Math.min(river,dist(x,y,e.a,e.b)-e.w*.5);
  const coverage=land??0,base=vertical(h)*smooth((coverage-.49)/.25),bank=smooth(1-clamp((river+.035)/.23)),z=known?coverage<.50?-.035:Math.max(-.025,base-bank*.10):0;
  vertices.set([x,y,z,h,known?(m.sample(x,y,'moisture')??0):0,known?(m.sample(x,y,'fert')??0):0,known?(m.sample(x,y,'forest')??0):0,coverage,known?clamp(river,-.2,1):2],o);elevations[k]=z;
  if(known&&m.m.land[cell]){minH=Math.min(minH,h);maxH=Math.max(maxH,h);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);}
  if(i%detail===detail/2&&j%detail===detail/2&&known){anchorError=Math.max(anchorError,Math.abs(h-m.m.height[cell]));if(m.m.land[cell]){landCount++;if(m.m.terrain[cell]===4||m.m.terrain[cell]===3)mountainCount++;}}
  }await yieldIf();}
- for(let j=0;j<rows-1;j++){for(let i=0;i<cols-1;i++){const a=j*cols+i,b=a+1,c=a+cols,d=c+1,k=(j*(cols-1)+i)*6;indices.set([a,b,d,a,d,c],k);}await yieldIf();}
+ if(!textureOnly)for(let j=0;j<rows-1;j++){for(let i=0;i<cols-1;i++){const a=j*cols+i,b=a+1,c=a+cols,d=c+1,k=(j*(cols-1)+i)*6;indices.set([a,b,d,a,d,c],k);}await yieldIf();}
  const center=vertical(m.sample(cam.x,cam.y,'height')??0);
  return {vertices,indices,elevations,cols,rows,detail,bounds:[x0,y0,x1,y1],center,stats:{ms:performance.now()-start,maxSlice:Math.max(maxSlice,performance.now()-last),minH,maxH,minZ,maxZ,anchorError,landCount,mountainCount,triangles:indices.length/3,bytes:vertices.byteLength+indices.byteLength+elevations.byteLength}};
 }
