@@ -228,7 +228,7 @@ function livingProduction(s,invest=false){economicInit(s);
  }
 }
 export const activePressureCells=new WeakMap();
-function occupationStep(s){
+export function occupationStep(s){
  ensureLiving(s);let present=new Set(),changed=false,active=activePressureCells.get(s);if(!active){active=new Set();for(let i=0;i<N;i++)if(s.pressure[i]>0)active.add(i);activePressureCells.set(s,active);}
  for(const a of s.armies){let n=strength(a);if(n<=0||a.supply<2||a.fleet!=null)continue;for(const i of [a.i,...neighbors(a.i)]){
  let owner=s.owner[i];if(owner<0||!atWar(s,a.f,owner)||!s.map.land[i])continue;
