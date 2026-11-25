@@ -4,7 +4,7 @@ const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-10-23';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Онлайн-партия: серверное подтверждение скрытых указов, безопасное повторное отправление при ошибке связи и различимые состояния ожидания.","Реванш запускает только организатор, оба клиента корректно выходят из результата в новую партию без старой анимации или сохранённого выбора.","Выход из комнаты очищает сетевую сессию; переподключение и повторный вход не подхватывают устаревшее состояние.","Интерактивный браузерный, серверный и мобильный тесты проверяют весь ход от двух разных игроков до синхронизации и повторного матча."];
-const APP_SHELL = [
+const APP_SHELL = ["../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js","../../shared/workshop-mode.js","../../shared/workshop-mode.css","../../shared/pwa-utils.js","./workshop.js",
   "./",
   "./index.html",
   "./app.config.json",

@@ -1,3 +1,4 @@
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {ITEMS,DOCTRINES,TREATMENTS,VOWS,MAX_ROUNDS,START_FAITH,MAX_FAITH,createGame,setAction,
@@ -308,3 +309,5 @@ window.addEventListener('pagehide',()=>{if(session)persist()});
 window.__BNT_QA__=()=>({onlinePhase:online.phase,onlineRoom:online.roomId,screen,phase:session?.phase||null,round:session?.round??null,faith:session?.faith??null,
  item:session?.actions.itemId??null,doctrines:session?.doctrines||[],history:session?.history.length||0,hasSave:!!session});
 render();
+
+createWorkshopMode({appName:"БОЖЕ, НЕ ТАК!",version:"0.5.0",cachePrefix: 'bozhe-ne-tak-',storageNamespace: 'pocket-works:bozhe-ne-tak',onReset(){location.reload();}});

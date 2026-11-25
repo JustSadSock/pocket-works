@@ -652,9 +652,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}), { once: true });
-}
+
 
 if (!validateLevels()) {
   console.error('КВАРТА: level validation failed');

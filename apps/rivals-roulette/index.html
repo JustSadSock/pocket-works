@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#171717"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>Rivals Roulette</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#171717"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>Rivals Roulette</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="../../shared/update-manager.css">
+</head>
 <body><main class="app-shell" data-app-shell data-fullscreen-app>
 <header class="topbar" data-ui><a class="back-link" data-app-control data-native-press href="../../">← Pocket Works</a><button id="settingsBtn" class="icon-btn" data-native-press aria-label="Настройки">•••</button></header>
 <section class="stage" aria-labelledby="appTitle">
@@ -13,4 +14,5 @@
 <section class="history-block" data-ui><div class="section-head"><h2>Последние</h2><button id="clearHistoryBtn" data-native-press>Очистить</button></div><div id="history" class="history"><p class="empty">Здесь появятся результаты колеса.</p></div></section>
 </section>
 <div id="sheetBackdrop" class="sheet-backdrop" hidden></div><section id="sheet" class="sheet" hidden data-ui aria-modal="true" role="dialog"><div class="sheet-grab"></div><div class="sheet-head"><div><p class="eyebrow">НАСТРОЙКИ ПУЛА</p><h2 id="sheetTitle">Бан-лист</h2></div><button id="closeSheetBtn" class="close-btn" data-native-press>Готово</button></div><div id="sheetContent" class="sheet-content"></div></section><div id="toast" class="toast" role="status" aria-live="polite"></div>
-</main><script type="module" src="./app.js"></script></body></html>
+</main><script type="module" src="./app.js"></script><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="RIVALS ROULETTE" data-app-version="1.1.0"></script>
+</body></html>

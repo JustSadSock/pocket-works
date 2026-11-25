@@ -6,7 +6,8 @@
     <meta name="theme-color" content="#12101f">
     <title>Трон на троих</title>
     <link rel="stylesheet" href="./styles.css">
-  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
+</head>
   <body>
     <main class="phone-shell" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
       <section class="screen active" id="screen-menu" data-screen="menu">
@@ -31,7 +32,7 @@
       </section>
 
       <section class="screen" id="screen-online" data-screen="online">
-        <header class="screen-head">
+        <header class="screen-head"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
           <button class="icon-btn" data-screen-target="menu" aria-label="Назад">‹</button>
           <div>
             <p class="eyebrow">комната для дуэли</p>
@@ -194,5 +195,6 @@
     <script src="./js/rules.js"></script>
     <script src="./js/ai.js"></script>
     <script type="module" src="./app.js"></script><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Трон на троих" data-app-version="0.1.0"></script>
-  </body>
+  <script type="module" src="./workshop.js"></script>
+</body>
 </html>

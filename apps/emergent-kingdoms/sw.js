@@ -8,7 +8,7 @@ const RELEASE_NOTES = [
   "Семь слоёв карты, дипломатия, войны, торговля и история государств.",
   "Вмешательства, разветвление истории, сравнение, архив и JSON-экспорт."
 ];
-const APP_SHELL = [
+const APP_SHELL = ["../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js","../../shared/workshop-mode.js","../../shared/workshop-mode.css","../../shared/pwa-utils.js","./workshop.js",
   "./",
   "./index.html",
   "./app.config.json",

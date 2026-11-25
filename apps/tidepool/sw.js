@@ -3,7 +3,7 @@ const CACHE_NAME = 'tidepool-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-11-23';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Цветная головоломка с ежедневными картами, рекордами и отменой хода."];
+const RELEASE_NOTES = ["Остров дня, случайные карты, выбор цвета, подсчёт прироста, отмена хода и личные рекорды."];
 const APP_SHELL = [
   './',
   './index.html',

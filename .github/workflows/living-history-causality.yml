@@ -25,7 +25,7 @@ concurrency:
 jobs:
   family:
     if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'family'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -51,7 +51,7 @@ jobs:
 
   paired:
     if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'paired'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -77,7 +77,7 @@ jobs:
 
   crisis:
     if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'crisis'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -103,7 +103,7 @@ jobs:
 
   genealogy:
     if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'genealogy'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -130,7 +130,7 @@ jobs:
   summary:
     if: always()
     needs: [family, paired, crisis, genealogy]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

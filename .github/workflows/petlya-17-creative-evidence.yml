@@ -1,0 +1,48 @@
+name: Petlya 17 Creative Evidence
+on:
+  push:
+    branches: [platform/repair-app-contracts]
+    paths:
+      - 'apps/petlya-17/visual-direction.json'
+      - 'scripts/petlya-17-creative-evidence.mjs'
+      - '.github/workflows/petlya-17-creative-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate real direction and recent architectural comparisons
+        run: |
+          node --input-type=module -e "import {getRecentArchitectureProfiles} from './scripts/visual-architecture.mjs'; console.log(JSON.stringify(await getRecentArchitectureProfiles(process.cwd(),'petlya-17'),null,2))"
+          node scripts/validate-visual-direction.mjs --app=petlya-17
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - run: npm run --workspace=@pocket-works/petlya-17 build
+      - name: Capture actual landscape menu, race, speed and pause
+        run: |
+          POCKET_WORKS_SITE_ROOT="$GITHUB_WORKSPACE" node scripts/serve-site.mjs > /tmp/petlya-server.log 2>&1 &
+          server=$!
+          trap 'kill "$server" || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/apps/petlya-17/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/petlya-17-creative-evidence.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: petlya-17-creative-evidence
+          path: petlya-creative-evidence/
+          if-no-files-found: warn
+          retention-days: 14

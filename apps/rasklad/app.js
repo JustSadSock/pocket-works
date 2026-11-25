@@ -433,6 +433,4 @@ els.dropZone.addEventListener('drop', async (event) => {
 
 syncControls();
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
+

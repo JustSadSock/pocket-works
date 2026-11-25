@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compileBlueprint, createRepairPacket, BLUEPRINT_EXAMPLE, BlueprintError } from '../src/blueprint-runtime.js';
+import { compileBlueprint, createRepairPacket, BLUEPRINT_EXAMPLE, BlueprintError } from '../src/blueprint.js';
+import {compileBlueprint as compileLiveBlueprint,createRepairPacket as createMigrationPacket} from '../src/blueprint-runtime.js';
 import { normalizeDocument, compileDocument } from '../src/engine.js';
 
 test('Blueprint compiles Gearfly into gears, frame and cover', () => {
@@ -9,7 +10,17 @@ test('Blueprint compiles Gearfly into gears, frame and cover', () => {
   assert.deepEqual(document.parts.map(p => p.id), ['flywheel', 'thumb', 'frame-base', 'frame-cover']);
   assert.equal(report.gearPairs[0].ratio, 2.8);
   assert.equal(report.gearPairs[0].centerDistance, 20.2);
-  assert.deepEqual(document.parts[0].node.position, [0, 0, 2.5]);
+  // The driver is the origin; the driven gear is offset by the specified
+  // 180-degree mesh angle and pitch-centre distance. Check actual geometry.
+  const driven = document.parts[0].node;
+  assert.equal(driven.type, 'union');
+  assert.ok(Math.abs(driven.position[0] + 20.2) < 1e-9);
+  assert.ok(Math.abs(driven.position[1]) < 1e-9);
+  assert.equal(driven.position[2], 0);
+  const gearBody = driven.children[0].children[0].children[0];
+  assert.equal(gearBody.type, 'cylinder');
+  assert.equal(gearBody.height, 5.2);
+  assert.equal(gearBody.position[2], 2.6);
   assert.doesNotThrow(() => normalizeDocument(document));
   assert.doesNotThrow(() => compileDocument(document));
 });
@@ -32,4 +43,12 @@ test('repair packet preserves source and bans low-level gear drawing', () => {
   assert.match(repair, /Исходный Blueprint/);
   assert.match(repair, /Не рисуй шестерни/);
   assert.match(repair, /Нужен непустой массив parts/);
+});
+
+
+test('live import rejects legacy blueprints and provides a usable migration packet',()=>{
+ const source=JSON.stringify(BLUEPRINT_EXAMPLE);let failure;
+ assert.throws(()=>compileLiveBlueprint(BLUEPRINT_EXAMPLE),error=>{failure=error;return error instanceof BlueprintError&&/FORMA 2.0/.test(error.message);});
+ const packet=createMigrationPacket(source,failure);
+ assert.match(packet,/FORMA_PROJECT/);assert.match(packet,/contract/);assert.match(packet,/Не выдавай FormaBlueprint 1/);assert.ok(packet.includes(source));
 });

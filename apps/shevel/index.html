@@ -7,10 +7,11 @@
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css">
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 </head>
 <body data-fullscreen-app>
 <main class="shell app-shell" data-app-shell data-keyboard-aware>
-<header class="head" data-ui>
+<header class="head" data-ui><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
   <a href="../../" class="back" data-app-control data-native-press aria-label="В Pocket Works">‹ <span>POCKET WORKS</span></a>
   <div class="brand"><div class="brandmark"><span></span><span></span><span></span></div><strong>ШЕВЕЛЬ</strong></div>
   <div class="head-actions"><span id="saveState" class="save-state" aria-live="polite">Сохранено</span><button type="button" class="iconbtn" id="undoBtn" aria-label="Отменить" title="Отменить (Ctrl+Z)">↶</button><button type="button" class="iconbtn" id="redoBtn" aria-label="Повторить" title="Повторить (Ctrl+Y)">↷</button><button type="button" class="export-btn" id="exportBtn">Экспорт <span>↗</span></button></div>
@@ -91,4 +92,5 @@
 </main>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ШЕВЕЛЬ" data-app-version="1.0.1"></script>
 <script type="module" src="./app.js"></script>
+<script type="module" src="./workshop.js"></script>
 </body></html>

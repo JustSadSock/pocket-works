@@ -1,9 +1,9 @@
 const CACHE_PREFIX='chronatlas-';
 const CACHE_NAME='chronatlas-v2.1.0';
-const APP_VERSION='2.1.0';
-const RELEASE_DATE='2026-07-23';
-const RELEASE_NOTES=['Полноценный pinch-to-zoom','Рабочие города на исторических картах','Подписи держав и исправленная Франция'];
-const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./atlas-data.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+const APP_VERSION="2.1.0";
+const RELEASE_DATE="2026-07-23";
+const RELEASE_NOTES=["Условная схема заменена настоящей бумажной картой в проекции Natural Earth.","Добавлены детальные политические срезы 1600, 1914 и 2026 годов.","Добавлены 4 520 административных единиц и 2 173 ключевых города.","Добавлены поиск стран, автоматическое приближение, жесты карты и три режима тренировки.","Добавлено полноценное масштабирование двумя пальцами с удержанием точки под жестом.","Исправлены исторические карты, видимость Франции и режим городов."];
+const APP_SHELL=["../../shared/pwa-utils.js",'./','./index.html','./app.config.json','./styles.css','./app.js','./atlas-data.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL))));
 self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

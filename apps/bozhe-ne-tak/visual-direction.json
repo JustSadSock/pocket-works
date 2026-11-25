@@ -51,6 +51,16 @@
         "slug": "picto",
         "spatialDifference": "ПИКТО — почти белое плоское полотно с контурным алфавитом и кадрами истории; БОЖЕ НЕ ТАК — тёмная деревянная фронтальная сцена, отдельные материальные дары на алтаре, гербы событий.",
         "interactionDifference": "ПИКТО позволяет свободно составлять и поворачивать знаки, а жрецы здесь согласуют дискретные ритуальные действия по тайным ролям и видят математические последствия происшествий."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "A carved altar, deity face and offering shelf replace an overhead atlas with a research ledger.",
+        "interactionDifference": "Select material offerings and resolve a cooperative ritual verdict rather than alter environmental variables."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "A frontal ritual stage and inventory shelf replace a historical map surrounded by story navigation.",
+        "interactionDifference": "Players negotiate risky offerings and dogmas instead of reading and scrubbing authored episodes."
       }
     ]
   },
