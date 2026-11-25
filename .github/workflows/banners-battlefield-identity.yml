@@ -118,6 +118,7 @@ jobs:
       - name: Pack mixed atlas and harmonize bush foliage
         run: |
           python3 apps/banners-of-war/research/battlefield-identity/pack.py
+          python3 apps/banners-of-war/research/battlefield-identity/review-sheet.py
           python3 - <<'PY'
           from PIL import Image
           import os

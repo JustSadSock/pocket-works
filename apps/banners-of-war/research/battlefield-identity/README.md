@@ -14,3 +14,5 @@ The breastplate position is derived from the actual torso bone including mounted
 
 ## Playable review gate
 Native mouse/touch route, actual group selection, conditional brace, formation edit, undo and redo are checked separately from scripted battle evidence. Both mobile orientations in Chromium and WebKit run real UI buttons and spatial group orders through the actual result dialog; QA API reads state/projection/records only in native test. Desktop native test independent from scripted desktop evidence. Any missing pointer order fails gate, no API fallback. Adaptive WebKit 60-regiment 30 FPS checked in both repeats in all three camera modes. Existing d11ec80 producer is not cancelled; same hashed bake cache reused. No asset design change.
+
+Review sheets retain a common projected scale and ground anchor across all five types and four directions; a second sheet contains all ten source poses from the side, with measured projected extents. Original atlas pixels only. Desktop scripted evidence is retained even when independent native route test fails; native input has its own video. Map selection is verified independently of group buttons.
