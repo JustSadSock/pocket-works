@@ -55,16 +55,24 @@ test('ПЕТЛЯ 17 loads WebGL, accelerates and exposes live handling state', a
     { timeout: 12_000 }
   ).toBeGreaterThan(110);
 
-  await page.keyboard.down('KeyD');
-  await page.waitForTimeout(1800);
-  await page.keyboard.up('KeyD');
-  await page.keyboard.up('KeyW');
-
-  const handling = await page.locator('html').evaluate((root) => ({
+  const readHandling = () => page.locator('html').evaluate((root) => ({
     state: root.dataset.handlingState || '',
     grip: Number(root.dataset.grip),
     slip: Number(root.dataset.slip)
   }));
+  // Steering is a transient response; sample while the key is held, not
+  // after release when the vehicle may already have recovered grip.
+  let handling = await readHandling();
+  try {
+    await page.keyboard.down('KeyD');
+    await expect.poll(async () => {
+      handling = await readHandling();
+      return Math.abs(handling.slip);
+    }, { timeout: 6_000 }).toBeGreaterThan(0.001);
+  } finally {
+    await page.keyboard.up('KeyD');
+    await page.keyboard.up('KeyW');
+  }
   expect(['grip', 'limit', 'sliding']).toContain(handling.state);
   expect(handling.grip).toBeGreaterThanOrEqual(0);
   expect(handling.grip).toBeLessThanOrEqual(1);

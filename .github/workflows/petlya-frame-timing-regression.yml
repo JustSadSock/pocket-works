@@ -1,0 +1,38 @@
+name: Petlya 17 Frame Timing Regression
+on:
+  push:
+    branches: [maintenance/petlya-17-frame-timing]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Typecheck and run handling and clock regressions
+        run: |
+          npm run --workspace=@pocket-works/petlya-17 typecheck
+          npm run --workspace=@pocket-works/petlya-17 test
+      - name: Build production assets
+        run: npm run deploy:site
+      - name: Repeat unchanged Chromium landscape acceptance test
+        run: npx playwright test tests/e2e/petlya-17.spec.ts --project=chromium-mobile-landscape --repeat-each=3 --retries=0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: petlya-frame-timing-regression
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn

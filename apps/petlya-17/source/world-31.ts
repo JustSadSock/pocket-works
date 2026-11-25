@@ -7,6 +7,7 @@ import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
 import { TrackModel } from './track-model';
+import { measuredFps } from './frame-timing';
 import { buildFallbackTrackWorld } from './world-track';
 import { buildCircuit32 } from './circuit-32';
 import { VisualRig, type CarVisual, type CockpitMotion } from './world-visuals';
@@ -22,7 +23,6 @@ export class RaceWorld {
 
   private previewCar: CarVisual | null = null;
   private frameCounter = 0;
-  private fpsAccumulator = 0;
   private fpsTimer = 0;
 
   constructor(canvas: HTMLCanvasElement, quality: 'auto' | 'high') {
@@ -140,14 +140,18 @@ export class RaceWorld {
   }
 
   adaptQuality(delta: number, quality: 'auto' | 'high'): void {
+    // Ignore suspension gaps rather than treating them as sustained low FPS.
+    if (delta <= 0 || delta > 1) {
+      this.frameCounter = 0;
+      this.fpsTimer = 0;
+      return;
+    }
     this.frameCounter += 1;
     this.fpsTimer += delta;
-    this.fpsAccumulator += 1 / Math.max(delta, 0.0001);
     if (this.fpsTimer < 2.5) return;
-    const average = this.fpsAccumulator / this.frameCounter;
+    const average = measuredFps(this.frameCounter, this.fpsTimer);
     this.frameCounter = 0;
     this.fpsTimer = 0;
-    this.fpsAccumulator = 0;
     if (quality === 'auto') {
       const current = this.engine.getHardwareScalingLevel();
       if (average < 46 && current < 2) this.engine.setHardwareScalingLevel(Math.min(2, current + 0.16));

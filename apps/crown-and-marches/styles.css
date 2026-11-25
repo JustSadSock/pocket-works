@@ -86,3 +86,7 @@
  #panel .city-summary b,#panel .crown-summary b{font-size:19px}
  #panel .city-tabs{margin-bottom:5px}
 }
+
+/* Second art pass — compact controls preserve the playable field. */
+.battlehud #panel:has(>button[data-act="showorders"]){width:auto;padding:0;border:0;box-shadow:none;background:none;left:auto;right:62px}.battlehud #panel:has(>button[data-act="showorders"]) button{background:#302e27;color:#f3e3bf;border:1px solid #b99a63}.battlehud #panel .actions button[data-act="line"]{background:#66563e;color:#fff0cd;font-weight:700}.battlehud #panel button[data-act="hideorders"]{border-style:dashed}.battlehud #panel .actions{gap:4px}.battlehud #panel .panelhead{margin-bottom:4px}
+@media(max-width:650px) and (orientation:portrait){.battlehud #panel{max-height:30%}.battlehud #panel:has(>button[data-act="showorders"]){right:8px;bottom:calc(8px + env(safe-area-inset-bottom))}.battlehud #notice{top:auto;bottom:calc(54px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px)} }
