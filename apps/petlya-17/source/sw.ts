@@ -6,10 +6,10 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'petlya-17-';
-const CACHE_NAME = 'petlya-17-v3.2.1';
-const APP_VERSION = '3.2.1';
-const RELEASE_DATE = '2026-10-13';
-const RELEASE_NOTES = ["Исправлена критическая ошибка запуска VertexData is not defined: восстановлен импорт Babylon.js для генерации кузовов.","Проверка TypeScript теперь обязательна перед сборкой, чтобы незаявленные идентификаторы не попадали в релиз.","Прибрежный автодром полностью пересобран: асфальт, разметка, поребрики, барьеры, пейзаж и портовые сооружения.","Созданы новые 3D-болиды и кокпит, освобождающий обзор дороги."];
+const CACHE_NAME = 'petlya-17-v3.2.2';
+const APP_VERSION = '3.2.2';
+const RELEASE_DATE = '2026-11-25';
+const RELEASE_NOTES = ["Ускорение, руление и гоночный таймер сохраняют игровой темп при снижении частоты кадров.","Автоматическое качество графики учитывает фактическую частоту кадров.","Добавлены регрессионные проверки физики при 4–120 FPS и длительных паузах."];
 
 setCacheNameDetails({
   prefix: 'petlya-17',
