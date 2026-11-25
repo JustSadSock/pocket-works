@@ -36,16 +36,18 @@ for(const [format,counts,historical] of [['2vAI',[2,0],false],['2v1',[2,1],true]
    await expect(host.locator('#net-scenario')).toHaveValue('file');await host.locator('#net-time').selectOption(format==='2vAI'?'30':'0');
    await host.locator('#net-historical').selectOption(historical?'1':'0');await host.locator('#net-create').click();const room=await code(host);
    for(let i=1;i<count;i++){await pages[i].goto('/apps/banners-of-war/?battle='+room);await expect(pages[i].locator('#net-accept')).toBeVisible({timeout:20000})}
+   const priorRed=format==='2v2'?await view(pages[counts[0]],room):null;
    for(let side=0;side<2;side++){
     let first=side?counts[0]:0;if(!counts[side])continue;let cap=pages[first],v=await view(cap,room);
     const team=v.allied.members.filter((m:any)=>!m.self),groups=v.nodes.filter((n:any)=>n.level===1);
     if(!team.length)continue;
+    if(side===1&&priorRed){expect(v.allied.revision).not.toBe(priorRed.allied.revision);const stale=await request(cap,room+'/action',{type:'allocate',seq:v.nextSeq,revision:priorRed.allied.revision,seat:team[0].seat,groups:[groups[0].id]});expect(stale.status).toBe(400);expect(stale.data.error).toBe('authority_changed');const unchanged=await view(cap,room);expect(unchanged.nextSeq).toBe(v.nextSeq);expect(unchanged.allied.members).toEqual(v.allied.members)}
     await expect(cap.locator('#net-allied-seat')).toBeAttached({timeout:20000});
     for(let j=0;j<team.length;j++){
      const details=cap.locator('#net-allied-seat').locator('xpath=ancestor::details');
      if(!await cap.locator('#net-allied-seat').isVisible())await details.locator('summary').click();
      await cap.locator('#net-allied-seat').selectOption(String(team[j].seat));await cap.locator('#net-allied-groups').selectOption(groups[j].id);
-     await cap.locator('#net-allied-assign').click();
+     const response=cap.waitForResponse(r=>r.url().endsWith('/action')&&r.request().method()==='POST');await cap.locator('#net-allied-assign').click();expect((await response).status()).toBe(200);
      await expect(cap.locator('#net-status')).toContainText('Сервер принял действие');
      await expect.poll(async()=>((await view(cap,room)).allied.members.find((m:any)=>m.seat===team[j].seat).groups),{timeout:10000}).toEqual([groups[j].id]);
     }

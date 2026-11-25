@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'pocketnet/**'
+      - 'apps/banners-of-war/network-*.js'
+      - 'apps/banners-of-war/qa/network-*.ts'
       - 'pocket-id/**'
       - 'pocket-cloud/**'
       - 'pocket-social/**'
@@ -25,6 +27,8 @@ on:
     branches: [main]
     paths:
       - 'pocketnet/**'
+      - 'apps/banners-of-war/network-*.js'
+      - 'apps/banners-of-war/qa/network-*.ts'
       - 'pocket-id/**'
       - 'pocket-cloud/**'
       - 'apps/folio/**'

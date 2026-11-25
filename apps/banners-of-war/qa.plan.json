@@ -107,7 +107,8 @@
       "files": [
         "commander.test.mjs",
         "allied-command.test.mjs",
-        "allied-room.test.mjs"
+        "allied-room.test.mjs",
+        "network-authority.test.mjs"
       ],
       "tier": "smoke"
     },
