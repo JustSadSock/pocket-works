@@ -1,16 +1,27 @@
 // Genesis 3.2 only. Existing revisions are frozen. The two candidates share
 // the same coast, incision, climate, classification and hydrology pipeline.
 export const NATURAL_REVISION='genesis-3.2.0';
+export const LIVING_REVISION='genesis-3.3.0';
 const C=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),L=(a,b,t)=>a+(b-a)*t,S=t=>{t=C(t);return t*t*(3-2*t)};
 function random(seed){let a=2166136261;for(const c of String(seed))a=Math.imul(a^c.charCodeAt(0),16777619);return ()=>{a=(Math.imul(a,1664525)+1013904223)>>>0;return a/4294967296;};}
 const refs=['alpine','carpathian','gorge','foothills','low-ridge','rolling','coastal'];
 // Frozen, self-contained 250 m DEM exemplars. Quantization to integer metres
 // is explicit; the original source hashes and attribution travel with the save.
-export function validateExemplars(data){
- if(!Array.isArray(data)||data.length!==7)throw Error('Field synthesis requires seven frozen DEM exemplars');
- return data.map((d,i)=>{if(d.id!==refs[i]||d.size!==193||typeof d.data!=='string'||d.data.length!==Math.ceil(193*193*2/3)*4||!d.metadata?.sampleSha256||!d.metadata?.attribution)throw Error('Invalid DEM exemplar '+i);return d;});
+// CRC32 covers the exact packed little-endian Int16 bytes, not the source DEM.
+export function packedChecksum(data){
+ const bytes=atob(data);let crc=-1;
+ for(let i=0;i<bytes.length;i++){crc^=bytes.charCodeAt(i);for(let bit=0;bit<8;bit++)crc=(crc>>>1)^(-(crc&1)&0xedb88320);}
+ return ((crc^-1)>>>0).toString(16).padStart(8,'0');
 }
-export function packExemplars(library){return refs.map(id=>{const d=library.find(x=>x.id===id);if(!d||d.size!==385)throw Error('Missing reference '+id);const N=193,a=new Uint8Array(N*N*2),view=new DataView(a.buffer);for(let y=0;y<N;y++)for(let x=0;x<N;x++)view.setInt16((y*N+x)*2,Math.round(d.metres[y*2*d.size+x*2]),true);let text='';for(let i=0;i<a.length;i+=8192)text+=String.fromCharCode(...a.subarray(i,i+8192));return {id,size:N,data:btoa(text),metadata:d.metadata};});}
+export function validateExemplars(data,{requirePackedChecksum=false}={}){
+ if(!Array.isArray(data)||data.length!==7)throw Error('Field synthesis requires seven frozen DEM exemplars');
+ return data.map((d,i)=>{if(d.id!==refs[i]||d.size!==193||typeof d.data!=='string'||d.data.length!==Math.ceil(193*193*2/3)*4||!d.metadata?.sampleSha256||!d.metadata?.attribution)throw Error('Invalid DEM exemplar '+i);
+ if(requirePackedChecksum||d.packedCrc32!==undefined){
+  if(typeof d.packedCrc32!=='string'||! /^[0-9a-f]{8}$/.test(d.packedCrc32))throw Error('Missing packed DEM checksum '+d.id);
+  const bytes=atob(d.data);if(bytes.length!==193*193*2||btoa(bytes)!==d.data||packedChecksum(d.data)!==d.packedCrc32)throw Error('Corrupt packed DEM '+d.id);
+ }return d;});
+}
+export function packExemplars(library){return refs.map(id=>{const d=library.find(x=>x.id===id);if(!d||d.size!==385)throw Error('Missing reference '+id);const N=193,a=new Uint8Array(N*N*2),view=new DataView(a.buffer);for(let y=0;y<N;y++)for(let x=0;x<N;x++)view.setInt16((y*N+x)*2,Math.round(d.metres[y*2*d.size+x*2]),true);let text='';for(let i=0;i<a.length;i+=8192)text+=String.fromCharCode(...a.subarray(i,i+8192));const data=btoa(text);return {id,size:N,data,packedCrc32:packedChecksum(data),metadata:d.metadata};});}
 function decode(d){const str=atob(d.data),a=new Float32Array(d.size*d.size);let lo=Infinity,hi=-Infinity;for(let i=0;i<a.length;i++){let v=str.charCodeAt(i*2)|(str.charCodeAt(i*2+1)<<8);if(v>32767)v-=65536;a[i]=v;lo=Math.min(lo,v);hi=Math.max(hi,v);}return {...d,a,lo,hi};}
 function sample(a,n,x,y){x=C(x,0,n-1);y=C(y,0,n-1);const i=Math.floor(x),j=Math.floor(y),u=x-i,v=y-j,X=Math.min(n-1,i+1),Y=Math.min(n-1,j+1);return L(L(a[j*n+i],a[j*n+X],u),L(a[Y*n+i],a[Y*n+X],u),v);}
 function binsFor(items,pad){const bins=new Map(),tile=8;for(const p of items){const r=pad(p);for(let y=Math.floor((p.y-r)/tile);y<=Math.floor((p.y+r)/tile);y++)for(let x=Math.floor((p.x-r)/tile);x<=Math.floor((p.x+r)/tile);x++){const k=x+','+y;if(!bins.has(k))bins.set(k,[]);bins.get(k).push(p);}}return (x,y)=>bins.get(Math.floor(x/tile)+','+Math.floor(y/tile))||[];}
@@ -36,14 +47,25 @@ function naturalRanges(seed,W,H,land,coast){
  const near=binsFor(branches,p=>p.len+Math.abs(p.bend)+Math.abs(p.bend2)+p.width*5);
  return {salt,chains,field(x,y){let sum=0;for(const p of near(x,y)){const a=evaluate(p,x,y);sum+=a**5;}const uplift=Math.pow(sum,.2);return {uplift,foot:uplift*.06};}};
 }
-function geographicField(seed,W,H,land,coast,exemplars){
+// Separate broad relief from local DEM residuals; summed-area box filtering
+// is limited to the seven exemplars and never allocates a world-size buffer.
+function lowpass(a,n,r=8){
+ const stride=n+1,integral=new Float64Array(stride*stride),out=new Float32Array(a.length);
+ for(let y=0;y<n;y++){let row=0;for(let x=0;x<n;x++){row+=a[y*n+x];integral[(y+1)*stride+x+1]=integral[y*stride+x+1]+row;}}
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){const x0=Math.max(0,x-r),x1=Math.min(n,x+r+1),y0=Math.max(0,y-r),y1=Math.min(n,y+r+1);out[y*n+x]=(integral[y1*stride+x1]-integral[y0*stride+x1]-integral[y1*stride+x0]+integral[y0*stride+x0])/((x1-x0)*(y1-y0));}
+ return out;
+}
+function geographicField(seed,W,H,land,coast,exemplars,living=false){
  const rng=random(seed+':field'),salt=Math.floor(rng()*2**31),library=exemplars.map(decode),regions=[];
  // Entire 48 km landscapes, not details inserted into pre-existing mountains.
  // Nonperiodic staggered centers, orientation and anisotropic scale are seeded.
  for(let y=-8;y<H+24;y+=21)for(let x=-8;x<W+24;x+=21){const X=x+(rng()-.5)*6,Y=y+(rng()-.5)*6,i=C(Math.round(Y),0,H-1)*W+C(Math.round(X),0,W-1),inland=coast[i],pool=inland>15?[0,1,2,3]:inland>6?[1,2,3,4,5]:[4,5,6],d=library[pool[Math.floor(rng()*pool.length)]],angle=rng()*Math.PI*2,scale=.82+rng()*.38;
  const amplitude=d.id==='alpine'?.54:d.id==='carpathian'?.36:d.id==='gorge'?.31:d.id==='foothills'?.38:d.id==='low-ridge'?.23:d.id==='rolling'?.15:.24;
  regions.push({x:X,y:Y,d,angle,scale,stretch:.88+rng()*.24,amplitude,offsetX:(rng()-.5)*10,offsetY:(rng()-.5)*10});}
+ if(living)for(const d of library)d.low=lowpass(d.a,d.size);
  const near=binsFor(regions,()=>43);
- return {salt,chains:regions.map(({d,...p})=>({...p,source:d.id})),field(x,y){let sum=0,weight=0;for(const p of near(x,y)){const dx=x-p.x,dy=y-p.y,co=Math.cos(p.angle),si=Math.sin(p.angle),u=(dx*co+dy*si)/p.scale,v=(-dx*si+dy*co)/(p.scale*p.stretch),radius=Math.hypot(u,v)/22.5;if(radius>=1)continue;const w=(1-radius*radius)**2,h=sample(p.d.a,p.d.size,96+p.offsetX+u*4,96+p.offsetY+v*4),base=p.d.id==='coastal'?0:p.d.lo,span=Math.max(600,p.d.hi-base);sum+=C((h-base)/span)*p.amplitude*w;weight+=w;}return {uplift:weight?sum/weight*S(weight/.15):0,foot:0};}};
+ return {salt,chains:regions.map(({d,...p})=>({...p,source:d.id})),field(x,y){let sum=0,weight=0,broad=0,residual=0,residualWeight=0;for(const p of near(x,y)){const dx=x-p.x,dy=y-p.y,co=Math.cos(p.angle),si=Math.sin(p.angle),u=(dx*co+dy*si)/p.scale,v=(-dx*si+dy*co)/(p.scale*p.stretch),radius=Math.hypot(u,v)/22.5;if(radius>=1)continue;const w=(1-radius*radius)**2,h=sample(p.d.a,p.d.size,96+p.offsetX+u*4,96+p.offsetY+v*4),base=p.d.id==='coastal'?0:p.d.lo,span=Math.max(600,p.d.hi-base);const z=C((h-base)/span)*p.amplitude;sum+=z*w;weight+=w;
+ if(living){const low=C((sample(p.d.low,p.d.size,96+p.offsetX+u*4,96+p.offsetY+v*4)-base)/span)*p.amplitude;const rw=w*w; broad+=low*w;residual+=(z-low)*rw;residualWeight+=rw;}
+ }const height=living&&residualWeight?Math.max(0,broad/weight+residual/residualWeight):weight?sum/weight:0;return {uplift:height*S(weight/.15),foot:0};}};
 }
-export function naturalGeology(seed,W,H,land,coast,config){return config.approach==='natural'?naturalRanges(seed,W,H,land,coast):geographicField(seed,W,H,land,coast,config.exemplars);}
+export function naturalGeology(seed,W,H,land,coast,config){return config.approach==='natural'?naturalRanges(seed,W,H,land,coast):geographicField(seed,W,H,land,coast,config.exemplars,config.revision===LIVING_REVISION);}
