@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {TASK,REPO,WORKFLOW,makeShadowReceipt} from './attested-shadow.mjs';
-import {admitTrial,parity} from './verified-reuse-admission.mjs';
+import {admitTrial,parity,REPLAY_WORKFLOW} from './verified-reuse-admission.mjs';
 const now=1800000000000;
 const environment={contract:'readonly-offline-container-v2',imageDigest:'1'.repeat(64),toolchainDigest:'2'.repeat(64),externalInputsDigest:'3'.repeat(64),containerConfigDigest:'4'.repeat(64),kernelDigest:'5'.repeat(64),executionContractDigest:'6'.repeat(64),os:'linux',arch:'x64',node:'v22.12.0'};
 const mountedInputs={schema:1,digest:'8'.repeat(64),files:6,directories:4,bytes:42,productionAuthorization:false,reuse:false};
@@ -43,4 +43,12 @@ test('fresh fallback requires successful original evidence',()=>fixture(({target
  const t={schema:1,mode:'fresh-trial',executed:true,admission:{decision:'execute',productionAuthorization:false},result,productionAuthorization:false};
  assert.equal(parity(t,result,target.tree,2,1,target.commit).trialReused,false);
  assert.throws(()=>parity({...t,result:{...result,exitCode:1}},result,target.tree,2,1,target.commit),/fallback/);
+}));
+
+test('completed same-commit upstream can be replayed only by distinct bound replay workflow',()=>fixture(({root,run,bundle,target})=>{
+ execFileSync('git',['checkout','--detach',bundle.source.commit],{cwd:root});
+ const replay={...target,commit:bundle.source.commit,tree:bundle.source.tree,workflow:REPLAY_WORKFLOW,event:'workflow_run',upstreamRun:run.id,upstreamAttempt:run.run_attempt};
+ assert.equal(admitTrial(root,run,bundle,replay,environment,now).decision,'reuse-trial');
+ for(const bad of [{...replay,upstreamRun:99},{...replay,upstreamAttempt:2},{...replay,run:run.id},{...replay,commit:target.commit},{...replay,workflow:WORKFLOW}])
+  assert.equal(admitTrial(root,run,bundle,bad,environment,now).decision,'execute');
 }));

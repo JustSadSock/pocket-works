@@ -14,8 +14,10 @@ const fallback=reason=>({schema:1,decision:'execute',reason,productionAuthorizat
 export function admitTrial(root,priorRun,bundle,target,environment,now=Date.now()){
  try{
   const p=checkRun(root,priorRun,bundle,now);
-  if(target?.repository!==REPO||target.workflow!==WORKFLOW||target.ref!=='refs/heads/main'||
-     !['push','workflow_dispatch'].includes(target.event)||!sha.test(target.commit??'')||
+  const regular=target?.workflow===WORKFLOW&&['push','workflow_dispatch'].includes(target.event);
+  const replay=target?.workflow===REPLAY_WORKFLOW&&target.event==='workflow_run'&&
+    target.upstreamRun===p.source.run&&target.upstreamAttempt===p.source.attempt&&target.commit===p.source.commit;
+  if(target?.repository!==REPO||(!regular&&!replay)||target.ref!=='refs/heads/main'||!sha.test(target.commit??'')||
      !sha.test(target.tree??'')||!Number.isSafeInteger(target.run)||target.run<1||
      !Number.isSafeInteger(target.attempt)||target.attempt<1||
      target.run===p.source.run||target.commit!==git(root,['rev-parse','HEAD'])||
