@@ -30,7 +30,7 @@ function structural(input,library){
  // Flood outward from the existing valley network. The resulting distance
  // transform defines entire interfluves and watershed saddles, not rock props.
  let seeds=0;for(let i=0;i<n;i++)if(channels[i]&&weight[i]>=0){dist[i]=0;label[i]=i;floor[i]=z[i];push(i,0);seeds++;}
- while(heap.length){const [i,d]=pop();if(d>dist[i]+1e-5)continue;const x=i%w,y=Math.floor(i/w);for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]]){const X=x+dx,Y=y+dy,j=Y*w+X;if(X<0||X>=w||Y<0||Y>=h||weight[j]<0)continue;const next=d+Math.hypot(dx,dy)/res;if(next>=dist[j])continue;dist[j]=next;label[j]=label[i];floor[j]=floor[i];push(j,next);}}
+ while(heap.length){const [i,d]=pop();if(d>dist[i]+1e-5)continue;const x=i%w,y=Math.floor(i/w);for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]]){const X=x+dx,Y=y+dy,j=Y*w+X;if(X<0||X>=w||Y<0||Y>=h||weight[j]<0)continue;const next=input.canonical?Math.fround(d+Math.hypot(dx,dy)/res):d+Math.hypot(dx,dy)/res;if(next>=dist[j])continue;dist[j]=next;label[j]=label[i];floor[j]=floor[i];push(j,next);}}
  const out=new Float32Array(n),distanceField=Float32Array.from(dist,v=>Number.isFinite(v)?v:0),smoothFloor=blur(floor,w,h,Math.round(res*.65)),smoothDistance=blur(distanceField,w,h,Math.round(res*.22));
  // Real reference determines slope scale from median central-gradient.
  const exemplars=library.filter(d=>['alpine','carpathian','gorge'].includes(d.id));let slope=0,count=0;

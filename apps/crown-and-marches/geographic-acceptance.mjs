@@ -11,7 +11,7 @@ export function clearAcceptanceCache(){cache.clear();resident=0;}
 export async function canonicalSnapshot(s,cam){
  const m=model(s),begin=performance.now(),snap=await snapshot(s,{...cam,x:m.width/2,y:m.height/2},{bounds:[0,0,m.width,m.height]});
  // Datum is camera-independent. Only known data appears in the snapshot.
- snap.base.center=0;
+ snap.base.center=0;snap.input.canonical=true;
  const t=performance.now(),parts=[];for(const key of ['z','weight','kind','anchor','channels','flow'])parts.push(await hash(snap.input[key]));
  snap.contentKey=[m.width,m.height,snap.input.res,...parts].join(':');
  snap.hashMs=performance.now()-t;snap.snapshotMs=performance.now()-begin;return snap;
