@@ -164,7 +164,8 @@ try {
   assert.equal(captureDone,0,'settled sphere cannot trigger GL errors');
   // A live device rotation must not crop a portrait run to fill landscape.
   await hiPage.setViewportSize({width:844,height:390});
-  await hiPage.waitForTimeout(250);
+  // Software WebGL can take several frames to redraw after a viewport change.
+  await hiPage.waitForFunction(()=>document.querySelector('canvas.spatial-canvas')?.dataset.edgeMode==='safe-fit',null,{timeout:10000});
   assert.equal(await hiPage.locator('canvas.spatial-canvas').getAttribute('data-edge-mode'),
     'safe-fit','existing run remains fully visible after rotation');
   await hi.close();

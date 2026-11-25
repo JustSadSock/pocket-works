@@ -1,5 +1,9 @@
+const RELEASE_NOTES = ["Колесо стало главным интерактивным элементом: теперь его можно крутить прямым нажатием, а результат получил более заметную анимацию и тактильную отдачу.","Серия переработана в Тройной пик: три результата сохраняются отдельным составом вместо исчезающего уведомления.","Бан-лист стал быстрее: добавлены массовое возвращение героев, фильтрация под текущую роль и подписи ролей.","Интерфейс стал компактнее на телефоне, фильтры ролей подняты ближе к колесу, улучшены состояния пустого пула и история."];
+const RELEASE_DATE = "2026-08-22";
+const APP_VERSION = "1.1.0";
 const CACHE_NAME='rivals-roulette-v1.1.0';
-const ASSETS=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
+const ASSETS=["../../shared/update-manager.js","../../shared/update-manager.css","../../shared/pwa-utils.js",'./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('rivals-roulette-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{if(response&&response.ok&&new URL(event.request.url).origin===self.location.origin){const copy=response.clone();caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));}return response;}).catch(()=>caches.match('./index.html'))));});
+self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:1,cacheName:"rivals-roulette-v1.1.0"});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});

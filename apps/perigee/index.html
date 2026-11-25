@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
 </head>
 <body data-app-preset="canvas" data-fullscreen-app>
   <main id="app" class="app-shell is-intro" data-app-shell data-fullscreen-app>
@@ -69,5 +70,6 @@
   </main>
 
   <script src="./app.js" type="module"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРИГЕЙ" data-app-version="1.0.1"></script>
 </body>
 </html>

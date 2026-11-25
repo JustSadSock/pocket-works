@@ -4,7 +4,7 @@ const APP_VERSION = '0.5.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Отломанные секции корпуса превращаются в отдельные вращающиеся физические обломки с инерцией и столкновениями.","При критическом перегреве возникают локальные аварии с повреждением брони и нагревом соседних станций; реакторы дают усиленный выброс.","Вражеские попадания толкают и закручивают корабль в зависимости от направления, массы и точки удара.","Новые визуальные эффекты ударной волны, разлёта металлических пластин, искр и теплового выброса.","32 регрессионных сценария; ограничение числа физических фрагментов и совместимость старых сохранений."];
-const APP_SHELL = [
+const APP_SHELL = ["../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js","../../shared/workshop-mode.js","../../shared/workshop-mode.css","../../shared/pwa-utils.js","./workshop.js",
 './assets/fonts/font-1.ttf',
 './assets/fonts/font-2.ttf',
 './assets/fonts/font-3.ttf',

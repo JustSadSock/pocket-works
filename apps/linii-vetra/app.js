@@ -620,7 +620,7 @@ function init(){
   if(campaign.day>MAX_DAYS){renderEnding();showScreen('endingScreen');}
   else {missions=missionsForDay(campaign);renderMap();showScreen('mapScreen');}
   ui.tutorialOverlay.hidden=campaign.tutorialDone;
-  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}),{once:true});
+  
   raf=requestAnimationFrame(loop);
 }
 

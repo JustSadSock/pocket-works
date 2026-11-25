@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#eee9de">
 <title>Тихий кадр · удаление диалогов</title><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
+</head>
 <body><main data-app-shell class="lab">
 <header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">2 МОДЕЛИ · ЛОКАЛЬНО</span></header>
 <section class="intro"><div><p class="eyebrow">НЕЙРОСЕТЕВАЯ ЛАБОРАТОРИЯ</p><h1>ТИХИЙ <em>КАДР</em></h1><p class="lead">Сравни быстрый Open-Unmix и более тщательную SCNet на одной сцене. Без цепочек, сторонних сервисов и отправки видео на сервер.</p></div><div class="mark" aria-hidden="true"><span class="line"></span><span class="cross">×</span><span class="line short"></span></div></section>
@@ -10,7 +11,7 @@
 <div class="panel-title"><h2 id="source-heading">01 / Исходный файл</h2><span id="file-detail" class="muted">Файл не выбран</span></div>
 <label class="drop" id="drop-zone" for="file-input"><input id="file-input" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv" hidden><span class="drop-icon">＋</span><span><strong>Выбрать видео</strong><small>MP4, MOV, WebM · только на устройстве</small></span></label>
 <div id="input-details" class="hidden"><video id="source-video" playsinline preload="metadata" muted controls></video><div class="fields"><label>Начало фрагмента, сек.<input id="start-seconds" type="number" min="0" step="0.1" value="0"></label><label>Длительность, сек.<input id="duration-seconds" type="number" min="1" max="90" step="1" value="20"></label></div>
-<div class="scene-shortcut"><button id="scene-gravity" type="button" class="secondary" disabled>К сцене 2:28</button><span>Для твоего теста Gravity Falls · 148-я секунда</span></div>
+<div class="scene-shortcut"><button data-native-press id="scene-gravity" type="button" class="secondary" disabled>К сцене 2:28</button><span>Для твоего теста Gravity Falls · 148-я секунда</span></div>
 <p id="range-note" class="hint"></p></div>
 <div class="panel-title second"><h2>02 / Обработка</h2><span class="chip">ЛОКАЛЬНО</span></div>
 <div class="fields"><label>Нейросеть<select id="quality-mode" aria-label="Нейросеть">
@@ -81,4 +82,5 @@
 <p id="study-active-status" class="hint" role="status">Версии появятся здесь.</p>
 </section>
 <footer>SCNet by starrytong · Open-Unmix by SigSep · MIT / ONNX by audiojs. Оригинальное видео не загружается на сервер. Используйте материалы, на которые у вас есть права.</footer>
-</main><script type="module" src="./app.js"></script></body></html>
+<button type="button" data-workshop-trigger data-native-press>Диагностика</button>
+</main><script type="module" src="./app.js"></script><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ТИХИЙ КАДР" data-app-version="1.9.0"></script></body></html>

@@ -1,0 +1,24 @@
+{
+  "id": "/apps/echolot/",
+  "name": "ЭХОЛОТ",
+  "short_name": "Эхолот",
+  "description": "Подводная экспедиция: разведай рифы сонаром, собери образцы и вернись с запасом кислорода.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#102e40",
+  "theme_color": "#102e40",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

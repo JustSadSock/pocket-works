@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   world:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: geography (${{ matrix.shard }})
     timeout-minutes: 55
     strategy:
@@ -52,7 +52,7 @@ jobs:
   summary:
     if: always()
     needs: [world]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4

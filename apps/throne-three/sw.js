@@ -4,7 +4,7 @@ const APP_VERSION = '0.1.0';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Initial interactive preset release."];
-const APP_SHELL = [
+const APP_SHELL = ["../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js","../../shared/workshop-mode.js","../../shared/workshop-mode.css","../../shared/pwa-utils.js","./workshop.js",
   "./",
   "./index.html",
   "./app.config.json",

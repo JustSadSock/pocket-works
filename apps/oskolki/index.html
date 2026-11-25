@@ -14,10 +14,11 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 </head>
 <body>
   <main class="app-shell" data-app-shell data-keyboard-aware>
-    <header class="topbar" data-ui>
+    <header class="topbar" data-ui><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
       <a class="exit-link" href="../../" data-app-control data-native-press aria-label="Вернуться в PocketWorks">← PocketWorks</a>
       <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>ОСКОЛКИ</span></div>
       <div class="head-tools"><span class="head-right" id="headStatus">01 / память</span><button type="button" class="head-right head-button" id="leaveBtn" data-native-press hidden>К тексту ↗</button></div>
@@ -75,5 +76,6 @@
   </main>
   <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОСКОЛКИ" data-app-version="1.0.0"></script>
   <script src="./app.js" type="module"></script>
+<script type="module" src="./workshop.js"></script>
 </body>
 </html>

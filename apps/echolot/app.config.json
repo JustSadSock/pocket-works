@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "echolot",
+  "name": "ЭХОЛОТ",
+  "shortName": "Эхолот",
+  "description": "Подводная экспедиция: разведай рифы сонаром, собери образцы и вернись с запасом кислорода.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-24",
+  "releaseDateTime": "2026-11-24T11:00:00+02:00",
+  "changelog": [
+    "Три подводных маршрута, разведка импульсами, кислород, повреждения корпуса, сбор образцов и возврат на базу.",
+    "Локальное сохранение рейсов, управление клавиатурой и сенсорными кнопками, офлайн PWA."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#ffad65",
+  "backgroundColor": "#102e40",
+  "themeColor": "#102e40",
+  "orientation": "any",
+  "cacheName": "echolot-v1.0.0",
+  "storageNamespace": "pocket-works:echolot",
+  "tags": [
+    "game",
+    "exploration",
+    "sonar",
+    "wildcard",
+    "offline"
+  ],
+  "order": 465
+}

@@ -1,3 +1,4 @@
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 const chapter=new URLSearchParams(location.search).has('chapter');
@@ -21,3 +22,5 @@ import(chapter?'./app.mjs':'./rogue-app.mjs').catch(error => {
   const fatal = document.getElementById('fatal');
   if (fatal) fatal.hidden = false;
 });
+
+createWorkshopMode({appName:"NOT DEAD YET",version:"2.2.3",cachePrefix: 'not-dead-yet-',storageNamespace: 'pocket-works:not-dead-yet',onReset(){location.reload();}});

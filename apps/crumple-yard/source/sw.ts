@@ -9,7 +9,7 @@ const CACHE_PREFIX = 'crumple-yard-';
 const CACHE_NAME = 'crumple-yard-v1.6.0';
 const APP_VERSION = '1.6.0';
 const RELEASE_DATE = '2026-10-21';
-const RELEASE_NOTES = ["Настоящие локальные вмятины на наружных панелях кузова.","Отдельные трещины стекла и реалистичное отключение разбитых огней.","Следы шин при боковом скольжении, плавное исчезновение и сброс между заездами."];
+const RELEASE_NOTES = ["Деформация капота, бамперов, решётки и наружных деталей синхронизирована с повреждениями кузова.","Трещины каждого стекла, отключение повреждённых светодиодных фар и фонарей.","Два настоящих следа шин при скольжении и корректный сброс следов при новом заезде."];
 
 setCacheNameDetails({ prefix: 'crumple-yard', suffix: 'v' + APP_VERSION, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
