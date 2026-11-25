@@ -64,3 +64,16 @@ export function auditPhysicalEdges(m,W,H){
  for(let a=0;a<n;a++){const b=m.down[a];if(!m.land[a]||b<0||m.height[b]<m.height[a])continue;const e=evidence.get(key(a,b)),type=!e?'no-fine-crossing':e.representedLake?'represented-lake-crossing':e.bedDelta>0?(Math.max(e.depthFrom,e.depthTo)>.012?'filled-depression-bed-rise':'bed-rise-outside-depth-threshold'):'coarse-average-rise-fine-bed-descends';counts[type]=(counts[type]||0)+1;cases.push({from:a,to:b,coarseDelta:m.height[b]-m.height[a],representedWater:!m.land[b],type,evidence:e??null});}
  return {total:cases.length,counts,cases};
 }
+
+// Experimental repair on a detached graph only. Do not alter Genesis 3.3
+// or serialize a different routing graph under the same revision.
+export function auditExitRepair(m,W,H){
+ const g=m.geography,r=g.detail,w=g.width,n=W*H,cell=i=>Math.min(H-1,Math.floor(Math.floor(i/w)/r))*W+Math.min(W-1,Math.floor((i%w)/r)),original=auditMajorExits(m,W,H),down=m.down.slice(),results=[];
+ const terminal=(start,graph,avoid=-1)=>{const seen=new Set();let i=start;while(i>=0&&!seen.has(i)){if(i===avoid)return {cycle:true,terminal:i,steps:seen.size};seen.add(i);if(!m.land[i]||graph[i]<0)return {cycle:false,terminal:i,steps:seen.size};i=graph[i];}return {cycle:true,terminal:i,steps:seen.size};};
+ for(const c of [...original.cases].sort((a,b)=>(b.alternatives[0]?.discharge??0)-(a.alternatives[0]?.discharge??0))){
+ const old=terminal(c.chosen,down),choices=c.alternatives.map(a=>({...a,...terminal(a.cell,down,c.cell)})),chosen=choices.find(a=>!a.cycle);
+ if(chosen)down[c.cell]=chosen.cell;
+ results.push({cell:c.cell,oldExit:c.chosen,oldDischarge:c.chosenDischarge,oldTerminal:old,choices,proposed:chosen?.cell??null,status:chosen?'acyclic-major-repair':'requires-quotient-cycle-resolution'});
+ }
+ const candidate=auditMajorExits({...m,down},W,H);return {original:original.total,remaining:candidate.total,results,remainingCases:candidate.cases,changed:results.filter(r=>r.proposed!==null).length};
+}

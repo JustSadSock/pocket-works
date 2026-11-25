@@ -72,9 +72,40 @@ export async function contourSource(s,cam,{bounds,detail=8,contourDetail=8,verti
  // Keep a physical terrain bed underneath the independent clipped water.
  // Lake surface and ocean plane are not baked into terrain or materials.
  for(let y=0;y<source.rows;y++){for(let x=0;x<source.cols;x++){const i=y*source.cols+x,o=i*9,X=x0+x/detail,Y=y0+y/detail,p=field.sample(X,Y),wet=p.coast<0||p.lake>0,z=p.coast<0?-(Math.max(0,.12-p.bed)*3.1+.025):vertical(p.bed);
- source.vertices[o+2]=z;source.vertices[o+3]=p.bed;source.vertices[o+7]=1;source.elevations[i]=z;source.water.kind[i]=0;source.water.depth[i]=0;source.water.shore[i]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));if(wet)source.vertices[o+8]=1;
+ source.vertices[o+2]=z;source.vertices[o+3]=p.bed;source.vertices[o+7]=1;source.elevations[i]=z;source.water.kind[i]=0;source.water.depth[i]=0;source.water.shore[i]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));if(wet)source.vertices[o+8]=1;else source.vertices[o+8]=Math.max(.016,source.vertices[o+8]);
  }if(y%8===0)await yieldRow();}
- source.contours=await buildContours(m,bounds,{detail:contourDetail,vertical,yieldRow,diagnostic});source.diagnostic=diagnostic;
+ source.contours=await buildContours(m,bounds,{detail:contourDetail,vertical,yieldRow,diagnostic});const rivers=riverRibbons(g,bounds,{vertical,threshold:contourDetail<=4?58:25});source.contours.chunks.push(...rivers.chunks);source.contours.stats.rivers=rivers.stats;source.contours.stats.bytes+=rivers.stats.bytes;source.diagnostic=diagnostic;
  source.stats={...source.stats,ms:source.stats.ms+clock()-begin,contours:source.contours.stats,bytes:source.stats.bytes+source.contours.stats.bytes,cacheHit:false};cache.put(key,source,source.stats.bytes);source.stats.cacheBytes=cache.bytes;return source;
 }
 export function clearContourCache(g){bakedCache.get(g)?.clear();bakedCache.delete(g);}
+
+// Geometry is world-space and independent of the terrain mesh LOD.
+// Edge endpoint and width are shared by every adjacent ribbon.
+export function riverRibbons(g,bounds,{vertical,threshold=25}={}){
+ const [x0,y0,x1,y1]=bounds,r=g.detail,w=g.width,h=g.height,tiles=new Map(),valid=i=>i>=0&&g.land[i]&&!g.lakeWater?.[i]&&g.flow[i]/(r*r)>=threshold;
+ const node=i=>({x:(i%w)/r,y:Math.floor(i/w)/r,z:vertical(g.lakeWater?.[i]?g.surface[i]:g.bed[i])+.035,w:C(.018+.024*Math.log2(Math.max(12,g.flow[i]/(r*r))/12),.018,.165)});
+ const incoming=i=>{const x=i%w,y=Math.floor(i/w),a=[];for(let Y=Math.max(0,y-1);Y<=Math.min(h-1,y+1);Y++)for(let X=Math.max(0,x-1);X<=Math.min(w-1,x+1);X++){const j=Y*w+X;if(valid(j)&&g.down[j]===i)a.push(j);}return a;};
+ let edges=0,triangles=0;
+ for(let y=Math.max(0,Math.floor((y0-1)*r));y<=Math.min(h-1,Math.ceil((y1+1)*r));y++)for(let x=Math.max(0,Math.floor((x0-1)*r));x<=Math.min(w-1,Math.ceil((x1+1)*r));x++){
+ const i=y*w+x,j=g.down[i];if(!valid(i)||j<0)continue;
+ const a=node(i),b=node(j),inc=incoming(i),next=g.down[j],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(!len)continue;
+ const prev=inc.length===1?node(inc[0]):null,post=valid(j)&&next>=0&&incoming(j).length===1?node(next):null;
+ const tx=prev?(b.x-prev.x)*.5:dx,ty=prev?(b.y-prev.y)*.5:dy,ux=post?(post.x-a.x)*.5:dx,uy=post?(post.y-a.y)*.5:dy;
+ const bend=((Math.imul(i+1,2654435761)>>>0)/4294967295-.5)*.12/r;
+ const points=[];for(let k=0;k<=4;k++){const t=k/4,t2=t*t,t3=t2*t,A=2*t3-3*t2+1,B=t3-2*t2+t,D=-2*t3+3*t2,E=t3-t2;
+ points.push({x:A*a.x+B*tx+D*b.x+E*ux-dy/len*Math.sin(Math.PI*t)**2*bend,y:A*a.y+B*ty+D*b.y+E*uy+dx/len*Math.sin(Math.PI*t)**2*bend,z:L(a.z,b.z,t),w:L(a.w,b.w,t)});}
+ const key=Math.floor(x/r/16)+':'+Math.floor(y/r/16),tile=tiles.get(key)??{data:[],x0:Infinity,y0:Infinity,x1:-Infinity,y1:-Infinity,zmin:Infinity,zmax:-Infinity};tiles.set(key,tile);
+ const emit=p=>{tile.data.push(p.x,p.y,p.z,.22,.35,.40);tile.x0=Math.min(tile.x0,p.x);tile.x1=Math.max(tile.x1,p.x);tile.y0=Math.min(tile.y0,p.y);tile.y1=Math.max(tile.y1,p.y);tile.zmin=Math.min(tile.zmin,p.z);tile.zmax=Math.max(tile.zmax,p.z);};
+ const pairs=points.map((p,k)=>{const before=points[Math.max(0,k-1)],after=points[Math.min(4,k+1)],x=after.x-before.x,y=after.y-before.y,d=Math.hypot(x,y)||1;return [{x:p.x-y/d*p.w,y:p.y+x/d*p.w,z:p.z},{x:p.x+y/d*p.w,y:p.y-x/d*p.w,z:p.z}];});
+ for(let k=1;k<pairs.length;k++){const [a,b]=pairs[k-1],[c,d]=pairs[k];for(const p of [a,b,c,b,d,c])emit(p);triangles+=2;}
+ // A small junction disk covers meeting ribbons without widening the whole stream.
+ if(inc.length!==1){for(let k=0;k<8;k++){emit(a);for(const t of [k,k+1])emit({x:a.x+Math.cos(t*Math.PI/4)*a.w,y:a.y+Math.sin(t*Math.PI/4)*a.w,z:a.z});triangles++;}}
+ edges++;
+ }
+ const chunks=[...tiles.values()].map(({data,...b})=>({...b,vertices:Float32Array.from(data)}));return {chunks,stats:{edges,triangles,bytes:chunks.reduce((n,c)=>n+c.vertices.byteLength,0)}};
+}
+export function connectedLakePairs(g){
+ const b=lakeBasins(g),r=g.detail,w=g.width,pairs=[],seen=new Set();
+ for(let i=0;i<g.land.length;i++){if(!g.lakeWater[i])continue;const id=b.labels[i],j=g.down[i];if(!id||j<0||b.labels[j]===id)continue;let p=j;for(let k=0;k<r*96&&p>=0&&g.land[p];k++){const to=b.labels[p];if(to===id)break;if(to&&to!==id&&g.lakeWater[p]){const key=id+':'+to;if(!seen.has(key)){seen.add(key);const a={x:(i%w)/r,y:Math.floor(i/w)/r},z={x:(p%w)/r,y:Math.floor(p/w)/r};pairs.push({from:id,to,fromNode:i,toNode:p,steps:k+1,distance:Math.hypot(a.x-z.x,a.y-z.y),a,b:z});}break;}p=g.down[p];}}
+ return pairs;
+}
