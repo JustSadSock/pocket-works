@@ -60,7 +60,7 @@ jobs:
             echo "has_browser=$(jq -c .hasBrowser plan/plan.json)"
             echo "has_build=$(jq -c .hasBuild plan/plan.json)"
           } >> "$GITHUB_OUTPUT"
-          jq '{legacyJobs,shardJobs,sharedBuildTasks:(.prebuilt|length)}' plan/plan.json
+          jq '{coverageScope,originalLegacyJobs,legacyJobs,shardJobs,sharedBuildTasks:(.prebuilt|length)}' plan/plan.json
       - uses: actions/upload-artifact@v4
         with:
           name: integrated-plan-${{ github.run_attempt }}
