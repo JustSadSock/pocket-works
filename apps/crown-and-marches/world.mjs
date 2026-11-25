@@ -911,12 +911,13 @@ export function societyStep(s){
  for(let i=1;i<q.length;i++){const change=clamp((c.pop*weights[i]/sum-q[i].pop)*.035,-q[i].pop*.04,q[0].pop*.012*(.4+q[i].skill+education*.15));q[i].pop+=change;q[0].pop-=change;}
  q[6].skill=clamp(q[6].skill+education*.005,.1,1);
  // Earnings are paid from the private market; taxes and consumption spend these wallets.
+ if(s.society.institutionalReforms!==false){const loss=Math.max(0,c.originLoss-(d.lastOriginLoss||0));d.lastOriginLoss=c.originLoss;d.warBurden=clamp((d.warBurden||0)*.88+loss/Math.max(1,c.pop),0,1);if(loss>0){const g=s.society.architecture.governments[c.f];g.legitimacy=clamp(g.legitimacy-loss/Math.max(1,s.cities.filter(v=>v.f===c.f).reduce((n,v)=>n+v.pop,0))*.5,0,1);}}
  const wagePool=Math.min(c.cash*(s.society.circulation===false?.025:.12),demand.reduce((n,v)=>n+v,0)*.08),earned=demand.reduce((n,v,i)=>n+v*(.5+q[i].skill),0);
  c.cash-=wagePool;if(s.society.circulation!==false)cashFlows(c).wages+=wagePool;
  for(let i=0;i<q.length;i++){const g=q[i],income=wagePool*demand[i]*(.5+g.skill)/earned;g.cash+=income;g.income=income;
  const tax=Math.min(g.cash,income*st.tax),local=tax*internalRetention(s,c);g.cash-=tax;d.localTreasury+=local;st.gold+=tax-local;st.budget.tax+=tax-local;g.tax=tax;if(s.society.circulation!==false)cashFlows(c).householdTax+=tax;
  const good=i===2||i===3?16:15,spend=Math.min(g.cash*.012,g.pop*.006,c.stock[good]*c.market[good]);g.cash-=spend;c.cash+=spend;consume(s,c,good,spend/Math.max(.001,c.market[good]));g.consumption=spend;if(s.society.circulation!==false)cashFlows(c).goods+=spend;
- g.support=clamp(.62+(food-.8)*.8-st.tax*.8+(i===3||i===4?d.autonomy*.18:0)-(war&&i!==5?.08:0),0,1);}
+ g.support=clamp(.62+(food-.8)*.8-st.tax*.8+(i===3||i===4?d.autonomy*.18:0)-(war&&i!==5?.08:0)-(s.society.institutionalReforms!==false?Math.min(.4,(d.warBurden||0)*(i===5?.5:1)):0),0,1);}
  // Local authorities have their own means and may rescue an exhausted market.
  if(food<.8&&d.localTreasury>0){const aid=Math.min(d.localTreasury,4);d.localTreasury-=aid;c.cash+=aid;if(s.society.circulation!==false)cashFlows(c).relief+=aid;}
  if(s.society.circulation!==false)fundLocalServices(s,c);
@@ -1090,7 +1091,7 @@ function politicalArchitectureStep(s){
  }
  for(const st of s.states){const g=a.governments[st.id];if(!g||st.defunct)continue;const cs=s.cities.filter(c=>c.f===st.id&&c.occupation<0);if(!cs.length)continue;
  if(g.law){const r=g.law,capacity=cs.reduce((n,c)=>n+clamp(c.lastFoodRatio*(.2+c.infra*.12),0,1),0)/cs.length;if(capacity<.15){polityEvent(s,st.id,'constitution failed',{kind:r.kind});g.law=null;}else{r.progress=Math.min(1,r.progress+capacity*r.consent*.12);if(r.progress>=1){g.institutions={...CONSTITUTIONS[r.kind]};polityEvent(s,st.id,'constitution enacted',{kind:r.kind});g.law=null;}}}
- if(s.day%360===0){if(polAI(s,st.id)){const ideal=taxAssembly(s,st.id).preferred;const requested=clamp(st.tax+clamp(ideal-st.tax,-.04,.04),0,.5);if(Math.abs(requested-st.tax)>.005)setTaxLaw(s,st.id,requested);}for(const id of [g.ruler,g.heir]){const p=a.people[id];if(p)p.age=Math.floor((s.day-p.born)/360);}const ruler=a.people[g.ruler];if(ruler&&ruler.age>=60+hash(s.seed+':death:'+ruler.id)%25)succeedRuler(s,st.id);else if(ruler?.age>=18)g.regent=null;}
+ if(s.day%360===0){if(polAI(s,st.id)){if(s.society.institutionalReforms!==false){const trade=tariffAssembly(s,st.id),target=clamp(st.tariff+clamp(trade.preferred-st.tariff,-.04,.04),0,.2);if(Math.abs(target-st.tariff)>.005)setTariffLaw(s,st.id,target);urbanConstitutionReview(s,st.id);}const ideal=taxAssembly(s,st.id).preferred;const requested=clamp(st.tax+clamp(ideal-st.tax,-.04,.04),0,.5);if(Math.abs(requested-st.tax)>.005)setTaxLaw(s,st.id,requested);}for(const id of [g.ruler,g.heir]){const p=a.people[id];if(p)p.age=Math.floor((s.day-p.born)/360);}const ruler=a.people[g.ruler];if(ruler&&ruler.age>=60+hash(s.seed+':death:'+ruler.id)%25)succeedRuler(s,st.id);else if(ruler?.age>=18)g.regent=null;}
  }
 }
 export function politicalArchitectureSnapshot(s,f){
@@ -1539,4 +1540,20 @@ export function grandCampaign(config={}){
  const kinds=Object.keys(CONSTITUTIONS),governments=[],initial=[];
  for(const st of s.states){const city=s.cities.find(c=>c.f===st.id),h=hash(seed+':start:'+st.id),coast=coastal(s,city),fert=s.map.fert[city.i];governments[st.id]=coast&&h%3===0?'merchant':kinds[h%kinds.length];city.pop=Math.round(620+fert*680+h%450);city.cash=city.pop*.55;st.gold=150+h%190;st.focus=coast?5:h%5;city.specialization=coast?'trade':fert>.58?'farming':'balanced';initial[st.id]=['writing',...(fert>.54?['rotation']:[]),...(coast?['coastal-sail']:[])];if(h%4===0)initial[st.id].push('masonry');}
  recalcTerritory(s);enableDiscovery(s,{initial,autoExplore:true});enableSociety(s,{governments,mixed:.15,autonomy:.45});s.playerFaction=clamp(Math.floor(config.playerFaction||0),0,count-1);s.grand={schema:1,goal:config.goal||'sandbox',started:s.day};return s;
+}
+
+export function tariffAssembly(s,f,target=null){
+ const st=s.states[f],g=s.society?.architecture?.governments[f],rows=g?constituency(s,f):[],body=g?.institutions.treasury||'crown',voters=rows.filter(q=>body==='merchants'?q.id==='merchants':body==='lords'?['landowners','district'].includes(q.id):body==='clergy'?q.id==='clergy':body==='districts'?q.id==='district':true),total=voters.reduce((n,q)=>n+q.power,0)||1,preference=q=>clamp(.22-q.openTrade*.22,0,.2),preferred=body==='crown'?clamp(.04+Math.max(0,st.fiscal.expense-st.fiscal.income)*.004,0,.2):voters.reduce((n,q)=>n+preference(q)*q.power,0)/total,proposed=target??st.tariff;
+ return {body,preferred,support:body==='crown'?1:voters.reduce((n,q)=>n+(Math.abs(proposed-preference(q))<=Math.abs(st.tariff-preference(q))+.015?q.power:0),0)/total};
+}
+export function setTariffLaw(s,f,target){
+ if(!s.states[f]||!Number.isFinite(target)||target<0||target>.2)return 'Недопустимая пошлина';
+ const st=s.states[f],v=tariffAssembly(s,f,target);if(v.support<.5)return 'Совет отклонил пошлину · '+Math.round(v.support*100)+'%';
+ const previous=st.tariff;st.tariff=target;if(s.society&&Math.abs(previous-target)>.005)polityEvent(s,f,'trade privilege',{previous,target,body:v.body,support:v.support});return 'Пошлина согласована';
+}
+export function urbanConstitutionReview(s,f){
+ const g=s.society?.architecture?.governments[f];if(!g||g.law||!['estates','aristocratic'].includes(governmentType(s,f)))return false;
+ const rows=constituency(s,f),total=rows.reduce((n,q)=>n+q.power,0),urban=rows.filter(q=>q.id==='merchants'||q.id==='artisans').reduce((n,q)=>n+q.power,0);
+ if(total<=0||urban/total<=.5)return false;
+ return proposeConstitution(s,f,'merchant').startsWith('Реформа принята');
 }
