@@ -39,9 +39,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/receipt-input" "$RUNNER_TEMP/receipt-source"
+          mkdir -p "$RUNNER_TEMP/receipt-input" "$RUNNER_TEMP/receipt-source" "$RUNNER_TEMP/receipt-task-output"
           out="$RUNNER_TEMP/receipt-input"
           src="$RUNNER_TEMP/receipt-source"
+          taskout="$RUNNER_TEMP/receipt-task-output"
           # Archive tracked source; do not expose .git, runner credentials or home.
           git archive HEAD apps/axis-pals shared scripts package.json package-lock.json | tar -xf - -C "$src"
           mkdir -p "$src/qa-artifacts"
@@ -60,10 +61,11 @@ jobs:
           jq -n --arg image "${image##*@sha256:}" --arg config "${config#sha256:}" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg execution "$execution" --arg external "$external"             '{contract:"readonly-offline-container-v1",imageDigest:$image,containerConfigDigest:$config,node:$node,os:"linux",arch:$arch,toolchainDigest:$toolchain,kernelDigest:$kernel,executionContractDigest:$execution,externalInputsDigest:$external}' > "$out/environment.json"
           jq -n --arg repository "$GITHUB_REPOSITORY" --arg commit "$(git rev-parse HEAD)" --arg tree "$(git rev-parse HEAD^{tree})" --arg event "$GITHUB_EVENT_NAME" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT"             '{repository:$repository,workflow:".github/workflows/verified-results-shadow.yml",ref:"refs/heads/main",commit:$commit,tree:$tree,event:$event,run:$run,attempt:$attempt}' > "$out/source.json"
           task='{"key":"axis-pals-rules","app":"axis-pals","suite":"rules","kind":"node-test","seed":null,"install":false}'
-          docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$out,dst=/work/qa-artifacts" -w /work -e "PW_QA_TASK=$task" "$image" node scripts/universal-qa/run.mjs
+          docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$taskout,dst=/work/qa-artifacts" -w /work -e "PW_QA_TASK=$task" "$image" node scripts/universal-qa/run.mjs
           # Publish only the structured result; discard the raw task log.
-          cp "$out/axis-pals-rules/result.json" "$out/evidence.json"
-          rm -rf "$out/axis-pals-rules"
+          test -f "$taskout/axis-pals-rules/result.json" && test ! -L "$taskout/axis-pals-rules/result.json"
+          cp "$taskout/axis-pals-rules/result.json" "$out/evidence.json"
+          rm -rf "$taskout"
       - uses: actions/upload-artifact@v4
         with:
           name: verified-shadow-input-${{ github.run_attempt }}
