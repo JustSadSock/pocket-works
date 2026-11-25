@@ -185,7 +185,8 @@
       "id": "art-reference",
       "kind": "playwright",
       "files": [
-        "qa/art-reference.spec.ts"
+        "qa/art-reference.spec.ts",
+        "qa/orthographic-art.spec.ts"
       ],
       "tier": "smoke"
     },

@@ -1,0 +1,9 @@
+# Orthographic Art Standard — independent candidate, NOT APPROVED
+
+Four original procedural mesh prototypes. No external art or license dependency. Real 3D geometry, smooth material normals, depth-tested orthographic rendering; fixed upper-left world light; 45/60/75-degree comparison, 60-degree default. 8 directions, 8 frames per pose for spear and horse; static Roman and elephant prototypes. The live battlefield uses Canvas 2D atlas blits, not 3D rendering. The renderer is a separate research route; no game integration.
+
+The same original makeScene fixture as Art Reference is copied without changing its engine calls, seeds or geometry. Front rows and local pressure select the pose; deterministic row sampling, bounded cohesion offsets, no per-soldier physics. Missing troop types use explicitly provisional proxies (including ancient cavalry, ranged units, non-Roman infantry); not an expanded atlas or historical representation claim. The Zama overview is a test of mass/legibility, not a finished historical depiction. Actual river sample and river centerline retain water through a ford; the crossing remains the engine's passability decision. Ground texture and trees are experimental, not final.
+
+Art QA runs separately from the active renderer regression and the deep-only renderer diagnostic. Compare PNGs to the existing SVG art-reference capture, which uses exactly the same fixture. Dedicated video and mobile benchmark record preparation time, memory footprint, visible frame rate and p95 separately. Actual device performance and art approval remain outstanding. 30 FPS at 60 regiments is a target, not a pass claim.
+
+Open research/orthographic-art/ in the existing local HTTP preview. Model sheets, angle studies, A/C cameras, replay and animation cycles are available directly. No changes to engine, AI, networking, saves or production renderer.
