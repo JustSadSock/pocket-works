@@ -4,7 +4,7 @@ import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const here=dirname(fileURLToPath(import.meta.url)),root=resolve(here,'../..');
 const deps=['battle-events.js','battle-plans.js','chronicles.js','commander.js','engine.js','historical-command.js','historical-profiles.js'];
-const local=['slice-core.js','slice-renderer.js','slice.js'];
+const local=['slice-core.js','living-miniatures.js','slice-renderer.js','slice.js'];
 function wrap(source,name){
  const ex=[];
  const body=source.replace(/^\s*import\s+\{([^}]+)\}\s+from\s+['"](.+?)['"];?/gm,(_,b,d)=>'const {'+b.replace(/\s+as\s+/g,':')+'}=__load('+JSON.stringify(d.split('/').at(-1))+');').replace(/\bexport\s+(const|let|var|function|class)\s+(\w+)/g,(_,k,id)=>{ex.push(id);return k+' '+id});
