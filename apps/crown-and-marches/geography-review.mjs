@@ -1,4 +1,8 @@
 import {W,H,xx,yy,idx,clamp,hash,neighbors,charted,freshIntel,observedCities,observedOwner,PALETTE} from './world.mjs';
+import {miniature,drawMiniature,resourceSheet} from './landscape-assets.mjs';
+import {planLivingTown} from './living-town.mjs';
+import {prepareLivingSurface,livingLand,livingRivers,riverAudit} from './landscape-surface.mjs';
+export {resourceSheet};
 // Review renderer only. No writes to simulation state; all geometry is derived from a known-cell snapshot.
 const lerp=(a,b,t)=>a+(b-a)*t, smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)}, mix=(a,b,t)=>a.map((v,i)=>lerp(v,b[i],t));
 const rand=(x,y)=>{let n=Math.imul(x+853,374761393)^Math.imul(y+123,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296};
@@ -95,7 +99,44 @@ function town(c,t,style){for(const f of t.fields){c.save();c.translate(f.x,f.y);
  for(const p of t.piers){line(c,[p.land,p.shore,p.end],'#6a543a',.13);line(c,[p.land,p.shore,p.end],'#bd9b66',.09);const dx=p.end[0]-p.land[0],dy=p.end[1]-p.land[1],n=Math.hypot(dx,dy);for(let k=0;k<=1;k+=.13){const x=lerp(p.land[0],p.end[0],k),y=lerp(p.land[1],p.end[1],k);line(c,[[x-dy/n*.055,y+dx/n*.055],[x+dy/n*.055,y-dx/n*.055]],'#765e43',.012);}}
  for(const b of [...t.buildings].sort((a,b)=>a.y-b.y))architecture(c,b,style);}
 const states=new WeakMap();
-export function drawGeographyReview(atlas,s,cam,mode,selection,quality,style){
+const livingStates=new WeakMap();
+function livingWoodland(c,m,bounds,scale,towns){
+ if(scale<11)return;const [x0,y0,x1,y1]=bounds,step=scale>45?.32:.48,points=[];
+ for(let j=Math.floor(y0/step);j<y1/step;j++)for(let i=Math.floor(x0/step);i<x1/step;i++){const z=rand(i,j),x=(i+.5+(z-.5)*.92)*step,y=(j+.5+(rand(j,i+8)-.5)*.92)*step,cell=m.at(Math.floor(x),Math.floor(y));if(cell<0||!m.known[cell]||!m.m.land[cell]||m.m.terrain[cell]!==2||(m.land(x,y)??0)<.72||towns.some(t=>Math.hypot(t.x-x,t.y-y)<t.radius+.3))continue;
+ const patch=noise(x,y,.64),density=m.sample(x,y,'forest')??0;if(z>density*(.25+.65*patch))continue;const kind=['pine','fir','oak','birch','bush'][Math.floor(rand(j,i+21)*5)],size=.52+rand(i+31,j-7)*.62;points.push({x,y,kind,size,variant:Math.floor(z*3)});}
+ points.sort((a,b)=>a.y-b.y);for(const t of points){const a=miniature(t.kind,t.variant);c.drawImage(a,t.x-96/290*t.size,t.y-156/290*t.size,192/290*t.size,224/290*t.size);}
+}
+function drawLivingTown(c,t){
+ for(const f of t.fields){c.save();c.translate(f.x,f.y);c.rotate(f.angle);fill(c,[[-.22,-.18],[.22,-.18],[.22,.18],[-.22,.18]],'#b5ab69');for(let k=-.16;k<.20;k+=.075){line(c,[[k,-.17],[k,.17]],'#82794d',.012);for(let j=-.12;j<=.12;j+=.10)drawMiniature(c,{type:'crop',x:k,y:j,variant:1});}c.restore();}
+ for(const row of t.roads){line(c,row,'#8a7954',.065);line(c,row,'#d0bc93',.043);}
+ const props=[];
+ for(const ring of t.walls){const k=ring.gate??0,points=Array.from({length:ring.length-3},(_,n)=>ring[(k+2+n)%ring.length]);line(c,points,'#625e50',.09);line(c,points,'#cec4a7',.055);
+ for(const n of [k+9,k+18,k+27]){const p=ring[(n+ring.length)%ring.length];props.push({x:p[0],y:p[1],type:'tower',variant:0});}const p=ring[k],prev=ring[(k+ring.length-1)%ring.length],next=ring[(k+1)%ring.length];props.push({x:p[0],y:p[1],type:'gate',angle:Math.atan2(next[1]-prev[1],next[0]-prev[0]),variant:0});}
+ for(const p of t.piers){line(c,[p.land,p.shore,p.end],'#594e3c',.12);line(c,[p.land,p.shore,p.end],'#b89b71',.082);const dx=p.end[0]-p.land[0],dy=p.end[1]-p.land[1],n=Math.hypot(dx,dy);for(let k=.1;k<1;k+=.11){const x=lerp(p.land[0],p.end[0],k),y=lerp(p.land[1],p.end[1],k);line(c,[[x-dy/n*.045,y+dx/n*.045],[x+dy/n*.045,y-dx/n*.045]],'#6d583f',.010);}}
+ for(const b of [...t.buildings,...props].sort((a,b)=>a.y-b.y))drawMiniature(c,b);
+}
+function drawLivingReview(atlas,s,cam,mode,quality){
+ const started=performance.now();atlas.resize(quality);atlas.fit(cam,false);cam.layout(atlas.width,atlas.height);const c=atlas.ctx,w=atlas.width,h=atlas.height,scale=cam.s,physical=mode==='geography';
+ const stateKey=[s.day,s.playerFaction,s.autonomous,s.discovery?.fullMap,s.cities.length,s.news.length].join('|');let cache=livingStates.get(s);if(!cache||cache.key!==stateKey){const m=model(s);m.land=(x,y)=>livingLand(m,x,y);cache={key:stateKey,m,network:livingRivers(m),audit:riverAudit(m),tiles:new Map(),jobs:new Map(),towns:new Map()};livingStates.set(s,cache);}
+ const {m,network}=cache,x0=clamp(Math.floor(-cam.ox/scale)-2,0,W-1),y0=clamp(Math.floor(-cam.oy/scale)-2,0,H-1),x1=clamp(Math.ceil((w-cam.ox)/scale)+2,x0+1,W),y1=clamp(Math.ceil((h-cam.oy)/scale)+2,y0+1,H),bounds=[x0,y0,x1,y1],res=clamp(Math.ceil(Math.min(scale,8)),3,8),key=[...bounds,res,!physical].join('|');
+ let tile=cache.tiles.get(key);if(!tile&&!cache.jobs.has(key)){const job=prepareLivingSurface(m,bounds,res,!physical,rgb).then(value=>{cache.tiles.set(key,value);if(cache.tiles.size>10)cache.tiles.delete(cache.tiles.keys().next().value);cache.jobs.delete(key);return value;},err=>{cache.jobs.delete(key);throw err;});cache.jobs.set(key,job);}
+ atlas.reviewPending=cache.jobs.get(key)||null;
+ c.fillStyle=m.fog?'#ded3b5':'#315a6b';c.fillRect(0,0,w,h);
+ c.save();c.translate(cam.ox,cam.oy);c.scale(scale,scale);if(tile)c.drawImage(tile.canvas,x0,y0,x1-x0,y1-y0);
+ if(!tile){c.restore();c.fillStyle='#e3d9c0';c.font='16px Georgia';c.textAlign='center';c.fillText('Preparing surveyed relief…',w/2,h/2);atlas.metrics.geography={pending:true,totalMs:performance.now()-started};return;}
+ const t0=performance.now(),towns=[];
+ if(!physical)for(const city of m.cities){const x=xx(city.i)+.5,y=yy(city.i)+.5;if(x<x0-4||x>x1+4||y<y0-4||y>y1+4||!m.known[city.i])continue;let t=cache.towns.get(city.id);if(!t){t=planLivingTown(m,city,network);cache.towns.set(city.id,t);}towns.push(t);}
+ const layoutMs=performance.now()-t0,assetStart=performance.now();livingWoodland(c,m,bounds,scale,towns);
+ const riversInView=network.filter(l=>l.points.some(p=>p[0]>=x0-1&&p[0]<=x1+1&&p[1]>=y0-1&&p[1]<=y1+1));
+ c.lineJoin='round';c.lineCap='round';for(const r of riversInView)line(c,r.points,'#748c75',r.width+.022);for(const r of riversInView)line(c,r.points,'#3e7387',Math.max(.7/scale,r.width));
+ if(!physical){for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){const i=idx(x,y);if(!m.known[i]||!m.m.land[i])continue;for(const j of neighbors(i)){if(j<=i||!m.known[j]||!m.m.land[j])continue;const dx=xx(j)-x,dy=yy(j)-y;if(m.own[i]!==m.own[j]&&(m.own[i]>=0||m.own[j]>=0)){const ax=x+.5+dx*.5,ay=y+.5+dy*.5;line(c,[[ax-dy*.5,ay-dx*.5],[ax+dy*.5,ay+dx*.5]],'#66543d65',.7/scale);}
+ if(m.fresh[i]&&m.fresh[j]&&s.road[i]&&s.road[j]){line(c,[[x+.5,y+.5],[xx(j)+.5,yy(j)+.5]],'#a58c60',.037);if(s.bridge?.[i]||s.bridge?.[j])line(c,[[x+.5,y+.5],[xx(j)+.5,yy(j)+.5]],'#e0ccb0',.022);}}}
+ for(const t of towns){if(scale>=10)drawLivingTown(c,t);else{c.fillStyle='#574a37';c.beginPath();c.arc(t.x,t.y,t.city.capital?.20:.12,0,Math.PI*2);c.fill();}}}
+ c.restore();if(!physical){c.font='600 14px Georgia';c.textAlign='center';const used=[];for(const t of towns.sort((a,b)=>b.city.pop-a.city.pop)){const x=cam.ox+t.x*scale,y=cam.oy+(t.y+(scale>=10?t.radius+.25:.4))*scale,width=c.measureText(t.city.name).width+12;if(used.some(q=>Math.abs(q.x-x)<(q.width+width)/2&&Math.abs(q.y-y)<20))continue;used.push({x,y,width});c.strokeStyle='#e3d6b6';c.lineWidth=3;c.strokeText(t.city.name,x,y);c.fillStyle='#403426';c.fillText(t.city.name,x,y);}}
+ atlas.metrics.geography={style:'living',physical,rasterMs:tile.ms,rasterComputeMs:tile.compute,rasterMaxSlice:tile.maxSlice,layoutMs,drawAssetsMs:performance.now()-assetStart,totalMs:performance.now()-started,audit:{...cache.audit,clipped:network.filter(r=>r.clipped).length},settlements:towns.map(t=>({id:t.city.id,name:t.city.name,pop:t.city.pop,fort:t.city.fort,port:t.city.port,buildings:t.buildings.length,walls:t.walls.length,piers:t.piers.length,valid:t.valid,complete:t.complete,missing:t.missing,types:[...new Set(t.buildings.map(b=>b.type))]}))};
+}
+
+export function drawGeographyReview(atlas,s,cam,mode,selection,quality,style){if(style==='living'){drawLivingReview(atlas,s,cam,mode,quality);return;}atlas.reviewPending=null;
  const started=performance.now();atlas.resize(quality);atlas.fit(cam,false);cam.layout(atlas.width,atlas.height);const c=atlas.ctx,w=atlas.width,h=atlas.height,scale=cam.s,physical=mode==='geography';
  const stateKey=[s.day,s.playerFaction,s.autonomous,s.discovery?.fullMap,s.cities.length,s.news.length].join('|');let cache=states.get(s);if(!cache||cache.key!==stateKey){const m=model(s),network=rivers(m);cache={key:stateKey,m,network,tiles:new Map(),towns:new Map()};states.set(s,cache);}
  const {m,network}=cache,x0=clamp(Math.floor(-cam.ox/scale)-1,0,W-1),y0=clamp(Math.floor(-cam.oy/scale)-1,0,H-1),x1=clamp(Math.ceil((w-cam.ox)/scale)+1,x0+1,W),y1=clamp(Math.ceil((h-cam.oy)/scale)+1,y0+1,H),bounds=[x0,y0,x1,y1],res=clamp(Math.ceil(Math.min(scale,18)),3,18),key=[...bounds,res,style,!physical].join('|');

@@ -155,6 +155,12 @@
       "tier": "smoke"
     },
     {
+      "id": "living-landscapes",
+      "kind": "browser-node",
+      "entry": "living-landscapes-qa.mjs",
+      "tier": "smoke"
+    },
+    {
       "id": "living-lands",
       "kind": "visual",
       "tier": "smoke",
