@@ -1,0 +1,69 @@
+name: Simulation Repeatability Shadow
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/simulation-repeatability.yml'
+      - 'scripts/ci-overhaul/simulation-repeatability*'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: crown
+            app: crown-and-marches
+            sha: f253a6e1d81d9f831e8b95b6e508d854a395e5fe
+          - kind: banners
+            app: banners-of-war
+            sha: 948a4a349a503ea5ecf5a4b22e8e0dbf1cfce17d
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/simulation-repeatability.test.mjs
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+          path: audit-source
+          persist-credentials: false
+      - name: Replay actual selected scenarios twice without network
+        env:
+          APP: ${{ matrix.app }}
+          KIND: ${{ matrix.kind }}
+          SOURCE_SHA: ${{ matrix.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C audit-source rev-parse HEAD)" = "$SOURCE_SHA"
+          src="$RUNNER_TEMP/replay-source"
+          out="$RUNNER_TEMP/replay-output"
+          mkdir -p "$src" "$out/1" "$out/2"
+          git -C audit-source archive HEAD "apps/$APP" shared scripts package.json package-lock.json | tar -xf - -C "$src"
+          docker pull node:22-bookworm-slim
+          image="$(docker image inspect --format '{{index .RepoDigests 0}}' node:22-bookworm-slim)"
+          [[ "$image" =~ @sha256:[0-9a-f]{64}$ ]]
+          for n in 1 2; do
+            opts=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp -e PW_QA_OUTPUT_DIR=/out --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$out/$n,dst=/out" -w /work)
+            if [ "$KIND" = crown ]; then
+              docker run "${opts[@]}" "$image" node apps/crown-and-marches/balance-targeted.mjs 0
+              cp "$out/$n/balance-targeted-0.json" "$out/$n/report.json"
+            else
+              docker run "${opts[@]}" "$image" node --input-type=module -e 'import {historicalCases,historicalTrial} from "./apps/banners-of-war/completion-lab.mjs";import {writeFileSync} from "node:fs";const cases=historicalCases().filter(x=>x.repeat===6||x.repeat===7).slice(0,2);if(cases.length!==2)throw Error("Missing cases");writeFileSync("/out/report.json",JSON.stringify(cases.map(historicalTrial)));'
+            fi
+          done
+          node scripts/ci-overhaul/simulation-repeatability.mjs "$KIND" "$out/1/report.json" "$out/2/report.json" "$out/comparison.json"
+          cat "$out/comparison.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulation-repeatability-${{ matrix.kind }}
+          path: ${{ runner.temp }}/replay-output/comparison.json
+          if-no-files-found: warn
+          retention-days: 7
