@@ -14,7 +14,7 @@ permissions:
   contents: read
 jobs:
   original-browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
           retention-days: 5
 
   fog-ai-marathon:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

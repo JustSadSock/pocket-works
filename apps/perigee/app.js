@@ -336,8 +336,4 @@ if (sessionIndex !== null) goTo(sessionIndex);
 renderNav();
 updateHud();
 frameId=requestAnimationFrame(frame);
-// Pocket Works production injects release-guard.js; it owns Service Worker
-// installation/update. Register only when running this app outside the launcher.
-if(!document.querySelector('script[data-pw-release]') && 'serviceWorker' in navigator) {
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}),{once:true});
-}
+

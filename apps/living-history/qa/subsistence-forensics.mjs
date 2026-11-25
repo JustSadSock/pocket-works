@@ -91,7 +91,6 @@ async function getEngine(label){
  // fitness curves around the production healthy=75 reference, not fake
  // "healthy at 10" workers doing a full day of work.
  const modelSource=fs.readFileSync(path.join(appDir,'model.js'),'utf8');
- const navigationSource=fs.readFileSync(path.join(appDir,'navigation.js'),'utf8');
  const target='const healthy=75;';
  if(modelSource.split(target).length!==2)throw Error('Labour-curve intervention anchor changed');
  const healthy=label==='gentle60'?60:label==='strict90'?90:null;
@@ -100,8 +99,23 @@ async function getEngine(label){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'living-work-curve-'));
  fs.writeFileSync(path.join(dir,'package.json'),'{"type":"module"}');
  fs.writeFileSync(path.join(dir,'model.js'),revised);
- fs.writeFileSync(path.join(dir,'navigation.js'),navigationSource);
- const imported=await import(pathToFileURL(path.join(dir,'model.js')).href);
+ // Mirror the engine's local module graph, preserving all production dependencies.
+ const copied=new Set(['model.js']);
+ function copyDependencies(source,relative){
+  for(const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*)['"](\.\.?\/[^'"]+)['"]/g)){
+   const dependency=path.normalize(path.join(path.dirname(relative),match[1]));
+   if(dependency.startsWith('..'+path.sep)||path.isAbsolute(dependency))throw Error('Dependency escapes simulation root: '+dependency);
+   if(copied.has(dependency))continue;
+   copied.add(dependency);
+   const code=fs.readFileSync(path.join(appDir,dependency),'utf8');
+   fs.mkdirSync(path.dirname(path.join(dir,dependency)),{recursive:true});
+   fs.writeFileSync(path.join(dir,dependency),code);
+   copyDependencies(code,dependency);
+  }
+ }
+ let imported;
+ try{copyDependencies(revised,'model.js');imported=await import(pathToFileURL(path.join(dir,'model.js')).href);}
+ catch(error){fs.rmSync(dir,{recursive:true,force:true});throw error;}
  return {...imported,dispose:()=>fs.rmSync(dir,{recursive:true,force:true}),
   patch:{label,changed:'healthy-normalization',healthy,baselineHealthy:75}};
 }

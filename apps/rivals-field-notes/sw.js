@@ -4,7 +4,7 @@ const APP_VERSION = '1.2.0';
 const RELEASE_DATE = '2026-11-16';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Два топ‑10 героев на новом первом экране.", "Обновлены герои, сезоны, дуэты, карты и рекомендации с учётом S11.", "Входящий урон по героям показан отдельно от блокирования."];
-const APP_SHELL = [
+const APP_SHELL = ["./workshop.js",
   './',
   './index.html',
   './app.config.json',

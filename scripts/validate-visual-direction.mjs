@@ -30,6 +30,16 @@ export function visualChanges(files) {
 export function mobileOnlyHtmlChange(before, after) {
   const normalise = (source, original) => {
     let text = source;
+    // Treat only fixed, semantically verified platform plumbing as non-creative.
+    // Arbitrary buttons, styles, layout or script edits still require design review.
+    const workshopTrigger = '<button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>';
+    const wrapper = '<div data-ui style="position:fixed;right:max(8px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));z-index:30">';
+    text = text.replaceAll(wrapper+workshopTrigger+'</div>','').replaceAll(workshopTrigger,'')
+      .replaceAll('<button type="button" data-workshop-trigger data-native-press>Диагностика</button>','')
+      .replaceAll('<div data-ui style="position:absolute;inset:auto 8px 8px auto;z-index:10"></div>','')
+      .replace(/\s*<script type="module" src="\.\/workshop\.js"><\/script>/g,'')
+      .replace(/\s*<link rel="stylesheet" href="\.\.\/\.\.\/shared\/(?:workshop-mode|update-manager)\.css"\s*\/?>/g,'')
+      .replace(/\s*<script type="module" src="\.\.\/\.\.\/shared\/update-manager\.js" data-update-manager data-service-worker="\.\/sw\.js" data-app-name="[^"]+" data-app-version="[\d.]+"><\/script>/g,'');
     if (!original.includes('src="./app.js"')) {
       text = text.replace(/\s*<script type="module" src="\.\/app\.js"><\/script>/g, '');
     }

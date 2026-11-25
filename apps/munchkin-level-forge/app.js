@@ -741,9 +741,7 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('pagehide', saveState);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveState(); });
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}), { once: true });
-}
+
 
 if (state) {
   pointerAccumulator = angleForLevel(selectedPlayer().level);

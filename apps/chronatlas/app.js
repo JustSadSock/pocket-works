@@ -402,4 +402,4 @@ createWorkshopMode({appName:'ХРОНОАТЛАС',version:'2.1.0',cachePrefix:'
 window.addEventListener('appdatareset',()=>{localStorage.removeItem(STORAGE_KEY);state={...DEFAULTS};renderShell();});
 
 renderShell();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
+

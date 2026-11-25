@@ -46,6 +46,16 @@
         "slug": "living-history",
         "spatialDifference": "Исторический живой ландшафт без рамки заменён ограниченным исследовательским бассейном с одним предметом и гравированной приборной линейкой.",
         "interactionDifference": "Вместо наблюдения за автономными поколениями здесь инженер устанавливает физические начальные условия, запускает коллапс и изучает радиус во времени."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "A bounded optical chamber and pressure console replace an overhead geographic map and annual ledger.",
+        "interactionDifference": "Change fluid pressure and move a boundary to observe bubble collapse rather than change social history."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "The laboratory chamber and instrument graph replace the documentary atlas and its timeline.",
+        "interactionDifference": "Scrub calculated fluid trajectories rather than navigate authored historical episodes."
       }
     ]
   },

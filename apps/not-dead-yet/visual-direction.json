@@ -130,6 +130,16 @@
         "slug": "perekos",
         "spatialDifference": "A continuous first-person Soviet family apartment with physical radio, furniture and localized perception differs from Perekos's compact pixel-art wizard-duel battleground.",
         "interactionDifference": "The player navigates rooms, collects memory fragments and tunes a radio to resolve a personal story instead of composing competitive conditional rune chains and resolving 1v1 spell tactics."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "A full-screen eye-level apartment with perimeter controls replaces the overhead civilization map and ledger.",
+        "interactionDifference": "Explore rooms and survive in real time rather than observe and alter an autonomous civilization."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "A furnished first-person interior replaces documentary maps and chapter navigation.",
+        "interactionDifference": "Walk through rooms and interact with objects rather than replay an authored historical timeline."
       }
     ]
   }

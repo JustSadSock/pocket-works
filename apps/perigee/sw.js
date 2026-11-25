@@ -1,8 +1,11 @@
+const RELEASE_NOTES = ["Исправлен увод композиции при жестах прицеливания на мобильных устройствах.","При обновлении Service Worker сохраняется текущая экспедиция, а не повторно появляется заставка.","Повторно проверена совместимость с iPhone WebKit и Chromium."];
+const RELEASE_DATE = "2026-10-08";
+const APP_VERSION = "1.0.1";
 const PREFIX='perigee-';
 const CACHE_NAME='perigee-v1.0.1-p2';
 const VERSION='1.0.1';
 const NOTES=["Исправлен увод композиции при жестах прицеливания на мобильных устройствах.","При обновлении Service Worker сохраняется текущая экспедиция, а не повторно появляется заставка.","Повторно проверена совместимость с iPhone WebKit и Chromium."];
-const ASSETS=['./','./index.html','./app.config.json','./styles.css','./app.js','./physics.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
+const ASSETS=["../../shared/update-manager.js","../../shared/update-manager.css","../../shared/pwa-utils.js",'./','./index.html','./app.config.json','./styles.css','./app.js','./physics.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'];
 const SCOPE=new URL('./',self.registration.scope);
 const KEYS=new Map(ASSETS.map(path=>{const url=new URL(path,SCOPE);return [url.pathname,url.href];}));
 function tagged(value){const url=new URL(value instanceof Request?value.url:value,SCOPE);url.searchParams.set('__pw_build',VERSION+'-p2');return url;}
@@ -20,7 +23,7 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
   await self.clients.claim();
 })()));
 self.addEventListener('message',event=>{
-  if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:VERSION,releaseDate:'2026-10-08',releaseNotes:NOTES,cacheProtocol:2,cacheName:CACHE_NAME});
+  if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:2,cacheName:CACHE_NAME});
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
 self.addEventListener('fetch',event=>{

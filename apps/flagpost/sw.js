@@ -4,7 +4,7 @@ const APP_VERSION = '1.1.2';
 const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Защищённая верхняя область на iPhone: элементы управления не перекрываются системной строкой в Safari и установленном приложении.","Единый Pocket ID: нарисованный аватар из профиля теперь используется в игре.","Новая мини-стратегия для двух настоящих игроков: комнаты по восьмизначному коду и ссылка-приглашение.","Серверные ходы, войска, бой, набор подкреплений, подсчёт знамён и победа.","Автоматическое восстановление соединения и сохранение партий в Cloudflare Durable Objects.","Pocket ID: ник и аватар полководца, защита от выдачи себя за другого игрока."];
-const APP_SHELL = [
+const APP_SHELL = ["../../shared/capabilities/motion.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js",
   './','./index.html','./app.config.json','./styles.css','./app.js',
   './manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',

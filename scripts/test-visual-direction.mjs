@@ -63,3 +63,13 @@ assert.equal(mobileOnlyHtmlChange(beforeMobile,afterMobile.replace('data-native-
 assert.equal(mobileOnlyHtmlChange('<body><main>Play</main></body>','<body data-app-shell><main>Play</main></body>'),true);
 assert.equal(mobileOnlyHtmlChange('<main>Play</main>','<main>Play</main><button>New action</button>'),false);
 console.log('Creative brief, generic-copy rejection, template detection and changed-app scope passed.');
+
+// Runtime additions must be exact; visual changes are still checked.
+{
+ const before='<html><head></head><body><header>Game</header><main>Board</main></body></html>';
+ const after=before.replace('</head>','<link rel="stylesheet" href="../../shared/workshop-mode.css"></head>').replace('<header>','<header><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>').replace('</body>','<script type="module" src="./workshop.js"></script></body>');
+ assert.equal(mobileOnlyHtmlChange(before,after),true);
+ assert.equal(mobileOnlyHtmlChange(before,after.replace('Board','Different board')),false);
+ assert.equal(mobileOnlyHtmlChange(before,after.replace('title="Диагностика"','title="Different control"')),false);
+ assert.equal(mobileOnlyHtmlChange(before,after.replace('./workshop.js','./unrelated.js')),false);
+}

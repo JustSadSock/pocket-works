@@ -4,7 +4,7 @@ const APP_VERSION = '0.3.0';
 const RELEASE_DATE = '2026-10-21';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Надёжное восстановление сетевых комнат после обрыва связи и возврат из ошибок входа.","Сверхкороткие нажатия на атаку, щит и рывок теперь не теряются между шагами симуляции.","Улучшены ИИ-навигация, три уровня сложности и запись личных побед и поражений.","Перерисовано пространство вокруг арены для вертикальных экранов; улучшены подсказки перезарядки.","Упорядоченные боевые события, корректный перезапуск раунда и исправлено управление с клавиатуры."];
-const APP_SHELL = [
+const APP_SHELL = ["../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js","../../shared/workshop-mode.js","../../shared/workshop-mode.css","../../shared/pwa-utils.js","./workshop.js",
   "./",
   "./index.html",
   "./app.config.json",

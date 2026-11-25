@@ -15,12 +15,13 @@
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 </head>
 <body>
 <main id="app" class="app-shell" data-app-shell data-fullscreen-app>
   <section id="library" class="library" aria-labelledby="brand-title">
     <div class="library-grain" aria-hidden="true"></div>
-    <header class="lib-header" data-ui>
+    <header class="lib-header" data-ui><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
       <div class="eyebrow"><span class="eye-dot"></span> POCKET WORKS <span class="eyebrow-sep">/</span> ИСТОРИЧЕСКАЯ МАСТЕРСКАЯ</div>
       <a href="../../" class="exit-link" data-app-control>Pocket Works <span aria-hidden="true">↗</span></a>
     </header>
@@ -238,5 +239,6 @@
 </main>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.5.0"></script>
 <script type="module" src="./app.js"></script>
+<script type="module" src="./workshop.js"></script>
 </body>
 </html>

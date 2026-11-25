@@ -103,6 +103,16 @@
         "slug": "chyepukha",
         "spatialDifference": "Chyepukha uses prompt-and-answer storytelling screens and readable text stages. Blockies instead dedicates its limited phone area to one shared 20-row grid, precise colored 4-cell player entries and thumb-reachable controls.",
         "interactionDifference": "Chyepukha advances turn-based comic or story prompts, whereas Blockies demands continuous synchronized player input, gravity ticks, and server-reconciled positions within one shared board."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "An editorial start screen leads to a shared crisp falling-block well. On cooperative games a colored multi-gate gantry anchors each player exactly above their four-cell entrance, while touch controls sit at thumb reach. An automatically dark evening palette maintains low luminance on every setup and result screen; desktop forms use broad two-column structures. The four-cell inlets and two-cell previews now occupy a single contiguous grid plane aligned to the playable canvas with hairline colored rails carrying visually into the first two board rows. The post-match report uses a safe-area-aware scrollable shell with a reachable sticky replay action even in short landscape viewports. В emergent-kingdoms основной поверхностью служит историческая карта с исследовательской или документальной навигацией.",
+        "interactionDifference": "Place falling pieces into the one shared well: hold horizontal movement or soft-drop, rotate with a tap, swipe in whole-cell steps, or hard-drop. В emergent-kingdoms основное действие относится к изменению истории или просмотру её хронологии, а не к этому сценарию."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "An editorial start screen leads to a shared crisp falling-block well. On cooperative games a colored multi-gate gantry anchors each player exactly above their four-cell entrance, while touch controls sit at thumb reach. An automatically dark evening palette maintains low luminance on every setup and result screen; desktop forms use broad two-column structures. The four-cell inlets and two-cell previews now occupy a single contiguous grid plane aligned to the playable canvas with hairline colored rails carrying visually into the first two board rows. The post-match report uses a safe-area-aware scrollable shell with a reachable sticky replay action even in short landscape viewports. В palimpsest-atlas основной поверхностью служит историческая карта с исследовательской или документальной навигацией.",
+        "interactionDifference": "Place falling pieces into the one shared well: hold horizontal movement or soft-drop, rotate with a tap, swipe in whole-cell steps, or hard-drop. В palimpsest-atlas основное действие относится к изменению истории или просмотру её хронологии, а не к этому сценарию."
       }
     ]
   },

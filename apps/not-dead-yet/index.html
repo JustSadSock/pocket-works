@@ -2,7 +2,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#171918"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="NOT DEAD YET">
 <title>NOT DEAD YET — Бесконечный хоррор-рогалик</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css"></head>
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
+</head>
 <body><main class="app-shell" data-app-shell data-fullscreen-app>
 <canvas id="view" tabindex="0" data-gesture-surface data-block-callout aria-label="Меняющаяся хрущёвка от первого лица"></canvas>
 <div class="grain" aria-hidden="true"></div><div id="perception" class="perception" aria-hidden="true"></div><div class="reticle" aria-hidden="true"></div>
@@ -27,7 +28,7 @@
  <div class="menu-visual" aria-hidden="true"><span class="door-shape"><i></i></span><span class="door-glimmer"></span></div>
  <div class="menu-main"><p class="eyebrow">ВЫЖИВАНИЕ / НЕСКОНЧАЕМАЯ КВАРТИРА</p><h1>NOT<br>DEAD<br><em>YET.</em></h1>
  <p class="intro">Ты заблудился в собственной хрущёвке. Комнаты исчезают из памяти и появляются другими. Иди дальше, отбивайся от видений и собирай знакомые вещи. Выхода нет.</p>
- <div class="menu-actions"><button id="start" class="primary" data-native-press>Начать забег <span>↗</span></button>
+ <div class="menu-actions"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button><button id="start" class="primary" data-native-press>Начать забег <span>↗</span></button>
  <button id="continue" class="secondary" hidden data-native-press>Продолжить забег</button>
  <button id="sound" class="secondary" data-native-press>Звук: вкл</button>
  <a class="secondary chapter-link" href="./?chapter=1">Сюжетная глава: квартира №17</a><a class="exit" data-app-control href="../../">Вернуться в Pocket Works</a></div>

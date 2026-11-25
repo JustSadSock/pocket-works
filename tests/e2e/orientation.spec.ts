@@ -4,7 +4,8 @@ import {
   attachCriticalScreenshot,
   monitorUnexpectedBrowserOutput,
   openStablePage,
-  openLibraryPage
+  openLibraryPage,
+  installGuestAccountPreview
 } from './helpers';
 
 test('Screen Lab matches the project orientation without viewport overflow', async ({ page }, testInfo) => {
@@ -26,6 +27,7 @@ test('Screen Lab matches the project orientation without viewport overflow', asy
 });
 
 test('launcher remains usable in the project orientation', async ({ page }, testInfo) => {
+  await installGuestAccountPreview(page);
   const monitor = monitorUnexpectedBrowserOutput(page);
   const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
   await openLibraryPage(page, screenLabEntry);

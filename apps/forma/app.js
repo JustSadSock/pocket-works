@@ -42,7 +42,7 @@ function boot() {
     $('emptyStage').querySelector('span').textContent = 'WebGL недоступен. Код и экспорт останутся доступны после сборки на поддерживаемом устройстве.';
   }
   syncDocumentUI(true);
-  registerServiceWorker();
+
   buildDocument({ silent: true });
 }
 
@@ -469,4 +469,4 @@ function plural(n,one,few,many){const m10=n%10,m100=n%100;return`${n} ${m10===1&
 function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function toast(message,type='',duration=3000){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=message;$('toastHost').append(el);setTimeout(()=>el.remove(),duration);}
 async function copyText(text,message){try{await navigator.clipboard.writeText(text);toast(message,'success');}catch{const area=document.createElement('textarea');area.value=text;document.body.append(area);area.select();document.execCommand('copy');area.remove();toast(message,'success');}}
-function registerServiceWorker(){if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(error=>console.warn('FORMA SW',error));}
+

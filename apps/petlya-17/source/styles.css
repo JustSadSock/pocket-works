@@ -139,7 +139,7 @@
   background:rgba(17,46,48,.67);
   border-right:3px solid #efbd70;
   opacity:0;
-  transform:translateX(20px);
+  transform:translateX(-12px);
   transition:opacity .18s ease,transform .18s ease;
   pointer-events:none
 }
