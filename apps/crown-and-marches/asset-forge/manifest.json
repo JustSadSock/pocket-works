@@ -1,0 +1,57 @@
+{
+  "version": 2,
+  "runtimeRoot": ".",
+  "index": "assets/terrain-lab/forge-index.json",
+  "jobs": [
+    {
+      "id": "geological-forms",
+      "adapter": "blender",
+      "source": "asset-forge/geological-forms.py",
+      "dependsOn": [],
+      "seed": 173,
+      "parameters": {},
+      "outputs": {
+        "model": "assets/terrain-lab/geological-forms.glb",
+        "editable": "asset-forge/generated/geological-forms.blend"
+      },
+      "budget": {
+        "maxBytes": 14000000,
+        "maxTriangles": 110000,
+        "maxTextureSize": 2048
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original authored geological cross-sections and connected terrain mesh studies, no third-party graphic assets"
+      }
+    },
+    {
+      "id": "geological-contact-sheet",
+      "adapter": "bake",
+      "source": "asset-forge/generated/geological-forms.blend",
+      "dependsOn": [
+        "geological-forms"
+      ],
+      "seed": 173,
+      "parameters": {
+        "width": 1600,
+        "height": 900,
+        "frame": 1,
+        "samples": 32
+      },
+      "outputs": {
+        "image": "assets/terrain-lab/geological-contact-sheet.png"
+      },
+      "budget": {
+        "maxBytes": 4000000,
+        "maxWidth": 1600,
+        "maxHeight": 900
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original authored geological cross-sections and connected terrain mesh studies, no third-party graphic assets"
+      }
+    }
+  ]
+}
