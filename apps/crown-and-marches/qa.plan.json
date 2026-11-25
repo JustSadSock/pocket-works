@@ -143,6 +143,12 @@
       "tier": "smoke"
     },
     {
+      "id": "art-slices",
+      "kind": "browser-node",
+      "entry": "art-slices.mjs",
+      "tier": "smoke"
+    },
+    {
       "id": "living-lands",
       "kind": "visual",
       "tier": "smoke",
