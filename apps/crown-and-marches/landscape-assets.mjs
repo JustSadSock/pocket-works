@@ -20,18 +20,18 @@ function mesh(type,v){
  if(timber){for(const u of [0,.5,1])box(x+w*u-.003,y+d+.004,z+.015,.006,.004,h-.016,'wood');for(const t of [.38,.75])box(x,y+d+.004,z+h*t,w,.004,.006,'wood');for(let i=0;i<2;i++){const a=x+w*i*.5,b=a+w*.5;face([[a,y+d+.005,z+h*.4],[a+.006,y+d+.005,z+h*.4],[b,y+d+.005,z+h*.75],[b-.006,y+d+.005,z+h*.75]],'wood');}}};
  const tower=(x,y,r,h,spire=false)=>{cyl(x,y,0,r,h,'stone',12);if(spire)cone(x,y,h,r*1.17,r*2.4,'slate',12);else{cyl(x,y,h-.012,r*1.10,.020,'stone',12);for(let k=0;k<8;k++){const a=k*Math.PI/4;box(x+r*.79*Math.cos(a)-.008,y+r*.79*Math.sin(a)-.008,h+.008,.016,.016,.022,'stone');}}};
  if(['pine','fir','oak','birch','bush','crop'].includes(type)){if(type==='crop'){for(let i=0;i<18;i++){const x=(R(i+v)-.5)*.17,y=(R(i+v+98)-.5)*.17,h=.025+R(i+99)*.06;cone(x,y,0,.009,h,'leaf',5,i);ellipsoid(x,y,h,.006,.006,.016,'cloth',i);}return faces;}
- const h=type==='bush'?.12:type==='fir'?.39:type==='pine'?.34:.29,rad=type==='bush'?.105:.085;cyl(0,0,0,type==='birch'?.010:.013,h*.82,type==='birch'?'plaster':'bark',7);
- if(type==='pine'||type==='fir'){for(let k=0;k<8;k++){const z=h*(.23+k*.081),r=rad*(1-k*.10);for(let j=0;j<7;j++){const a=(j+k*.38)*Math.PI*2/7;cone(Math.cos(a)*r*.43,Math.sin(a)*r*.43,z,r*.49,h*.20,'leaf',7,j+k);}}cone(0,0,h*.63,rad*.49,h*.42,'leaf',10,v);}
+ const h=type==='bush'?.10:type==='fir'?.39:type==='pine'?.38:type==='birch'?.35:.27,rad=type==='bush'?.12:type==='oak'?.115:type==='birch'?.074:.09;cyl(0,0,0,type==='birch'?.007:.012,h*.86,type==='birch'?'plaster':'bark',9);
+ if(type==='fir'){for(let k=0;k<9;k++){const z=h*(.16+k*.081),r=rad*(1-k*.092);for(let j=0;j<9;j++){const a=(j+k*.38)*Math.PI*2/9;cone(Math.cos(a)*r*.48,Math.sin(a)*r*.48,z,r*.55,h*.19,'leaf',9,j+k);}}cone(0,0,h*.68,rad*.40,h*.35,'leaf',12,v);}else if(type==='pine'){for(let k=0;k<10;k++){const a=k*2.39996,r=rad*(.3+.65*R(k+v)),z=h*(.55+.40*R(k+19));ellipsoid(Math.cos(a)*r,Math.sin(a)*r,z,rad*.65,rad*.51,h*.13,'leaf',k+v*17);}}
  else{for(let k=0;k<11;k++){const a=k*2.39996,r=rad*(.2+.60*R(k+v*31)),z=h*(.43+.48*R(k+v*17));ellipsoid(Math.cos(a)*r,Math.sin(a)*r,z,rad*.55,rad*.54,h*.23,'leaf',k+v*31);}}return faces;}
  const [w,d,h]=size[type]||size.house, x=-w/2,y=-d/2;
  if(type==='keep'){box(x,y,0,w,d,h*.72,'stone');windows(x,y,0,w,d,h*.72,2);for(const u of [-1,1])for(const t of [-1,1])tower(u*w*.44,t*d*.43,.045,h*(.88+.10*(u===t)),u===t);home(-w*.25,-d*.21,h*.72,w*.5,d*.42,h*.23,false,'stone','slate');}
  else if(type==='tower')tower(0,0,w*.49,h,v%2===1);
  else if(type==='gate'){tower(-w*.36,0,.038,h*.89);tower(w*.36,0,.038,h*.89);box(-w*.23,-d*.4,h*.48,w*.46,d*.8,h*.23,'stone');roof(-w*.27,-d*.48,h*.71,w*.54,d*.96,h*.14,'slate');}
- else if(['chapel','church','cathedral'].includes(type)){home(x,y,0,w,d,h*.52,false,'stone','slate');const tw=w*.38;box(-tw/2,d*.22,0,tw,tw,h*.91,'stone');windows(-tw/2,d*.22,0,tw,tw,h*.9,2);cone(0,d*.22+tw/2,h*.91,tw*.68,h*.35,'slate',8);if(type==='cathedral'){for(const u of [-1,1]){home(u*w*.36-w*.14,-d*.12,0,w*.28,d*.32,h*.41,false,'stone','slate');tower(u*w*.36,-d*.38,w*.13,h*.68,true);}}}
+ else if(['chapel','church','cathedral'].includes(type)){home(x,y,0,w,d,h*.48,false,'stone','slate');const tw=w*.43;box(-tw/2,d*.20,0,tw,tw,h*1.12,'stone');windows(-tw/2,d*.20,0,tw,tw,h,2);cone(0,d*.20+tw/2,h*1.12,tw*.74,h*.42,'slate',8);box(-.003,d*.20+tw/2-.003,h*1.54,.006,.006,.035,'wood');if(type==='cathedral'){home(-w*.69,-d*.10,0,w*1.38,d*.30,h*.43,false,'stone','slate');for(const u of [-1,1]){tower(u*w*.39,-d*.35,w*.13,h*.94,true);}cyl(0,-d*.48,0,w*.28,h*.40,'stone',12);cone(0,-d*.48,h*.40,w*.3,h*.26,'slate',12);}}
  else if(type==='shop'){home(x,y,0,w,d,h*.72,v%2===0,v%2?'stone':'plaster');box(x+w*.15,y+d*.18,h*.55,.026,.027,h*.75,'stone');box(x-w*.08,y+d*.55,0,w*.45,d*.18,.035,'wood');}
  else if(type==='market'){for(let k=0;k<3;k++){const xx=x+k*w/3;box(xx,y,0,w*.27,d,.025,'wood');for(const u of [0,1])for(const t of [0,1])box(xx+u*w*.23,y+t*d*.9,0,.006,.006,.065,'wood');roof(xx-.004,y-.004,.066,w*.30,d+.008,.021,k%2?'cloth':'roof');}}
  else if(type==='warehouse'||type==='barn'){home(x,y,0,w,d,h,type==='barn','wood','roof');box(-w*.14,y+d+.004,0,w*.28,.006,h*.54,'wood');}
- else home(x,y,0,w,d,h,type==='timber'||v%3===1,'plaster',v%3===2?'slate':'roof');
+ else {home(x,y,0,w,d,h*(v%3===2?.78:1),type==='timber'||v%3===1,'plaster',v%3===2?'slate':'roof');if(type==='timber'){box(x-.008,y-.008,h*.47,w+.016,d+.016,.012,'wood');}if(v%3===2){home(x+w*.57,y+d*.10,0,w*.43,d*.61,h*.38,false,'stone','roof');}else if(v%3===0){box(x+w*.70,y+d*.14,h*.9,.018,.021,h*.55,'stone');}}
  return faces;
 }
 const cache=new Map();
@@ -40,8 +40,19 @@ export function miniature(type,variant=0,angle=0){
  const a=document.createElement('canvas');a.width=192;a.height=224;const c=a.getContext('2d'),S=290,ox=96,oy=156,ang=facing*Math.PI/4,co=Math.cos(ang),si=Math.sin(ang);
  const transform=p=>[p[0]*co-p[1]*si,p[0]*si+p[1]*co,p[2]],proj=p=>[ox+p[0]*S,oy+(p[1]-p[2]*.73)*S],light=[-.47,-.42,.77];
  const shadow=c.createRadialGradient(ox+5,oy+4,2,ox+5,oy+4,44);shadow.addColorStop(0,'#34312865');shadow.addColorStop(1,'#34312800');c.save();c.translate(ox,oy);c.scale(1,.54);c.translate(-ox,-oy);c.fillStyle=shadow;c.fillRect(ox-48,oy-48,100,100);c.restore();
- const fs=mesh(type,variant).map(f=>{const p=f.p.map(transform),u=p[1].map((v,i)=>v-p[0][i]),v=p[2].map((v,i)=>v-p[0][i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],len=Math.hypot(...n)||1;const lit=C(.69+.43*(n[0]*light[0]+n[1]*light[1]+Math.abs(n[2])*light[2])/len,.48,1.17);return {p,depth:p.reduce((s,q)=>s+q[1]*.73+q[2],0)/p.length,shade:mul(palettes[f.mat],lit+(f.variation||0))};});
- fs.sort((a,b)=>a.depth-b.depth);for(const f of fs){c.beginPath();c.moveTo(...proj(f.p[0]));for(const p of f.p.slice(1))c.lineTo(...proj(p));c.closePath();c.fillStyle=color(f.shade);c.fill();c.strokeStyle=color(f.shade);c.lineWidth=.6;c.stroke();}
+ const im=c.getImageData(0,0,a.width,a.height),pixels=im.data,depth=new Float32Array(a.width*a.height).fill(-Infinity);
+ const frac=x=>x-Math.floor(x),hash=(x,y,z)=>{let n=Math.imul(x+731,374761393)^Math.imul(y+541,668265263)^Math.imul(z+87,1274126177);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;};
+ const texture=(mat,x,y,z,nz)=>{const tiny=hash(Math.floor(x*530),Math.floor(y*530),Math.floor(z*530))-.5,coarse=hash(Math.floor(x*90),Math.floor(y*90),Math.floor(z*90))-.5;let f=1+tiny*.075+coarse*.06;
+ if(mat==='stone'){const row=Math.floor(z/.014),u=(x+y)/.022+row*.5;if(nz<.7){if(frac(z/.014)<.07||frac(u)<.055)f*=.71;else f*=.95+hash(Math.floor(u),row,17)*.12;}}
+ else if(mat==='roof'||mat==='slate'){const u=(x+y)*75,v=(z*120+y*12);if(frac(v)<.09||frac(u+Math.floor(v)*.5)<.06)f*=.74;else f*=.92+hash(Math.floor(u),Math.floor(v),32)*.14;}
+ else if(mat==='wood'||mat==='bark'){f*=.9+.20*hash(Math.floor((x+y)*240),Math.floor(z*8),17);}
+ else if(mat==='leaf'){f*=.80+.37*hash(Math.floor(x*185),Math.floor(y*185),Math.floor(z*185));f*=.89+.21*hash(Math.floor(x*55),Math.floor(y*55),Math.floor(z*55));}
+ return f;};
+ const triangle=(p0,p1,p2,mat,lit,normal)=>{const P=[p0,p1,p2],A=proj(p0),B=proj(p1),D=proj(p2),area=(B[0]-A[0])*(D[1]-A[1])-(B[1]-A[1])*(D[0]-A[0]);if(Math.abs(area)<1e-7)return;
+ const loX=Math.max(0,Math.floor(Math.min(A[0],B[0],D[0]))),hiX=Math.min(a.width-1,Math.ceil(Math.max(A[0],B[0],D[0]))),loY=Math.max(0,Math.floor(Math.min(A[1],B[1],D[1]))),hiY=Math.min(a.height-1,Math.ceil(Math.max(A[1],B[1],D[1]))),d=P.map(p=>p[1]*.73+p[2]);
+ for(let y=loY;y<=hiY;y++)for(let x=loX;x<=hiX;x++){const xx=x+.5-A[0],yy=y+.5-A[1],u=(xx*(D[1]-A[1])-yy*(D[0]-A[0]))/area,v=((B[0]-A[0])*yy-(B[1]-A[1])*xx)/area,w=1-u-v;if(u<-.00001||v<-.00001||w<-.00001)continue;const z=d[0]*w+d[1]*u+d[2]*v,i=y*a.width+x;if(z<=depth[i])continue;depth[i]=z;const wx=p0[0]*w+p1[0]*u+p2[0]*v,wy=p0[1]*w+p1[1]*u+p2[1]*v,wz=p0[2]*w+p1[2]*u+p2[2]*v,localX=wx*co+wy*si,localY=-wx*si+wy*co,tex=texture(mat,localX,localY,wz,Math.abs(normal[2])),base=palettes[mat],ao=.86+.14*C(wz/.095,0,1),f=lit*tex*ao,k=i*4;pixels[k]=C(base[0]*f,0,255);pixels[k+1]=C(base[1]*f,0,255);pixels[k+2]=C(base[2]*f,0,255);pixels[k+3]=255;}};
+ for(const f of mesh(type,variant)){const p=f.p.map(transform),u=p[1].map((v,i)=>v-p[0][i]),v=p[2].map((v,i)=>v-p[0][i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],len=Math.hypot(...n)||1,normal=n.map(x=>x/len),lit=C(.76+.40*(normal[0]*light[0]+normal[1]*light[1]+Math.abs(normal[2])*light[2])+(f.variation||0),.48,1.2);for(let k=1;k<p.length-1;k++)triangle(p[0],p[k],p[k+1],f.mat,lit,normal);}
+ c.putImageData(im,0,0);
  if(cache.size>=256)cache.delete(cache.keys().next().value);cache.set(key,a);return a;
 }
 export function drawMiniature(c,b){const a=miniature(b.type,b.variant||0,b.angle||0);c.drawImage(a,b.x-96/290,b.y-156/290,192/290,224/290);}
