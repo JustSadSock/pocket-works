@@ -21,15 +21,15 @@ function fixture(historical:boolean){
 }
 async function mapTap(p:Page,s:any,x:number,y:number){const map=p.locator('#net-map');let {w,h}=await map.evaluate(el=>({w:el.clientWidth,h:el.clientHeight}));let k=Math.min(w/s.scenario.width,h/s.scenario.height);await map.tap({position:{x:(w-s.scenario.width*k)/2+x*k,y:(h-s.scenario.height*k)/2+y*k}})}
 async function seal(p:Page){await expect(p.locator('#net-ready')).toBeEnabled({timeout:30000});p.once('dialog',d=>d.accept());await p.locator('#net-ready').click()}
-async function register(ctx:BrowserContext,name:string){let p=await ctx.newPage();await p.goto('/');let response=await p.evaluate(async nickname=>{let r=await fetch('/pocket-id/register',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({nickname,avatar:'moss'})});let j=await r.json();return {status:r.status,id:j.user?.id,recoveryCode:j.recoveryCode}},name);expect(response.status).toBe(201);expect(response.id).toBeTruthy();await p.close();return response}
+async function register(ctx:BrowserContext,name:string){let p=await ctx.newPage();await p.goto('/');let response=await p.evaluate(async nickname=>{let r=await fetch('/pocket-id/register',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({nickname,avatar:'moss'})});let j=await r.json();return {status:r.status,id:j.user?.id,recoveryCode:j.recoveryCode}},name);expect(response.status).toBe(201);expect(response.id).toBeTruthy();const identity=await p.evaluate(async()=>{let r=await fetch('/pocket-id/me',{credentials:'same-origin'}),j=await r.json();return {status:r.status,id:j.user?.id}});expect(identity).toEqual({status:200,id:response.id});expect((await ctx.cookies()).find(c=>c.name==='__Host-pw-id')).toMatchObject({httpOnly:true,secure:true,sameSite:'Lax',path:'/'});await p.close();return response}
 for(const [format,counts,historical] of [['2vAI',[2,0],false],['2v1',[2,1],true],['2v2',[2,2],true],['3vAI',[3,0],false]] as const){
  test('Allied '+format+' independent mobile clients finish and recover',async({browser},info)=>{
   test.setTimeout(150000);
   const origin=info.project.use.baseURL!,{defaultBrowserType,...device}=devices[info.project.name.includes('webkit')?'iPhone 13':'Pixel 7'];
-  const count=counts[0]+counts[1],contexts:BrowserContext[]=[],pages:Page[]=[],ids:string[]=[],errors:string[]=[];
+  const count=counts[0]+counts[1],contexts:BrowserContext[]=[],pages:Page[]=[],ids:string[]=[],recoveries:string[]=[],errors:string[]=[];
   try{
    const tag=Date.now().toString(36).slice(-7)+info.project.name.slice(-2);
-   for(let i=0;i<count;i++){let c=await browser.newContext({...device,baseURL:origin,ignoreHTTPSErrors:true});contexts.push(c);const account=await register(c,'Ally'+i+tag);ids.push(account.id);let p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));pages.push(p)}
+   for(let i=0;i<count;i++){let c=await browser.newContext({...device,baseURL:origin,ignoreHTTPSErrors:true});contexts.push(c);const account=await register(c,'Ally'+i+tag);ids.push(account.id);recoveries.push(account.recoveryCode);let p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));pages.push(p)}
    expect(new Set(ids).size).toBe(count);
    const host=pages[0];await host.goto('/apps/banners-of-war/');await host.locator('#network').click();await expect(host.locator('#net-status')).toContainText('Pocket ID');
    await host.locator('#net-format').selectOption(format);await host.locator('#net-file').setInputFiles({name:'allied.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture(historical)))});
@@ -61,14 +61,14 @@ for(const [format,counts,historical] of [['2vAI',[2,0],false],['2v1',[2,1],true]
    if(format==='2v2'){
     // An unrelated client cannot read state or replays.
     const outsider=await browser.newContext({...device,baseURL:origin,ignoreHTTPSErrors:true});contexts.push(outsider);
-    const o=await outsider.newPage();await o.goto('/');expect((await request(o,room+'/view')).status).toBe(401);
+    const o=await outsider.newPage();await o.goto('/');expect((await request(o,room+'/view')).status).toBe(401);await register(outsider,'Observer'+tag);expect((await request(o,room+'/view')).status).toBe(403);expect((await request(o,room+'/round?n=1')).status).toBe(403);
     // Handoff before any accepted draft; old captain loses allocation authority.
     expect((await action(host,room,'handoff',{seat:sub.allied.seat})).status).toBe(200);
     expect((await view(pages[1],room)).allied.role).toBe('captain');
     expect((await action(host,room,'delegate',{seat:sub.allied.seat,on:true})).status).toBe(400);
     // Keep a disconnected former captain's authority while delegating explicitly.
     expect((await action(pages[1],room,'delegate',{seat:own.allied.seat,on:true})).status).toBe(200);
-    await host.goto('/apps/banners-of-war/?battle='+room);await expect(host.locator('#net-ready')).toBeVisible({timeout:20000});
+    await host.goto('/apps/banners-of-war/?battle='+room);await expect(host.locator('#net-ready')).toBeVisible({timeout:20000});expect((await view(host,room)).allied.members.find((m:any)=>m.self).ai).toBe(true);
    }
    for(let i=0;i<count;i++){
     const p=pages[i],s=await view(p,room);
@@ -87,8 +87,21 @@ for(const [format,counts,historical] of [['2vAI',[2,0],false],['2v1',[2,1],true]
     await contexts[1].setOffline(false);await pages[1].goto('/apps/banners-of-war/?battle='+room);
    }else await Promise.all(pages.filter((_,i)=>!(format==='2v2'&&i===0)).map(seal));
    await waitPhase(host,room,'replay');
+   const personal:any[]=[];
    for(let i=0;i<count;i++){
-    const r=await request(pages[i],room+'/round?n=1');expect(r.status).toBe(200);expect(Object.keys(r.data).sort()).toEqual(['frames','number']);
+    const r=await request(pages[i],room+'/round?n=1');expect(r.status).toBe(200);expect(Object.keys(r.data).sort()).toEqual(['frames','number']);expect(r.data.frames.length).toBeGreaterThan(0);personal.push(r.data);
+   }
+   if(historical){expect(personal[0]).not.toEqual(personal[1]);expect(personal[0]).toEqual((await request(pages[0],room+'/round?n=1')).data)}
+   if(format==='2v2'){
+    // Recover the current captain in a fresh cookie jar, not by copying credentials.
+    await contexts[1].close();
+    const recovered=await browser.newContext({...device,baseURL:origin,ignoreHTTPSErrors:true});contexts.push(recovered);
+    const p=await recovered.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto('/');
+    const identity=await p.evaluate(async recoveryCode=>{let r=await fetch('/pocket-id/recover',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({recoveryCode})});let j=await r.json();return {status:r.status,id:j.user?.id}},recoveries[1]);
+    expect(identity).toEqual({status:200,id:ids[1]});pages[1]=p;
+    await p.goto('/apps/banners-of-war/?battle='+room);await expect(p.locator('#net-replay-done')).toBeVisible({timeout:20000});
+    expect((await view(p,room)).allied.role).toBe('captain');
+    expect((await request(p,room+'/round?n=1')).data).toEqual(personal[1]);
    }
    await host.screenshot({path:info.outputPath(format+'-replay.png')});
    for(let i=0;i<count;i++){const p=pages[i],v=await view(p,room);if(v.allied.members.find((m:any)=>m.self).ai)continue;await expect(p.locator('#net-replay-done')).toBeVisible({timeout:20000})}
@@ -106,6 +119,6 @@ for(const [format,counts,historical] of [['2vAI',[2,0],false],['2v1',[2,1],true]
     await host.locator('#net-rematch').click();let next=await code(host);expect(next).not.toBe(room);expect((await view(host,next)).allied.format).toBe(format);
    }
    expect(errors).toEqual([]);
-  }finally{await Promise.all(contexts.map(c=>c.close()))}
+  }finally{await Promise.all(contexts.map(c=>c.close().catch(()=>{})))}
  });
 }

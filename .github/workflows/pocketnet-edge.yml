@@ -150,10 +150,7 @@ jobs:
           start /tmp/banners-durable
           node pocketnet/test/banners-real.mjs --resume
           stop
-          start /tmp/banners-browser --local-protocol https
-          for i in {1..100}; do curl -kfsS https://127.0.0.1:8787/pocket-id/config >/dev/null && break; sleep 1; done
-          curl -kfsS https://127.0.0.1:8787/pocket-id/config >/dev/null
-          POCKETNET_TEST_URL=https://127.0.0.1:8787 node_modules/.bin/playwright test --config apps/banners-of-war/qa/network-real.config.ts
+          bash pocketnet/test/banners-browser-matrix.sh "$wr"
       - name: Banners network browser evidence
         if: always()
         uses: actions/upload-artifact@v4
