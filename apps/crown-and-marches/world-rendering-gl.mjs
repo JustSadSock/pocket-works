@@ -7,7 +7,7 @@ function hash(x,y){let n=Math.imul(x+631,374761393)^Math.imul(y+289,668265263);n
 function noise(x,y){const i=Math.floor(x),j=Math.floor(y),u=smooth(x-i),v=smooth(y-j);return lerp(lerp(hash(i,j),hash(i+1,j),u),lerp(hash(i,j+1),hash(i+1,j+1),u),v);}
 function dist(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=clamp(((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy||1));return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);}
 function sampleHeight(m,x,y){const u=x-.5,v=y-.5,i=Math.floor(u),j=Math.floor(v),a=u-i,b=v-j,z=m.sample(x,y,'height')??0,get=(x,y)=>{const k=m.at(x,y);return k>=0&&m.known[k]?m.m.height[k]:z;},p=get(i,j),q=get(i+1,j),r=get(i,j+1),s=get(i+1,j+1);
- // Monotonic cubic interpolation of the four source samples. No new extrema.
+ // Bilinear interpolation of the four source samples. No new extrema.
  const f=lerp(lerp(p,q,a),lerp(r,s,a),b),range=Math.max(p,q,r,s)-Math.min(p,q,r,s),gate=smooth((f-.39)/.16);
  // Sub-cell rock structure: residual is zero at every source node. No
  // arbitrary peaks on plains; small erosion detail constrained by local range.
