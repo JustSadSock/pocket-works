@@ -1,0 +1,11 @@
+# Natural Waters & Living Surface
+Genesis 3.3 remains authoritative; no generator revision or campaign/save changes. Original 3.2 and 3.3 views retained. Main campaign v2 and Natural Ranges unchanged.
+
+## Cross-project review
+Banners of War PR #1355 at c2e52ab, research/battlefield-identity/terrain-tiles.js, README.md, slice-renderer.js and prepare.py: world-coordinate water materials and bounded shoreline transitions; independent cached spatial tiles with LRU, stable LOD and async preparation; Blender/Forge provenance and offline rasterization. Crown adaptation: water-level based material, depth-dependent colors, separate riverbank/rock/vegetation fields; immutable geography WeakMap caches basin labels and coarse lake membership; existing Baked Terrain precomputed light and chunk-culling reused. No tactical atlas, sprites, rig or horse resources copied; no new Blender job justified for scalar surfaces. Banners' textures require provenance and scale review before reuse. Full LRU tile residency not implemented.
+
+## Water reconstruction
+Lake candidates are connected positive-depth depressions seeded only by represented lakeWater. Median represented surface is the visual plane, bounded by coarse lake plus 0.24 cell and physical bed. This is not a new navigable area. Diagnostic counts expose visual extension and dry samples inside coarse lake cells. Separate depressions without a seed remain dry. Coast signed scalar is anchored to fine authoritative land and bed. Local monotone cubic bed interpolation preserves fine node elevations and limits overshoot. Curves round single-inlet bends, preserve junctions and vary width by discharge; overview hides minor streams. No gameplay graph change. Lakes with differing levels in one depression and shore shape require real-image review.
+
+## Review
+Same three control worlds, 3.2 and 3.3 and waters candidate, Chromium and WebKit. Close local Detail16 vs local Detail8 and authoritative Detail8; RAF camera motion records intervals, FPS, P95/max and CPU submit P95 separately from screenshot readback. Lake system selected only if separate represented basins are nearby; missing features logged. Native memory and exit/physical-bed audits retained. Seven reported mismatches require investigation before changing authoritative routing. No claim of 8/10 or release approval.

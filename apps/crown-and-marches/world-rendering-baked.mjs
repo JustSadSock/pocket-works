@@ -1,6 +1,7 @@
 // Terrain bake: an isolated rendering experiment. Real height geometry is
 // retained; expensive material/normal/shadow evaluation is not per-frame.
 import {prepareTerrain} from './world-rendering-gl.mjs';
+import {watersMaterial} from './genesis-waters.mjs';
 import {livingMaterial} from './genesis-living-visual.mjs';
 const C=(n,a=0,b=1)=>Math.max(a,Math.min(b,n)),L=(a,b,t)=>a+(b-a)*t,S=t=>{t=C(t);return t*t*(3-2*t)},mix=(a,b,t)=>a.map((v,i)=>L(v,b[i],t));
 function hash(x,y){let n=Math.imul(x+631,374761393)^Math.imul(y+289,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;}
@@ -26,13 +27,14 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  const stone=mix([128,125,111],[206,194,166],S((grain-.18)/.72)),talus=mix(stone,[166,152,118],S((nz-.22)/.65)*.22);
  base=mix(base,talus,Math.max(rock,S((H-.49)/.13)*.55));base=mix(base,[225,221,203],S((H-.60)/.12)*S((nz-.35)/.55)*.65);
  const variation=geology?0:(broad-.5)*11+(med-.5)*8+(fine-.5)*5+(scree-.5)*rock*10;
- if(geology==='living'){const curvature=at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1)-4*height;base=livingMaterial({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature,river});}else if(geology==='synthesis'){const steep=S((slope-.12)/.53),alpine=S((H-.43)/.22),curvature=(at(x+2,y)+at(x-2,y)+at(x,y+2)+at(x,y-2)-4*height),exposure=C((-nx-ny)*.35+.5),soil=mix([133,119,81],[93,125,76],wet),turf=mix(soil,[157,151,94],fert*.63),cliff=mix([115,113,104],[195,187,169],exposure),talus=mix([136,123,101],[179,168,143],S((curvature+.04)/.16));base=mix(turf,[57,83,50],forest*(1-alpine)*.84);base=mix(base,talus,alpine*S((slope-.03)/.44)*.78);base=mix(base,cliff,steep*(.55+.45*alpine));base=mix(base,[225,222,210],S((H-.66)/.14)*(1-steep*.72));}else if(geology){const steep=S((slope-.12)/.47),alpine=S((H-.40)/.23),exposure=C((nx+ny)*.35+.5),soil=mix([137,121,84],[83,117,71],wet),grass=mix(soil,[148,154,91],fert*.7),scree=mix([133,126,108],[190,179,151],exposure),cliff=mix([116,114,106],[205,198,179],exposure);base=mix(grass,[55,84,52],forest*(1-alpine)*.85);base=mix(base,scree,alpine*.72);base=mix(base,cliff,steep*(.35+.65*alpine));base=mix(base,[226,227,216],S((H-.68)/.12)*(1-steep*.65));}
+ if(geology==='waters'&&source.water){const curvature=at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1)-4*height;base=watersMaterial({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature,river},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]});}else if(geology==='living'){const curvature=at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1)-4*height;base=livingMaterial({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature,river});}else if(geology==='synthesis'){const steep=S((slope-.12)/.53),alpine=S((H-.43)/.22),curvature=(at(x+2,y)+at(x-2,y)+at(x,y+2)+at(x,y-2)-4*height),exposure=C((-nx-ny)*.35+.5),soil=mix([133,119,81],[93,125,76],wet),turf=mix(soil,[157,151,94],fert*.63),cliff=mix([115,113,104],[195,187,169],exposure),talus=mix([136,123,101],[179,168,143],S((curvature+.04)/.16));base=mix(turf,[57,83,50],forest*(1-alpine)*.84);base=mix(base,talus,alpine*S((slope-.03)/.44)*.78);base=mix(base,cliff,steep*(.55+.45*alpine));base=mix(base,[225,222,210],S((H-.66)/.14)*(1-steep*.72));}else if(geology){const steep=S((slope-.12)/.47),alpine=S((H-.40)/.23),exposure=C((nx+ny)*.35+.5),soil=mix([137,121,84],[83,117,71],wet),grass=mix(soil,[148,154,91],fert*.7),scree=mix([133,126,108],[190,179,151],exposure),cliff=mix([116,114,106],[205,198,179],exposure);base=mix(grass,[55,84,52],forest*(1-alpine)*.85);base=mix(base,scree,alpine*.72);base=mix(base,cliff,steep*(.35+.65*alpine));base=mix(base,[226,227,216],S((H-.68)/.12)*(1-steep*.65));}
  const direct=diff*(1-shadow*.88),ambient=.61-.12*S((H-.35)/.24);if(auditFields){normals.set([nx,ny,nz],k*3);lighting.set([direct,ambient],k*2);materials.set(base,k*3);}
  col=base.map((v,i)=>v*(ambient+.58*direct)+variation+[2,5,10][i]*(1-direct));
+ if(geology==='waters'&&source.water){if(source.water.kind[k])col=base;}else{
  const bank=1-S((river-.005)/.15);col=mix(col,[91,119,78],bank*.32);
  if(land<.50){const shallow=S(land/.48),wave=(noise(wx*1.1,wy*6.2)-.5)*8;col=mix([38,78,95],[107,157,149],shallow).map(v=>v+wave);}
  else{const shore=1-S(Math.abs(land-.52)/.06);col=mix(col,[191,175,130],shore*.76);
- if(river<.014){const opacity=1-S((river+.010)/.024);col=mix(col,mix([49,93,108],[111,144,120],S((river+.06)/.07)),opacity);}}
+ if(river<.014){const opacity=1-S((river+.010)/.024);col=mix(col,mix([49,93,108],[111,144,120],S((river+.06)/.07)),opacity);}}}
  }
  const i=k*4;pixels[i]=C(col[0],0,255);pixels[i+1]=C(col[1],0,255);pixels[i+2]=C(col[2],0,255);pixels[i+3]=255;
  }await b.yield();}

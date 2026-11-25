@@ -8,7 +8,8 @@ export function lakeBasins(g){
  for(let i=0;i<n;i++){if(!g.lakeWater?.[i]||labels[i])continue;const id=levels.length;let head=0,tail=1;queue[0]=i;labels[i]=id;const values=[];
  while(head<tail){const j=queue[head++],x=j%w,y=Math.floor(j/w);if(g.lakeWater[j])values.push(g.surface[j]);for(const k of [x?j-1:-1,x<w-1?j+1:-1,y?j-w:-1,y<h-1?j+w:-1])if(k>=0&&!labels[k]&&g.land[k]&&(g.lake[k]>.001||g.lakeWater[k])){labels[k]=id;queue[tail++]=k;}}
  values.sort((a,b)=>a-b);levels.push(values[Math.floor(values.length/2)]);}
- const result={labels,levels};cache.set(g,result);return result;
+ const W=(w-1)/g.detail,H=(h-1)/g.detail,cells=new Uint8Array(W*H);for(let i=0;i<n;i++)if(g.lakeWater?.[i])cells[Math.min(H-1,Math.floor(Math.floor(i/w)/g.detail))*W+Math.min(W-1,Math.floor((i%w)/g.detail))]=1;
+ const result={labels,levels,cells};cache.set(g,result);return result;
 }
 function cubic(a,b,c,d,t){const u=(c-a)*.5,v=(d-b)*.5;return C((2*t*t*t-3*t*t+1)*b+(t*t*t-2*t*t+t)*u+(-2*t*t*t+3*t*t)*c+(t*t*t-t*t)*v,Math.min(b,c),Math.max(b,c));}
 export function curvedChannels(g,bounds,detail){
@@ -35,7 +36,7 @@ export async function naturalWatersSource(s,cam,{bounds,detail=8,vertical,yieldR
  const sample=(a,X,Y)=>bilinear(X,Y,i=>a[i]);
  const bedAt=(X,Y)=>{const x=Math.floor(X),y=Math.floor(Y),u=X-x,v=Y-y,rr=k=>cubic(g.bed[at(x-1,k)],g.bed[at(x,k)],g.bed[at(x+1,k)],g.bed[at(x+2,k)],u);return cubic(rr(y-1),rr(y),rr(y+1),rr(y+2),v);};
  // Restrict inundation to the existing gameplay lake plus one fine sample.
- const lakeCell=(x,y)=>x>=0&&x<W&&y>=0&&y<H&&!m.land[y*W+x]&&g.land[at(x*r+Math.floor(r/2),y*r+Math.floor(r/2))];
+ const lakeCell=(x,y)=>x>=0&&x<W&&y>=0&&y<H&&!m.land[y*W+x]&&!!basins.cells[y*W+x];
  const coastSigned=i=>g.land[i]?Math.max(.0001,g.bed[i]-.12):Math.min(-.0001,g.bed[i]-.12);
  for(let y=0;y<rows;y++){for(let x=0;x<cols;x++){const X=x0+x/detail,Y=y0+y/detail,fx=X*r,fy=Y*r,cx=C(Math.floor(X),0,W-1),cy=C(Math.floor(Y),0,H-1),k=cy*W+cx,i=y*cols+x,bed=bedAt(fx,fy),wet=sample(g.rain,fx,fy),coast=bilinear(fx,fy,coastSigned);
  const ix=Math.floor(fx),iy=Math.floor(fy);let id=0,best=Infinity;for(let dy=0;dy<=1;dy++)for(let dx=0;dx<=1;dx++){const j=at(ix+dx,iy+dy),label=basins.labels[j],d=(fx-ix-dx)**2+(fy-iy-dy)**2;if(label&&d<best){id=label;best=d;}}

@@ -12,7 +12,8 @@
         "balance.test.mjs",
         "discovery.test.mjs",
         "genesis-living-regression.test.mjs",
-        "genesis-living-visual.test.mjs"
+        "genesis-living-visual.test.mjs",
+        "genesis-waters.test.mjs"
       ],
       "tier": "smoke"
     },
