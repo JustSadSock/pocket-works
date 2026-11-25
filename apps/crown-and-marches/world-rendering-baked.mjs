@@ -6,8 +6,8 @@ function hash(x,y){let n=Math.imul(x+631,374761393)^Math.imul(y+289,668265263);n
 function noise(x,y){const i=Math.floor(x),j=Math.floor(y),u=S(x-i),v=S(y-j);return L(L(hash(i,j),hash(i+1,j),u),L(hash(i,j+1),hash(i+1,j+1),u),v);}
 const sleep=()=>new Promise(r=>setTimeout(r,0));
 function budget(){let last=performance.now(),max=0;return {async yield(){const now=performance.now();if(now-last>=6){max=Math.max(max,now-last);await sleep();last=performance.now();}},get max(){return Math.max(max,performance.now()-last);}};}
-export async function prepareBakedTerrain(s,cam){
- const started=performance.now(),source=await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),{vertices:v,elevations:z,cols:w,rows:h,detail:res}=source,b=budget(),pixels=new Uint8Array(w*h*4);
+export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=false}={}){
+ const started=performance.now(),source=sourceOverride||await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),{vertices:v,elevations:z,cols:w,rows:h,detail:res}=source,b=budget(),pixels=new Uint8Array(w*h*4);
  // Normal and horizon fields are reconstructed from the actual height mesh.
  // Bilinear horizon lookup removes nearest-texel shadow striping.
  const at=(x,y)=>z[C(y,0,h-1)*w+C(x,0,w-1)],sample=(x,y)=>{const i=Math.floor(x),j=Math.floor(y),u=x-i,t=y-j;return L(L(at(i,j),at(i+1,j),u),L(at(i,j+1),at(i+1,j+1),u),t);};
@@ -24,7 +24,8 @@ export async function prepareBakedTerrain(s,cam){
  const strike=(-ny*wx+nx*wy),grain=noise(strike*2.2+height*.37,height*5.6),scree=noise(wx*4.7+height*1.9,wy*4.7-height*.8);
  const stone=mix([128,125,111],[206,194,166],S((grain-.18)/.72)),talus=mix(stone,[166,152,118],S((nz-.22)/.65)*.22);
  base=mix(base,talus,Math.max(rock,S((H-.49)/.13)*.55));base=mix(base,[225,221,203],S((H-.60)/.12)*S((nz-.35)/.55)*.65);
- const variation=(broad-.5)*11+(med-.5)*8+(fine-.5)*5+(scree-.5)*rock*10;
+ const variation=geology?0:(broad-.5)*11+(med-.5)*8+(fine-.5)*5+(scree-.5)*rock*10;
+ if(geology){const steep=S((slope-.12)/.47),alpine=S((H-.40)/.23),exposure=C((nx+ny)*.35+.5),soil=mix([137,121,84],[83,117,71],wet),grass=mix(soil,[148,154,91],fert*.7),scree=mix([133,126,108],[190,179,151],exposure),cliff=mix([116,114,106],[205,198,179],exposure);base=mix(grass,[55,84,52],forest*(1-alpine)*.85);base=mix(base,scree,alpine*.72);base=mix(base,cliff,steep*(.35+.65*alpine));base=mix(base,[226,227,216],S((H-.68)/.12)*(1-steep*.65));}
  const direct=diff*(1-shadow*.88),ambient=.61-.12*S((H-.35)/.24);
  col=base.map((v,i)=>v*(ambient+.58*direct)+variation+[2,5,10][i]*(1-direct));
  const bank=1-S((river-.005)/.15);col=mix(col,[91,119,78],bank*.32);
@@ -34,12 +35,12 @@ export async function prepareBakedTerrain(s,cam){
  }
  const i=k*4;pixels[i]=C(col[0],0,255);pixels[i+1]=C(col[1],0,255);pixels[i+2]=C(col[2],0,255);pixels[i+3]=255;
  }await b.yield();}
- const bakeMs=performance.now()-started-source.stats.ms,bakeSlice=b.max;
+ const bakeMs=performance.now()-started-(sourceOverride?0:source.stats.ms),bakeSlice=b.max;
  // Two independent index/vertex buffers share one pre-baked material field.
  // Source sampling is 8/cell; mesh is 2 or 4/cell and remains resident.
  const lods=[];for(const stride of [4,2]){const cols=(w-1)/stride+1,rows=(h-1)/stride+1,vertices=new Float32Array(cols*rows*3),indices=new Uint32Array((cols-1)*(rows-1)*6);for(let y=0;y<rows;y++){for(let x=0;x<cols;x++){const i=(y*stride*w+x*stride)*9,o=(y*cols+x)*3;vertices[o]=v[i];vertices[o+1]=v[i+1];vertices[o+2]=v[i+2];if(x<cols-1&&y<rows-1){const a=y*cols+x,k=(y*(cols-1)+x)*6;indices.set([a,a+1,a+cols+1,a,a+cols+1,a+cols],k);}}await b.yield();}lods.push({vertices,indices});}
  const bytes=pixels.byteLength+lods.reduce((n,l)=>n+l.vertices.byteLength+l.indices.byteLength,0);
- return {bounds:source.bounds,center:source.center,width:w,height:h,detail:res,pixels,lods,stats:{...source.stats,ms:performance.now()-started,sourceMs:source.stats.ms,bakeMs,bakeSlice,maxSlice:Math.max(source.stats.maxSlice,b.max),triangles:lods.map(l=>l.indices.length/3),bytes,peakSourceBytes:source.stats.bytes}};
+ return {bounds:source.bounds,center:source.center,width:w,height:h,detail:res,pixels,lods,stats:{...source.stats,ms:performance.now()-started+(sourceOverride?source.stats.ms:0),sourceMs:source.stats.ms,bakeMs,bakeSlice,maxSlice:Math.max(source.stats.maxSlice,b.max),triangles:lods.map(l=>l.indices.length/3),bytes,peakSourceBytes:source.stats.bytes}};
 }
 const VS=`#version 300 es
 precision highp float;

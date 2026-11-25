@@ -151,7 +151,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "world-rendering-baked-qa.mjs",
+      "entry": "terrain-art-lab-qa.mjs",
       "tier": "smoke"
     },
     {

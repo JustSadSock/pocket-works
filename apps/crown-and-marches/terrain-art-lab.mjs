@@ -1,0 +1,60 @@
+// Research-only height sources; the campaign's state and geography are read-only.
+import {prepareTerrain} from './world-rendering-gl.mjs';
+import {model} from './geography-review.mjs';
+const C=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),L=(a,b,t)=>a+(b-a)*t,S=x=>{x=C(x);return x*x*(3-2*x)};
+const sleep=()=>new Promise(r=>setTimeout(r,0));
+function budget(){const start=performance.now();let last=start,max=0;return {async tick(){const n=performance.now();if(n-last>=6){max=Math.max(max,n-last);await sleep();last=performance.now();}},get ms(){return performance.now()-start},get max(){return Math.max(max,performance.now()-last)}};}
+const distance=(x,y,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],t=C(((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy||1));return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);};
+export function realSource(dem){
+ const {size,detail,metres,metadata}=dem,w=size,h=size,n=w*h,vertices=new Float32Array(n*9),elevations=new Float32Array(n),min=Math.min(...metres.slice(0,1));let lo=Infinity,hi=-Infinity;
+ for(const m of metres){lo=Math.min(lo,m);hi=Math.max(hi,m);}
+ const cellKm=metadata.cellKm,exaggeration=metadata.exaggeration;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,H=metres[i],z=(H-lo)/1000/cellKm*exaggeration,e=H/4500,forest=1-S((H-1600)/650),fert=1-S((H-800)/1700);vertices.set([x/detail,y/detail,z,e,.55,fert,forest,1,1],i*9);elevations[i]=z;}
+ return {vertices,elevations,indices:new Uint32Array(0),cols:w,rows:h,detail,bounds:[0,0,(w-1)/detail,(h-1)/detail],center:elevations[(w>>1)*w+(w>>1)],stats:{ms:0,maxSlice:0,anchorError:0,minH:lo,maxH:hi,minZ:0,maxZ:(hi-lo)/1000/cellKm*exaggeration,bytes:vertices.byteLength+elevations.byteLength,dem:true,metadata}};
+}
+export function terrainMetrics(z,w,h,step){
+ let n=0,sum=0,sq=0,lo=Infinity,hi=-Infinity,peaks=0,pits=0,rough=0,slope=0,sx=0,sy=0;const angles=new Uint32Array(8),corr=[0,0,0],diff=[0,0,0],lags=[1,2,4].map(k=>Math.max(1,Math.round(k/step)));
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x,v=z[i];if(!Number.isFinite(v))continue;n++;sum+=v;sq+=v*v;lo=Math.min(lo,v);hi=Math.max(hi,v);const a=z[i-1],b=z[i+1],c=z[i-w],d=z[i+w],dx=(b-a)/(2*step),dy=(d-c)/(2*step);rough+=Math.abs(a+b+c+d-4*v);slope+=Math.hypot(dx,dy);sx+=dx*dx;sy+=dy*dy;angles[((Math.floor((Math.atan2(dy,dx)+Math.PI)*4/Math.PI))%8+8)%8]++;const ns=[a,b,c,d,z[i-w-1],z[i-w+1],z[i+w-1],z[i+w+1]];if(ns.every(q=>v>q))peaks++;if(ns.every(q=>v<q))pits++;for(let j=0;j<3;j++){const k=lags[j];if(x+k<w){corr[j]++;diff[j]+=(z[i+k]-v)**2;}if(y+k<h){corr[j]++;diff[j]+=(z[i+k*w]-v)**2;}}}
+ const variance=Math.max(0,sq/n-(sum/n)**2);
+ return {samples:n,min:lo,max:hi,mean:sum/n,sd:Math.sqrt(variance),peaks,pits,meanSlope:slope/n,meanLaplacian:rough/n,directionalSlope:[Math.sqrt(sx/n),Math.sqrt(sy/n)],slopeDirections:[...angles],semivariance:lags.map((k,i)=>({distance:k*step,value:diff[i]/(2*corr[i]),normalized:variance?diff[i]/(2*corr[i]*variance):0}))};
+}
+function crestGraph(m,bounds){
+ const [x0,y0,x1,y1]=bounds,pts=new Map(),edges=[],W=m.width;
+ const end=i=>{for(let k=0;k<6;k++){const j=m.m.down[i];if(j<0||!m.known[j]||!m.m.land[j])break;i=j;}return i;};
+ for(let y=Math.max(1,y0);y<Math.min(m.height-1,y1);y++)for(let x=Math.max(1,x0);x<Math.min(m.width-1,x1);x++){const i=m.at(x,y);if(!m.known[i]||!m.m.land[i]||m.m.height[i]<.40)continue;const h=m.m.height[i];let crest=0,watershed=0;
+ for(const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]){const a=m.at(x-dx,y-dy),b=m.at(x+dx,y+dy);if(!m.known[a]||!m.known[b])continue;if(h>=m.m.height[a]&&h>=m.m.height[b]){crest=Math.max(crest,h-(m.m.height[a]+m.m.height[b])*.5);if(end(a)!==end(b))watershed++;}}
+ if(crest>.007&&watershed)pts.set(i,{p:[x+.5,y+.5],strength:C(crest/.05),h});}
+ for(const [i,a] of pts){const x=i%W,y=Math.floor(i/W);for(const [dx,dy] of [[1,0],[0,1],[1,1],[-1,1]]){const j=m.at(x+dx,y+dy),b=pts.get(j);if(!b)continue;edges.push({a:a.p,b:b.p,strength:(a.strength+b.strength)*.5});}}
+ const buckets=new Map();for(const e of edges)for(let y=Math.floor(Math.min(e.a[1],e.b[1])-.7);y<=Math.floor(Math.max(e.a[1],e.b[1])+.7);y++)for(let x=Math.floor(Math.min(e.a[0],e.b[0])-.7);x<=Math.floor(Math.max(e.a[0],e.b[0])+.7);x++){const k=x+','+y;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(e);}
+ return {nodes:pts.size,edges:edges.length,buckets};
+}
+export async function reconstructTerrain(s,cam,kind){
+ const base=await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),b=budget(),w=base.cols,h=base.rows,res=base.detail,n=w*h,v=base.vertices,z=base.elevations,original=z.slice(),movable=new Uint8Array(n),fixed=new Uint8Array(n),delta=new Float32Array(n);let anchorError=0,transport=0,runoff=0,graph=null;
+ for(let y=0;y<h;y++){for(let x=0;x<w;x++){const i=y*w+x,o=i*9;fixed[i]=+(x%res===res/2&&y%res===res/2);movable[i]=+(x>0&&x<w-1&&y>0&&y<h-1&&!fixed[i]&&v[o+7]>.72&&v[o+8]>.025&&v[o+3]>.31);}await b.tick();}
+ if(kind==='erosion'){
+ // Closed-boundary conservative transport. Water routes along local
+ // downhill gradients, carrying eroded sediment; thermal creep moves material
+ // from steep slopes toward their lower neighbours. Fixed nodes are immutable.
+ let water=new Float32Array(n),next=new Float32Array(n);const sediment=new Float32Array(n),nextSed=new Float32Array(n);
+ for(let pass=0;pass<12;pass++){delta.fill(0);next.fill(0);nextSed.fill(0);
+ for(let y=1;y<h-1;y++){for(let x=1;x<w-1;x++){const i=y*w+x;if(!movable[i])continue;const o=i*9,volume=water[i]+.018*(.4+v[o+4]),neighbors=[i-1,i+1,i-w,i+w];let target=-1,fall=0;for(const j of neighbors){const d=z[i]-z[j];if(movable[j]&&d>fall){fall=d;target=j;}}
+ if(target<0){next[i]+=volume*.78;delta[i]+=sediment[i];continue;}
+ const capacity=volume*fall*2.4,eroded=Math.min(.020,Math.max(0,capacity-sediment[i])*.13),deposit=Math.min(sediment[i],Math.max(0,sediment[i]-capacity)*.25),thermal=Math.max(0,fall-1.10/res)*.062;
+ delta[i]+=deposit-eroded-thermal;delta[target]+=thermal;next[target]+=volume*.88;nextSed[target]+=sediment[i]+eroded-deposit;transport+=thermal+eroded;runoff+=volume;
+ }await b.tick();}
+ for(let i=0;i<n;i++)if(movable[i])z[i]+=delta[i];water=next;next=new Float32Array(n);sediment.set(nextSed);await b.tick();}
+ // Deposit residual carried sediment. No mass is silently discarded.
+ for(let i=0;i<n;i++)if(movable[i])z[i]+=sediment[i];
+ }else if(kind==='watersheds'){
+ const m=model(s);graph=crestGraph(m,base.bounds);
+ for(let y=0;y<h;y++){for(let x=0;x<w;x++){const i=y*w+x,o=i*9;if(!movable[i])continue;const wx=v[o],wy=v[o+1],H=v[o+3],river=v[o+8],u=(wx-.5)-Math.floor(wx-.5),t=(wy-.5)-Math.floor(wy-.5),anchor=S(Math.hypot(Math.min(u,1-u),Math.min(t,1-t))*2.4);let ridge=0;
+ for(const e of graph.buckets.get(Math.floor(wx)+','+Math.floor(wy))||[])ridge=Math.max(ridge,S(1-distance(wx,wy,e.a,e.b)/.38)*e.strength);
+ const valley=1-S((river-.025)/.52),local=(original[i-1]+original[i+1]+original[i-w]+original[i+w])*.25,relief=Math.abs(original[i]-local);
+ z[i]+=anchor*S((H-.34)/.14)*(ridge*.23-valley*.19)*C(.4+relief*8,0,1);
+ }await b.tick();}
+ }else throw Error('Unknown geometry candidate '+kind);
+ let massChange=0,maxDisplacement=0,changed=0;for(let i=0;i<n;i++){const d=z[i]-original[i];if(fixed[i])anchorError=Math.max(anchorError,Math.abs(d));if(!movable[i]&&d!==0)throw Error('Protected visual sample changed');maxDisplacement=Math.max(maxDisplacement,Math.abs(d));massChange+=d;if(Math.abs(d)>1e-6)changed++;v[i*9+2]=z[i];}
+ const metrics={before:terrainMetrics(original,w,h,1/res),after:terrainMetrics(z,w,h,1/res)};
+ return {...base,stats:{...base.stats,ms:base.stats.ms+b.ms,maxSlice:Math.max(base.stats.maxSlice,b.max),geometry:kind,visualAnchorError:anchorError,transport,runoff,massChange,maxDisplacement,changed,graph:graph?{nodes:graph.nodes,edges:graph.edges}:null,metrics}};
+}
+export function sourceMetrics(source){const {vertices:v,cols:w,rows:h,detail}=source,cols=Math.floor((w-1)/detail),rows=Math.floor((h-1)/detail),z=new Float32Array(cols*rows);for(let y=0;y<rows;y++)for(let x=0;x<cols;x++)z[y*cols+x]=v[((y*detail+detail/2)*w+x*detail+detail/2)*9+3];const m=terrainMetrics(z,cols,rows,1);const seen=new Uint8Array(z.length),components=[];for(let i=0;i<z.length;i++){if(seen[i]||z[i]<.55)continue;const q=[i];seen[i]=1;for(let k=0;k<q.length;k++){const j=q[k],x=j%cols,y=Math.floor(j/cols);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy,t=Y*cols+X;if(X<0||Y<0||X>=cols||Y>=rows||seen[t]||z[t]<.55)continue;seen[t]=1;q.push(t);}}components.push(q.length);}return {...m,mountainComponents:components.sort((a,b)=>b-a),grid:[cols,rows]};}
