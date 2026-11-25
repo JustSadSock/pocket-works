@@ -106,7 +106,8 @@
       "kind": "node-test",
       "files": [
         "commander.test.mjs",
-        "allied-command.test.mjs"
+        "allied-command.test.mjs",
+        "allied-room.test.mjs"
       ],
       "tier": "smoke"
     },

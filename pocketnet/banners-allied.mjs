@@ -6,10 +6,10 @@ import {E} from './banners-engine-v1/engine.js';
 const check=(ok,code)=>{if(!ok)throw Error(code)};
 const formats=Object.freeze({'2vAI':[2,0],'2v1':[2,1],'2v2':[2,2],'3vAI':[3,0]});
 const account=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-const participant=(r,id)=>{let m=r.members.find(m=>m.id===id);check(m,'not_member');return m};
+export const participant=(r,id)=>{let m=r.members.find(m=>m.id===id);check(m,'not_member');return m};
 const captain=(r,id)=>{let m=participant(r,id);check(m.captain,'captain_required');return m};
-const nodes=(s,side)=>hierarchy(s,side)?.nodes||[];
-const sideUnits=(s,side)=>s.units.filter(u=>u.side===side&&u.type!=='guard').map(u=>u.id);
+export const nodes=(s,side)=>s.alliedTree?.[side]||hierarchy(s,side)?.nodes||[];
+const sideUnits=(s,side)=>s.units.filter(u=>u.side===side&&(u.type!=='guard'||!hierarchy(s,side))).map(u=>u.id);
 function selected(s,side,ids){
  check(Array.isArray(ids)&&ids.length<=32&&new Set(ids).size===ids.length,'invalid_assignment');
  let tree=nodes(s,side),used=new Set();
@@ -69,7 +69,7 @@ export function beginAllied(r,s){
  check(r.phase==='lobby'||r.phase==='replay','invalid_phase');
  check(r.capacity.every((count,side)=>r.members.filter(m=>m.side===side).length===count),'team_incomplete');
  check(r.members.every(m=>m.captain||scope(r,s,m.id).length>0),'unassigned_commander');
- r.phase='planning';r.round=s.round;r.locked=null;r.markers=[];
+ r.phase='planning';r.round=s.round;r.locked=null;r.markers=r.markers.filter(v=>v.round>=s.round-1);
  for(const m of r.members){m.ready=false;m.draft={}}
 }
 export function setAlliedAI(r,actor,target,on){
@@ -103,11 +103,11 @@ export function lockAllied(r,s,{deadline=false,staff=()=>({})}={}){
   const team=r.members.filter(m=>m.side===side);
   if(!team.length){check(r.capacity[side]===0,'team_incomplete');merged[side]=validateOrders(s,side,staff(side));continue}
   for(const m of team){
-   let orders=m.ai?staff(side,scope(r,s,m.id)):m.draft;
+   let orders=m.ai||deadline&&!m.ready&&Object.keys(m.draft).length===0?staff(side,scope(r,s,m.id),m.ai):m.draft;
    // A planner may not issue a command to an overlapping ancestor; validate even trusted proposals.
    orders=scopedOrders(r,s,m,orders);
    if(orders.commands){merged[side].commands??=[];merged[side].commands.push(...orders.commands)}
-   else for(const [id,order] of Object.entries(orders)){check(!Object.hasOwn(merged[side],id),'overlapping_commands');merged[side][id]=order}
+   else for(const [id,order] of Object.entries(orders)){check(!Object.hasOwn(merged[side],id),'overlapping_commands');merged[side][id]=order.group?{...order,group:('seat'+r.members.indexOf(m)+'-'+order.group).slice(0,40)}:order}
   }
   if(merged[side].commands)merged[side].commands.sort((a,b)=>a.group.localeCompare(b.group));
   merged[side]=validateOrders(s,side,merged[side])
@@ -120,12 +120,12 @@ export function completeAllied(r){check(r.phase==='locked','invalid_phase');r.ph
 export function markAllied(r,s,id,{round,seq,kind,x,y,recipient=null,group=null}){
  let m=participant(r,id);if(!sequence(m,seq))return false;
  check(r.phase==='planning'&&round===r.round&&!m.ai&&!m.ready,'round_locked');
- check(['intent','support','line','phase','reserve'].includes(kind)&&Number.isFinite(x)&&Number.isFinite(y)&&x>=0&&x<=E.forState(s).W&&y<=E.forState(s).H,'invalid_marker');
+ check(['intent','support','line','phase','reserve','threat','confirm'].includes(kind)&&Number.isFinite(x)&&Number.isFinite(y)&&x>=0&&x<=E.forState(s).W&&y<=E.forState(s).H,'invalid_marker');
  const historic=!!hierarchy(s,m.side);
  if(recipient!==null){let v=participant(r,recipient);check(v.side===m.side&&v.id!==m.id,'invalid_recipient')}
  check(!historic||recipient!==null,'direct_dispatch_required');
  check(group===null||nodes(s,m.side).some(n=>n.id===group),'invalid_assignment');
- check(r.markers.filter(v=>v.from===id).length<12,'marker_limit');
+ check(r.markers.filter(v=>v.from===id&&v.round===r.round).length<12,'marker_limit');
  r.markers.push({from:id,recipient,side:m.side,kind,x,y,group,round,seq});m.seq=seq;return true
 }
 export function commandRosterView(r,s,id){
@@ -133,5 +133,5 @@ export function commandRosterView(r,s,id){
  return {format:r.format,phase:r.phase,round:r.round,revision:r.revision,side:m.side,role:m.captain?'captain':'subordinate',nextSeq:m.seq+1,
   scope:scope(r,s,id),draft:clone(m.draft),ready:m.ready,markers:r.markers.filter(v=>v.side===m.side&&(!v.recipient||v.from===id||v.recipient===id)).map(v=>({kind:v.kind,x:v.x,y:v.y,group:v.group,round:v.round,from:r.members.find(a=>a.id===v.from)?.name,own:v.from===id})),
   // Historical allies do not receive live remote drafts or even ready state.
-  members:team.map(v=>({name:v.name,role:v.captain?'captain':'subordinate',groups:[...v.groups],self:v.id===id,ai:v.ai,...(!hierarchy(s,m.side)||v.id===id?{ready:v.ready}:{})}))}
+  members:team.map(v=>({seat:r.members.indexOf(v),name:v.name,role:v.captain?'captain':'subordinate',groups:[...v.groups],self:v.id===id,ai:v.ai,...(!hierarchy(s,m.side)||v.id===id?{ready:v.ready}:{})}))}
 }
