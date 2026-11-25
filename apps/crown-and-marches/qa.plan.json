@@ -403,6 +403,22 @@
       "kind": "browser-node",
       "entry": "balance-journeys.mjs",
       "tier": "smoke"
+    },
+    {
+      "id": "grand-history",
+      "kind": "node",
+      "entry": "grand-experiment.mjs",
+      "args": [
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "tier": "deep"
     }
   ]
 }
