@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { assertParity, planShards, shadowFromLegacy } from './sharding.mjs';
 import { compareEvidence } from './pilot.mjs';
 
-export function fullPlan(raw){
+export function fullPlan(raw,{history={}}={}){
   const old=shadowFromLegacy(raw);
   const tasks=old.shards.flatMap(s=>s.tasks);
   if(!tasks.length)throw Error('Refuse empty full baseline');
   // Six tasks at most: even underestimated long tasks must fit hosted runner limits.
-  const shards=planShards(tasks,{maxTasks:6});
+  const shards=planShards(tasks,{maxTasks:6,history});
   assertParity(tasks,shards);
   const cpu=shards.filter(s=>s.pool!=='browser'),browser=shards.filter(s=>s.pool==='browser');
   return {schema:1,legacyJobs:tasks.length,shardJobs:shards.length,tasks,shards,

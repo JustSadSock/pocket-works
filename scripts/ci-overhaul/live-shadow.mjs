@@ -9,6 +9,7 @@ import {verdict,recover} from './canary-evidence.mjs';
 import {planShards,assertParity,shadowFromLegacy} from './sharding.mjs';
 import {changedApps,resolveTasks,partition} from '../universal-qa/plan.mjs';
 import {canonical} from './verified-results.mjs';
+import {liveSchedulingHistory} from './live-scheduling.mjs';
 const read=p=>JSON.parse(readFileSync(p,'utf8'));
 const write=(p,v)=>writeFileSync(p,JSON.stringify(v,null,2));
 export function context(root,env=process.env){
@@ -21,7 +22,7 @@ export function context(root,env=process.env){
 // issuing an empty coverage verdict. Never substitute smoke for app changes.
 export function livePlan(raw,root,{eventName,base,head}={}){
  const original=shadowFromLegacy(raw);
- if(original.legacyJobs>0)return {...integratedPlan(raw,root),coverageScope:eventName==='pull_request'?'original-pr-plan':'explicit-smoke',originalLegacyJobs:eventName==='pull_request'?original.legacyJobs:null};
+ if(original.legacyJobs>0)return {...integratedPlan(raw,root,{history:liveSchedulingHistory(original.shards.flatMap(s=>s.tasks))}),coverageScope:eventName==='pull_request'?'original-pr-plan':'explicit-smoke',originalLegacyJobs:eventName==='pull_request'?original.legacyJobs:null};
  if(eventName!=='pull_request'||changedApps(root,base,head).length!==0)throw Error('Empty application plan cannot be replaced by infrastructure smoke');
  const tasks=resolveTasks(root,{apps:['axis-pals','crumple-yard'],profile:'smoke',pullRequest:true});
  const m=partition(tasks);
@@ -65,6 +66,8 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
     for(const [k,v] of Object.entries(t.phases))p.phases[k]=(p.phases[k]??0)+v;
    }
    report.telemetry=totals;
+   report.taskTimings={first:first.timings, retry:second.timings};
+   report.shardEstimates=plan.shards.map(s=>({id:s.id,pool:s.pool,estimatedMs:s.estimatedMs,keys:s.tasks.map(t=>t.key)}));
    mkdirSync(a[3],{recursive:true});write(join(a[3],'report.json'),report);console.log(JSON.stringify(report,null,2));if(!report.success)process.exitCode=1;
   }else throw Error('Unknown live command');
  }

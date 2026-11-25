@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
+  workflow_run:
+    workflows: [Validate Pocket Works]
+    types: [completed]
+    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -24,7 +28,7 @@ jobs:
           persist-credentials: false
       - run: python3 scripts/cloudflare-monitor.py --self-test
   monitor:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && (github.event_name != 'workflow_run' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))
     needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 4
