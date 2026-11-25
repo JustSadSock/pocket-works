@@ -1,0 +1,55 @@
+name: Banners of War Asset Quality Reference
+on:
+  pull_request:
+    paths:
+      - 'apps/banners-of-war/research/asset-quality/**'
+      - '.github/workflows/banners-asset-quality.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: banners-asset-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-to-reference:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    env:
+      BOW_ART_WORK: /tmp/bow-asset-quality
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/banners-asset-quality
+      BLENDER_VERSION: '5.2.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare pinned editor
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil xz-utils fonts-dejavu-core libgl1 libx11-6 libxi6 libxrender1
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          curl -fsSL --retry 2 -o "$archive" "https://download.blender.org/release/Blender5.2/$archive"
+          curl -fsSL --retry 2 -o blender.sha256 "https://download.blender.org/release/Blender5.2/blender-${BLENDER_VERSION}.sha256"
+          grep " ${archive}$" blender.sha256 | sha256sum --check --strict
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Build source and limited atlas with Universal Art Forge
+        run: python3 apps/banners-of-war/research/asset-quality/build.py
+      - name: Browser reference and matched batch benchmark
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/asset-quality/capture.mjs
+      - name: Retain original evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banners-asset-quality-reference
+          path: quality-artifacts/banners-asset-quality
+          if-no-files-found: error
+          retention-days: 14
