@@ -5,14 +5,7 @@
       "id": "regression",
       "kind": "node-test",
       "files": [
-        "engine.test.mjs"
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "doctrines",
-      "kind": "node-test",
-      "files": [
+        "engine.test.mjs",
         "doctrine.test.mjs"
       ],
       "tier": "smoke"
