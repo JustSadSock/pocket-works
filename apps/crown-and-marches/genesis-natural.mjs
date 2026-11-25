@@ -40,10 +40,10 @@ function geographicField(seed,W,H,land,coast,exemplars){
  const rng=random(seed+':field'),salt=Math.floor(rng()*2**31),library=exemplars.map(decode),regions=[];
  // Entire 48 km landscapes, not details inserted into pre-existing mountains.
  // Nonperiodic staggered centers, orientation and anisotropic scale are seeded.
- for(let y=-8;y<H+24;y+=27)for(let x=-8;x<W+24;x+=27){const X=x+(rng()-.5)*10,Y=y+(rng()-.5)*10,i=C(Math.round(Y),0,H-1)*W+C(Math.round(X),0,W-1),inland=coast[i],pool=inland>15?[0,1,2,3]:inland>6?[1,2,3,4,5]:[4,5,6],d=library[pool[Math.floor(rng()*pool.length)]],angle=rng()*Math.PI*2,scale=.82+rng()*.38;
+ for(let y=-8;y<H+24;y+=21)for(let x=-8;x<W+24;x+=21){const X=x+(rng()-.5)*6,Y=y+(rng()-.5)*6,i=C(Math.round(Y),0,H-1)*W+C(Math.round(X),0,W-1),inland=coast[i],pool=inland>15?[0,1,2,3]:inland>6?[1,2,3,4,5]:[4,5,6],d=library[pool[Math.floor(rng()*pool.length)]],angle=rng()*Math.PI*2,scale=.82+rng()*.38;
  const amplitude=d.id==='alpine'?.54:d.id==='carpathian'?.36:d.id==='gorge'?.31:d.id==='foothills'?.38:d.id==='low-ridge'?.23:d.id==='rolling'?.15:.24;
- regions.push({x:X,y:Y,d,angle,scale,stretch:.88+rng()*.24,amplitude});}
+ regions.push({x:X,y:Y,d,angle,scale,stretch:.88+rng()*.24,amplitude,offsetX:(rng()-.5)*10,offsetY:(rng()-.5)*10});}
  const near=binsFor(regions,()=>43);
- return {salt,chains:regions.map(({d,...p})=>({...p,source:d.id})),field(x,y){let sum=0,weight=0;for(const p of near(x,y)){const dx=x-p.x,dy=y-p.y,co=Math.cos(p.angle),si=Math.sin(p.angle),u=(dx*co+dy*si)/p.scale,v=(-dx*si+dy*co)/(p.scale*p.stretch),radius=Math.hypot(u,v)/24;if(radius>=1)continue;const w=(1-radius*radius)**2,h=sample(p.d.a,p.d.size,96+u*4,96+v*4),base=p.d.id==='coastal'?0:p.d.lo,span=Math.max(600,p.d.hi-base);sum+=C((h-base)/span)*p.amplitude*w;weight+=w;}return {uplift:weight?sum/weight:0,foot:0};}};
+ return {salt,chains:regions.map(({d,...p})=>({...p,source:d.id})),field(x,y){let sum=0,weight=0;for(const p of near(x,y)){const dx=x-p.x,dy=y-p.y,co=Math.cos(p.angle),si=Math.sin(p.angle),u=(dx*co+dy*si)/p.scale,v=(-dx*si+dy*co)/(p.scale*p.stretch),radius=Math.hypot(u,v)/22.5;if(radius>=1)continue;const w=(1-radius*radius)**2,h=sample(p.d.a,p.d.size,96+p.offsetX+u*4,96+p.offsetY+v*4),base=p.d.id==='coastal'?0:p.d.lo,span=Math.max(600,p.d.hi-base);sum+=C((h-base)/span)*p.amplitude*w;weight+=w;}return {uplift:weight?sum/weight*S(weight/.15):0,foot:0};}};
 }
 export function naturalGeology(seed,W,H,land,coast,config){return config.approach==='natural'?naturalRanges(seed,W,H,land,coast):geographicField(seed,W,H,land,coast,config.exemplars);}
