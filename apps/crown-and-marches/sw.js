@@ -13,6 +13,7 @@ const APP_SHELL = [
   './world.mjs',
   './battle.mjs',
   './render.mjs',
+  './geography-review.mjs',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
