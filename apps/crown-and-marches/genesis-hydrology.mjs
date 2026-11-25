@@ -42,3 +42,15 @@ export function aggregateHydrology(m,W,H,{natural=false}={}){
  const landmass=new Int32Array(n),visited=new Uint8Array(n);for(let i=0;i<n;i++){if(!m.land[i]||visited[i])continue;const q=[i];visited[i]=1;for(let k=0;k<q.length;k++){const j=q[k],x=j%W,y=Math.floor(j/W);for(const [dx,dy] of D.slice(0,4)){const X=x+dx,Y=y+dy,t=Y*W+X;if(X<0||Y<0||X>=W||Y>=H||!m.land[t]||visited[t])continue;visited[t]=1;q.push(t);}}for(const j of q)landmass[j]=q.length;}m.landmass=landmass;
  if(natural){let aggregation=0,contradiction=0;const cases=[];for(let i=0;i<n;i++)if(channel[i]&&m.land[i]&&down[i]>=0&&m.land[down[i]]&&edgeFlow[i]<58){const major=[...edges[i]].filter(([j,f])=>f>=58);const type=major.length===0?'no-major-crossing':'major-route-disagrees';if(major.length===0)aggregation++;else contradiction++;cases.push({cell:i,chosen:down[i],discharge:edgeFlow[i],major,type});}g.exitAudit={aggregation,contradiction,cases};}g.lakeWater=lakeWater;g.hydrologyAudit={riverCount,matched,majorExitMismatch,fallback,unresolved,up,maxLift,changedLand,lakes};return m;
 }
+
+// Read-only diagnosis of an existing quotient graph. A different coarse
+// neighbor is not excused by the existence of a river in the same cell.
+export function auditMajorExits(m,W,H){
+ const g=m.geography,r=g.detail,w=g.width,n=W*H,cell=i=>Math.min(H-1,Math.floor(Math.floor(i/w)/r))*W+Math.min(W-1,Math.floor((i%w)/r)),edges=Array.from({length:n},()=>new Map());
+ for(let i=0;i<g.land.length;i++){if(!g.land[i]||g.lakeWater?.[i])continue;const a=cell(i),j=g.down[i];if(!m.land[a]||j<0)continue;const b=cell(j);if(a===b)continue;const flow=g.flow[i]/(r*r),prior=edges[a].get(b);if(!prior||prior.flow<flow)edges[a].set(b,{flow,from:i,to:j});}
+ const cases=[];for(let i=0;i<n;i++){const j=m.down[i];if(!m.land[i]||!m.river[i]||j<0||!m.land[j])continue;const chosen=edges[i].get(j)?.flow||0;if(chosen>=58)continue;const alternatives=[...edges[i]].filter(([b,e])=>e.flow>=58).sort((a,b)=>b[1].flow-a[1].flow);
+ const coarse=new Set();let c=j;for(let k=0;k<8&&c>=0&&!coarse.has(c);k++){coarse.add(c);c=m.down[c];}
+ let rejoin=false,returns=false;const fineCells=[];if(alternatives.length){let p=alternatives[0][1].to,prev=i;for(let k=0;k<r*r*32&&p>=0&&fineCells.length<8;k++){const next=cell(p);if(next!==prev){fineCells.push(next);prev=next;if(coarse.has(next))rejoin=true;if(next===i)returns=true;}p=g.down[p];}}
+ cases.push({cell:i,chosen:j,chosenDischarge:chosen,alternatives:alternatives.map(([b,e])=>({cell:b,discharge:e.flow})),fineCells,classification:!alternatives.length?'no-major-crossing':returns?'cell-reentry':rejoin?'different-exit-rejoins':'different-major-route'});}
+ return {total:cases.length,classes:Object.fromEntries([...new Set(cases.map(c=>c.classification))].map(k=>[k,cases.filter(c=>c.classification===k).length])),cases};
+}

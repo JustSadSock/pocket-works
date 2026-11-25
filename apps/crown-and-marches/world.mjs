@@ -1,4 +1,4 @@
-import {generateGenesis,genesisOptions} from './world-genesis.mjs';
+import {generateGenesis,genesisOptions,generateGenesisAblation} from './world-genesis.mjs';
 export let W=192,H=128,N=W*H;
 export const WORLD_SIZES={standard:{w:192,h:128,states:6},large:{w:256,h:192,states:12},huge:{w:320,h:320,states:20}};
 const neighborTables=new Map();
@@ -29,6 +29,8 @@ class Heap{constructor(){this.a=[]}push(i,p){let a=this.a,k=a.length;a.push([i,p
 // A priority-flood drainage surface gives every inland cell a path to water.
 // Physical height is minimally raised at enclosed depressions; the original seed is stable.
 function drainageNeighbors(i){const x=xx(i),y=yy(i),out=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if((dx||dy)&&x+dx>=0&&x+dx<W&&y+dy>=0&&y+dy<H)out.push(idx(x+dx,y+dy));return out;}
+// Research only; no saved revision is selected by this API.
+export function generateGenesisAudit(seed,shape,approach,auditProfile){return generateGenesisAblation(seed,W,H,generateLegacy(seed,shape),approach,auditProfile);}
 export function generate(seed,version=2,shape='classic',options={}){
  if(version===3)return generateGenesis(seed,W,H,generateLegacy(seed,shape),options);
  if(version===1)return generateLegacy(seed,shape);
