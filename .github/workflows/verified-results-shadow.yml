@@ -28,7 +28,7 @@ jobs:
       - run: node --test scripts/ci-overhaul/attested-shadow.test.mjs scripts/ci-overhaul/verified-results.test.mjs
   execute:
     needs: contract
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -59,10 +59,11 @@ jobs:
           execution="$(git show HEAD:.github/workflows/verified-results-shadow.yml | sha256sum | cut -d' ' -f1)"
           external="$(printf '%s' 'offline;no npm install;tracked source archive;TZ=UTC;LANG=C.UTF-8;HOME=/tmp' | sha256sum | cut -d' ' -f1)"
           jq -n --arg image "${image##*@sha256:}" --arg config "${config#sha256:}" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg execution "$execution" --arg external "$external"             '{contract:"readonly-offline-container-v1",imageDigest:$image,containerConfigDigest:$config,node:$node,os:"linux",arch:$arch,toolchainDigest:$toolchain,kernelDigest:$kernel,executionContractDigest:$execution,externalInputsDigest:$external}' > "$out/environment.json"
-          jq -n --arg repository "$GITHUB_REPOSITORY" --arg commit "$(git rev-parse HEAD)" --arg tree "$(git rev-parse HEAD^{tree})" --arg event "$GITHUB_EVENT_NAME" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT"             '{repository:$repository,workflow:".github/workflows/verified-results-shadow.yml",ref:"refs/heads/main",commit:$commit,tree:$tree,event:$event,run:$run,attempt:$attempt}' > "$out/source.json"
+          jq -n --arg repository "$GITHUB_REPOSITORY" --arg commit "$(git rev-parse HEAD)" --arg tree "$(git rev-parse HEAD^{tree})" --arg event "$GITHUB_EVENT_NAME" --arg ref "$GITHUB_REF" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT"             '{repository:$repository,workflow:".github/workflows/verified-results-shadow.yml",ref:$ref,commit:$commit,tree:$tree,event:$event,run:$run,attempt:$attempt}' > "$out/source.json"
           task='{"key":"axis-pals-rules","app":"axis-pals","suite":"rules","kind":"node-test","seed":null,"install":false}'
           docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$taskout,dst=/work/qa-artifacts" -w /work -e "PW_QA_TASK=$task" "$image" node scripts/universal-qa/run.mjs
           # Publish only the structured result; discard the raw task log.
+          test -d "$taskout/axis-pals-rules" && test ! -L "$taskout/axis-pals-rules"
           test -f "$taskout/axis-pals-rules/result.json" && test ! -L "$taskout/axis-pals-rules/result.json"
           cp "$taskout/axis-pals-rules/result.json" "$out/evidence.json"
           rm -rf "$taskout"
