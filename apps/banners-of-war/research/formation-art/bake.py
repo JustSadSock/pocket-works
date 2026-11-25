@@ -37,7 +37,7 @@ sc.cycles.samples=12
 # Camera sees the front at heading zero. The source's baked rig and materials are retained.
 def pixel(p):
     q=world_to_camera_view(sc,cam,Vector(p))
-    return [q.x*256,(1-q.y)*256]
+    return [q.x*sc.render.resolution_x,(1-q.y)*sc.render.resolution_y]
 weapon=[o for o in sc.objects if o.type=="MESH" and o.name.startswith(("Ash spear","Forged spear"))]
 body=[o for o in sc.objects if o.type=="MESH" and o not in weapon]
 def bounds(objects):
@@ -45,6 +45,21 @@ def bounds(objects):
     return [o.evaluated_get(deps).matrix_world@Vector(v) for o in objects for v in o.evaluated_get(deps).bound_box]
 sc.frame_set(1);bpy.context.view_layer.update()
 z0=min(v.z for v in bounds(body))
+# Common camera frustum preflight: include all evaluated body and weapon bounds.
+# Increasing the frustum does not change metres per source pixel.
+max_extent=0
+for heading in range(8):
+    pivot.rotation_euler.z=-heading*pi/4
+    for frame in [1,5,9,13,17,21,25,29,33,37]:
+        sc.frame_set(frame);bpy.context.view_layer.update()
+        for v in bounds(body+weapon):
+            p=world_to_camera_view(sc,cam,v)
+            max_extent=max(max_extent,abs(p.x-.5),abs(p.y-.5))
+factor=max(1.0,2.24*max_extent)
+cam.data.ortho_scale*=factor
+resolution=math.ceil(256*factor/32)*32
+sc.render.resolution_x=sc.render.resolution_y=resolution
+bpy.context.view_layer.update()
 records={}
 cloth=[m for m in bpy.data.materials if m.use_nodes and any(x in m.name.lower() for x in ("cloth","gambeson","tunic","fabric"))]
 base_cloth={m.name:m.diffuse_color[:] for m in cloth}
@@ -58,17 +73,23 @@ for side in [0,1]:
             anchor=pixel((0,0,z0))
             points=bounds(weapon);body_pts=bounds(body)
             tips=[pixel(v) for v in points]
+            direction=Vector((sin(-heading*pi/4),-cos(-heading*pi/4),0))
+            deps=bpy.context.evaluated_depsgraph_get()
+            verts=[o.evaluated_get(deps).matrix_world@v.co for o in weapon for v in o.evaluated_get(deps).data.vertices]
+            reach=max((v.dot(direction) for v in verts),default=0)
             sc.render.filepath=str(out/(name+".png"));bpy.ops.render.render(write_still=True)
             # Isolate the body, including shield but not spear, for actual visible body height.
-            for o in weapon:o.hide_render=True
-            sc.render.filepath=str(out/(name+"-body.png"));bpy.ops.render.render(write_still=True)
-            for o in weapon:o.hide_render=False
-            records[name]={"anchor":anchor,"pixelsPerMetre":256/cam.data.ortho_scale,"weaponBounds":tips,"bodyWorldHeight":max(v.z for v in body_pts)-min(v.z for v in body_pts)}
+            mask=f"0-{heading}-{frame}-body.png"
+            if side==0:
+                for o in weapon:o.hide_render=True
+                sc.render.filepath=str(out/mask);bpy.ops.render.render(write_still=True)
+                for o in weapon:o.hide_render=False
+            records[name]={"anchor":anchor,"pixelsPerMetre":resolution/cam.data.ortho_scale,"weaponBounds":tips,"weaponForwardMetres":reach,"bodyWorldHeight":max(v.z for v in body_pts)-min(v.z for v in body_pts),"bodyMask":mask,"renderSize":resolution}
             if frame in [1,21]:
                 # Restricted veteran shield finish; shared mesh, no new troop type.
                 color=(.20,.29,.34) if side==0 else (.37,.23,.10)
                 for i,f in [(0,.6),(1,1.3)]:ramp.color_ramp.elements[i].color=(*(x*f for x in color),1)
                 sc.render.filepath=str(out/(name+"-v.png"));bpy.ops.render.render(write_still=True)
-                records[name+"-v"]={**records[name],"bodyMask":name+"-body.png"}
+                records[name+"-v"]={**records[name]}
                 team(side)
-(out/"frames.json").write_text(json.dumps({"frames":records,"groundZ":z0,"elevation":60,"orthoScale":cam.data.ortho_scale}))
+(out/"frames.json").write_text(json.dumps({"frames":records,"groundZ":z0,"elevation":60,"orthoScale":cam.data.ortho_scale,"renderSize":resolution,"framingFactor":factor}))
