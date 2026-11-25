@@ -319,9 +319,10 @@ export function economy(s){economicInit(s);const before=materialTotals(s),src=s.
  for(const o of c.orders)o.remaining-=c.work.build*tool*security;c.orders=c.orders.filter(o=>o.remaining>0);let work=c.work.craft*1.5*tool*security;const order=RECIPES.map((r,i)=>i).sort((a,b)=>{const score=i=>(i===0&&c.stock[9]<c.pop/80?100:0)+c.market[RECIPES[i].out]*RECIPES[i].yield-RECIPES[i].inputs.reduce((n,[k,q])=>n+c.market[k]*q,0)+(s.discovery&&i===3&&c.stock[12]<2?Math.min(12,(2-c.stock[12])*4):0)+(s.discovery&&i===2&&c.stock[11]<2&&c.stock[12]<3?4:0);return score(b)-score(a);});
  for(const i of order){const r=RECIPES[i],capacity=Math.max(0,c.build[i]-c.orders.filter(o=>o.kind===i).length)*(2+(c.urban?.[5]||0)*.12),handcraft=s.discovery&&capacity===0&&[2,3].includes(i)&&c.stock[12]<3&&c.pop>=180?.35:0,cap=capacity+handcraft;for(const [k,q] of r.inputs)c.demand[k]+=Math.min(cap,work)*q;let q=Math.max(0,Math.min(cap,work,...r.inputs.map(([k,v])=>c.stock[k]/v)));for(const [k,v] of r.inputs)consume(s,c,k,q*v);const yieldFactor=s.discovery?1+(r.out===11?adoption(s,c,'blast-furnace')*.35:r.out===12?adoption(s,c,'water-power')*.25:r.out===15?adoption(s,c,'loom')*.3:0):1;source(s,c,r.out,q*r.yield*yieldFactor);c.metrics.recipeMargin[r.out]+=q*(c.market[r.out]*r.yield*yieldFactor-r.inputs.reduce((n,[k,v])=>n+c.market[k]*v,0));c.metrics.recipeWork[r.out]+=q;work-=q;}
  const need=c.pop/320;c.demand[9]+=need;c.demand[0]+=need*.4;const food=consume(s,c,9,need),grain=consume(s,c,0,Math.max(0,need-food)*1.2),ratio=need?Math.min(1,(food+grain/1.2)/need):1;
+ if(s.society?.circulation!==false&&s.society)householdFoodPayment(s,c,food,grain);
  consume(s,c,15,c.pop/9000);consume(s,c,6,c.pop/16000);const toolNeed=c.industryWorkers*.012;c.metrics.toolDemand+=toolNeed;c.metrics.toolMet+=consume(s,c,12,toolNeed);c.demand[12]+=c.industryWorkers*.05+.5+(s.discovery?(1+Object.keys(c.knowledge?.institutes||{}).length*.3):0);c.demand[2]+=.5+c.work.build*.12;c.demand[10]+=.4+c.work.build*.18;c.demand[13]+=.25*st.militaryBudget;c.demand[14]+=.25*st.militaryBudget;c.demand[8]+=.15*st.militaryBudget;c.demand[11]+=.1;c.demand[4]+=.12;c.demand[16]+=c.pop/18000;consume(s,c,4,c.pop/22000);consume(s,c,16,c.pop/18000);c.demand[15]+=c.pop/9000;c.demand[6]+=c.pop/16000;
  c.metrics.foodDemand+=need;c.metrics.foodMet+=need*ratio;c.lastFoodRatio=ratio;if(ratio<.85)c.shortageDays+=4;if(ratio<.5)c.crisisDays+=4;let returning=Math.min(c.returning,c.returning*.12+.1);const identities=s.society?returningIdentity(s,c,returning):null;c.returning-=returning;c.serviceReturnCredit+=returning;const mature=Math.min(Math.floor(c.serviceReturnCredit+1e-9),serviceCount(c.pendingService));if(mature){c.veteranService=unionService(c.veteranService,takeService(c.pendingService,mature));c.serviceReturnCredit-=mature;}if(!c.pendingService.length)c.serviceReturnCredit=0;if(identities){const next=Math.max(0,c.pop*(ratio>.95?1.00022:1-.004*(1-ratio)));normalizeCommunities(ensureCommunities(s,c),next);c.pop=next;receiveCommunities(s,c,identities,returning);c.pop+=returning;}else c.pop=Math.max(0,c.pop*(ratio>.95?1.00022:1-.004*(1-ratio))+returning);if(serviceCount(c.veteranService)>Math.floor(c.pop))takeService(c.veteranService,serviceCount(c.veteranService)-Math.floor(c.pop));c.wealth=clamp(c.wealth+(ratio-.85)*.45-(st.tax-.12)*.6,0,100);
- const tax=Math.min(c.cash,Math.max(0,c.cash*st.tax*.025*security));c.cash-=tax;const local=s.society?societyDistrict(s,c):null,retained=local?tax*internalRetention(s,c):0;if(local)local.localTreasury+=retained;st.gold+=tax-retained;st.budget.tax+=tax-retained;
+ const tax=Math.min(c.cash,Math.max(0,c.cash*st.tax*.025*security));c.cash-=tax;const local=s.society?societyDistrict(s,c):null,retained=local?tax*internalRetention(s,c):0;if(local){local.localTreasury+=retained;if(s.society.circulation!==false)cashFlows(c).marketTax+=tax;}st.gold+=tax-retained;st.budget.tax+=tax-retained;
  const role=[['farming',c.output[0]*c.market[0]],['mining',c.output.slice(2,5).reduce((n,q,k)=>n+q*c.market[k+2],0)],['metallurgy',c.output[11]*c.market[11]],['craft',c.output.slice(10).reduce((n,q,k)=>n+(k+10===11||k+10===13||k+10===14?0:q*c.market[k+10]),0)],['military',c.output[13]*c.market[13]+c.output[14]*c.market[14]],[neighbors(c.i).some(i=>!s.map.land[i])&&s.states[c.f].tech[7]>0?'port':'trade',c.lastTrade*.35]];role.sort((a,b)=>b[1]-a[1]);c.economicRole=role[0][1]>0?role[0][0]:'balanced';updateMarket(c);c.imports.fill(0);
  }marketTrade(s);const cities=s.cities;for(let k=0;k<17;k++)s.prices[k]=cities.reduce((n,c)=>n+c.market[k],0)/(cities.length||1);
  const after=materialTotals(s);for(let k=0;k<17;k++)s.ledger.maxGoodsError=Math.max(s.ledger.maxGoodsError,Math.abs(after.goods[k]-before.goods[k]-(s.ledger.source[k]-src[k])+(s.ledger.sink[k]-sink[k])));s.ledger.maxMoneyError=Math.max(s.ledger.maxMoneyError,Math.abs(after.money-before.money));s.ledger.cycles++;
@@ -859,7 +860,7 @@ function societyDistrict(s,c){
 }
 export function enableSociety(s,config={}){
  if(s.society){if(!s.society.architecture)enablePoliticalArchitecture(s,config);return s.society;}economicInit(s);enableDiscovery(s);
- s.society={schema:1,initialAutonomy:clamp(Number.isFinite(+config.autonomy)?+config.autonomy:.45,.05,.9),events:[]};
+ s.society={schema:1,initialAutonomy:clamp(Number.isFinite(+config.autonomy)?+config.autonomy:.45,.05,.9),circulation:config.circulation!==false,events:[]};
  for(const c of s.cities)societyDistrict(s,c);enablePoliticalArchitecture(s,config);return s.society;
 }
 function societyEvent(s,c,kind,detail){s.society.events.push({day:s.day,city:c.id,f:c.f,kind,detail});if(s.society.events.length>400)s.society.events.shift();}
@@ -896,14 +897,15 @@ export function societyStep(s){
  for(let i=1;i<q.length;i++){const change=clamp((c.pop*weights[i]/sum-q[i].pop)*.035,-q[i].pop*.04,q[0].pop*.012*(.4+q[i].skill+education*.15));q[i].pop+=change;q[0].pop-=change;}
  q[6].skill=clamp(q[6].skill+education*.005,.1,1);
  // Earnings are paid from the private market; taxes and consumption spend these wallets.
- const wagePool=Math.min(c.cash*.025,demand.reduce((n,v)=>n+v,0)*.08),earned=demand.reduce((n,v,i)=>n+v*(.5+q[i].skill),0);
- c.cash-=wagePool;
+ const wagePool=Math.min(c.cash*(s.society.circulation===false?.025:.12),demand.reduce((n,v)=>n+v,0)*.08),earned=demand.reduce((n,v,i)=>n+v*(.5+q[i].skill),0);
+ c.cash-=wagePool;if(s.society.circulation!==false)cashFlows(c).wages+=wagePool;
  for(let i=0;i<q.length;i++){const g=q[i],income=wagePool*demand[i]*(.5+g.skill)/earned;g.cash+=income;g.income=income;
- const tax=Math.min(g.cash,income*st.tax),local=tax*internalRetention(s,c);g.cash-=tax;d.localTreasury+=local;st.gold+=tax-local;st.budget.tax+=tax-local;g.tax=tax;
- const good=i===2||i===3?16:15,spend=Math.min(g.cash*.012,g.pop*.006,c.stock[good]*c.market[good]);g.cash-=spend;c.cash+=spend;consume(s,c,good,spend/Math.max(.001,c.market[good]));g.consumption=spend;
+ const tax=Math.min(g.cash,income*st.tax),local=tax*internalRetention(s,c);g.cash-=tax;d.localTreasury+=local;st.gold+=tax-local;st.budget.tax+=tax-local;g.tax=tax;if(s.society.circulation!==false)cashFlows(c).householdTax+=tax;
+ const good=i===2||i===3?16:15,spend=Math.min(g.cash*.012,g.pop*.006,c.stock[good]*c.market[good]);g.cash-=spend;c.cash+=spend;consume(s,c,good,spend/Math.max(.001,c.market[good]));g.consumption=spend;if(s.society.circulation!==false)cashFlows(c).goods+=spend;
  g.support=clamp(.62+(food-.8)*.8-st.tax*.8+(i===3||i===4?d.autonomy*.18:0)-(war&&i!==5?.08:0),0,1);}
  // Local authorities have their own means and may rescue an exhausted market.
- if(food<.8&&d.localTreasury>0){const aid=Math.min(d.localTreasury,4);d.localTreasury-=aid;c.cash+=aid;}
+ if(food<.8&&d.localTreasury>0){const aid=Math.min(d.localTreasury,4);d.localTreasury-=aid;c.cash+=aid;if(s.society.circulation!==false)cashFlows(c).relief+=aid;}
+ if(s.society.circulation!==false)fundLocalServices(s,c);
  const grievance=q.reduce((n,g)=>n+g.pop*(1-g.support),0)/Math.max(1,c.pop);
  d.pressure=clamp(d.pressure*.88+grievance*.12,0,1);
  if(d.reform){const r=d.reform,actual=charterSupport(s,c,r.target).total,capacity=clamp((.25+c.infra*.12+education*.1)*food,0,1);
@@ -1061,7 +1063,7 @@ function politicalArchitectureStep(s){
  for(const t of Object.values(a.titles)){if(t.kind==='land'&&s.admin[t.cell]>=0){const city=s.admin[t.cell];(counts[city]??={})[t.beneficiary]=(counts[city][t.beneficiary]||0)+s.development[t.cell];}else if(t.kind==='workshop'){const c=s.cities.find(c=>c.id===t.city),k=Number(t.key.split(':')[2]),out=RECIPES[k]?.out;if(c&&out!=null){const value=c.output[out]*c.market[out]/Math.max(1,c.build[k]);(counts[c.id]??={})[t.beneficiary]=(counts[c.id][t.beneficiary]||0)+Math.min(10,value);}}}
  for(const c of s.cities){const sub=registerDistrict(s,c),d=c.society;sub.overlord=crownId(c.f);sub.contract.retention=legalRetention(s,c);const g=a.governments[c.f],lord=a.people[sub.person];if(lord?.role==='lord')lord.f=c.f;
  // Legal beneficiaries receive a bounded portion of actual market revenue, not generated rent.
- if(c.occupation<0){const row=counts[c.id]||{},total=Object.values(row).reduce((n,v)=>n+v,0),pool=Math.min(c.cash*.004,total*.025);if(total>0&&pool>0)for(const [id,weight] of Object.entries(row)){const pay=pool*weight/total;if(creditAccount(s,id,pay))c.cash-=pay;}}
+ if(c.occupation<0){const row=counts[c.id]||{},total=Object.values(row).reduce((n,v)=>n+v,0),pool=Math.min(c.cash*.004,total*.025);if(total>0&&pool>0)for(const [id,weight] of Object.entries(row)){const pay=pool*weight/total;if(creditAccount(s,id,pay)){c.cash-=pay;if(s.society.circulation!==false)cashFlows(c).rent+=pay;}}}
  if(s.day%360===0&&c.occupation<0){const p=a.people[sub.person];if(p){p.age=Math.floor((s.day-p.born)/360);if(p.age>=65+hash(s.seed+':death:'+p.id)%21){p.alive=false;const heir=createPerson(s,c.f,'lord',sub.id,25,p.dynasty);sub.person=heir.id;polityEvent(s,c.f,'lord succession',{district:c.id,old:p.id,heir:heir.id});}}}
  if(d.pressure>.62)sub.arrears++;else sub.arrears=Math.max(0,sub.arrears-1);
  if(sub.arrears>=3&&!sub.dispute){sub.dispute={stage:'petition',started:s.day,requestedAutonomy:Math.min(.9,d.autonomy+.15)};polityEvent(s,c.f,'petition',{district:c.id,issue:'tax and autonomy'});}
@@ -1083,7 +1085,7 @@ export function politicalArchitectureSnapshot(s,f){
 }
 
 export function societySandbox(config={}){
- const s=discoverySandbox({...config,society:{government:config.government||'feudal',governments:config.governments,autonomy:config.autonomy??.45,mixed:config.mixed??0}});
+ const s=discoverySandbox({...config,society:{government:config.government||'feudal',governments:config.governments,autonomy:config.autonomy??.45,mixed:config.mixed??0,circulation:config.circulation}});
  s.sandboxKind='society';s.sandboxConfig={...config};
  for(const st of s.states)if(Number.isFinite(config.tax))st.tax=clamp(config.tax,0,.5);
  for(const c of s.cities){const d=c.society;if(Number.isFinite(config.privateWealth)){const desired=clamp(config.privateWealth,0,.8)*(c.cash+d.cohorts.reduce((n,q)=>n+q.cash,0)),current=d.cohorts.reduce((n,q)=>n+q.cash,0);if(desired>current){const delta=Math.min(c.cash,desired-current);c.cash-=delta;for(const q of d.cohorts)q.cash+=delta*q.pop/Math.max(1,c.pop);}else if(current>0){for(const q of d.cohorts)q.cash*=desired/current;c.cash+=current-desired;}}}
@@ -1426,4 +1428,30 @@ export function sampleLedgerAudit(s){
  if(Math.abs(precise)>=1e-5&&!a.firstPrecise)a.firstPrecise=info;
  }
  return {firstLegacy:a.firstLegacy,firstPrecise:a.firstPrecise,peakLegacy:a.peakLegacy,peakPrecise:a.peakPrecise,peakDaily:a.peakDaily};
+}
+
+// Food was already consumed by the subsistence economy. Market participants pay
+// for the portion purchased, without consuming those same goods a second time.
+// In-kind rural subsistence and unpaid subsistence remain possible.
+function cashFlows(c){return c.society.flows??={food:0,goods:0,wages:0,marketTax:0,householdTax:0,rent:0,localServices:0,relief:0};}
+export function householdFoodPayment(s,c,food,grain){
+ const d=societyDistrict(s,c),cost=food*c.market[9]+grain*c.market[0];
+ if(!(cost>0)||c.pop<=0)return 0;
+ let paid=0;
+ for(const g of d.cohorts){
+ const participation=g.id==='peasants'?.25:g.id==='landowners'?.45:.8;
+ const due=cost*g.pop/c.pop*participation,pay=Math.min(g.cash,due,g.cash*.06);
+ g.cash-=pay;paid+=pay;
+ }
+ c.cash+=paid;cashFlows(c).food+=paid;return paid;
+}
+function fundLocalServices(s,c){
+ const d=c.society,local=cashFlows(c),sub=s.society.architecture.subjects[localId(c)];
+ // Existing administration, infrastructure and local justice have paid workers.
+ // Reserve operating funds first; no money is created and no goods are duplicated.
+ const capacity=Math.max(0,Math.min(c.pop/450,.3+c.infra*.4+c.developed*.012));
+ const reserve=8+(sub?.contract.levy||0)*.12,fee=Math.min(Math.max(0,d.localTreasury-reserve)*.025,capacity);
+ if(fee<=0)return;
+ const workers=[d.cohorts.find(g=>g.id==='scholars'),d.cohorts.find(g=>g.id==='artisans')],shares=[.65,.35];
+ d.localTreasury-=fee;for(let i=0;i<workers.length;i++)workers[i].cash+=fee*shares[i];local.localServices+=fee;
 }
