@@ -1,3 +1,4 @@
+import {naturalGeology,NATURAL_REVISION,validateExemplars} from './genesis-natural.mjs';
 import {aggregateHydrology,HYDRO_REVISION} from './genesis-hydrology.mjs';
 // World Genesis v3. Pure, deterministic, opt-in. No campaign systems here.
 // The v1 continental mask supplies coastline topology only, not mountain heights.
@@ -10,7 +11,7 @@ const D=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
 function distanceField(mask,w,h){const d=new Float32Array(w*h).fill(1e6);for(let i=0;i<d.length;i++)if(!mask[i])d[i]=0;for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(x)d[i]=Math.min(d[i],d[i-1]+1);if(y)d[i]=Math.min(d[i],d[i-w]+1);if(x&&y)d[i]=Math.min(d[i],d[i-w-1]+1.4142);if(x+1<w&&y)d[i]=Math.min(d[i],d[i-w+1]+1.4142);}for(let y=h-1;y>=0;y--)for(let x=w-1;x>=0;x--){const i=y*w+x;if(x+1<w)d[i]=Math.min(d[i],d[i+1]+1);if(y+1<h)d[i]=Math.min(d[i],d[i+w]+1);if(x+1<w&&y+1<h)d[i]=Math.min(d[i],d[i+w+1]+1.4142);if(x&&y+1<h)d[i]=Math.min(d[i],d[i+w-1]+1.4142);}return d;}
 function sample(a,w,h,x,y){const i=Math.floor(x),j=Math.floor(y),u=x-i,v=y-j,at=(x,y)=>a[C(y,0,h-1)*w+C(x,0,w-1)];return L(L(at(i,j),at(i+1,j),u),L(at(i,j+1),at(i+1,j+1),u),v);}
 function segment(x,y,a,b){const dx=b.x-a.x,dy=b.y-a.y,t=C(((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy||1));return {d:Math.hypot(x-a.x-dx*t,y-a.y-dy*t),t};}
-function geology(seed,w,h,land,coast,approach){
+function geology(seed,w,h,land,coast,approach,audit='original'){
  const rng=random(seed+':'+approach),salt=Math.floor(rng()*2**31),chains=[],segments=[],candidates=[];
  for(let y=8;y<h-8;y+=5)for(let x=8;x<w-8;x+=5){const i=y*w+x;if(land[i]&&coast[i]>5)candidates.push({x,y,score:coast[i]*.55+rng()*15});}
  candidates.sort((a,b)=>b.score-a.score);
@@ -24,13 +25,13 @@ function geology(seed,w,h,land,coast,approach){
  // World-coordinate spatial bins avoid a per-sample scan of every chain.
  const bins=new Map(),tile=8;
  for(const e of segments){const pad=e.width*(approach==='tectonic'?4:3);for(let y=Math.floor((Math.min(e.a.y,e.b.y)-pad)/tile);y<=Math.floor((Math.max(e.a.y,e.b.y)+pad)/tile);y++)for(let x=Math.floor((Math.min(e.a.x,e.b.x)-pad)/tile);x<=Math.floor((Math.max(e.a.x,e.b.x)+pad)/tile);x++){const key=x+','+y;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(e);}}
- const field=(x,y)=>{let uplift=0,foot=0;for(const e of bins.get(Math.floor(x/tile)+','+Math.floor(y/tile))||[]){const {d,t}=segment(x,y,e.a,e.b),amp=L(e.a.h,e.b.h,t),r=d/e.width;
+ const field=(x,y)=>{let uplift=0,foot=0,blend=0;for(const e of bins.get(Math.floor(x/tile)+','+Math.floor(y/tile))||[]){const {d,t}=segment(x,y,e.a,e.b),amp=L(e.a.h,e.b.h,t),r=d/e.width;
  if(approach==='tectonic'){// Broad deformation belts with asymmetric fold trains.
- const across=(x-e.a.x)*(e.b.y-e.a.y)-(y-e.a.y)*(e.b.x-e.a.x),sign=Math.sign(across),belt=Math.exp(-r*r*.28),fold=.64+.36*Math.cos(d*1.9+sign*.6+noise(salt,x,y,9)*2);uplift=Math.max(uplift,amp*belt*fold);foot=Math.max(foot,amp*belt*.16);}
+ const across=(x-e.a.x)*(e.b.y-e.a.y)-(y-e.a.y)*(e.b.x-e.a.x),sign=Math.sign(across),belt=Math.exp(-r*r*.28),fold=audit==='no-fold'?1:.64+.36*Math.cos(d*1.9+sign*.6+noise(salt,x,y,9)*2);uplift=Math.max(uplift,amp*belt*fold);foot=Math.max(foot,amp*belt*.16);}
  else{// Continuous interlocking ridge and spur envelopes; narrow crest,
  // concave foot slopes and broad support shared by the entire range.
- const profile=Math.exp(-r*1.45)*.71+Math.exp(-r*r*.24)*.29;uplift=Math.max(uplift,amp*profile);foot=Math.max(foot,amp*Math.exp(-r*r*.18)*.12);}
- }return {uplift,foot};};
+ const profile=audit==='rounded'?Math.exp(-r*r*1.45)*.71+Math.exp(-r*r*.24)*.29:Math.exp(-r*1.45)*.71+Math.exp(-r*r*.24)*.29;uplift=Math.max(uplift,amp*profile);if(audit==='blend')blend+=(amp*profile)**5;foot=Math.max(foot,amp*Math.exp(-r*r*.18)*.12);}
+ }return {uplift:audit==='blend'?Math.pow(blend,.2):uplift,foot};};
  return {field,chains,segments,salt};
 }
 // Priority flood: stable tie-breaking by index, strict downhill outlets.
@@ -48,11 +49,12 @@ function drainage(height,land,w,h,rain=null){
  return {filled,down,basin,flow,lake,order};
 }
 function landmass(land,w,h){const out=new Int32Array(land.length),seen=new Uint8Array(land.length);for(let i=0;i<land.length;i++){if(!land[i]||seen[i])continue;const q=[i];seen[i]=1;for(let k=0;k<q.length;k++){const j=q[k],x=j%w,y=(j/w)|0;for(const [dx,dy] of D.slice(0,4)){const X=x+dx,Y=y+dy,t=Y*w+X;if(X<0||Y<0||X>=w||Y>=h||!land[t]||seen[t])continue;seen[t]=1;q.push(t);}}for(const j of q)out[j]=q.length;}return out;}
-export function genesisOptions(options={}){const approach=options.approach??'structure',detail=options.detail??4;if(!['tectonic','structure'].includes(approach)||![2,4,8].includes(detail)||options.revision&&![GENESIS_REVISION,HYDRO_REVISION].includes(options.revision))throw Error('Unsupported Geography v3 parameters');return {revision:options.revision||GENESIS_REVISION,approach,detail};}
+export function genesisOptions(options={}){const revision=options.revision||GENESIS_REVISION,approach=options.approach??(revision===NATURAL_REVISION?'natural':'structure'),detail=options.detail??4;if(![GENESIS_REVISION,HYDRO_REVISION,NATURAL_REVISION].includes(revision)||![2,4,8].includes(detail)||!(revision===NATURAL_REVISION?['natural','field']:['tectonic','structure']).includes(approach))throw Error('Unsupported Geography v3 parameters');return {revision,approach,detail,...(approach==='field'?{exemplars:validateExemplars(options.exemplars)}:{})};}
 export function generateGenesis(seed,W,H,continental,options={}){
- const config=genesisOptions(options),{approach,detail:r}=config,n=W*H,land=continental.land.slice(),coastal=distanceField(land,W,H),oceanDistance=distanceField(Uint8Array.from(land,v=>1-v),W,H),g=geology(seed,W,H,land,coastal,approach),salt=g.salt,w=W*r+1,h=H*r+1,N=w*h,high=new Float32Array(N),mask=new Uint8Array(N),rain=new Float32Array(N),uplift=new Float32Array(N);
+ const config=genesisOptions(options),{approach,detail:r}=config,n=W*H,land=continental.land.slice(),coastal=distanceField(land,W,H),oceanDistance=distanceField(Uint8Array.from(land,v=>1-v),W,H),modern=config.revision===NATURAL_REVISION,g=modern?naturalGeology(seed,W,H,land,coastal,config):geology(seed,W,H,land,coastal,approach,options.auditProfile),salt=g.salt,w=W*r+1,h=H*r+1,N=w*h,high=new Float32Array(N),mask=new Uint8Array(N),rain=new Float32Array(N),uplift=new Float32Array(N);
  const signed=Float32Array.from(land,(v,i)=>v?coastal[i]-.5:.5-oceanDistance[i]);
- for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,X=x/r,Y=y/r,d=sample(signed,W,H,X-.5,Y-.5);mask[i]=+(d>0);if(!mask[i]){high[i]=.12-Math.min(.16,Math.abs(d)*.025);continue;}const coast=S(d/5),geo=g.field(X,Y),plain=.12+coast*(.045+.10*noise(salt^29,X,Y,23)+.035*noise(salt^81,X,Y,6)),hill=geo.uplift;uplift[i]=hill;high[i]=plain+coast*(hill+geo.foot)+coast*hill*.075*(noise(salt^70,X,Y,1.8)-.5);}
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,X=x/r,Y=y/r,d=sample(signed,W,H,X-.5,Y-.5);mask[i]=+(d>0);if(!mask[i]){high[i]=.12-Math.min(.16,Math.abs(d)*.025);continue;}const coast=S(d/5),geo=g.field(X,Y),plain=.12+coast*(.045+.10*noise(salt^29,X,Y,23)+.035*noise(salt^81,X,Y,6)),hill=geo.uplift;uplift[i]=hill;high[i]=plain+coast*(hill+geo.foot)+(modern?0:coast*hill*.075*(noise(salt^70,X,Y,1.8)-.5));}
+ const beforeErosion=options.captureStages?high.slice():null;
  // Orographic precipitation: prevailing west wind loses moisture on ascent.
  for(let y=0;y<h;y++){let vapor=.78,previous=.12;for(let x=0;x<w;x++){const i=y*w+x,z=high[i];if(!mask[i])vapor=.93;else{const rise=Math.max(0,z-previous),fall=Math.max(0,previous-z),precip=Math.min(vapor,.015/r+rise*1.9);rain[i]=C(.16+vapor*.53+precip*r*.8-fall*.35);vapor=C(vapor-precip+.004/r,.14,.93);}previous=z;}}
  // One drainage-driven incision pass and two conservative talus passes.
@@ -65,9 +67,9 @@ export function generateGenesis(seed,W,H,continental,options={}){
  // Standing water is represented by the filled water surface; preserve
  // separate bed height and lake depth for research. Sea remains the same coast.
  const height=new Float32Array(n),moisture=new Float32Array(n),temperature=new Float32Array(n),fert=new Float32Array(n),terrain=new Uint8Array(n),resource=new Int8Array(n).fill(-1),ridge=new Float32Array(n),pass=new Uint8Array(n),delta=new Uint8Array(n),coast=new Uint8Array(n),relief=new Float32Array(n),lakeDepth=new Float32Array(n);
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let sum=0,wet=0,up=0,lo=Infinity,hi=-Infinity,lake=0;for(let dy=0;dy<r;dy++)for(let dx=0;dx<r;dx++){const j=(y*r+dy)*w+x*r+dx;sum+=hyd.filled[j];wet+=rain[j];up+=uplift[j];lo=Math.min(lo,high[j]);hi=Math.max(hi,high[j]);lake+=hyd.lake[j];}height[i]=land[i]?Math.max(.12001,sum/(r*r)):Math.min(.1199,sum/(r*r));moisture[i]=wet/(r*r);ridge[i]=up/(r*r);relief[i]=hi-lo;lakeDepth[i]=lake/(r*r);}
- const coarse=drainage(height,land,W,H,moisture);height.set(coarse.filled);const {down,flow,basin}=coarse,river=new Uint8Array(n);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let sum=0,wet=0,up=0,lo=Infinity,hi=-Infinity,lake=0;for(let dy=0;dy<r;dy++)for(let dx=0;dx<r;dx++){const j=(y*r+dy)*w+x*r+dx;sum+=modern?high[j]:hyd.filled[j];wet+=rain[j];up+=uplift[j];lo=Math.min(lo,high[j]);hi=Math.max(hi,high[j]);lake+=hyd.lake[j];}height[i]=land[i]?Math.max(.12001,sum/(r*r)):Math.min(.1199,sum/(r*r));moisture[i]=wet/(r*r);ridge[i]=up/(r*r);relief[i]=hi-lo;lakeDepth[i]=lake/(r*r);}
+ const coarse=drainage(height,land,W,H,moisture);if(!modern)height.set(coarse.filled);const {down,flow,basin}=coarse,river=new Uint8Array(n);
  for(let i=0;i<n;i++){if(!land[i]){down[i]=-1;continue;}const x=i%W,y=(i/W)|0,e=height[i],wet=moisture[i],lat=Math.abs(y-H/2)/(H/2);temperature[i]=C(1-lat*.70-e*.67);coast[i]=+(coastal[i]<1.5);river[i]=+(flow[i]>58);delta[i]=+(coast[i]&&flow[i]>85);const valley=river[i]||relief[i]<.055;fert[i]=C(.32+wet*.40+temperature[i]*.20-e*.46+(valley?.14:0)+(delta[i]?.11:0),.05,1);terrain[i]=e>.55?4:e>.40?3:wet>.72&&e<.27&&valley?5:wet>.52?2:fert[i]>.44?1:6;const vein=noise(salt^185,x,y,4),v=noise(salt^930,x,y,9);resource[i]=e>.36||ridge[i]>.24?(vein>.55?3:vein<.34?4:2):coast[i]&&v>.63?6:coast[i]||river[i]&&v>.72?5:terrain[i]===2?1:terrain[i]===6?(v>.54?7:8):fert[i]>.44?0:7;}
  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;if(terrain[i]!==3)continue;const saddle=height[i-W]>height[i]+.035&&height[i+W]>height[i]+.035||height[i-1]>height[i]+.035&&height[i+1]>height[i]+.035;pass[i]=+(saddle&&relief[i]<.14);}
- const result={height,land,moisture,fert,terrain,resource,river,down,flow,basin,temperature,ridge,pass,delta,coast,landmass:landmass(land,W,H),relief,lakeDepth,geography:{config,width:w,height:h,detail:r,bed:high,surface:hyd.filled,land:mask,flow:hyd.flow,down:hyd.down,basin:hyd.basin,lake:hyd.lake,rain,chains:g.chains,erosion:{removed,deposited}}};return config.revision===HYDRO_REVISION?aggregateHydrology(result,W,H):result;
+ const result={height,land,moisture,fert,terrain,resource,river,down,flow,basin,temperature,ridge,pass,delta,coast,landmass:landmass(land,W,H),relief,lakeDepth,geography:{config,width:w,height:h,detail:r,bed:high,surface:hyd.filled,land:mask,flow:hyd.flow,down:hyd.down,basin:hyd.basin,lake:hyd.lake,rain,chains:g.chains,erosion:{removed,deposited},...(beforeErosion?{beforeErosion}:{})}};if(modern){const physical=height.slice();aggregateHydrology(result,W,H,{natural:true});result.routingHeight=result.height.slice();result.height=physical;return result;}return config.revision===HYDRO_REVISION?aggregateHydrology(result,W,H):result;
 }
