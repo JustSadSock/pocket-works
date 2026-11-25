@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/verified-input-impact.test.mjs
+      - run: node --test scripts/ci-overhaul/verified-input-impact.test.mjs scripts/ci-overhaul/verified-cross-commit.test.mjs
       - name: Compare base with tested merge tree
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
