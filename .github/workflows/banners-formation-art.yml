@@ -34,6 +34,13 @@ jobs:
           run-id: 45672121448
           artifact-ids: 15050357382
           path: /tmp/bow-source
+      - name: Retrieve previously validated surface textures
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45687063636
+          artifact-ids: 15056723437
+          path: /tmp/bow-terrain-baseline
       - name: Prepare editor
         run: |
           apt-get update
