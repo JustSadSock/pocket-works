@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {livingMaterial,riverDistances,genesisLivingSource} from './genesis-living-visual.mjs';
+const g={detail:4,width:17,height:17,land:new Uint8Array(289).fill(1),lakeWater:new Uint8Array(289),down:new Int32Array(289).fill(-1),flow:new Float32Array(289),bed:new Float32Array(289).fill(.3),surface:new Float32Array(289).fill(.3),lake:new Float32Array(289),rain:new Float32Array(289).fill(.6)};
+for(let i=0;i<16;i++){let a=8*17+i;g.down[a]=a+1;g.flow[a]=16*(35+i*10);}g.flow[8*17+16]=3000;
+const distances=riverDistances(g,[0,0,4,4],8);
+for(let x=0;x<33;x++)assert.ok(distances[16*33+x]<0,'continuous segment chain');
+assert.equal(distances[0],1);
+const source=await genesisLivingSource({mapVersion:3,autonomous:true,map:{geography:g,fert:new Float32Array(16).fill(.5)}},{},{bounds:[0,0,4,4],detail:8,vertical:h=>h});
+assert.equal(source.vertices.length,33*33*9);assert.ok(source.vertices.every(Number.isFinite));
+assert.ok(livingMaterial({x:2,y:2,H:.53,wet:.6,fert:.5,forest:.1,slope:.35,nx:.2,ny:.3,curvature:0,river:1}).every(v=>v>=0&&v<=255));
+console.log('Living geography visual synthetic checks passed');

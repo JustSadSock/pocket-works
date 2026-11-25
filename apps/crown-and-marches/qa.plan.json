@@ -10,7 +10,9 @@
         "wealth.test.mjs",
         "sinews.test.mjs",
         "balance.test.mjs",
-        "discovery.test.mjs"
+        "discovery.test.mjs",
+        "genesis-living-regression.mjs",
+        "genesis-living-visual.test.mjs"
       ],
       "tier": "smoke"
     },
