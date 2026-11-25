@@ -151,7 +151,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "world-genesis-qa.mjs",
+      "entry": "genesis-acceptance-qa.mjs",
       "tier": "smoke"
     },
     {
