@@ -9,6 +9,8 @@ on:
       - 'scripts/ci-overhaul/verified-input-impact*'
       - 'scripts/ci-overhaul/verified-cross-commit*'
       - 'scripts/ci-overhaul/verified-mounted-inputs*'
+      - 'scripts/ci-overhaul/verified-reuse-admission*'
+      - 'scripts/ci-overhaul/verified-offline-task.sh'
       - '.github/workflows/verified-cross-commit.yml'
       - 'apps/axis-pals/**'
       - 'shared/**'
@@ -19,6 +21,8 @@ on:
       - 'scripts/ci-overhaul/attested-shadow*'
       - 'scripts/ci-overhaul/verified-mounted-inputs*'
       - 'scripts/ci-overhaul/verified-cross-commit*'
+      - 'scripts/ci-overhaul/verified-reuse-admission*'
+      - 'scripts/ci-overhaul/verified-offline-task.sh'
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/attested-shadow.test.mjs scripts/ci-overhaul/verified-results.test.mjs scripts/ci-overhaul/verified-mounted-inputs.test.mjs scripts/ci-overhaul/verified-cross-commit.test.mjs
+      - run: node --test scripts/ci-overhaul/attested-shadow.test.mjs scripts/ci-overhaul/verified-results.test.mjs scripts/ci-overhaul/verified-mounted-inputs.test.mjs scripts/ci-overhaul/verified-cross-commit.test.mjs scripts/ci-overhaul/verified-reuse-admission.test.mjs
   execute:
     needs: contract
     if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
@@ -46,43 +50,9 @@ jobs:
       - name: Run one actual approved legacy task in offline container
         shell: bash
         run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/receipt-input" "$RUNNER_TEMP/receipt-source" "$RUNNER_TEMP/receipt-task-output"
-          out="$RUNNER_TEMP/receipt-input"
-          src="$RUNNER_TEMP/receipt-source"
-          taskout="$RUNNER_TEMP/receipt-task-output"
-          # Archive tracked source; do not expose .git, runner credentials or home.
-          git archive HEAD apps/axis-pals shared scripts package.json package-lock.json | tar -xf - -C "$src"
-          mkdir -p "$src/qa-artifacts"
-          node scripts/ci-overhaul/verified-mounted-inputs.mjs normalize "$GITHUB_WORKSPACE" "$(git rev-parse HEAD)" "$src" > "$RUNNER_TEMP/receipt-mount-before.json"
-          mounted="$(jq -er .digest "$RUNNER_TEMP/receipt-mount-before.json")"
-          [[ "$mounted" =~ ^[0-9a-f]{64}$ ]]
-          docker pull node:22-bookworm-slim
-          image="$(docker image inspect --format '{{index .RepoDigests 0}}' node:22-bookworm-slim)"
-          config="$(docker image inspect --format '{{.Id}}' "$image")"
-          [[ "$image" =~ @sha256:[0-9a-f]{64}$ ]]
-          [[ "$config" =~ ^sha256:[0-9a-f]{64}$ ]]
-          opts=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=64m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp)
-          runtime="$(docker run "${opts[@]}" "$image" node -p 'process.version')"
-          arch="$(docker run "${opts[@]}" "$image" node -p 'process.arch')"
-          toolchain="$(docker run "${opts[@]}" "$image" sha256sum /usr/local/bin/node | cut -d' ' -f1)"
-          kernel="$(uname -srvm | sha256sum | cut -d' ' -f1)"
-          execution="$(git show HEAD:.github/workflows/verified-results-shadow.yml | sha256sum | cut -d' ' -f1)"
-          external="$(printf '%s' 'offline;no npm install;tracked source archive;TZ=UTC;LANG=C.UTF-8;HOME=/tmp' | sha256sum | cut -d' ' -f1)"
-          jq -n --arg image "${image##*@sha256:}" --arg config "${config#sha256:}" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg execution "$execution" --arg external "$external"             '{contract:"readonly-offline-container-v2",imageDigest:$image,containerConfigDigest:$config,node:$node,os:"linux",arch:$arch,toolchainDigest:$toolchain,kernelDigest:$kernel,executionContractDigest:$execution,externalInputsDigest:$external}' > "$out/environment.json"
-          jq -n --arg repository "$GITHUB_REPOSITORY" --arg commit "$(git rev-parse HEAD)" --arg tree "$(git rev-parse HEAD^{tree})" --arg event "$GITHUB_EVENT_NAME" --arg ref "$GITHUB_REF" --argjson mounted "$(cat "$RUNNER_TEMP/receipt-mount-before.json")" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT"             '{repository:$repository,workflow:".github/workflows/verified-results-shadow.yml",ref:$ref,commit:$commit,tree:$tree,event:$event,run:$run,attempt:$attempt,mountedInputs:$mounted}' > "$out/source.json"
-          task='{"key":"axis-pals-rules","app":"axis-pals","suite":"rules","kind":"node-test","seed":null,"install":false}'
-          docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$taskout,dst=/work/qa-artifacts" -w /work -e "PW_QA_TASK=$task" -e "EXPECTED_MOUNT_DIGEST=$mounted" "$image" sh -ec '
-            node --input-type=module -e "import {mountedFingerprint} from \"./scripts/ci-overhaul/verified-mounted-inputs.mjs\"; const m=mountedFingerprint(process.cwd()); if(m.digest!==process.env.EXPECTED_MOUNT_DIGEST)throw Error(\"Container mount differs from host\"); console.log(JSON.stringify(m))"
-            exec node scripts/universal-qa/run.mjs
-          '
-          node scripts/ci-overhaul/verified-mounted-inputs.mjs measure "$src" > "$RUNNER_TEMP/receipt-mount-after.json"
-          cmp "$RUNNER_TEMP/receipt-mount-before.json" "$RUNNER_TEMP/receipt-mount-after.json"
-          # Publish only the structured result; discard the raw task log.
-          test -d "$taskout/axis-pals-rules" && test ! -L "$taskout/axis-pals-rules"
-          test -f "$taskout/axis-pals-rules/result.json" && test ! -L "$taskout/axis-pals-rules/result.json"
-          cp "$taskout/axis-pals-rules/result.json" "$out/evidence.json"
-          rm -rf "$taskout"
+          source scripts/ci-overhaul/verified-offline-task.sh
+          prepare_verified_task
+          run_verified_task
       - uses: actions/upload-artifact@v4
         with:
           name: verified-shadow-input-${{ github.run_attempt }}
@@ -144,3 +114,82 @@ jobs:
           jq -e --arg sha "$GITHUB_SHA" --arg tree "$(git rev-parse HEAD^{tree})" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT"             '.commit == $sha and .tree == $tree and .run == $run and .attempt == $attempt' receipt/source.json
           node scripts/ci-overhaul/attested-shadow.mjs compare receipt/source.json receipt/environment.json receipt/evidence.json receipt/receipt.json
           echo 'Verified shadow receipt; no delivery authorization and no test skipping.' >> "$GITHUB_STEP_SUMMARY"
+
+  reuse_trial:
+    needs: contract
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Attempt historical reuse only in independent trial
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source scripts/ci-overhaul/verified-offline-task.sh
+          prepare_verified_task
+          # Confirm the actual container mount even if the trial will skip execution.
+          docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$taskout,dst=/work/qa-artifacts" -w /work -e "PW_QA_TASK=$task" -e "EXPECTED_MOUNT_DIGEST=$mounted" "$image" node --input-type=module -e 'import {mountedFingerprint} from "./scripts/ci-overhaul/verified-mounted-inputs.mjs";if(mountedFingerprint(process.cwd()).digest!==process.env.EXPECTED_MOUNT_DIGEST)throw Error("Container mount differs from host")'
+          work="$RUNNER_TEMP/reuse-prior"
+          mkdir -p "$work"
+          report="$out/admission.json"
+          # Any lookup, artifact, signature or admission failure executes normally.
+          find_candidate() {
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/verified-results-shadow.yml/runs?branch=main&status=success&per_page=20" > "$work/runs.json" || return 1
+            jq -e --arg repo "$GITHUB_REPOSITORY" --argjson current "$GITHUB_RUN_ID" '[.workflow_runs[] | select(.id != $current and .repository.full_name == $repo and .head_repository.full_name == $repo and .path == ".github/workflows/verified-results-shadow.yml" and .head_branch == "main" and .status == "completed" and .conclusion == "success" and (.event == "push" or .event == "workflow_dispatch"))] | sort_by(.created_at) | reverse | .[0]' "$work/runs.json" > "$work/run.json" || return 1
+            run="$(jq -er .id "$work/run.json")" || return 1
+            attempt="$(jq -er .run_attempt "$work/run.json")" || return 1
+            sha="$(jq -er .head_sha "$work/run.json")" || return 1
+            [[ "$run" =~ ^[0-9]+$ && "$attempt" =~ ^[0-9]+$ && "$sha" =~ ^[0-9a-f]{40}$ ]] || return 1
+            gh run download "$run" --repo "$GITHUB_REPOSITORY" --name "verified-shadow-receipt-$attempt" --dir "$work/bundle" || return 1
+            gh attestation verify "$work/bundle/receipt.json" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-results-shadow.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$sha" --deny-self-hosted-runners || return 1
+            node scripts/ci-overhaul/verified-reuse-admission.mjs "$work/run.json" "$work/bundle" "$out/source.json" "$out/environment.json" "$report" || return 1
+          }
+          if ! find_candidate; then
+            printf '%s\n' '{"schema":1,"decision":"execute","reason":"Prior authenticated evidence unavailable","productionAuthorization":false}' > "$report"
+          fi
+          if jq -e '.decision == "reuse-trial" and .productionAuthorization == false' "$report" >/dev/null; then
+            # Only this non-delivery trial omits the test. Do not write a fake result.json.
+            echo 'Historical receipt admitted; independent trial task not executed.'
+            node scripts/ci-overhaul/verified-mounted-inputs.mjs measure "$src" > "$RUNNER_TEMP/receipt-mount-after.json"
+            cmp "$RUNNER_TEMP/receipt-mount-before.json" "$RUNNER_TEMP/receipt-mount-after.json"
+            jq -n --argjson admission "$(cat "$report")" '{schema:1,mode:"historical-trial",admission:$admission,executed:false,productionAuthorization:false}' > "$out/trial.json"
+          else
+            run_verified_task
+            jq -n --argjson admission "$(cat "$report")" --argjson result "$(cat "$out/evidence.json")" '{schema:1,mode:"fresh-trial",admission:$admission,executed:true,result:$result,productionAuthorization:false}' > "$out/trial.json"
+          fi
+          cat "$out/trial.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-reuse-trial-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipt-input/trial.json
+          retention-days: 7
+          if-no-files-found: error
+  trial_parity:
+    needs: [verify, reuse_trial]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-reuse-trial-${{ github.run_attempt }}
+          path: trial
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-shadow-receipt-${{ github.run_attempt }}
+          path: receipt
+      - name: Require fresh result and complete trial accounting
+        run: node scripts/ci-overhaul/verified-reuse-admission.mjs parity trial/trial.json receipt/evidence.json
