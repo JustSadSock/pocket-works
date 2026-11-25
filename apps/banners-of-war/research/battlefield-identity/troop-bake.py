@@ -193,7 +193,8 @@ else:
     pts=vertices(horse_objects);lo=Vector(tuple(min(v[i] for v in pts) for i in range(3)));hi=Vector(tuple(max(v[i] for v in pts) for i in range(3)))
     horse_root.location=Vector((-(lo.x+hi.x)/2,-(lo.y+hi.y)/2,-lo.z));bpy.context.view_layer.update()
     # Rider mounted at the saddle. Existing skinned legs are articulated around the mount.
-    for o in human_roots:o.location.z+=1.25
+    hips=bone('Hips','Pelvis','Root');lift=1.66-point(hips).z
+    for o in human_roots:o.location.z+=lift
     bpy.context.view_layer.update()
     for o in body:
         if kind=="lightHorse" and o.name.startswith(("Curved shield","Shield rawhide","Shield boss")):o.hide_render=True
@@ -248,7 +249,8 @@ def apply_pose(frame):
         horse_rig.animation_data.action=None
         for b in horse_rig.pose.bones:b.matrix_basis=saved[b.name]
         bpy.context.view_layer.update()
-        aim(RH,(-.43,-.25,-.72));aim(LH,(.43,-.25,-.72));aim(RK,(0,.30,-1));aim(LK,(0,.30,-1))
+        sign=1 if point(RH).x>point(LH).x else -1
+        aim(RH,(sign*.43,-.25,-.72));aim(LH,(-sign*.43,-.25,-.72));aim(RK,(0,.30,-1));aim(LK,(0,.30,-1))
         aim(LU,(.10,-.50,-.78));aim(LF,(-.15,-.85,.02))
         aim(RU,(-.10,-.7,-.60 if frame<25 else -.15));aim(RF,(0,-1,.12))
     else:
@@ -258,16 +260,25 @@ def apply_pose(frame):
             aim(LU,(.05,-1,-.08 if draw else -.4));aim(LF,(0,-1,0))
             aim(RU,(-.6,-.25,-.3));aim(RF,(.35,-.10,.65 if draw else -.4))
             temporary=bow_geometry(draw)
+            for o in temporary:o.parent=pivot
         if kind=="sword" and frame>=25:
             aim(RU,(-.26,-.65,.35 if frame in [25,37] else -.15));aim(RF,(.08,-1,.40 if frame==25 else -.15))
     bpy.context.view_layer.update()
 # A common physical projection. Larger cavalry frustum with same source pixel/metre.
 ground=0 if horse_rig else z0
 target=Vector((0,0,1.45 if horse_rig else .85));cam.location=target+Vector((0,-5,5*math.tan(pi/3)));look(cam,target)
-cam.data.ortho_scale=6 if horse_rig else 4.6
+cam.data.ortho_scale=7.0 if horse_rig else 5.0
 resolution=384 if horse_rig else 320;sc.render.resolution_x=sc.render.resolution_y=resolution
 def active_mesh():return [o for o in sc.objects if o.type=="MESH" and not o.hide_render]
 records={}
+# Common enclosing frustum for actual evaluated mesh extents, no clipping or physical scaling.
+max_extent=0
+for h in range(8):
+    for f in poses:
+        apply_pose(f);pivot.rotation_euler.z=-h*pi/4;bpy.context.view_layer.update()
+        for v in bounds(active_mesh()):
+            q=world_to_camera_view(sc,cam,v);max_extent=max(max_extent,abs(q.x-.5),abs(q.y-.5))
+factor=max(1,2.20*max_extent,1.18 if horse_rig else 1.12);cam.data.ortho_scale*=factor;resolution=math.ceil(resolution*factor/32)*32;sc.render.resolution_x=sc.render.resolution_y=resolution
 for side in [0,1]:
     livery(side);clothmat.node_tree.nodes.get("Principled BSDF").inputs["Base Color"].default_value=(*((.10,.22,.43) if side==0 else (.46,.12,.05)),1)
     for heading in range(8):
@@ -275,5 +286,32 @@ for side in [0,1]:
             apply_pose(frame);pivot.rotation_euler.z=-heading*pi/4;bpy.context.view_layer.update()
             name=f"{side}-{heading}-{frame}";anchor=pixel((0,0,ground))
             sc.render.filepath=str(out/(name+".png"));bpy.ops.render.render(write_still=True)
-            records[name]={"anchor":anchor,"pixelsPerMetre":resolution/cam.data.ortho_scale,"weaponForwardMetres":2.8 if kind=="knight" else 1.1 if kind in ["sword","lightHorse"] else .7,"renderSize":resolution}
+            direction=Vector((sin(-heading*pi/4),-cos(-heading*pi/4),0))
+            visible_weapons=[o for o in weapon if not o.hide_render]
+            reach=max((v.dot(direction) for v in vertices(visible_weapons)),default=0) if visible_weapons else 0
+            records[name]={"anchor":anchor,"pixelsPerMetre":resolution/cam.data.ortho_scale,"weaponForwardMetres":reach,"renderSize":resolution}
+        # Bounded additional command representatives, using real existing human/mount.
+        for role in ["banner","officer"]:
+            apply_pose(1);bpy.context.view_layer.update()
+            hand=point(R);z=hand.z
+            for o in weapon:o.hide_render=True
+            for o in temporary:o.hide_render=True
+            if role=="banner":
+                pole=rod("Regimental standard",hand+Vector((0,0,-.7)),hand+Vector((0,0,1.15)),.025,wood,pivot)
+                vv=[tuple(hand+Vector((i*.07,.07*sin(i*.5+j*.4),1.10-j*.09-i*.007))) for i in range(11) for j in range(8)]
+                ff=[(i*8+j,(i+1)*8+j,(i+1)*8+j+1,i*8+j+1) for i in range(10) for j in range(7)]
+                banner=mesh("Woven regimental colour",vv,ff,clothmat,pivot);md=banner.modifiers.new("Cloth","SOLIDIFY");md.thickness=.004
+                gear=[pole,banner]
+            else:
+                # Gold-coloured fabric sash drapes across torso, not metal recolour.
+                z=point(torso).z;vv=[(-.22,-.17,z+.30),(-.15,-.18,z+.34),(.23,-.20,z-.18),(.16,-.20,z-.22)]
+                sash=mesh("Officer textile sash",vv,[(0,1,2,3)],linen,pivot);md=sash.modifiers.new("Sash thickness","SOLIDIFY");md.thickness=.012
+                gear=[sash]
+                for o in weapon:
+                    if kind!="archer":o.hide_render=False
+            pivot.rotation_euler.z=-heading*pi/4;bpy.context.view_layer.update()
+            name=f"{side}-{heading}-1-{role}";sc.render.filepath=str(out/(name+".png"));bpy.ops.render.render(write_still=True)
+            records[name]={**records[f"{side}-{heading}-1"],"role":role}
+            for o in gear:bpy.data.objects.remove(o,do_unlink=True)
+            for o in weapon:o.hide_render=kind=="archer"
 (out/"frames.json").write_text(json.dumps({"frames":records,"kind":kind,"humanHeightMetres":human_height,"horseActions":list(horse_actions),"groundZ":ground}))
