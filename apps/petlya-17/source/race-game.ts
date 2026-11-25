@@ -11,6 +11,7 @@ import {
   type VehicleDynamics
 } from './handling';
 import { RaceAudio } from './race-audio';
+import { frameTiming } from './frame-timing';
 import { RaceWorld } from './world-31';
 import type { CarVisual } from './world-visuals';
 
@@ -849,10 +850,10 @@ export class RaceGame {
       document.documentElement.dataset.trackReady = String(Boolean(this.world.scene.getMeshByName('race-asphalt') || this.world.scene.getMeshByName('road')));
     };
     this.world.engine.runRenderLoop(() => {
-      const delta = clamp(this.world.engine.getDeltaTime() / 1000, 0, 0.05);
-      this.updateRace(delta);
-      this.updatePresentation(delta);
-      this.world.adaptQuality(delta, this.settings.quality);
+      const timing = frameTiming(this.world.engine.getDeltaTime());
+      for (let step = 0; step < timing.steps; step++) this.updateRace(timing.stepSeconds);
+      this.updatePresentation(timing.presentationSeconds);
+      this.world.adaptQuality(timing.elapsed, this.settings.quality);
       this.world.scene.render();
       if (!bootCompleted && ++goodFrames >= 2) reveal();
     });

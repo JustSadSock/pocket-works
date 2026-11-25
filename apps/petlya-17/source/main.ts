@@ -25,7 +25,7 @@ import { createVersionedStore } from '../../../shared/capabilities/storage.js';
 import { lockOrientation, unlockOrientation, watchOrientation } from '../../../shared/capabilities/device.js';
 import { catmullRomClosed, clamp, lerp, signedWrappedDelta, speedFeel, wrap, type Vec3Tuple } from './core';
 
-const VERSION = '3.2.1';
+const VERSION = '3.2.2';
 const APP_NAME = 'ПЕТЛЯ 17';
 const NS = 'pocket-works:petlya-17';
 const LAPS = 3;
@@ -37,8 +37,8 @@ const UP = Vector3.Up();
 installMobileRuntime();
 registerEnhancedUpdate({
   appName: APP_NAME,
-  version: '3.2.1',
-  releaseNotes: ["Исправлена критическая ошибка запуска VertexData is not defined: восстановлен импорт Babylon.js для генерации кузовов.","Проверка TypeScript теперь обязательна перед сборкой, чтобы незаявленные идентификаторы не попадали в релиз.","Прибрежный автодром полностью пересобран: асфальт, разметка, поребрики, барьеры, пейзаж и портовые сооружения.","Созданы новые 3D-болиды и кокпит, освобождающий обзор дороги."]
+  version: '3.2.2',
+  releaseNotes: ["Ускорение, руление и гоночный таймер сохраняют игровой темп при снижении частоты кадров.","Автоматическое качество графики учитывает фактическую частоту кадров.","Добавлены регрессионные проверки физики при 4–120 FPS и длительных паузах."]
 });
 
 const $ = <T extends HTMLElement>(selector: string): T => {
