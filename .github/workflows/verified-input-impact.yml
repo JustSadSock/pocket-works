@@ -1,0 +1,29 @@
+name: Verified Input Impact Shadow
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'shared/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - '.github/workflows/verified-*.yml'
+      - '**/.gitattributes'
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/verified-input-impact.test.mjs
+      - name: Compare base with tested merge tree
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/ci-overhaul/verified-input-impact.mjs "$BASE_SHA" "$(git rev-parse HEAD)"
