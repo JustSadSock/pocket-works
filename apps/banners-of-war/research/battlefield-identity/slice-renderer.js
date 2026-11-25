@@ -1,5 +1,5 @@
 import {E} from '../../engine.js';
-import {initArt,warmArt,paintArt,pendingArt,setArtPolicy} from './battle-art.js';
+import {initArt,warmArt,warmBackdrop,paintArt,pendingArt,setArtPolicy} from './battle-art.js';
 const clamp=E.clamp,PI=Math.PI,S=Math.sin(PI/3),T=.5,colors=['#315776','#97432e'],cream='#fff1d0',stagesLength=q=>1+(q.stages?.length||0);
 function oval(g,x,y,rx,ry,fill,stroke,w=1){g.beginPath();g.ellipse(x,y,rx,ry,0,0,PI*2);g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=w;g.stroke()}}
 function poly(g,p,fill,stroke,w=1){g.beginPath();p.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=w;g.stroke()}}
@@ -17,7 +17,7 @@ export function interpolateFrame(a,b,t){
 export class Battlefield{
  constructor(canvas){this.canvas=canvas;this.g=canvas.getContext('2d',{alpha:false});this.cam={z:1,x:0,y:0};this.layout={};this.stats={};this.layer=false;this.tilt=1;this.composition='C';this.F=E;this.state=null;this.backend='canvas';this.benchmarking=false;this.ready=initArt(canvas).then(a=>this.atlas=a)}
  axis(){return this.composition==='A'?(this.canvas.clientWidth>=this.canvas.clientHeight?'wide':'tall'):'tactical'}
- resize(){let c=this.canvas,w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}let portrait=h>w,axis=this.axis(),mw=axis==='wide'?this.F.W:this.F.H,mh=axis==='wide'?this.F.H:axis==='tall'?this.F.W:this.F.W*S,base=Math.max(.1,Math.min((w-16)/mw,(h-120)/mh));let k=base*this.cam.z;
+ resize(){let c=this.canvas,w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}let portrait=h>w,axis=this.axis(),mw=axis==='wide'?this.F.W:this.F.H,mh=axis==='wide'?this.F.H:axis==='tall'?this.F.W:this.F.W*S,base=Math.max(.1,Math.min((w-16)/mw,(h-(axis==='tactical'?120:portrait?100:Math.min(62,h*.12)))/mh));let k=base*this.cam.z;
  if(!this.benchmarking){let bx=mw*k/2,by=mh*k/2,margin=axis==='tactical'?Math.max(12,k*18):12;this.cam.x=clamp(this.cam.x,-Math.max(0,bx-w/2+margin),Math.max(0,bx-w/2+margin));this.cam.y=clamp(this.cam.y,-Math.max(0,by-h/2+margin),Math.max(0,by-h/2+margin))}
  this.layout={w,h,d,portrait,axis,k,cx:w/2+this.cam.x,cy:h/2+this.cam.y,base};return this.layout}
  height(x,y){return this.state?this.F.sample(this.state.terrain,clamp(x,0,this.F.W),clamp(y,0,this.F.H)).h:0}
@@ -38,6 +38,7 @@ export class Battlefield{
  overview(canvas,state){if(!state||!canvas)return;let g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,F=this.F,key=state.seed;if(this.mapKey!==key){this.mapKey=key;this.map=document.createElement('canvas');this.map.width=w;this.map.height=h;let c=this.map.getContext('2d');for(let y=0;y<h;y++)for(let x=0;x<w;x++){let q=F.sample(state.terrain,x/w*F.W,y/h*F.H);c.fillStyle=q.water?'#557d89':q.wood?'#40553d':q.road?'#ae9b72':'#89936b';c.fillRect(x,y,1,1)}}g.drawImage(this.map,0,0);for(let u of state.units){if(!F.alive(u))continue;g.fillStyle=colors[u.side];g.fillRect(u.x/F.W*w-1,u.y/F.H*h-1,3,3)}let ps=[[0,0],[this.layout.w,0],[this.layout.w,this.layout.h],[0,this.layout.h]].map(([x,y])=>this.world({x,y},false));poly(g,ps.map(p=>[p.x/F.W*w,p.y/F.H*h]),null,'#fff4cf',1)}
  setBackend(name){return name==='canvas'}
  setPolicy(p){setArtPolicy(p)}
+ async prepareBackdrop(state){this.state=state;this.F=E.forState(state);this.resize();return warmBackdrop(state,this.layout,this.camera())}
  async prepare(state){this.state=state;this.F=E.forState(state);this.resize();return warmArt(state,this.layout,this.camera())}
  pending(){return pendingArt()}
  flag(u,selected){let g=this.g,p=this.project(u);g.save();g.translate(p.x,p.y-7);poly(g,[[0,-8],[12,-7],[9,-1],[0,-2]],colors[u.side],selected?'#f8d783':cream,.8);line(g,0,-8,0,7,'#514a38');g.restore()}

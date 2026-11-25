@@ -16,7 +16,7 @@ function project(x,y,z=0){let F=scene.F,t=scene.frames[0].terrain,k=cam.k,alt=re
 function snapPoint(x,y){let F=scene.F,t=scene.frames[0].terrain,k=cam.k,z=renderHeight(F,t,x,y);return {x:Math.round(-y*k)+Math.round(w/2-cam.u*k),y:Math.round((x*S-z*T)*k)+Math.round(h/2-cam.v*k)}}
 function initTerrain(s){terrainTiles?.dispose();terrainTiles=new TerrainTiles(scene.F,s.terrain,textures,treeAsset)}
 async function prepareTerrain(pad=0){resize();let start=performance.now(),coarse={...cam,k:cam.k/2};let first=await terrainTiles.warm(coarse,w,h,d,0),current=await terrainTiles.warm(cam,w,h,d,pad);return {wallMs:performance.now()-start,first,current}}
-function landscape(s){let ground=terrainTiles.draw(g,cam,w,h,d,performance.now()<zoomUntil?zoomLevel:null),trees=[];if(cam.k>=1.1)for(let o of terrainTiles.vegetation(cam,w,h)){let p=project(o.x,o.y),k=cam.k*o.scale,asset=treeAsset[o.kind];if(!asset)continue;let m=asset.meta,span=m.height*k;if(p.x<-span||p.x>w+span||p.y<-span||p.y>h+span)continue;trees.push({p,k,kind:o.kind});let radius=Math.max(1,span*.29);g.fillStyle='#30342142';g.beginPath();g.ellipse(p.x+span*.32,p.y+span*.13,radius,radius*.38,.35,0,7);g.fill()}
+function landscape(s){let ground=terrainTiles.draw(g,cam,w,h,d,performance.now()<zoomUntil?zoomLevel:null),trees=[];g.fillStyle='#30342142';g.beginPath();if(cam.k>=1.1)for(let o of terrainTiles.vegetation(cam,w,h)){let p=project(o.x,o.y),k=cam.k*o.scale,asset=treeAsset[o.kind];if(!asset)continue;let m=asset.meta,span=m.height*k;if(p.x<-span||p.x>w+span||p.y<-span||p.y>h+span)continue;trees.push({p,k,kind:o.kind});let radius=Math.max(1,span*.29);g.moveTo(p.x+span*.32+radius,p.y+span*.13);g.ellipse(p.x+span*.32,p.y+span*.13,radius,radius*.38,.35,0,7)}g.fill();
  return {trees,ground}}
 function tree(t,ctx=g){let {p,k,kind}=t,{im,meta}=treeAsset[kind],s=k/meta.ppm;ctx.drawImage(im,p.x-meta.anchor[0]*s,p.y-meta.anchor[1]*s,im.width*s,im.height*s)}
 // Contact uses the exact engine sector pair intersection, then a ray to the enemy sector rectangle.
@@ -26,7 +26,7 @@ function engagement(p,b,list,reach){let best=null;for(let h of list||[]){let v=n
 function heading(a){return ((Math.round(a/(Math.PI/4))%8)+8)%8}
 function pose(u,q,row,rows,s,seed,contact){let kind=u.type==='guard'?'knight':u.type,extended=!!atlas.meta.entries[kind+':0:0:41'];return motionPose(u,q,row,rows,s,seed,contact,extended)}
 // Use exact source cropping once per atlas entry, rather than resampling the entire atlas for each soldier.
-function blit(ctx,o,x=0,y=0){let e=o.e||atlas.meta.entries[o.key],s=o.scale,r=e.rect;if(!e.sprite){let c=document.createElement('canvas');c.width=r[2];c.height=r[3];c.getContext('2d').drawImage(atlas.pages[e.page],...r,0,0,r[2],r[3]);e.sprite=c}ctx.drawImage(e.sprite||atlas.pages[e.page],e.sprite?0:r[0],e.sprite?0:r[1],r[2],r[3],o.x-x-e.anchor[0]*s,o.y-y-e.anchor[1]*s,r[2]*s,r[3]*s)}
+function blit(ctx,o,x=0,y=0){let e=o.e||atlas.meta.entries[o.key],s=o.scale,r=e.rect;if(!e.sprite){let c=document.createElement('canvas');c.width=r[2];c.height=r[3];c.getContext('2d').drawImage(atlas.pages[e.page],...r,0,0,r[2],r[3]);e.sprite=c}ctx.drawImage(e.sprite,o.x-x-e.anchor[0]*s,o.y-y-e.anchor[1]*s,r[2]*s,r[3]*s)}
 // Same atlas pixels, same projection and painter order. Bake the exact screen-size
 // sample once for each sprite, DPR and scale, then issue an unscaled Canvas blit.
 // Like C&M's baked material field, move repeated sampling out of composition.
@@ -108,14 +108,15 @@ function getScene(s,layout,C){
  if(!scene||terrainKey!==key){terrainKey=key;scene={F,frames:[s]};geometryCache.clear();cadence.clear();previousDraw=null;scaledCache.clear();scaledBytes=0;worldRows.clear();worldRowBytes=0;initTerrain(s);lastCam=null;zoomLevel=null;zoomUntil=0;cache.clear();cacheBytes=0}
  else scene.frames[0]=s;
 }
+export async function warmBackdrop(s,layout,C){getScene(s,layout,C);let active=await terrainTiles.ensureBackdrop(cam.axis||'tactical');for(let axis of ['wide','tall','tactical'])if(axis!==(cam.axis||'tactical'))void terrainTiles.ensureBackdrop(axis).catch(()=>{});return {ms:active.ms,bytes:active.bytes}}
 export async function warmArt(s,layout,C){getScene(s,layout,C);let t=performance.now();let coarse=await terrainTiles.warm({...cam,k:cam.k/2},w,h,d),detail=await terrainTiles.warm(cam,w,h,d);return {wallMs:performance.now()-t,coarse,detail}}
 export function paintArt(s,layout,C){getScene(s,layout,C);let before=lastCam;motionKind=before&&Math.abs(before.k-cam.k)>1e-7?'zoom':before&&(before.x!==cam.x||before.y!==cam.y)?'pan':'none';moving=motionKind!=='none';
- if(motionKind==='zoom'){if(performance.now()>=zoomUntil)zoomLevel=terrainTiles.visible(before,w,h,d)[0]?.l;zoomUntil=performance.now()+180}
+ if(motionKind==='zoom'){terrainTiles.motionUntil=performance.now()+180;if(performance.now()>=zoomUntil)zoomLevel=terrainTiles.visible(before,w,h,d)[0]?.l;zoomUntil=performance.now()+180}
  lastCam={...cam};let now=performance.now(),bucket=motionKind+'|'+d+'|'+Math.round(Math.log2(Math.max(.1,cam.k))*2);
  // RAF-to-RAF time includes deferred Canvas raster and compositing, unlike JS submit time.
  // Ignore paused/idle frames and scene changes; learn only from adjacent active draws.
  if(previousDraw&&previousDraw.bucket===bucket){let ms=now-previousDraw.at;if(ms>=4&&ms<120){let samples=cadence.get(bucket)||{},p=samples[previousDraw.mode]||{ms:0,n:0};p.ms=p.n?p.ms*.84+ms*.16:ms;p.n++;samples[previousDraw.mode]=p;cadence.set(bucket,samples)}}
- let choices=motionKind==='zoom'&&cam.k<=2.5?['direct','batch','layer','world-row']:['direct','batch','layer'],learned=cadence.get(bucket)||{},mode=policy;
+ let choices=motionKind==='zoom'?['direct']:['direct','batch'],learned=cadence.get(bucket)||{},mode=policy;
  if(policy==='auto'){
   let unknown=choices.find(m=>(learned[m]?.n||0)<3);
   mode=unknown||choices.reduce((best,m)=>learned[m].ms<learned[best].ms?m:best,choices[0]);
