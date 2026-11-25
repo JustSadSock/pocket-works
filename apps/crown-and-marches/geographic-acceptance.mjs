@@ -45,6 +45,12 @@ export function compareOverlap(a,b,A,B,margin=0){
  for(let Y=Math.round(y0*r);Y<=Math.round(y1*r);Y++)for(let X=Math.round(x0*r);X<=Math.round(x1*r);X++){const i=at(a,X/r,Y/r),j=at(b,X/r,Y/r);if(i<0||j<0||i>=A.length||j>=B.length)continue;const d=Math.abs(A[i]-B[j]);count++;changed+=+(d>1e-6);max=Math.max(max,d);if(X>x0*r&&X<x1*r&&Y>y0*r&&Y<y1*r)peakMismatch+=+(peak(a,A,i)!==peak(b,B,j));}
  return {count,changed,max,peakMismatch};
 }
+export function compareBakedOverlap(a,b,A,B,channels,margin=8){
+ const r=a.detail,x0=Math.max(a.bounds[0],b.bounds[0])+margin,y0=Math.max(a.bounds[1],b.bounds[1])+margin,x1=Math.min(a.bounds[2],b.bounds[2])-margin,y1=Math.min(a.bounds[3],b.bounds[3])-margin;
+ if(x1<x0||y1<y0)throw Error('No padded bake overlap');let samples=0,changed=0,max=0;
+ for(let y=y0*r;y<=y1*r;y++)for(let x=x0*r;x<=x1*r;x++){const i=((y-a.bounds[1]*r)*a.cols+x-a.bounds[0]*r)*channels,j=((y-b.bounds[1]*r)*b.cols+x-b.bounds[0]*r)*channels;samples++;for(let c=0;c<channels;c++){const d=Math.abs(A[i+c]-B[j+c]);changed+=+(d>1e-6);max=Math.max(max,d);}}
+ return {samples,changed,max};
+}
 export function compareBytes(a,b){if(a.length!==b.length)throw Error('Array size mismatch');let count=0;for(let i=0;i<a.length;i++)count+=+(a[i]!==b[i]);return count;}
 export function slopeAudit(source,base){
  const {cols:w,rows:h,detail:r,elevations:z,bounds}=source,a=base.elevations,top=[];let steepened=0,changed=0;
