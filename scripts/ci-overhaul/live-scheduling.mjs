@@ -1,13 +1,17 @@
-// Advisory estimates only: no historical result can satisfy delivery coverage.
-// Measured on 2026-11-25, run 45685258405, job 139456962520.
-// Seed 0 took about eight minutes; seed 1 was interrupted by a new PR head.
-// Seed 5 was much faster. Isolate the family conservatively until per-task
-// timings from completed live runs support narrower estimates.
+// Advisory scheduling estimates; task identity and complete delivery remain unchanged.
+// Crown: completed live run 45710896020, seed 3 job 139544988005 took 936s.
+// Banners: full original completion seed 0 took 601161ms and 593025ms in
+// 45717048670; earlier grouped completion jobs were cancelled after 21min.
+// Conservative isolation prevents consecutive long simulations in one shard.
 export function liveSchedulingHistory(tasks){
  const history=Object.create(null);
  for(const t of tasks){
-  if(t.app==='crown-and-marches'&&t.suite==='balance-experiments'&&
-     t.kind==='node'&&Number.isSafeInteger(t.seed)){
+  if(t.kind!=='node'||t.install!==false||!Number.isSafeInteger(t.seed))continue;
+  if(t.app==='crown-and-marches'&&t.suite==='balance-experiments'&&t.seed>=0&&t.seed<=5&&
+     t.key==='crown-and-marches-balance-experiments-'+t.seed){
+   history[t.key]=t.seed===3?1200000:900000;
+  }else if(t.app==='banners-of-war'&&t.suite==='completion-lab'&&t.seed>=0&&t.seed<=7&&
+     t.key==='banners-of-war-completion-lab-'+t.seed){
    history[t.key]=900000;
   }
  }

@@ -1,0 +1,55 @@
+name: CI Observatory Live
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ci-observatory-live.yml'
+      - 'scripts/ci-overhaul/live-observatory*'
+      - 'scripts/ci-overhaul/live-scheduling*'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ci-observatory-live.yml'
+      - 'scripts/ci-overhaul/live-observatory*'
+      - 'scripts/ci-overhaul/live-scheduling*'
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-observatory-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/live-observatory.test.mjs scripts/ci-overhaul/live-scheduling.test.mjs
+  collect:
+    needs: contract
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Collect bounded completed run metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci-overhaul/live-observatory.mjs "$RUNNER_TEMP/observatory"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-observatory-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/observatory/
+          retention-days: 14
+          if-no-files-found: error
