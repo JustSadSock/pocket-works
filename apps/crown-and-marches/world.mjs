@@ -174,12 +174,12 @@ export function marketTrade(s){economicInit(s);s.routes=[];const cities=s.cities
  }
 }
 function deliver(s,sh,from,to){if(s.discovery){knowledgeContact(s,from,to,sh.sea?'sea trade':'trade');if(sh.sea)s.discovery.stats.seaDeliveries=(s.discovery.stats.seaDeliveries||0)+1;}if(s.politics&&from.f!==to.f){const v=polPair(s,to.f,from.f);v.delivered??=zeros();for(let k=0;k<17;k++)v.delivered[k]+=sh.goods[k];}for(let k=0;k<17;k++){to.stock[k]+=sh.goods[k];to.imports[k]+=sh.goods[k];to.tradeIn[k]+=sh.goods[k];from.tradeOut[k]+=sh.goods[k];const value=sh.goods[k]*(sh.prices?.[k]||from.market[k]);to.recentTrade+=value;from.recentTrade+=value;}if(sh.escrow){const tariff=Math.min(sh.escrow,sh.goods.reduce((n,q,k)=>n+q*sh.prices[k]*(sh.tariff||0),0));s.states[to.f].gold+=tariff;s.states[to.f].budget.tariff+=tariff;from.cash+=sh.escrow-tariff;}}
-function lostCargo(s,sh,to,interceptor=null){if(s.politics){const blocked=interceptor?.f??(sh.sea?s.fleets.find(v=>warship(v)&&(atWar(s,sh.fromFaction,v.f)||atWar(s,sh.toFaction,v.f))&&dist(v.i,to?.i??sh.i)<2)?.f:controller(s,sh.path[sh.index]??sh.i));if(Number.isInteger(blocked)&&blocked>=0&&blocked!==sh.toFaction&&atWar(s,sh.toFaction,blocked))politicalEvent(s,sh.toFaction,blocked,'blockade','lost trade shipment');}if(interceptor){for(let k=0;k<17;k++){if(k===9)interceptor.rations+=sh.goods[k];else interceptor.equipment[k]+=sh.goods[k];}log(s,'Караван захвачен войсками '+s.states[interceptor.f].name);}else for(let k=0;k<17;k++)s.ledger.sink[k]+=sh.goods[k];if(sh.relief&&s.states[sh.toFaction])s.states[sh.toFaction].gold+=sh.escrow||0;else if(to)to.cash+=sh.escrow||0;else s.ledger.moneySink+=sh.escrow||0;}
+function lostCargo(s,sh,to,interceptor=null){if(s.politics){const blocked=interceptor?.f??(sh.sea?s.fleets.find(v=>warship(v)&&(atWar(s,sh.fromFaction,v.f)||atWar(s,sh.toFaction,v.f))&&dist(v.i,to?.i??sh.i)<2)?.f:controller(s,sh.path[sh.index]??sh.i));if(Number.isInteger(blocked)&&blocked>=0&&blocked!==sh.toFaction&&atWar(s,sh.toFaction,blocked))politicalEvent(s,sh.toFaction,blocked,'blockade','lost trade shipment');}if(interceptor){for(let k=0;k<17;k++){if(k===9)interceptor.rations+=sh.goods[k];else interceptor.equipment[k]+=sh.goods[k];}log(s,'Караван захвачен войсками '+s.states[interceptor.f].name);}else for(let k=0;k<17;k++)s.ledger.sink[k]+=sh.goods[k];if(sh.privateInvestor&&creditAccount(s,sh.privateInvestor,sh.escrow||0)){}else if(sh.relief&&s.states[sh.toFaction])s.states[sh.toFaction].gold+=sh.escrow||0;else if(to)to.cash+=sh.escrow||0;else s.ledger.moneySink+=sh.escrow||0;}
 // A district can open an undeveloped mining frontier with labor and primitive materials.
  // This is not an ore grant: the entire route must be administratively accessible.
 function miningFrontier(s,c,available){
  const permitted=new Set(available),ore=available.filter(i=>s.map.resource[i]===3);
- if(!ore.length||ore.some(i=>s.development[i]>.18))return -1;
+ if(!ore.length)return -1;if(ore.some(i=>s.development[i]>.18)&&(!s.society||c.output[3]>=Math.max(.2,c.demand[3]*.8)))return -1;
  const queue=ore.slice().sort((a,b)=>dist(a,c.i)-dist(b,c.i)||a-b),seen=new Set(queue);
  for(let k=0;k<queue.length;k++){const i=queue[k];if(i!==c.i&&s.development[i]<=.18&&neighbors(i).some(j=>permitted.has(j)&&(j===c.i||s.development[j]>.18||s.road[j]>0)))return i;
  for(const j of neighbors(i))if(permitted.has(j)&&!seen.has(j)){seen.add(j);queue.push(j);}}
@@ -261,7 +261,7 @@ export function splitDistrict(s,c,i){
 }
 export function preparePosition(s,a){if(!a||strength(a)<=0||!s.map.land[a.i])return 'Армия недоступна';a.path=[];a.progress=0;a.defensive=true;return 'Армия удерживает позицию';}
 export function recruit(s,c,type=0,options={}){
- economicInit(s);if(!c||c.occupation>=0)return 'Город недоступен';if(s.politics&&s.politics.contracts.some(t=>t.status==='active'&&t.clauses.some(q=>q.kind==='arms-limit'&&q.from===c.f&&s.armies.filter(a=>a.f===c.f).reduce((n,a)=>n+strength(a),0)+60>q.amount)))return 'Ограничение численности по договору';const st=s.states[c.f],u=UNIT[type];if(!u)return 'Неизвестный тип';
+ economicInit(s);if(!c||c.occupation>=0)return 'Город недоступен';if(s.politics&&s.politics.contracts.some(t=>t.status==='active'&&t.clauses.some(q=>q.kind==='arms-limit'&&q.from===c.f&&s.armies.filter(a=>a.f===c.f).reduce((n,a)=>n+strength(a),0)+60>q.amount)))return 'Ограничение численности по договору';const st=s.states[c.f],u=UNIT[type];if(!u)return 'Неизвестный тип';const government=s.society?.architecture?.governments[c.f];if(government?.institutions.military==='lords'&&!c.capital&&!options.subject)return 'Местный набор требует контингента владетеля';
  if(type===9&&(s.discovery?adoption(s,c,'handguns')<.6:st.tech[8]<1)||type===3&&(s.discovery?adoption(s,c,'pike-drill')<.5:st.tech[5]<1))return 'Требуется технология';
  const need=zeros();need[9]=10;need[13]=u[1]*6;need[14]=[0,1,1,4,0,2,2,8,0,1][type];need[8]=type===6?6:type===7?8:0;need[1]=u[5]?2:0;need[11]=u[5]?1:0;if(s.discovery&&type===9){need[6]=1.2;need[13]+=2;}
  const cost=12+u[1]*8;if(st.gold<cost||c.pop<180||need.some((q,k)=>q>c.stock[k]+st.reserves[k]))return 'Не хватает монет, населения или экипировки';
@@ -908,7 +908,7 @@ export function societyStep(s){
  d.pressure=clamp(d.pressure*.88+grievance*.12,0,1);
  if(d.reform){const r=d.reform,actual=charterSupport(s,c,r.target).total,capacity=clamp((.25+c.infra*.12+education*.1)*food,0,1);
  if(actual<.25||food<.4){societyEvent(s,c,'charter suspended',{target:r.target});d.reform=null;}
- else {r.progress=clamp(r.progress+capacity*(actual+r.consent)*.09,0,1);if(r.progress>=1){d.autonomy=r.target;societyEvent(s,c,'charter enacted',{autonomy:d.autonomy});d.reform=null;}}}
+ else {const govt=s.society.architecture.governments[c.f],office=govt?.institutions.legislature==='crown'?crownId(c.f):localId(c),fee=.5+Math.abs(r.target-d.autonomy)*3;if(debitAccount(s,office,fee)){c.cash+=fee;if(office===crownId(c.f))st.budget.investment+=fee;r.progress=clamp(r.progress+capacity*(actual+r.consent)*.09,0,1);}else r.unfunded=(r.unfunded||0)+40;if(r.progress>=1){d.autonomy=r.target;societyEvent(s,c,'charter enacted',{autonomy:d.autonomy});d.reform=null;}else if(r.unfunded>=720){societyEvent(s,c,'charter suspended',{target:r.target,reason:'administration unfunded'});d.reform=null;}}}
  else if(polAI(s,c.f)&&s.day%360===0){if(d.pressure>.57&&d.autonomy<.75)requestCharter(s,c,d.autonomy+.15);else if(d.pressure<.4&&st.gold>150&&c.infra>=2&&d.autonomy>.2)requestCharter(s,c,d.autonomy-.15,5);}
  }
  if(s.day%40===0){politicalArchitectureStep(s);civilConflictStep(s);}
@@ -1068,7 +1068,7 @@ function politicalArchitectureStep(s){
  if(sub.dispute?.stage==='petition'&&sub.arrears>=8&&d.pressure>.68){sub.dispute.stage='withholding';polityEvent(s,c.f,'tax withholding',{district:c.id});}
  if(sub.dispute&&(d.pressure<.42||d.autonomy>=sub.dispute.requestedAutonomy-.001)){polityEvent(s,c.f,'petition settled',{district:c.id});sub.dispute=null;sub.arrears=0;}
  if(sub.dispute&&!d.reform&&polAI(s,c.f)&&s.day%360===0&&d.autonomy<.82)requestCharter(s,c,sub.dispute.requestedAutonomy);
- if(s.day%80===0&&c.occupation<0&&c.lastFoodRatio>.8&&!c.orders.length)privateIndustryReview(s,c);
+ if(s.day%80===0&&c.occupation<0&&c.lastFoodRatio>.8){privateSupplyReview(s,c);if(!c.orders.length)privateIndustryReview(s,c);}
  if(s.day%360===0&&c.occupation<0){if(polAI(s,c.f)&&s.states.some(st=>atWar(s,c.f,st.id))&&g?.institutions.military==='lords')musterLevy(s,c);if(c.lastFoodRatio>.85&&!c.knowledge?.institutes?.school){const clergy=d.cohorts.find(q=>q.id==='clergy');if(clergy.cash>=INSTITUTES.school[1]){const st=s.states[c.f],fee=INSTITUTES.school[1];clergy.cash-=fee;st.gold+=fee;const msg=fundInstitute(s,c,'school');if(msg!=='Учреждение основано'){st.gold-=fee;clergy.cash+=fee;}else{st.budget.investment-=fee;polityEvent(s,c.f,'clergy school',{district:c.id});}}}}
  if(g&&c.colony?.kind==='overseas'&&c.colony.selfSufficiency>.8&&d.pressure>.52&&!d.reform&&d.autonomy<.75&&polAI(s,c.f))requestCharter(s,c,d.autonomy+.15);
  }
@@ -1147,7 +1147,7 @@ export function privateBuild(s,c,kind,investor){
 }
 function privateIndustryReview(s,c){
  const candidates=[];
- for(const k of [2,3]){const r=RECIPES[k],cost=BUILD[k][5];if(c.build[k]>0||r.inputs.some(([g,n])=>c.stock[g]<n*3)||c.stock[r.out]>Math.max(4,c.demand[r.out]*5))continue;
+ for(const k of [2,3]){const r=RECIPES[k],cost=BUILD[k][5];if(c.build[k]>=3||r.inputs.some(([g,n])=>c.stock[g]<n*(3+c.build[k]*2))||c.stock[r.out]>Math.max(4,c.demand[r.out]*5)||c.build[k]>0&&c.output[r.out]<c.build[k]*r.yield*1.5)continue;
  const revenue=c.market[r.out]*r.yield,input=r.inputs.reduce((n,[g,q])=>n+c.market[g]*q,0);if(revenue<=input)continue;
  for(const id of [groupId(c,'artisans'),groupId(c,'merchants'),groupId(c,'landowners'),localId(c)]){const account=subjectAccount(s,id);if(account&&account.obj[account.key]>=cost+5)candidates.push({id,k,score:(revenue-input)/cost});}}
  candidates.sort((a,b)=>b.score-a.score||a.k-b.k||a.id.localeCompare(b.id));if(candidates.length){const v=candidates[0];privateBuild(s,c,v.k,v.id);}
@@ -1306,4 +1306,33 @@ function returningIdentity(s,c,n){
  const rows=c.returningCommunities??=[],known=rows.reduce((m,q)=>m+q.pop,0);
  if(known<c.returning-1e-7){const fallback=ensureCommunities(s,c).slice().sort((a,b)=>b.pop-a.pop)[0];let row=rows.find(q=>q.culture===fallback.culture&&q.faith===fallback.faith);if(!row){row={culture:fallback.culture,faith:fallback.faith,pop:0};rows.push(row);}row.pop+=c.returning-known;}
  if(c.returning<=0)return [];normalizeCommunities(rows,c.returning);const ratio=Math.min(1,n/c.returning),result=rows.map(q=>{const pop=q.pop*ratio;q.pop-=pop;return {culture:q.culture,faith:q.faith,pop};});c.returningCommunities=rows.filter(q=>q.pop>1e-9);return result;
+}
+
+// Private working capital buys physical inputs from a willing, reachable supplier.
+// Funds travel as escrow in the existing shipment ledger; loss refunds the actual investor.
+export function privateProcure(s,c,good,investor){
+ if(!s.society?.architecture||!c||c.occupation>=0||![3,11,12].includes(good)||subjectFaction(s,investor)!==c.f||investor===crownId(c.f))return false;
+ const account=subjectAccount(s,investor);if(!account||account.obj[account.key]<3||blockade(s,c))return false;
+ const pending=s.shipments.reduce((n,q)=>n+(q.to===c.id?q.goods[good]:0),0),target=Math.max(4,c.demand[good]*4),need=target-c.stock[good]-pending;if(need<.5||s.shipments.some(q=>q.to===c.id&&q.privateInvestor&&q.goods[good]>0))return false;
+ const offers=[];
+ for(const from of s.cities){if(from===c||from.occupation>=0||!discoveryContact(s,c.f,from.f)||atWar(s,c.f,from.f)||from.f!==c.f&&!canTrade(s,c.f,from.f)||blockade(s,from)||s.states[c.f].embargo.includes(from.f)||s.states[from.f].embargo.includes(c.f))continue;
+ const surplus=from.stock[good]-Math.max(2,from.demand[good]*2);if(surplus<.5)continue;
+ let sea=false,path=dist(from.i,c.i)<=85?marketRoute(s,from,c):[];if((!path.length||path.length>dist(from.i,c.i)*1.7)&&from.port&&c.port){const water=seaRoute(s,from,c);if(water&&water.length<=150){path=water;sea=true;}}if(!path.length)continue;
+ const length=sea?path.length*.55:path.reduce((n,i,j)=>n+travelCost(s,j?path[j-1]:from.i,i),0),fee=.04+length*.003,tariff=from.f===c.f?0:s.states[c.f].tariff,unit=from.market[good]*(1+tariff)+fee;
+ const recipe=good===3?RECIPES[2]:good===11?RECIPES[3]:null,outputValue=recipe?Math.max(0,c.market[recipe.out]*recipe.yield-recipe.inputs.filter(([g])=>g!==good).reduce((n,[g,v])=>n+c.market[g]*v,0))/recipe.inputs.find(([g])=>g===good)[1]:c.market[12]*(c.stock[12]<1?1.2:1);
+ if(unit>Math.max(c.market[good],outputValue))continue;
+ const amount=Math.min(surplus,need,6,(account.obj[account.key]-2)/unit);if(amount>=.5)offers.push({from,path,sea,length,fee,tariff,unit,amount});
+ }
+ offers.sort((a,b)=>a.unit-b.unit||a.length-b.length||a.from.id-b.from.id);const v=offers[0];if(!v)return false;
+ const cost=v.unit*v.amount;if(!debitAccount(s,investor,cost))return false;
+ const goods=zeros();goods[good]=v.amount;v.from.stock[good]-=v.amount;v.from.exports[good]+=v.amount;
+ s.shipments.push({id:s.nextShipment++,from:v.from.id,to:c.id,fromFaction:v.from.f,toFaction:c.f,i:v.from.i,start:v.from.i,end:c.i,sea:v.sea,path:v.path,index:0,progress:0,duration:Math.max(1,v.length*.5),goods,wait:0,escrow:cost,tariff:v.tariff,fee:v.fee,prices:v.from.market.slice(),privateInvestor:investor});
+ c.metrics.privateProcurement=(c.metrics.privateProcurement||0)+cost;return true;
+}
+function privateSupplyReview(s,c){
+ const a=s.society.architecture,goods=[12,...(c.build[3]>0?[11]:[]),...(c.build[2]>0?[3]:[])];
+ for(const good of goods){if(c.stock[good]>=Math.max(2,c.demand[good]*2))continue;
+ const kind=good===3?2:3,owners=[...Object.values(a.titles).filter(t=>t.kind==='workshop'&&t.city===c.id&&Number(t.key.split(':')[2])===kind).map(t=>t.owner),groupId(c,'artisans'),groupId(c,'merchants'),localId(c)];
+ for(const id of new Set(owners))if(privateProcure(s,c,good,id))break;
+ }
 }
