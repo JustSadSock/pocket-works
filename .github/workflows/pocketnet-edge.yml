@@ -47,7 +47,7 @@ permissions:
 jobs:
   edge:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -102,9 +102,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/pocketnet-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/pocketnet-dev.log 2>&1 &
-          pid=$!
-          trap 'kill "$pid" 2>/dev/null || true; cat /tmp/pocketnet-dev.log | tail -n 100' EXIT
+          source pocketnet/test/local-worker-process.sh
+          trap 'rc=$?; worker_stop || rc=1; tail -n 100 /tmp/pocketnet-dev.log; exit "$rc"' EXIT
+          worker_start /tmp/pocketnet-wrangler/node_modules/.bin/wrangler 8787 /tmp/pocketnet-dev.log
           node pocket-id/test/edge.mjs
           node pocket-cloud/test/edge.mjs
           node pocketnet/test/identity.mjs
@@ -127,9 +127,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/pocketnet-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/pocketnet-fog.log 2>&1 &
-          pid=$!
-          trap 'kill "$pid" 2>/dev/null || true; tail -n 120 /tmp/pocketnet-fog.log' EXIT
+          source pocketnet/test/local-worker-process.sh
+          trap 'rc=$?; worker_stop || rc=1; tail -n 120 /tmp/pocketnet-fog.log; exit "$rc"' EXIT
+          worker_start /tmp/pocketnet-wrangler/node_modules/.bin/wrangler 8787 /tmp/pocketnet-fog.log
           node pocketnet/test/fog-real-worker.mjs
           node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/worker.config.ts
 
@@ -138,18 +138,14 @@ jobs:
         run: |
           set -euo pipefail
           wr=/tmp/pocketnet-wrangler/node_modules/.bin/wrangler
-          start() {
-            "$wr" dev --local --port 8787 --persist-to "$1" "${@:2}" > /tmp/banners-worker.log 2>&1 &
-            pid=$!
-          }
-          stop() { kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; }
-          trap 'stop; tail -n 120 /tmp/banners-worker.log' EXIT
-          start /tmp/banners-durable
+          source pocketnet/test/local-worker-process.sh
+          trap 'rc=$?; worker_stop || rc=1; tail -n 120 /tmp/banners-worker.log; exit "$rc"' EXIT
+          worker_start "$wr" 8787 /tmp/banners-worker.log --persist-to /tmp/banners-durable
           node pocketnet/test/banners-real.mjs
-          stop
-          start /tmp/banners-durable
+          worker_stop
+          worker_start "$wr" 8787 /tmp/banners-worker.log --persist-to /tmp/banners-durable
           node pocketnet/test/banners-real.mjs --resume
-          stop
+          worker_stop
           bash pocketnet/test/banners-browser-matrix.sh "$wr"
       - name: Banners network browser evidence
         if: always()
