@@ -32,3 +32,5 @@ body{--panel:#293039f5;--ink:#f4ebd7;--gold:#e5c285;--muted:#c2c4bc;--edge:#ffff
 
 /* Portrait: primary zoom is available without opening the secondary camera panel. */
 @media(max-width:700px) and (orientation:portrait){#camera:not(.expanded) #zoomIn,#camera:not(.expanded) #zoomOut{display:block}#camera.expanded #layer{display:block}}
+
+#camera #audioToggle{font:600 10px system-ui;min-height:32px}#audioDialog .inline{display:flex;justify-content:space-between;gap:12px;margin:14px 0}#audioDialog input[type=range]{width:48%}

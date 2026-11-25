@@ -7,10 +7,10 @@ function line(g,x,y,a,b,c,w=1){g.strokeStyle=c;g.lineWidth=w;g.beginPath();g.mov
 export function interpolateFrame(a,b,t){
  if(!b||t<=0)return a;if(t>=1)return b;
  const map=new Map(b.units.map(u=>[u.id,u]));
- return {...a,time:a.time+(b.time-a.time)*t,units:a.units.map(u=>{
+ let at=a.time+(b.time-a.time)*t,shots=[...(a.shots||[]),...(b.shots||[]).filter(q=>!(a.shots||[]).some(p=>p.id===q.id&&p.time===q.time))].filter(q=>q.time<=at&&at-q.time<1.7);return {...a,time:at,shots,units:a.units.map(u=>{
   const v=map.get(u.id);if(!v)return u;const angle=Math.atan2(Math.sin(v.a-u.a),Math.cos(v.a-u.a)),lerp=k=>(u[k]??0)+((v[k]??0)-(u[k]??0))*t;
   let sectors=u.sectors?.map((q,i)=>{let p=v.sectors?.[i]||q;return {...q,bend:(q.bend||0)+((p.bend||0)-(q.bend||0))*t,cohesion:q.cohesion+(p.cohesion-q.cohesion)*t,share:q.share+(p.share-q.share)*t,pressure:(q.pressure||0)+((p.pressure||0)-(q.pressure||0))*t}});
-  return {...u,x:lerp("x"),y:lerp("y"),a:u.a+angle*t,n:lerp("n"),fatigue:lerp("fatigue"),morale:lerp("morale"),cohesion:lerp("cohesion"),v:lerp("v"),sectors:sectors||u.sectors}
+  return {...u,x:lerp("x"),y:lerp("y"),a:u.a+angle*t,n:lerp("n"),fatigue:lerp("fatigue"),morale:lerp("morale"),cohesion:lerp("cohesion"),v:lerp("v"),motionDistance:lerp("motionDistance"),motionShotTime:(v.motionShotTime??-1e6)<=a.time+(b.time-a.time)*t?v.motionShotTime:u.motionShotTime,sectors:sectors||u.sectors}
  })};
 }
 
