@@ -26,3 +26,7 @@ Historical evidence: integrated run 45483925251 (180/180), independent replay
 45485063517 (50/50), rollback drill 45498339187, protected receipt lab 45490754186.
 
 Executor hardening: the live workflow records completed nonzero test exits for bounded retry only. Invalid evidence, crashes, timeouts, dependency/build errors and cleanup failures fail the runner job, preventing the final audit from authorizing a successful candidate. This change does not enable the production migration.
+
+## Phase 2: staged stable delivery gate
+
+`Pocket Works CI Gate` runs on every PR, preserving the original planner and strict evidence audit. The legacy path is the default. The optional reusable sharded path independently verifies the parent plan digest and complete current-run evidence; failed candidate jobs fail the gate. Zero original app suites are identified explicitly, not presented as app coverage. Platform checks remain separate. `delivery-policy.json` is disabled: no production route change is authorized. Future activation requires completed parity validation, verified deployment, adding the stable check to the ruleset, and an explicit reviewed policy change plus repository Actions variable `PW_QA_ROUTE=sharded`. Rollback sets the variable to `legacy` and starts a fresh run; do not bypass a failed gate. Fork and manual/issue QA retain the original executor. No result reuse or impact skipping is allowed.

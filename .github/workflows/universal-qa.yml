@@ -22,14 +22,11 @@ on:
   issues:
     types: [opened]
   pull_request:
-    paths:
-      - 'apps/**'
-      - 'scripts/universal-qa/**'
-      - '.github/workflows/universal-qa.yml'
-      - 'docs/UNIVERSAL-QA.md'
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: universal-qa-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
@@ -51,6 +48,9 @@ jobs:
       has_cpu: ${{ steps.plan.outputs.has_cpu }}
       has_browser: ${{ steps.plan.outputs.has_browser }}
       expected: ${{ steps.plan.outputs.expected }}
+      route: ${{ steps.route.outputs.route }}
+      count: ${{ steps.route.outputs.count }}
+      plan_digest: ${{ steps.route.outputs.plan_digest }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,17 +60,25 @@ jobs:
         with:
           node-version: '22'
       - name: Test planning and reporting infrastructure
-        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs
+        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs
       - name: Prepare application QA matrix
         id: plan
         env:
           QA_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           QA_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/universal-qa/plan.mjs
+      - name: Select delivery route (legacy default)
+        id: route
+        env:
+          QA_CPU_MATRIX: ${{ steps.plan.outputs.cpu_matrix }}
+          QA_BROWSER_MATRIX: ${{ steps.plan.outputs.browser_matrix }}
+          QA_EXPECTED: ${{ steps.plan.outputs.expected }}
+          PW_QA_ROUTE: ${{ vars.PW_QA_ROUTE }}
+        run: node scripts/ci-overhaul/delivery-gate.mjs plan
 
   cpu:
     needs: plan
-    if: needs.plan.outputs.has_cpu == 'true'
+    if: needs.plan.outputs.route == 'legacy' && needs.plan.outputs.has_cpu == 'true'
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -102,7 +110,7 @@ jobs:
 
   browser:
     needs: plan
-    if: needs.plan.outputs.has_browser == 'true'
+    if: needs.plan.outputs.route == 'legacy' && needs.plan.outputs.has_browser == 'true'
     strategy:
       fail-fast: false
       max-parallel: 8
@@ -137,7 +145,7 @@ jobs:
           if-no-files-found: warn
 
   summary:
-    if: always() && needs.plan.result == 'success' && needs.plan.outputs.expected != '[]'
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.route == 'legacy' && needs.plan.outputs.expected != '[]'
     needs: [plan, cpu, browser]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -161,6 +169,12 @@ jobs:
           QA_EXPECTED: ${{ needs.plan.outputs.expected }}
           QA_COLLECTED_DIR: qa-collected
         run: node scripts/universal-qa/aggregate.mjs
+      - name: Independently verify exact legacy coverage
+        env:
+          QA_CPU_MATRIX: ${{ needs.plan.outputs.cpu_matrix }}
+          QA_BROWSER_MATRIX: ${{ needs.plan.outputs.browser_matrix }}
+          QA_EXPECTED: ${{ needs.plan.outputs.expected }}
+        run: QA_TREE=$(git rev-parse HEAD^{tree}) node scripts/ci-overhaul/delivery-gate.mjs legacy qa-collected/summary.json
       - name: Upload consolidated report
         if: always()
         uses: actions/upload-artifact@v4
@@ -171,3 +185,40 @@ jobs:
             qa-collected/SUMMARY.md
           if-no-files-found: warn
           retention-days: 7
+
+  candidate:
+    needs: plan
+    if: needs.plan.outputs.route == 'sharded'
+    uses: ./.github/workflows/qa-canary.yml
+    permissions:
+      contents: read
+      actions: read
+    with:
+      delivery_route: true
+      expected_plan_digest: ${{ needs.plan.outputs.plan_digest }}
+
+  delivery_gate:
+    name: Pocket Works CI Gate
+    needs: [plan, cpu, browser, summary, candidate]
+    if: always() && (github.event_name != 'issues' || needs.plan.result != 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require complete selected route
+        env:
+          QA_PLAN_RESULT: ${{ needs.plan.result }}
+          QA_ROUTE: ${{ needs.plan.outputs.route }}
+          QA_COUNT: ${{ needs.plan.outputs.count }}
+          QA_HAS_CPU: ${{ needs.plan.outputs.has_cpu }}
+          QA_HAS_BROWSER: ${{ needs.plan.outputs.has_browser }}
+          QA_CPU_RESULT: ${{ needs.cpu.result }}
+          QA_BROWSER_RESULT: ${{ needs.browser.result }}
+          QA_SUMMARY_RESULT: ${{ needs.summary.result }}
+          QA_CANDIDATE_RESULT: ${{ needs.candidate.result }}
+        run: node scripts/ci-overhaul/delivery-gate.mjs gate
