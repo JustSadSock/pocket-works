@@ -187,6 +187,22 @@
         "qa/vertical-slice.spec.ts"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "art-reference",
+      "kind": "playwright",
+      "files": [
+        "qa/art-reference.spec.ts"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "renderer-diagnostic",
+      "kind": "playwright",
+      "files": [
+        "qa/renderer-diagnostic.spec.ts"
+      ],
+      "tier": "deep"
     }
   ]
 }

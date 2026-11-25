@@ -56,11 +56,20 @@ test('responsive compact battlefield and standalone without network',async({page
  test.setTimeout(90000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url+'standalone.html');await page.waitForFunction(()=>!!(window as any).sliceQA);await context.setOffline(true);await page.locator('#start').click();await writeFile(info.outputPath('greyford-living-battlefield.html'),await readFile(resolve('apps/banners-of-war/research/vertical-slice/standalone.html')));let results=[];for(const [w,h] of [[390,844],[844,390],[820,1180],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.locator('#fit').click();await page.waitForTimeout(150);let s=await state(page);results.push({w,h,coverage:s.coverage,selected:0});await page.locator('[data-group=foot]').click();await page.waitForTimeout(100);let a=await state(page);results.push({w,h,coverage:a.coverage,selected:4});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);await snap(page,info,'responsive-'+w+'x'+h);await page.locator('#clear').click()} 
  await page.locator('#commit').click();await page.locator('#commit').click();await page.locator('#execute').click();await expect(page.locator('#phase')).toHaveText('Исполнение',{timeout:45000});expect((await state(page)).history[0].frames).toBeGreaterThan(2);await page.locator('#next').click();await expect(page.locator('#phase')).toHaveText('Замысел');await writeFile(info.outputPath('coverage.json'),JSON.stringify(results,null,2));expect(errors).toEqual([]);
 });
-test('render stress 20, 60, 100 and 158 actual engine regiments',async({page},info)=>{
- test.setTimeout(900000);await page.goto(url);await page.waitForFunction(()=>!!(window as any).sliceQA);await page.locator('#start').click();const data=[];for(const n of [20,60,100,158]){
- let r=await page.evaluate(n=>(window as any).sliceQA.benchmark(n),n);expect(r.count).toBe(n);expect(r.results.length).toBe(3);expect(r.results.every((x:any)=>Number.isFinite(x.fps)&&x.fps>0&&x.drawMs>=0&&x.visible>0&&x.modes.length===3)).toBe(true);expect(r.backends[0].supported).toBe(true);expect(r.preferredCanvasMode).toBe(info.project.name==='mobile-webkit'?'legacy':'tiles');let gl=r.backends.find((x:any)=>x.backend==='webgl'&&x.supported);if(gl)for(let i=0;i<3;i++)for(let j=0;j<3;j++){expect(gl.results[i].modes[j].visible).toBe(r.results[i].modes[j].visible);expect(gl.results[i].modes[j].sprites).toBe(r.results[i].modes[j].sprites)}
- const [a,b]=await panPath(page),s0=await state(page);if(info.project.name==='mobile-chromium')await nativeTouch(page,[[{...a,id:1}],[{...b,id:1}]]);else{await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});await page.mouse.up()}await expect.poll(async()=>(await state(page)).inputPaint.length).toBeGreaterThan(s0.inputPaint.length);expect((await state(page)).camera).not.toEqual(s0.camera);r.inputToRenderMs=(await state(page)).inputPaint.at(-1);let legacy=r.backends.find((x:any)=>x.backend==='canvas-legacy');expect(legacy.supported).toBe(true);for(let i=0;i<3;i++)for(let j=0;j<3;j++){expect(legacy.results[i].modes[j].visible).toBe(r.results[i].modes[j].visible);expect(legacy.results[i].modes[j].sprites).toBe(r.results[i].modes[j].sprites)}data.push(r);await snap(page,info,'stress-'+n);
- }await writeFile(info.outputPath('render-stress.json'),JSON.stringify(data,null,2));
+test('active Canvas: render stress 20, 60, 100 and 158 actual engine regiments',async({page},info)=>{
+ test.setTimeout(480000);await page.goto(url);await page.waitForFunction(()=>!!(window as any).sliceQA);await page.locator('#start').click();const data:any[]=[];
+ for(const n of [20,60,100,158]){
+  const r=await page.evaluate(n=>(window as any).sliceQA.benchmark(n,{selection:'active',budgetMs:90000}),n);
+  data.push(r);await writeFile(info.outputPath('render-stress.json'),JSON.stringify(data,null,2));
+  expect(r.count).toBe(n);expect(r.completed).toBe(true);expect(r.results.length).toBe(3);
+  expect(r.preferredCanvasMode).toBe(info.project.name==='mobile-webkit'?'legacy':'tiles');
+  expect(r.backends.length).toBe(1);expect(r.backends[0].backend).toBe(info.project.name==='mobile-webkit'?'canvas-legacy':'canvas');expect(r.backends[0].supported).toBe(true);
+  for(const z of r.results){expect(z.modes.length).toBe(3);for(const m of z.modes){expect(Number.isFinite(m.fps)&&m.fps>0&&Number.isFinite(m.frameP95)&&Number.isFinite(m.drawMs)&&m.drawMs>=0&&m.visible>0).toBe(true);expect(m.actualBackends).toEqual(['canvas']);if(info.project.name==='mobile-webkit')expect(m.canvasModes).toEqual(['legacy']);expect(m.frameP95,'active renderer p95 must be below one second').toBeLessThan(1000);}}
+  const [a,b]=await panPath(page),s0=await state(page);if(info.project.name==='mobile-chromium')await nativeTouch(page,[[{...a,id:1}],[{...b,id:1}]]);else{await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});await page.mouse.up()}await expect.poll(async()=>(await state(page)).inputPaint.length).toBeGreaterThan(s0.inputPaint.length);expect((await state(page)).camera).not.toEqual(s0.camera);r.inputToRenderMs=(await state(page)).inputPaint.at(-1);await snap(page,info,'stress-'+n);await writeFile(info.outputPath('render-stress.json'),JSON.stringify(data,null,2));
+ }
+});
+test('existing laboratory evidence and historical armies',async({page},info)=>{
+ test.setTimeout(240000);await page.goto(url);await page.waitForFunction(()=>!!(window as any).sliceQA);await page.locator('#start').click();
  // Separate control situations authored in the existing Laboratory, recorded with actual frames.
  let evidence=[];for(let id of ['infantry','charge','missiles','disorder','withdraw','reserve','ford']){
   const m=await page.evaluate(async(id)=>{const {recordCase}=await import('/apps/banners-of-war/research/vertical-slice/slice-evidence.js');const c=recordCase(id);(window as any).__sliceClip=c;let f=c.frames[c.best],focus=f.units.filter((u:any)=>u.type!=='guard'&&u.contact>0)[0]||f.units.find((u:any)=>u.type!=='guard'&&!u.pendingArrival);(window as any).sliceQA.evidence(f,c.title,5,focus);return {id,project:c.project,measure:c.measure,best:c.best,frames:c.frames.length,time:f.time}},id);
@@ -73,23 +82,4 @@ test('render stress 20, 60, 100 and 158 actual engine regiments',async({page},in
   await page.evaluate(async()=>{let c=(window as any).__sliceClip,begin=Math.max(0,c.best-12),end=Math.min(c.frames.length-1,c.best+22);for(let i=begin;i<=end;i++){(window as any).sliceQA.drawEvidence(c.frames[i]);await new Promise(r=>setTimeout(r,110))}});
  }await writeFile(info.outputPath('lab-evidence.json'),JSON.stringify(evidence,null,2));
  for(const [id,scale,count] of [['bannockburn','historical',60],['zama','expanded',158]] as const){const size=await page.evaluate(async({id,scale})=>{const {E}=await import('/apps/banners-of-war/engine.js'),{createHistorical}=await import('/apps/banners-of-war/chronicles.js'),s=createHistorical(E,id,{scale});(window as any).sliceQA.evidence(s,id==='zama'?'Замa · историческая численность, условная графика':'Бэннокбёрн · историческая численность',1);return s.units.length},{id,scale});expect(size).toBe(count);await snap(page,info,'historical-'+count)}await page.evaluate(()=>{delete (window as any).__sliceClip;(window as any).sliceQA.clearEvidence()});
-});
-
-test('isolated reference scenes: actual engine states, matched comparison, independent art review',async({page},info)=>{
- test.skip(info.project.name!=='desktop-chromium','Dedicated reference scene capture at 1440 × 900');
- test.setTimeout(180000);await page.setViewportSize({width:1440,height:900});
- const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/apps/banners-of-war/research/art-direction-reset/standalone.html');
- await page.waitForFunction(()=>!!(window as any).referenceQA&&(window as any).referenceQA.stats().sprites>0,{},{timeout:90000});
- await page.evaluate(()=>document.body.classList.add('clean'));let records:any[]=[];
- for(const id of ['infantry','charge','ford','zama']){
-  let m=await page.evaluate(id=>(window as any).referenceQA.load(id),id);expect(m.measure.peakContact).toBeGreaterThan(0);if(id==='zama')expect(m.measure.count).toBe(158);
-  let settings=[];for(const close of [false,true]){
-   let a=await page.evaluate(close=>(window as any).referenceQA.view('C',close),close);expect(a.sprites).toBeGreaterThan(0);let name='reference-'+id+'-'+(close?'close':'tactical');await snap(page,info,name);
-   let b=await page.evaluate(()=>(window as any).referenceQA.compare(true));await snap(page,info,name+'-dd90cbf');await page.evaluate(()=>(window as any).referenceQA.compare(false));settings.push({close,current:a,baseline:b})
-  }
-  await page.evaluate(()=> (window as any).referenceQA.view('C',false));
-  let motion=await page.evaluate(async best=>{let qa=(window as any).referenceQA,out=[];for(let i=Math.max(0,best-12);i<=Math.min(qa.frames()-1,best+24);i++){await new Promise(r=>requestAnimationFrame(r));out.push(qa.show(i))}return out},m.best);expect(motion.length).toBeGreaterThan(2);records.push({...m,settings,motion});
- }
- await writeFile(info.outputPath('art-direction-reset-measurements.json'),JSON.stringify(records,null,2));await writeFile(info.outputPath('art-direction-reset.html'),await readFile(resolve('apps/banners-of-war/research/art-direction-reset/standalone.html')));expect(errors).toEqual([]);
 });
