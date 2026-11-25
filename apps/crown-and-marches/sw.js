@@ -12,6 +12,7 @@ const APP_SHELL = [
   './app.js',
   './world.mjs',
   './world-genesis.mjs',
+  './genesis-hydrology.mjs',
   './battle.mjs',
   './render.mjs',
   './geography-review.mjs',

@@ -1,3 +1,4 @@
+import {aggregateHydrology,HYDRO_REVISION} from './genesis-hydrology.mjs';
 // World Genesis v3. Pure, deterministic, opt-in. No campaign systems here.
 // The v1 continental mask supplies coastline topology only, not mountain heights.
 export const GENESIS_REVISION='genesis-3.0.0';
@@ -47,7 +48,7 @@ function drainage(height,land,w,h,rain=null){
  return {filled,down,basin,flow,lake,order};
 }
 function landmass(land,w,h){const out=new Int32Array(land.length),seen=new Uint8Array(land.length);for(let i=0;i<land.length;i++){if(!land[i]||seen[i])continue;const q=[i];seen[i]=1;for(let k=0;k<q.length;k++){const j=q[k],x=j%w,y=(j/w)|0;for(const [dx,dy] of D.slice(0,4)){const X=x+dx,Y=y+dy,t=Y*w+X;if(X<0||Y<0||X>=w||Y>=h||!land[t]||seen[t])continue;seen[t]=1;q.push(t);}}for(const j of q)out[j]=q.length;}return out;}
-export function genesisOptions(options={}){const approach=options.approach??'structure',detail=options.detail??4;if(!['tectonic','structure'].includes(approach)||![2,4,8].includes(detail)||options.revision&&options.revision!==GENESIS_REVISION)throw Error('Unsupported Geography v3 parameters');return {revision:GENESIS_REVISION,approach,detail};}
+export function genesisOptions(options={}){const approach=options.approach??'structure',detail=options.detail??4;if(!['tectonic','structure'].includes(approach)||![2,4,8].includes(detail)||options.revision&&![GENESIS_REVISION,HYDRO_REVISION].includes(options.revision))throw Error('Unsupported Geography v3 parameters');return {revision:options.revision||GENESIS_REVISION,approach,detail};}
 export function generateGenesis(seed,W,H,continental,options={}){
  const config=genesisOptions(options),{approach,detail:r}=config,n=W*H,land=continental.land.slice(),coastal=distanceField(land,W,H),oceanDistance=distanceField(Uint8Array.from(land,v=>1-v),W,H),g=geology(seed,W,H,land,coastal,approach),salt=g.salt,w=W*r+1,h=H*r+1,N=w*h,high=new Float32Array(N),mask=new Uint8Array(N),rain=new Float32Array(N),uplift=new Float32Array(N);
  const signed=Float32Array.from(land,(v,i)=>v?coastal[i]-.5:.5-oceanDistance[i]);
@@ -68,5 +69,5 @@ export function generateGenesis(seed,W,H,continental,options={}){
  const coarse=drainage(height,land,W,H,moisture);height.set(coarse.filled);const {down,flow,basin}=coarse,river=new Uint8Array(n);
  for(let i=0;i<n;i++){if(!land[i]){down[i]=-1;continue;}const x=i%W,y=(i/W)|0,e=height[i],wet=moisture[i],lat=Math.abs(y-H/2)/(H/2);temperature[i]=C(1-lat*.70-e*.67);coast[i]=+(coastal[i]<1.5);river[i]=+(flow[i]>58);delta[i]=+(coast[i]&&flow[i]>85);const valley=river[i]||relief[i]<.055;fert[i]=C(.32+wet*.40+temperature[i]*.20-e*.46+(valley?.14:0)+(delta[i]?.11:0),.05,1);terrain[i]=e>.55?4:e>.40?3:wet>.72&&e<.27&&valley?5:wet>.52?2:fert[i]>.44?1:6;const vein=noise(salt^185,x,y,4),v=noise(salt^930,x,y,9);resource[i]=e>.36||ridge[i]>.24?(vein>.55?3:vein<.34?4:2):coast[i]&&v>.63?6:coast[i]||river[i]&&v>.72?5:terrain[i]===2?1:terrain[i]===6?(v>.54?7:8):fert[i]>.44?0:7;}
  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;if(terrain[i]!==3)continue;const saddle=height[i-W]>height[i]+.035&&height[i+W]>height[i]+.035||height[i-1]>height[i]+.035&&height[i+1]>height[i]+.035;pass[i]=+(saddle&&relief[i]<.14);}
- return {height,land,moisture,fert,terrain,resource,river,down,flow,basin,temperature,ridge,pass,delta,coast,landmass:landmass(land,W,H),relief,lakeDepth,geography:{config,width:w,height:h,detail:r,bed:high,surface:hyd.filled,land:mask,flow:hyd.flow,down:hyd.down,basin:hyd.basin,lake:hyd.lake,rain,chains:g.chains,erosion:{removed,deposited}}};
+ const result={height,land,moisture,fert,terrain,resource,river,down,flow,basin,temperature,ridge,pass,delta,coast,landmass:landmass(land,W,H),relief,lakeDepth,geography:{config,width:w,height:h,detail:r,bed:high,surface:hyd.filled,land:mask,flow:hyd.flow,down:hyd.down,basin:hyd.basin,lake:hyd.lake,rain,chains:g.chains,erosion:{removed,deposited}}};return config.revision===HYDRO_REVISION?aggregateHydrology(result,W,H):result;
 }
