@@ -38,3 +38,21 @@
 .econ-chart span{display:flex;justify-content:space-between}.econ-chart svg{width:100%;height:auto;display:block;max-height:92px}
 #dock{overflow-x:auto;scrollbar-width:none}#dock button{flex:1 0 auto;min-width:54px}
 @media(max-width:650px){.econ-settings{grid-template-columns:1fr 1fr;gap:6px 10px}.econ-settings label{font-size:12px}#dock button{font-size:11px;padding-inline:6px}}
+
+/* Grand Campaign: contextual dispatch desk. */
+.grand-ui #panel{border-top:3px solid #d3b580;max-height:calc(100% - 132px)}
+.grand-ui #stats button{min-height:32px;background:#d3b580;color:#30291e;font-weight:700;padding:4px 9px}
+.grand-ui #stats .fall{color:#efb3a0}.grand-ui #stats .rise{color:#b1d2a3}
+.city-tabs{display:flex;gap:3px;overflow-x:auto;border-bottom:1px solid #857353;padding-bottom:5px;margin-bottom:10px}
+.city-tabs button{flex:1 0 auto;min-height:42px;font-size:12px;padding:5px 8px}
+.city-summary,.crown-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:9px 0 11px}
+.city-summary>div,.crown-summary>div{display:flex;flex-direction:column;font-size:12px;color:#c0b9a6;border-left:2px solid #9e8b62;padding-left:9px}
+.city-summary b,.crown-summary b{font:700 24px Georgia;color:#f0dbb0}
+.dispatch,.goal,.history-entry{border-bottom:1px solid #746b51;padding:9px 0;line-height:1.45}
+.dispatch{border-left:3px solid #8d9375;padding-left:9px;margin:6px 0}
+.dispatch.critical{border-color:#d78a71}.dispatch.urgent{border-color:#e4b16e}.dispatch.diplomatic{border-color:#8fb8c6}.dispatch.opportunity{border-color:#90bb85}
+.dispatch small,.history-entry small{display:block;text-transform:uppercase;font-size:10px;letter-spacing:1px;color:#c7b58c}
+.dispatch b,.history-entry b{display:block;margin:3px 0}.dispatch p,.goal p{margin:5px 0;font-size:13px}.goal.chosen{border-left:3px solid #d3b580;padding-left:9px}
+.goal progress{width:100%;height:8px;accent-color:#d3b580}.border-preview{display:block;background:#32413c;width:100%;height:auto;max-height:130px}
+.compact-controls button{min-height:34px;font-size:11px}.grand-ui #panel select,.grand-ui #panel input[type=range]{width:100%;min-height:40px}
+@media(max-width:650px) and (orientation:portrait){.grand-ui #panel{max-height:39%;padding:10px}.grand-ui #layers{max-height:44px}.grand-ui #stats{align-items:center;gap:4px}.grand-ui .city-summary{gap:6px}.city-summary b{font-size:22px}.grand-ui #dock button{font-size:11px}}
