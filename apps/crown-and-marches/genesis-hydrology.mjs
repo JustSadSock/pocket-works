@@ -54,3 +54,13 @@ export function auditMajorExits(m,W,H){
  cases.push({cell:i,chosen:j,chosenDischarge:chosen,alternatives:alternatives.map(([b,e])=>({cell:b,discharge:e.flow})),fineCells,classification:!alternatives.length?'no-major-crossing':returns?'cell-reentry':rejoin?'different-exit-rejoins':'different-major-route'});}
  return {total:cases.length,classes:Object.fromEntries([...new Set(cases.map(c=>c.classification))].map(k=>[k,cases.filter(c=>c.classification===k).length])),cases};
 }
+
+// Read-only attribution of physical uphill coarse edges using their fine
+// crossing evidence. A filled depression alone is not a represented lake.
+export function auditPhysicalEdges(m,W,H){
+ const g=m.geography,r=g.detail,w=g.width,n=W*H,cell=i=>Math.min(H-1,Math.floor(Math.floor(i/w)/r))*W+Math.min(W-1,Math.floor((i%w)/r)),evidence=new Map(),counts={},cases=[];
+ const key=(a,b)=>a*n+b;
+ for(let i=0;i<g.land.length;i++){if(!g.land[i])continue;const j=g.down[i];if(j<0)continue;const a=cell(i),b=cell(j);if(a===b||!m.land[a]||m.down[a]!==b||m.height[b]<m.height[a])continue;const k=key(a,b),q=g.flow[i]/(r*r),old=evidence.get(k);if(old&&old.flow>=q)continue;evidence.set(k,{from:i,to:j,flow:q,bedDelta:g.bed[j]-g.bed[i],routingDelta:g.surface[j]-g.surface[i],depthFrom:g.lake[i],depthTo:g.lake[j],representedLake:!!(g.lakeWater?.[i]||g.lakeWater?.[j])});}
+ for(let a=0;a<n;a++){const b=m.down[a];if(!m.land[a]||b<0||m.height[b]<m.height[a])continue;const e=evidence.get(key(a,b)),type=!e?'no-fine-crossing':e.representedLake?'represented-lake-crossing':e.bedDelta>0?(Math.max(e.depthFrom,e.depthTo)>.012?'filled-depression-bed-rise':'bed-rise-outside-depth-threshold'):'coarse-average-rise-fine-bed-descends';counts[type]=(counts[type]||0)+1;cases.push({from:a,to:b,coarseDelta:m.height[b]-m.height[a],representedWater:!m.land[b],type,evidence:e??null});}
+ return {total:cases.length,counts,cases};
+}

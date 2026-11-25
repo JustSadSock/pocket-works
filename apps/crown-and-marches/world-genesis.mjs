@@ -65,6 +65,7 @@ function generateInternal(seed,W,H,continental,options,auditProfile){
  for(let i=0;i<N;i++){const j=hyd.down[i];if(!mask[i]||j<0||!mask[j]||high[i]<.16)continue;const slope=Math.max(0,(hyd.filled[i]-hyd.filled[j])*r),area=hyd.flow[i]/(r*r),cut=Math.min(.085,Math.max(0,Math.log1p(area)-.5)*Math.sqrt(slope)*.032,high[i]-.135);if(cut<=0)continue;erosion[i]-=cut;erosion[j]+=cut*.22;removed+=cut;deposited+=cut*.22;}
  for(let i=0;i<N;i++)high[i]+=erosion[i];
  for(let pass=0;pass<2;pass++){erosion.fill(0);for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(!mask[i])continue;let j=-1,drop=0;for(const k of [i-1,i+1,i-w,i+w])if(mask[k]&&high[i]-high[k]>drop){drop=high[i]-high[k];j=k;}if(j>=0){const move=Math.max(0,drop-.115/r)*.19;erosion[i]-=move;erosion[j]+=move;}}for(let i=0;i<N;i++)high[i]+=erosion[i];}
+ if(config.revision===LIVING_REVISION){hyd=null;erosion=null;}
  hyd=drainage(high,mask,w,h,rain);
  // Standing water is represented by the filled water surface; preserve
  // separate bed height and lake depth for research. Sea remains the same coast.
