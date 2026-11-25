@@ -126,7 +126,7 @@ torso=bone("Spine1","Spine","chest")
 steel=mat("Hammered plate",(.45,.49,.52),.78);leather=mat("Oiled saddle leather",(.18,.079,.034));wood=mat("Yew heartwood",(.37,.20,.085));linen=mat("Linen string",(.68,.61,.43));clothmat=mat("Dyed wool",(.14,.26,.39))
 # Actual metal shell fitted to the source torso, with front curvature and rolled lower edges.
 def plate():
-    p=point(torso);p.z=z0+human_height*.60
+    p=point(torso);p.z+=.06
     v=[];f=[]
     for j,(zz,rx,ry) in enumerate([(-.22,.19,.12),(-.16,.22,.15),(-.04,.24,.17),(.12,.25,.16),(.23,.20,.11)]):
         for i in range(19):
