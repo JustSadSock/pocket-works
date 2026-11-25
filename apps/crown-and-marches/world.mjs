@@ -1217,7 +1217,7 @@ export function formCivilSide(s,id,{peaceful=false,publicShare=0}={}){
 export function reuniteRealms(s,parent,side,{claimant=null}={}){
  if(!s.society?.architecture||parent===side||!polLive(s,parent)||!polLive(s,side)||s.battle)return false;
  const a=s.society.architecture,q=civilRegistry(s).cases.find(q=>q.parent===parent&&q.side===side);if(!q)return false;
- for(const w of s.wars.filter(w=>w.status==='active'&&[w.f,w.enemy].includes(side)))concludeWhitePeace(s,w,'civil settlement');
+ for(const w of s.wars.filter(w=>w.status==='active'&&([w.f,w.enemy].includes(side)||w.conflict===q.war&&w.reason==='civil intervention')))concludeWhitePeace(s,w,'civil settlement');
  transferDistricts(s,side,parent,s.cities.filter(c=>c.f===side).map(c=>c.id),true);
  resolveStateExtinction(s,side,parent);
  const g=a.governments[parent],h=a.governments[side];if(claimant!=null&&a.people[claimant]?.alive){g.ruler=claimant;g.regent=null;g.legitimacy=.55;const person=a.people[claimant];person.f=parent;person.role='ruler';person.office=crownId(parent);for(const sub of Object.values(a.subjects))if(sub.person===claimant)sub.person=createPerson(s,parent,'lord',sub.id,25,person.dynasty).id;const heir=a.people[h.heir];if(heir?.alive){g.heir=heir.id;heir.f=parent;}}
@@ -1229,7 +1229,7 @@ export function settleCivilCase(s,id,outcome){
  if(outcome==='concessions'&&q.side==null&&q.goal==='constitution'){const msg=proposeConstitution(s,q.parent,q.requestedGovernment);if(msg.startsWith('Реформа принята'))civilStage(s,q,'negotiation');return msg;}
  if(outcome==='concessions'&&q.side==null){const cs=s.cities.filter(c=>q.districts.includes(c.id)&&c.f===q.parent);if(!cs.length)return 'Нет владений';const cost=cs.reduce((n,c)=>n+8+Math.abs(q.requestedAutonomy-c.society.autonomy)*80+10,0);if(s.states[q.parent].gold<cost)return 'Недостаточно средств для уступок';
  for(const c of cs)if(!c.society.reform)requestCharter(s,c,Math.min(q.requestedAutonomy,c.society.autonomy+.25),10);if(!cs.every(c=>c.society.reform||c.society.autonomy>=q.requestedAutonomy-.01))return 'Не все владения согласны';civilStage(s,q,'negotiation');return 'Уступки согласованы, ожидается исполнение';}
- if(outcome==='independence'){if(q.goal!=='independence')return 'Требуется мандат на независимость';if(q.side==null)return formCivilSide(s,id,{peaceful:true})!=null?'Независимость признана':'Отделение недоступно';for(const w of s.wars.filter(w=>w.status==='active'&&w.civil===id))concludeWhitePeace(s,w,'independence');delete s.states[q.side].provisional;q.status='resolved';q.outcome='independence';civilStage(s,q,'settlement');return 'Независимость признана';}
+ if(outcome==='independence'){if(q.goal!=='independence')return 'Требуется мандат на независимость';if(q.side==null)return formCivilSide(s,id,{peaceful:true})!=null?'Независимость признана':'Отделение недоступно';for(const w of s.wars.filter(w=>w.status==='active'&&(w.civil===id||w.conflict===q.war&&w.reason==='civil intervention')))concludeWhitePeace(s,w,'independence');delete s.states[q.side].provisional;q.status='resolved';q.outcome='independence';civilStage(s,q,'settlement');return 'Независимость признана';}
  if(q.side==null)return 'Нет вооружённой стороны';if(outcome==='constitution'){if(q.goal!=='constitution'||s.battle)return 'Нет конституционного мандата';const msg=proposeConstitution(s,q.parent,q.requestedGovernment);if(!msg.startsWith('Реформа принята'))return msg;if(!reuniteRealms(s,q.parent,q.side))return 'Урегулирование недоступно';q.outcome='constitutional settlement';return 'Мир и исполнение конституционной реформы';}if(outcome==='claimant'&&(q.goal!=='succession'||!s.society.architecture.people[q.claimant]?.alive))return 'Нет живого претендента';
  if(['reunion','claimant','autonomy'].includes(outcome)){if(!reuniteRealms(s,q.parent,q.side,{claimant:outcome==='claimant'?q.claimant:null}))return 'Урегулирование недоступно';if(outcome==='autonomy')for(const c of s.cities.filter(c=>q.districts.includes(c.id)))if(!c.society.reform)requestCharter(s,c,Math.min(q.requestedAutonomy,c.society.autonomy+.25),5);return 'Гражданский конфликт урегулирован';}return 'Неизвестные условия';
 }
@@ -1383,4 +1383,23 @@ function civilForeignReview(s){
  if(p.threat>.38&&b.trust>.62&&st.gold>120&&!q.interventions.some(v=>v.donor===f&&v.kind==='aid'))supportCivilSide(s,q.id,f,Math.min(20,st.gold*.08));
  if(p.threat>.55&&b.trust>.72&&!q.interventions.some(v=>v.donor===f&&v.kind==='military')){const capital=s.cities.find(c=>c.f===q.parent&&c.capital);if(capital){const prospect=campaignProspect(s,f,q.parent,capital.i,'support independence');if(prospect.feasible&&prospect.net>0)interveneCivilSide(s,q.id,f,'military');}}
  }
+}
+
+export function civilAllegiance(s,id,district,actor){
+ const q=civilCases(s).find(q=>q.id===id&&q.status==='active'&&q.side!=null),c=s.cities.find(c=>c.id===district);
+ if(!q||!c||c.capital||c.occupation>=0||s.battle||actor!==c.f||![q.parent,q.side].includes(c.f))return 'Недопустимый переход';
+ const toward=c.f===q.parent?q.side:q.parent,sub=s.society.architecture.subjects[localId(c)],pressure=c.society.pressure;
+ if(c.f===q.parent&&(pressure<.65||sub?.dispute?.stage!=='withholding'))return 'Владение не поддерживает восстание';
+ if(c.f===q.side&&pressure>.55&&c.society.autonomy<q.requestedAutonomy-.01)return 'Владение не согласно вернуться';
+ const from=c.f;if(from===q.side&&s.cities.filter(v=>v.f===q.side).length<=1)return 'Сначала заключите мир';
+ const moved=transferDistricts(s,from,toward,[c.id]);if(toward===q.side){if(!q.districts.includes(c.id))q.districts.push(c.id);q.districts.sort((a,b)=>a-b);}else q.districts=q.districts.filter(i=>i!==c.id);
+ q.members=s.cities.filter(c=>q.districts.includes(c.id)).map(c=>({district:c.id,subject:localId(c),person:s.society.architecture.subjects[localId(c)].person}));q.history.push({day:s.day,stage:'allegiance',district,from,to:toward,armies:moved});polityEvent(s,q.parent,'civil allegiance',{id,district,from,to:toward});return 'Владение сменило политическую сторону';
+}
+export function offerVoluntaryReunion(s,parent,side,actor){
+ const q=civilCases(s).find(q=>q.parent===parent&&q.side===side&&q.status==='resolved'&&q.outcome==='independence');
+ if(!q||![parent,side].includes(actor)||!polLive(s,parent)||!polLive(s,side)||s.battle||s.states.some(st=>atWar(s,parent,st.id)||atWar(s,side,st.id)))return 'Мирное объединение недоступно';
+ const a=polPair(s,parent,side),b=polPair(s,side,parent),shared=commonRuler(s,parent,side),g=s.society.architecture.governments,person=s.society.architecture.people,married=person[g[parent].ruler]?.spouse===g[side].ruler;
+ const autonomy=s.cities.filter(c=>c.f===side).every(c=>c.society.pressure<.4),support=Math.min(a.trust,b.trust);
+ if(!autonomy||support<.55||!shared&&!married&&support<.78)return 'Советы не согласны на восстановление единства';
+ return reuniteRealms(s,parent,side)?'Добровольное воссоединение согласовано':'Объединение недоступно';
 }
