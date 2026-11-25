@@ -165,14 +165,23 @@ const visible=b.soldiers.filter(p=>p.state!=='escaped'&&p.state!=='captured'&&!(
 const detail=cam.s>=1.5&&quality!=='low'&&visible.length<900,phase=Math.floor(b.time*7)%4;
 if(!this.figureAtlas){this.figureAtlas=document.createElement('canvas');this.figureAtlas.width=this.figureAtlas.height=2048;this.figureContext=this.figureAtlas.getContext('2d');this.figureScratch=document.createElement('canvas');this.figureScratch.width=this.figureScratch.height=24;this.figureRead=this.figureScratch.getContext('2d',{willReadFrequently:true});this.figureMaster=document.createElement('canvas');this.figureMaster.width=this.figureMaster.height=80;this.figureMasterContext=this.figureMaster.getContext('2d',{willReadFrequently:true});}
 const t0=performance.now();let builds=0,stamps=0;this.metrics.spriteBuild=0;this.metrics.spriteComposite=0;this.metrics.spriteUpload=0;this.metrics.spriteDraw=0;
+this.overviewFigures??=new Map();
+const poseOf=p=>p.hp<=0?'down':p.state==='shoot'?'shoot':p.hit>0?'hit':p.state==='block'?'block':p.state==='fight'?'fight':p.state==='move'||p.state==='flee'?'walk':'stand';
+const overviewSprite=(p,g)=>{
+ // Eight facing directions and two active phases are enough below the
+ // individual-detail threshold. All stamps retain the actual type and faction.
+ const face=((Math.round(p.angle/(Math.PI/4))+8)%8)*2,pose=poseOf(p),ph=pose==='walk'||pose==='fight'?(phase%2?1:3):0;
+ const key=[p.type,g.f,face,pose,ph].join(':');let a=this.overviewFigures.get(key);if(a)return a;
+ const started=performance.now(),q=this.figureRead;q.save();q.setTransform(1,0,0,1,0,0);q.clearRect(0,0,24,24);q.translate(12,12);figure(q,p,g,face,pose,ph);q.restore();
+ const raw=q.getImageData(0,0,24,24).data,rows=[];for(let iy=0;iy<24;iy++){const row=[];for(let ix=0;ix<24;ix++){const i=(iy*24+ix)*4,A=raw[i+3];if(A<16)continue;row.push(ix,raw[i],raw[i+1],raw[i+2],A);}if(row.length)rows.push({dy:iy-12,pixels:new Uint8Array(row)});}
+ a={rows};if(this.overviewFigures.size>=8192)this.overviewFigures.clear();this.overviewFigures.set(key,a);builds++;this.metrics.spriteBuild+=performance.now()-started;return a;
+};
 const sprite=(p,g)=>{
- const face=(Math.round(p.angle/(Math.PI/8))+16)%16,pose=p.hp<=0?'down':p.state==='shoot'?'shoot':p.hit>0?'hit':p.state==='block'?'block':p.state==='fight'?'fight':p.state==='move'||p.state==='flee'?'walk':'stand';
+ const face=(Math.round(p.angle/(Math.PI/8))+16)%16,pose=poseOf(p);
  const key=[p.type,g.f,face,pose,pose==='stand'||pose==='down'?0:phase].join(':');let a=this.figures.get(key);if(a)return a;
  const started=performance.now(),slot=this.figures.size<625?this.figures.size:this.figures.values().next().value.slot;if(this.figures.size>=625)this.figures.delete(this.figures.keys().next().value);
  const x=slot%25*80,y=Math.floor(slot/25)*80,q=this.figureMasterContext;q.save();q.setTransform(1,0,0,1,0,0);q.clearRect(0,0,80,80);q.translate(40,40);q.scale(80/24,80/24);figure(q,p,g,face,pose,phase);q.restore();this.figureContext.clearRect(x,y,80,80);this.figureContext.drawImage(this.figureMaster,x,y);
- const read=this.figureRead;read.clearRect(0,0,24,24);read.drawImage(this.figureMaster,0,0,24,24);
- const raw=read.getImageData(0,0,24,24).data,rows=[];for(let iy=0;iy<24;iy++){const row=[];for(let ix=0;ix<24;ix++){const i=(iy*24+ix)*4,A=raw[i+3];if(A<16)continue;row.push(ix-12,raw[i],raw[i+1],raw[i+2],A);}if(row.length)rows.push({dy:iy-12,pixels:new Uint8Array(row.map((z,i)=>i%5===0?z+12:z))});}
- a={slot,x,y,rows};this.figures.set(key,a);builds++;this.metrics.spriteBuild+=performance.now()-started;return a;
+ a={slot,x,y};this.figures.set(key,a);builds++;this.metrics.spriteBuild+=performance.now()-started;return a;
 };
 if(detail){const started=performance.now();for(const p of visible){const a=sprite(p,b.units[p.g]);c.drawImage(this.figureAtlas,a.x,a.y,80,80,p.x-12,p.y-12,24,24);stamps++;}this.metrics.spriteDraw=performance.now()-started-this.metrics.spriteBuild;}
 else{
@@ -180,11 +189,11 @@ else{
  const key=b.time+'|'+quality;
  if(this.soldierBattle!==b||this.soldierKey!==key){this.soldierBattle=b;this.soldierKey=key;
  const pixels=new Uint32Array(this.soldierPixels.data.buffer);pixels.set(this.terrainPixels);
- const started=performance.now();for(const p of b.soldiers){if(p.state==='escaped'||p.state==='captured'||p.hp<=0&&quality==='low')continue;const a=sprite(p,b.units[p.g]),x=Math.round(p.x)-12,y=Math.round(p.y);for(const row of a.rows){const yy=y+row.dy;if(yy<0||yy>=BH)continue;const offset=yy*BW+x,rr=row.pixels;for(let j=0;j<rr.length;j+=5){const xx=x+rr[j];if(xx<0||xx>=BW)continue;const i=offset+rr[j],alpha=rr[j+4],old=pixels[i];if(alpha>=250){pixels[i]=(0xff000000|(rr[j+3]<<16)|(rr[j+2]<<8)|rr[j+1])>>>0;}else{const inv=255-alpha,R=(rr[j+1]*alpha+(old&255)*inv+127)/255|0,G=(rr[j+2]*alpha+((old>>>8)&255)*inv+127)/255|0,B=(rr[j+3]*alpha+((old>>>16)&255)*inv+127)/255|0;pixels[i]=(0xff000000|(B<<16)|(G<<8)|R)>>>0;}}}stamps++;}
+ const started=performance.now();for(const p of b.soldiers){if(p.state==='escaped'||p.state==='captured'||p.hp<=0&&quality==='low')continue;const a=overviewSprite(p,b.units[p.g]),x=Math.round(p.x)-12,y=Math.round(p.y);for(const row of a.rows){const yy=y+row.dy;if(yy<0||yy>=BH)continue;const offset=yy*BW+x,rr=row.pixels;for(let j=0;j<rr.length;j+=5){const xx=x+rr[j];if(xx<0||xx>=BW)continue;const i=offset+rr[j],alpha=rr[j+4],old=pixels[i];if(alpha>=250){pixels[i]=(0xff000000|(rr[j+3]<<16)|(rr[j+2]<<8)|rr[j+1])>>>0;}else{const inv=255-alpha,R=(rr[j+1]*alpha+(old&255)*inv+127)/255|0,G=(rr[j+2]*alpha+((old>>>8)&255)*inv+127)/255|0,B=(rr[j+3]*alpha+((old>>>16)&255)*inv+127)/255|0;pixels[i]=(0xff000000|(B<<16)|(G<<8)|R)>>>0;}}}stamps++;}
  this.metrics.spriteComposite=performance.now()-started-this.metrics.spriteBuild;const upload=performance.now();this.soldierContext.putImageData(this.soldierPixels,0,0);this.metrics.spriteUpload=performance.now()-upload;}
  const draw=performance.now();c.drawImage(this.soldierLayer,0,0);this.metrics.spriteDraw=performance.now()-draw;
 }
-this.metrics.spriteCount=stamps;this.metrics.spriteBuilds=builds;this.metrics.spriteLOD=detail?'detail':'overview';this.metrics.spriteTotal=performance.now()-t0;
+this.metrics.spriteCount=stamps;this.metrics.spriteBuilds=builds;this.metrics.overviewCache=this.overviewFigures.size;this.metrics.spriteLOD=detail?'detail':'overview';this.metrics.spriteTotal=performance.now()-t0;
 // Commands remain visible above the opaque composite.
 if(!detail)for(const g of b.units){if(!g.alive||!selected.includes(g.id))continue;c.strokeStyle='#ffeb9b';c.lineWidth=1.5/cam.s;c.setLineDash([5/cam.s,4/cam.s]);c.beginPath();c.ellipse(g.x,g.y,38,38,0,0,Math.PI*2);c.stroke();c.setLineDash([]);if(g.order!=='hold'&&g.order!=='defend'){c.beginPath();c.moveTo(g.x,g.y);c.lineTo(g.tx,g.ty);c.stroke();}}
 if(b.previewLine){const [a,z]=b.previewLine;c.strokeStyle='#ffe6aa';c.lineWidth=2/cam.s;c.setLineDash([6/cam.s,4/cam.s]);c.beginPath();c.moveTo(...a);c.lineTo(...z);c.stroke();c.setLineDash([]);}c.lineWidth=.65;c.strokeStyle='#f4e0aa';c.beginPath();for(const p of b.projectiles||[]){c.moveTo(p.x,p.y);c.lineTo(p.x-p.vx*.045,p.y-p.vy*.045);}c.stroke();
