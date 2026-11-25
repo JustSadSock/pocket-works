@@ -911,7 +911,7 @@ export function societyStep(s){
  else {const govt=s.society.architecture.governments[c.f],office=govt?.institutions.legislature==='crown'?crownId(c.f):localId(c),fee=.5+Math.abs(r.target-d.autonomy)*3;if(debitAccount(s,office,fee)){c.cash+=fee;if(office===crownId(c.f))st.budget.investment+=fee;r.progress=clamp(r.progress+capacity*(actual+r.consent)*.09,0,1);}else r.unfunded=(r.unfunded||0)+40;if(r.progress>=1){d.autonomy=r.target;societyEvent(s,c,'charter enacted',{autonomy:d.autonomy});d.reform=null;}else if(r.unfunded>=720){societyEvent(s,c,'charter suspended',{target:r.target,reason:'administration unfunded'});d.reform=null;}}}
  else if(polAI(s,c.f)&&s.day%360===0){if(d.pressure>.57&&d.autonomy<.75)requestCharter(s,c,d.autonomy+.15);else if(d.pressure<.4&&st.gold>150&&c.infra>=2&&d.autonomy>.2)requestCharter(s,c,d.autonomy-.15,5);}
  }
- if(s.day%40===0){politicalArchitectureStep(s);civilConflictStep(s);if(s.day%360===0){dynasticReview(s);archivePoliticalPeople(s);}}
+ if(s.day%40===0){politicalArchitectureStep(s);civilConflictStep(s);if(s.day%360===0){dynasticReview(s);civilForeignReview(s);archivePoliticalPeople(s);}}
 }
 export function societySnapshot(s,f=null){return {day:s.day,districts:s.cities.filter(c=>c.society&&(f==null||c.f===f)).map(c=>({id:c.id,name:c.name,f:c.f,pop:c.pop,autonomy:c.society.autonomy,treasury:c.society.localTreasury,pressure:c.society.pressure,reform:c.society.reform?{...c.society.reform}:null,cohorts:c.society.cohorts.map(q=>({...q})),centralSupport:charterSupport(s,c,Math.max(.05,c.society.autonomy-.15)).total})),events:s.society?.events.filter(e=>f==null||e.f===f)||[]};}
 
@@ -1191,11 +1191,12 @@ export function proposeCivilCase(s,parent,districts,goal='autonomy'){
  const reg=civilRegistry(s),ids=[...new Set(districts)].sort((a,b)=>a-b),cs=ids.map(id=>s.cities.find(c=>c.id===id&&c.f===parent&&c.occupation<0));
  if(!ids.length||cs.some(c=>!c||c.capital)||reg.cases.some(q=>q.status==='active'&&q.parent===parent))return null;
  const sub=registerDistrict(s,cs[0]),q={id:reg.next++,parent,districts:ids,goal,claimant:goal==='succession'?sub.person:null,stage:'petition',status:'active',started:s.day,updated:s.day,requestedAutonomy:Math.min(.9,Math.max(...cs.map(c=>c.society.autonomy))+.15),side:null,history:[{day:s.day,stage:'petition'}],interventions:[]};
- reg.cases.push(q);polityEvent(s,parent,'civil petition',{id:q.id,goal,districts:ids});return q;
+ if(goal==='constitution')q.requestedGovernment=governmentType(s,parent)==='estates'?'central':'estates';
+ q.members=cs.map(c=>({district:c.id,subject:localId(c),person:s.society.architecture.subjects[localId(c)].person}));reg.cases.push(q);polityEvent(s,parent,'civil petition',{id:q.id,goal,districts:ids});return q;
 }
 function civilStage(s,q,stage){q.stage=stage;q.updated=s.day;q.history.push({day:s.day,stage});polityEvent(s,q.parent,'civil '+stage,{id:q.id,goal:q.goal});}
 export function civilResources(s,q){
- const cs=s.cities.filter(c=>q.districts.includes(c.id)),pop=cs.reduce((n,c)=>n+c.pop,0),support=cs.reduce((n,c)=>n+c.pop*c.society.pressure,0)/Math.max(1,pop),gold=cs.reduce((n,c)=>n+c.society.localTreasury,0),food=cs.reduce((n,c)=>n+c.stock[9]+c.depot[9],0),loyal=s.armies.filter(a=>a.f===q.parent&&a.cohorts.every(co=>q.districts.includes(co.city))).reduce((n,a)=>n+strength(a),0),crown=s.armies.filter(a=>a.f===q.parent).reduce((n,a)=>n+strength(a),0);
+ const cs=s.cities.filter(c=>q.districts.includes(c.id)),pop=cs.reduce((n,c)=>n+c.pop,0),support=cs.reduce((n,c)=>n+c.pop*c.society.pressure,0)/Math.max(1,pop),gold=cs.reduce((n,c)=>n+c.society.localTreasury,0),food=cs.reduce((n,c)=>n+c.stock[9]+c.depot[9],0),loyal=s.armies.filter(a=>q.side!=null?a.f===q.side:a.f===q.parent&&a.cohorts.every(co=>q.districts.includes(co.city))).reduce((n,a)=>n+strength(a),0),crown=s.armies.filter(a=>a.f===q.parent).reduce((n,a)=>n+strength(a),0);
  return {pop,support,gold,food,loyal,crown,feasible:pop>=180&&food>=12&&(loyal>=60||gold>=24)&&loyal+Math.floor(gold/12)*60>=Math.max(60,(crown-loyal)*.35)};
 }
 export function formCivilSide(s,id,{peaceful=false,publicShare=0}={}){
@@ -1225,10 +1226,11 @@ export function reuniteRealms(s,parent,side,{claimant=null}={}){
 }
 export function settleCivilCase(s,id,outcome){
  const q=civilRegistry(s).cases.find(q=>q.id===id&&q.status==='active');if(!q)return 'Нет активного конфликта';
+ if(outcome==='concessions'&&q.side==null&&q.goal==='constitution'){const msg=proposeConstitution(s,q.parent,q.requestedGovernment);if(msg.startsWith('Реформа принята'))civilStage(s,q,'negotiation');return msg;}
  if(outcome==='concessions'&&q.side==null){const cs=s.cities.filter(c=>q.districts.includes(c.id)&&c.f===q.parent);if(!cs.length)return 'Нет владений';const cost=cs.reduce((n,c)=>n+8+Math.abs(q.requestedAutonomy-c.society.autonomy)*80+10,0);if(s.states[q.parent].gold<cost)return 'Недостаточно средств для уступок';
  for(const c of cs)if(!c.society.reform)requestCharter(s,c,Math.min(q.requestedAutonomy,c.society.autonomy+.25),10);if(!cs.every(c=>c.society.reform||c.society.autonomy>=q.requestedAutonomy-.01))return 'Не все владения согласны';civilStage(s,q,'negotiation');return 'Уступки согласованы, ожидается исполнение';}
  if(outcome==='independence'){if(q.goal!=='independence')return 'Требуется мандат на независимость';if(q.side==null)return formCivilSide(s,id,{peaceful:true})!=null?'Независимость признана':'Отделение недоступно';for(const w of s.wars.filter(w=>w.status==='active'&&w.civil===id))concludeWhitePeace(s,w,'independence');delete s.states[q.side].provisional;q.status='resolved';q.outcome='independence';civilStage(s,q,'settlement');return 'Независимость признана';}
- if(q.side==null)return 'Нет вооружённой стороны';if(outcome==='claimant'&&(q.goal!=='succession'||!s.society.architecture.people[q.claimant]?.alive))return 'Нет живого претендента';
+ if(q.side==null)return 'Нет вооружённой стороны';if(outcome==='constitution'){if(q.goal!=='constitution'||s.battle)return 'Нет конституционного мандата';const msg=proposeConstitution(s,q.parent,q.requestedGovernment);if(!msg.startsWith('Реформа принята'))return msg;if(!reuniteRealms(s,q.parent,q.side))return 'Урегулирование недоступно';q.outcome='constitutional settlement';return 'Мир и исполнение конституционной реформы';}if(outcome==='claimant'&&(q.goal!=='succession'||!s.society.architecture.people[q.claimant]?.alive))return 'Нет живого претендента';
  if(['reunion','claimant','autonomy'].includes(outcome)){if(!reuniteRealms(s,q.parent,q.side,{claimant:outcome==='claimant'?q.claimant:null}))return 'Урегулирование недоступно';if(outcome==='autonomy')for(const c of s.cities.filter(c=>q.districts.includes(c.id)))if(!c.society.reform)requestCharter(s,c,Math.min(q.requestedAutonomy,c.society.autonomy+.25),5);return 'Гражданский конфликт урегулирован';}return 'Неизвестные условия';
 }
 export function supportCivilSide(s,id,donor,amount){
@@ -1244,7 +1246,7 @@ function civilConflictStep(s){
  }
  for(const q of reg.cases.filter(q=>q.status==='active')){
  if(q.side==null){const cs=s.cities.filter(c=>q.districts.includes(c.id)&&c.f===q.parent);if(cs.length!==q.districts.length){q.status='resolved';q.outcome='territory lost';civilStage(s,q,'settlement');continue;}
- if(cs.every(c=>c.society.pressure<.42||c.society.autonomy>=q.requestedAutonomy-.001)){q.status='resolved';q.outcome='concessions';civilStage(s,q,'settlement');continue;}
+ if(q.goal==='constitution'&&governmentType(s,q.parent)===q.requestedGovernment||q.goal!=='constitution'&&cs.every(c=>c.society.autonomy>=q.requestedAutonomy-.001)){q.status='resolved';q.outcome='concessions';civilStage(s,q,'settlement');continue;}if(s.day-q.started>=120&&cs.every(c=>c.society.pressure<.42)&&!s.society.architecture.governments[q.parent]?.law&&!cs.some(c=>c.society.reform)){q.status='resolved';q.outcome='petition withdrawn';civilStage(s,q,'settlement');continue;}
  const age=s.day-q.updated,r=civilResources(s,q);
  if(age>=80&&q.stage==='petition'){if(polAI(s,q.parent))settleCivilCase(s,q.id,'concessions');if(q.stage==='petition')civilStage(s,q,'negotiation');}
  else if(q.stage==='negotiation'&&age>=120&&cs.every(c=>!c.society.reform)&&r.support>.65)civilStage(s,q,'withholding');
@@ -1254,7 +1256,7 @@ function civilConflictStep(s){
  if(!polLive(s,q.parent)||!polLive(s,q.side)){q.status='resolved';q.outcome='extinction';civilStage(s,q,'settlement');continue;}
  const capital=s.cities.find(c=>c.f===q.parent&&c.capital),base=s.cities.find(c=>c.f===q.side&&c.capital);
  if(!polAI(s,q.parent)||!polAI(s,q.side))continue;
- if(base?.occupation===q.parent)settleCivilCase(s,q.id,'reunion');else if(capital?.occupation===q.side)settleCivilCase(s,q.id,q.goal==='succession'?'claimant':q.goal==='independence'?'independence':'autonomy');
+ if(base?.occupation===q.parent)settleCivilCase(s,q.id,'reunion');else if(capital?.occupation===q.side)settleCivilCase(s,q.id,q.goal==='succession'?'claimant':q.goal==='independence'?'independence':q.goal==='constitution'?'constitution':'autonomy');
  else if(s.day-q.updated>=720&&s.states[q.parent].cashStreak>80&&s.states[q.side].cashStreak>80)settleCivilCase(s,q.id,q.goal==='independence'?'independence':'autonomy');
  }
  }
@@ -1283,7 +1285,7 @@ export function civilPeaceTerms(s,q){
  const parent=s.cities.find(c=>c.f===q.parent&&c.capital),base=s.cities.find(c=>c.f===q.side&&c.capital);
  const p=s.states[q.parent],b=s.states[q.side],warDays=s.day-q.updated,force=f=>s.armies.filter(a=>a.f===f).reduce((n,a)=>n+strength(a)*a.organization,0),ours=force(q.parent),theirs=force(q.side);
  const exhausted=warDays>=120&&(p.gold<20||b.gold<20)&&Math.abs(ours-theirs)<Math.max(100,(ours+theirs)*.4);
- return {reunion:base?.occupation===q.parent||theirs===0&&ours>=60||exhausted,claimant:q.goal==='succession'&&(parent?.occupation===q.side||ours===0&&theirs>=60),autonomy:base?.occupation===q.parent||parent?.occupation===q.side||exhausted,independence:q.goal==='independence'&&(parent?.occupation===q.side||exhausted||ours===0&&theirs>=60)};
+ return {reunion:base?.occupation===q.parent||theirs===0&&ours>=60||exhausted,claimant:q.goal==='succession'&&(parent?.occupation===q.side||ours===0&&theirs>=60),autonomy:base?.occupation===q.parent||parent?.occupation===q.side||exhausted,independence:q.goal==='independence'&&(parent?.occupation===q.side||exhausted||ours===0&&theirs>=60),constitution:q.goal==='constitution'&&(parent?.occupation===q.side||exhausted||ours===0&&theirs>=60)};
 }
 export function offerCivilPeace(s,id,actor,outcome){
  const q=civilCases(s).find(q=>q.id===id&&q.status==='active');if(!q||![q.parent,q.side].includes(actor))return 'Нет полномочий';
@@ -1362,5 +1364,23 @@ function dynasticReview(s){
  for(const st of live){const f=st.id,g=a.governments[f],p=a.people[g.ruler];if(!p?.alive||p.age<20||p.age>65||g.institutions.selection==='elective')continue;
  if(!a.people[p.spouse]?.alive){const choices=live.filter(v=>v.id!==f&&!atWar(s,f,v.id)&&discoveryContact(s,f,v.id)).map(v=>{const h=a.governments[v.id],q=a.people[h.ruler],view=polPair(s,f,v.id),back=polPair(s,v.id,f);return {v,h,q,score:(view.trust+back.trust)/2+(view.dependence+back.dependence)*.15-(view.hostility+back.hostility)*.5};}).filter(x=>x.q?.alive&&x.q.age>=20&&x.q.age<=65&&!a.people[x.q.spouse]?.alive&&x.h.institutions.selection!=='elective'&&x.q.dynasty!==p.dynasty&&x.score>.64).sort((x,y)=>y.score-x.score||x.v.id-y.v.id);if(choices.length)marryRulers(s,f,choices[0].v.id);}
  const spouse=a.people[p.spouse],heir=a.people[g.heir];if(spouse?.alive&&p.age>=55&&(!heir?.alive||heir.age<16)&&g.legitimacy>=.55){const other=live.find(v=>v.id!==f&&a.governments[v.id].ruler===spouse.id);if(other&&polPair(s,f,other.id).trust>.68)nominateDynasticSuccessor(s,f,other.id);}
+ }
+}
+
+export function interveneCivilSide(s,id,donor,kind='recognize'){
+ const q=civilCases(s).find(q=>q.id===id&&q.status==='active'&&q.side!=null),st=s.states[donor];if(!q||!st||!polLive(s,donor)||[q.parent,q.side].includes(donor)||!discoveryContact(s,donor,q.side)||atWar(s,donor,q.side))return 'Вмешательство недоступно';
+ if(kind==='recognize'){if(q.interventions.some(v=>v.donor===donor&&v.kind===kind))return 'Признание уже предоставлено';q.interventions.push({day:s.day,donor,kind});politicalEvent(s,q.side,donor,'cooperation','recognition');politicalEvent(s,q.parent,donor,'breach','rival claimant recognition');return 'Политическая сторона признана';}
+ if(kind==='goods'){const amount=Math.min(5,st.reserves[9]);if(amount<1)return 'Нет продовольственного резерва';st.reserves[9]-=amount;s.states[q.side].reserves[9]+=amount;q.interventions.push({day:s.day,donor,kind,good:9,amount});return 'Передано продовольствие';}
+ if(kind==='military'){const goal=s.cities.find(c=>c.f===q.parent&&c.capital);if(!goal||!discoveryContact(s,donor,q.parent)||!s.armies.some(a=>a.f===donor&&strength(a)>=60)||atWar(s,donor,q.parent)||politicalBlocked(s,donor,q.parent))return 'Нет допустимого военного вмешательства';
+ if(!politicalFront(s,donor,q.parent,goal.i,'civil intervention',q.war,q.side))return 'Военная коалиция отклонена';q.interventions.push({day:s.day,donor,kind});return 'Иностранная держава вступила в конфликт';}
+ if(kind==='mediate'){if(atWar(s,donor,q.parent)||!discoveryContact(s,donor,q.parent))return 'Посредник должен быть нейтрален';const terms=civilPeaceTerms(s,q),outcome=terms.independence?'independence':terms.constitution?'constitution':terms.autonomy?'autonomy':terms.claimant?'claimant':terms.reunion?'reunion':null;if(!outcome)return 'Стороны пока не готовы к посредничеству';const msg=settleCivilCase(s,id,outcome);q.interventions.push({day:s.day,donor,kind,outcome});return msg;}
+ return 'Неизвестное вмешательство';
+}
+function civilForeignReview(s){
+ for(const q of civilCases(s).filter(q=>q.status==='active'&&q.side!=null))for(const st of s.states.filter(st=>!st.defunct&&polAI(s,st.id)&&![q.parent,q.side].includes(st.id)&&polLive(s,st.id)&&discoveryContact(s,st.id,q.side)&&discoveryContact(s,st.id,q.parent))){
+ if(q.status!=='active')break;const f=st.id,p=polPair(s,f,q.parent),b=polPair(s,f,q.side);
+ if(!atWar(s,f,q.parent)&&!atWar(s,f,q.side)&&p.trust>.55&&b.trust>.55&&civilPeaceTerms(s,q).autonomy){interveneCivilSide(s,q.id,f,'mediate');break;}
+ if(p.threat>.38&&b.trust>.62&&st.gold>120&&!q.interventions.some(v=>v.donor===f&&v.kind==='aid'))supportCivilSide(s,q.id,f,Math.min(20,st.gold*.08));
+ if(p.threat>.55&&b.trust>.72&&!q.interventions.some(v=>v.donor===f&&v.kind==='military')){const capital=s.cities.find(c=>c.f===q.parent&&c.capital);if(capital){const prospect=campaignProspect(s,f,q.parent,capital.i,'support independence');if(prospect.feasible&&prospect.net>0)interveneCivilSide(s,q.id,f,'military');}}
  }
 }
