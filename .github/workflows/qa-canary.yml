@@ -60,7 +60,7 @@ jobs:
             echo "has_browser=$(jq -c .hasBrowser plan/plan.json)"
             echo "has_build=$(jq -c .hasBuild plan/plan.json)"
           } >> "$GITHUB_OUTPUT"
-          jq '{legacyJobs,shardJobs,sharedBuildTasks:(.prebuilt|length)}' plan/plan.json
+          jq '{coverageScope,originalLegacyJobs,legacyJobs,shardJobs,sharedBuildTasks:(.prebuilt|length)}' plan/plan.json
       - uses: actions/upload-artifact@v4
         with:
           name: integrated-plan-${{ github.run_attempt }}
@@ -116,8 +116,8 @@ jobs:
         with:
           node-version: '22'
       - name: Execute isolated tasks; record failed attempts for audit
-        continue-on-error: true
         env:
+          PW_QA_RECORD_TEST_FAILURES: '1'
           PW_QA_SHARD: ${{ toJSON(matrix) }}
         run: node scripts/ci-overhaul/run-shard.mjs
       - uses: actions/upload-artifact@v4
@@ -163,8 +163,8 @@ jobs:
           tar -xf incoming/build-bundle.tar -C build-bundle
           node scripts/ci-overhaul/build-once.mjs verify . build-bundle
       - name: Execute isolated tasks; record failed attempts for audit
-        continue-on-error: true
         env:
+          PW_QA_RECORD_TEST_FAILURES: '1'
           PW_QA_SHARD: ${{ toJSON(matrix) }}
           PW_QA_BUILD_BUNDLE: ${{ matrix.needsBuild && format('{0}/build-bundle', github.workspace) || '' }}
         run: node scripts/ci-overhaul/run-shard.mjs
@@ -242,8 +242,8 @@ jobs:
         with:
           node-version: '22'
       - name: Execute isolated tasks; record failed attempts for audit
-        continue-on-error: true
         env:
+          PW_QA_RECORD_TEST_FAILURES: '1'
           PW_QA_SHARD: ${{ toJSON(matrix) }}
         run: node scripts/ci-overhaul/run-shard.mjs
       - uses: actions/upload-artifact@v4
@@ -289,8 +289,8 @@ jobs:
           tar -xf incoming/build-bundle.tar -C build-bundle
           node scripts/ci-overhaul/build-once.mjs verify . build-bundle
       - name: Execute isolated tasks; record failed attempts for audit
-        continue-on-error: true
         env:
+          PW_QA_RECORD_TEST_FAILURES: '1'
           PW_QA_SHARD: ${{ toJSON(matrix) }}
           PW_QA_BUILD_BUNDLE: ${{ matrix.needsBuild && format('{0}/build-bundle', github.workspace) || '' }}
         run: node scripts/ci-overhaul/run-shard.mjs

@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveTasks } from '../universal-qa/plan.mjs';
-import { executeShard, validateShard, command } from './run-shard.mjs';
+import { executeShard, validateShard, command, shardExitCode } from './run-shard.mjs';
 import { planShards } from './sharding.mjs';
 
 test('isolated shard runs later tasks after failure and preserves all evidence',{skip:process.platform!=='linux'},async()=>{
@@ -26,7 +26,7 @@ test('isolated shard runs later tasks after failure and preserves all evidence',
       const dest=join('qa-artifacts',t.key);
       mkdirSync(dest,{recursive:true});
       const success=t.seed===2&&!contaminated;
-      writeFileSync(join(dest,'result.json'),JSON.stringify({schema:1,...t,success}));
+      writeFileSync(join(dest,'result.json'),JSON.stringify({schema:1,...t,success,exitCode:success?0:1,signal:null,timedOut:false}));
       writeFileSync(join(dest,'console.log'),'raw evidence');
       if(!success)process.exitCode=1;
     `);
@@ -39,6 +39,9 @@ test('isolated shard runs later tasks after failure and preserves all evidence',
     assert.throws(()=>validateShard(root,altered),/differs/);
     const report=await executeShard(root,shard);
     assert.equal(report.success,false);
+    assert.equal(report.results[0].failureKind,'test');
+    assert.equal(shardExitCode(report),1);
+    assert.equal(shardExitCode(report,true),0);
     assert.deepEqual(report.results.map(t=>t.success),[false,true]);
     for(const t of tasks)assert.ok(existsSync(join(root,'qa-artifacts',t.key,'console.log')));
     assert.equal(JSON.parse(readFileSync(join(root,'qa-artifacts',tasks[0].key,'result.json'),'utf8')).success,false);
@@ -53,4 +56,12 @@ test('subprocess timeout is a failure',{skip:process.platform!=='linux'},async()
   const r=await command(process.execPath,['-e','setInterval(()=>{},1000)'],{cwd:process.cwd(),timeoutMs:200});
   assert.equal(r.success,false);
   assert.equal(r.expired,true);
+});
+
+test('record-only mode never accepts infrastructure failures or malformed completion',()=>{
+ const pass={key:'a',success:true,error:null,failureKind:null};
+ const failed={key:'b',success:false,error:'assertion',failureKind:'test'};
+ const report={success:false,results:[pass,failed]};
+ assert.equal(shardExitCode(report,true),0);
+ for(const bad of [undefined,{success:true,results:[]},{...report,success:true},{...report,results:[pass,pass]},{...report,results:[pass,{...failed,failureKind:'infrastructure'}]},{...report,results:[pass,{...failed,failureKind:null}]}])assert.equal(shardExitCode(bad,true),1);
 });

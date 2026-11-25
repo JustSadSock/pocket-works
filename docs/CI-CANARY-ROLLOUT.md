@@ -8,8 +8,7 @@ configuration is changed.
 The new Pocket Works QA Canary workflow runs on this release candidate branch
 and opt-in same-repository pull requests labeled `ci-canary`. It uses the real
 PR merge checkout and original PR planner. The branch push preflight runs the
-full smoke suites of axis-pals and crumple-yard. A PR with zero applicable tasks
-fails the experimental plan instead of claiming app coverage. No historical
+full smoke suites of axis-pals and crumple-yard. An infrastructure-only PR with zero original app tasks runs the explicit axis-pals/crumple-yard smoke plan, including CPU, browser and shared build. The report identifies `coverageScope: infrastructure-smoke` and `originalLegacyJobs: 0`; it does not claim full app coverage. An empty app-changing plan or an invalid plan still fails closed. No historical
 results are accepted. Builds are sealed against the same tree/run/attempt.
 First-pass failures are retained; retries are bounded and independently audited.
 The new check is not a deployment gate and must not be made required yet.
@@ -25,3 +24,5 @@ uses fixed six-worker pools and reports measured phase durations.
 
 Historical evidence: integrated run 45483925251 (180/180), independent replay
 45485063517 (50/50), rollback drill 45498339187, protected receipt lab 45490754186.
+
+Executor hardening: the live workflow records completed nonzero test exits for bounded retry only. Invalid evidence, crashes, timeouts, dependency/build errors and cleanup failures fail the runner job, preventing the final audit from authorizing a successful candidate. This change does not enable the production migration.
