@@ -6,7 +6,8 @@
       "kind": "node-test",
       "files": [
         "engine.test.mjs",
-        "doctrine.test.mjs"
+        "doctrine.test.mjs",
+        "breaking.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -78,14 +79,6 @@
       "files": [
         "qa/living.spec.ts"
       ]
-    },
-    {
-      "id": "breaking",
-      "kind": "node-test",
-      "files": [
-        "breaking.test.mjs"
-      ],
-      "tier": "smoke"
     },
     {
       "id": "performance",
@@ -197,6 +190,14 @@
         "qa/renderer-diagnostic.spec.ts"
       ],
       "tier": "deep"
+    },
+    {
+      "id": "orthographic-performance",
+      "kind": "playwright",
+      "files": [
+        "qa/orthographic-performance.spec.ts"
+      ],
+      "tier": "smoke"
     }
   ]
 }
