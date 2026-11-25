@@ -733,7 +733,7 @@ export function resolveStateExtinction(s,f,victor){if(!s.politics||polLive(s,f)|
  const prisoners=[];for(const q of s.prisoners){const affected=q.f===f||q.captor===f;if(!affected){prisoners.push(q);continue;}if(q.f===f)q.f=s.cities.find(c=>c.id===q.city)?.f??victor;if(q.captor===f||q.captor===q.f||!atWar(s,q.f,q.captor)){const home=s.cities.find(c=>c.id===q.city&&c.occupation<0)||s.cities.find(c=>c.f===q.f&&c.occupation<0)||destination;home.returning+=q.n;returnService(home,q.service||[],q.identities);s.states[q.f].service.released+=q.n;s.states[q.f].service.recovered+=q.n;}else prisoners.push(q);}s.prisoners=prisoners;for(const v of s.convoys)if(v.sourceFaction===f)v.sourceFaction=s.cities.find(c=>c.id===v.from)?.f??victor;
  for(let i=0;i<N;i++){if(s.owner[i]===f){s.owner[i]=victor;s.admin[i]=-1;s.adminOverride[i]=-1;}if(s.occ[i]===f)s.occ[i]=-1;if(s.contender[i]===f)s.contender[i]=-1;}
  for(const w of s.wars.filter(w=>w.status==='active'&&(w.f===f||w.enemy===f)))concludeWhitePeace(s,w,'state dissolution');for(const t of p.contracts.filter(t=>t.status==='active'&&(t.a===f||t.b===f||t.clauses.some(c=>c.against===f))))closePoliticalContract(s,t,'status-change');for(const o of p.offers.filter(o=>o.status==='pending'&&(o.a===f||o.b===f))){o.status='expired';o.reasons=['Государство прекратило существование'];}
- for(const q of s.states.filter(q=>q.id!==f)){s.relations[q.id][f]=s.relations[f][q.id]='peace';q.embargo=q.embargo.filter(v=>v!==f);}p.plans[f].interests=[];p.plans[f].goal=null;p.plans[f].escalation=null;p.power[f]=politicalPower(s,f);p.stats.extinct=(p.stats.extinct||0)+1;recordDecision(s,victor,f,'state dissolved',{soldiers,crew,reason:'Все поселения утрачены'});recalcTerritory(s,false);return true;
+ for(const q of s.states.filter(q=>q.id!==f)){s.relations[q.id][f]=s.relations[f][q.id]='peace';q.embargo=q.embargo.filter(v=>v!==f);}p.plans[f].interests=[];p.plans[f].goal=null;p.plans[f].escalation=null;p.power[f]=politicalPower(s,f);p.stats.extinct=(p.stats.extinct||0)+1;recordDecision(s,victor,f,'state dissolved',{soldiers,crew,reason:'Все поселения утрачены'});if(s.society)closeSocietyRealm(s,f,victor);recalcTerritory(s,false);return true;
 }
 
 // Age of Discovery: local knowledge, practical investment and physically funded surveys.
@@ -911,7 +911,7 @@ export function societyStep(s){
  else {const govt=s.society.architecture.governments[c.f],office=govt?.institutions.legislature==='crown'?crownId(c.f):localId(c),fee=.5+Math.abs(r.target-d.autonomy)*3;if(debitAccount(s,office,fee)){c.cash+=fee;if(office===crownId(c.f))st.budget.investment+=fee;r.progress=clamp(r.progress+capacity*(actual+r.consent)*.09,0,1);}else r.unfunded=(r.unfunded||0)+40;if(r.progress>=1){d.autonomy=r.target;societyEvent(s,c,'charter enacted',{autonomy:d.autonomy});d.reform=null;}else if(r.unfunded>=720){societyEvent(s,c,'charter suspended',{target:r.target,reason:'administration unfunded'});d.reform=null;}}}
  else if(polAI(s,c.f)&&s.day%360===0){if(d.pressure>.57&&d.autonomy<.75)requestCharter(s,c,d.autonomy+.15);else if(d.pressure<.4&&st.gold>150&&c.infra>=2&&d.autonomy>.2)requestCharter(s,c,d.autonomy-.15,5);}
  }
- if(s.day%40===0){politicalArchitectureStep(s);civilConflictStep(s);}
+ if(s.day%40===0){politicalArchitectureStep(s);civilConflictStep(s);if(s.day%360===0){dynasticReview(s);archivePoliticalPeople(s);}}
 }
 export function societySnapshot(s,f=null){return {day:s.day,districts:s.cities.filter(c=>c.society&&(f==null||c.f===f)).map(c=>({id:c.id,name:c.name,f:c.f,pop:c.pop,autonomy:c.society.autonomy,treasury:c.society.localTreasury,pressure:c.society.pressure,reform:c.society.reform?{...c.society.reform}:null,cohorts:c.society.cohorts.map(q=>({...q})),centralSupport:charterSupport(s,c,Math.max(.05,c.society.autonomy-.15)).total})),events:s.society?.events.filter(e=>f==null||e.f===f)||[]};}
 
@@ -1059,7 +1059,7 @@ function politicalArchitectureStep(s){
  const a=s.society.architecture;refreshTitles(s);
  const counts={};
  for(const t of Object.values(a.titles)){if(t.kind==='land'&&s.admin[t.cell]>=0){const city=s.admin[t.cell];(counts[city]??={})[t.beneficiary]=(counts[city][t.beneficiary]||0)+s.development[t.cell];}else if(t.kind==='workshop'){const c=s.cities.find(c=>c.id===t.city),k=Number(t.key.split(':')[2]),out=RECIPES[k]?.out;if(c&&out!=null){const value=c.output[out]*c.market[out]/Math.max(1,c.build[k]);(counts[c.id]??={})[t.beneficiary]=(counts[c.id][t.beneficiary]||0)+Math.min(10,value);}}}
- for(const c of s.cities){const sub=registerDistrict(s,c),d=c.society;sub.overlord=crownId(c.f);sub.contract.retention=legalRetention(s,c);const g=a.governments[c.f];
+ for(const c of s.cities){const sub=registerDistrict(s,c),d=c.society;sub.overlord=crownId(c.f);sub.contract.retention=legalRetention(s,c);const g=a.governments[c.f],lord=a.people[sub.person];if(lord?.role==='lord')lord.f=c.f;
  // Legal beneficiaries receive a bounded portion of actual market revenue, not generated rent.
  if(c.occupation<0){const row=counts[c.id]||{},total=Object.values(row).reduce((n,v)=>n+v,0),pool=Math.min(c.cash*.004,total*.025);if(total>0&&pool>0)for(const [id,weight] of Object.entries(row)){const pay=pool*weight/total;if(creditAccount(s,id,pay))c.cash-=pay;}}
  if(s.day%360===0&&c.occupation<0){const p=a.people[sub.person];if(p){p.age=Math.floor((s.day-p.born)/360);if(p.age>=65+hash(s.seed+':death:'+p.id)%21){p.alive=false;const heir=createPerson(s,c.f,'lord',sub.id,25,p.dynasty);sub.person=heir.id;polityEvent(s,c.f,'lord succession',{district:c.id,old:p.id,heir:heir.id});}}}
@@ -1127,13 +1127,13 @@ export function propertyOffer(s,f,i,kind='sale'){
 }
 export function marryRulers(s,f,b){
  const a=s.society?.architecture,g=a?.governments[f],h=a?.governments[b],p=a?.people[g?.ruler],q=a?.people[h?.ruler];
- if(!p||!q||f===b||p.id===q.id||!p.alive||!q.alive||p.age<18||q.age<18||p.dynasty===q.dynasty||a.people[p.spouse]?.alive||a.people[q.spouse]?.alive||atWar(s,f,b)||!discoveryContact(s,f,b))return 'Брак недоступен';
+ if(!p||!q||!polLive(s,f)||!polLive(s,b)||f===b||p.id===q.id||!p.alive||!q.alive||p.age<18||q.age<18||p.dynasty===q.dynasty||a.people[p.spouse]?.alive||a.people[q.spouse]?.alive||atWar(s,f,b)||!discoveryContact(s,f,b))return 'Брак недоступен';
  if(g.legitimacy<.4||h.legitimacy<.4)return 'Двор не признаёт соглашение';
  p.spouse=q.id;q.spouse=p.id;polityEvent(s,f,'dynastic marriage',{a:p.id,b:q.id,realm:b});polityEvent(s,b,'dynastic marriage',{a:q.id,b:p.id,realm:f});return 'Династический брак заключён';
 }
 export function nominateDynasticSuccessor(s,f,b){
  const a=s.society?.architecture,g=a?.governments[f],h=a?.governments[b],p=a?.people[g?.ruler],q=a?.people[h?.ruler];
- if(!p||!q||p.id===q.id||!p.alive||!q.alive||p.spouse!==q.id||g.institutions.selection==='elective'||g.legitimacy<.5||atWar(s,f,b))return 'Преемник не имеет признанного права';
+ if(!p||!q||!polLive(s,f)||!polLive(s,b)||p.id===q.id||!p.alive||!q.alive||p.spouse!==q.id||g.institutions.selection==='elective'||g.legitimacy<.5||atWar(s,f,b))return 'Преемник не имеет признанного права';
  const previous=g.heir;g.heir=q.id;polityEvent(s,f,'succession nomination',{previous,heir:q.id,realm:b});return 'Преемник признан; объединение казны и территории не происходит';
 }
 export function commonRuler(s,f,b){const a=s.society?.architecture;return f!==b&&a?.governments[f]?.ruler!=null&&a.governments[f].ruler===a.governments[b]?.ruler;}
@@ -1206,7 +1206,7 @@ export function formCivilSide(s,id,{peaceful=false,publicShare=0}={}){
  const st=appendRealm(s,q.parent,(peaceful?'Свободные земли ':'Совет ')+cs[0].name);if(!st)return null;
  q.side=st.id;if(!peaceful)st.provisional={parent:q.parent,case:q.id};
  const old=s.states[q.parent];st.gold=old.gold*publicShare;old.gold-=st.gold;for(let k=0;k<17;k++){st.reserves[k]=old.reserves[k]*publicShare;old.reserves[k]-=st.reserves[k];}
- const a=s.society.architecture,g=a.governments[st.id],person=a.people[q.claimant??a.subjects[localId(cs[0])].person];if(person){a.people[g.ruler].alive=false;g.ruler=person.id;}
+ const a=s.society.architecture,g=a.governments[st.id],person=a.people[q.claimant??a.subjects[localId(cs[0])].person];if(person){a.people[g.ruler].alive=false;g.ruler=person.id;person.role='ruler';person.office=crownId(st.id);for(const sub of Object.values(a.subjects))if(sub.person===person.id)sub.person=createPerson(s,st.id,'lord',sub.id,25,person.dynasty).id;}
  q.transferredArmies=transferDistricts(s,q.parent,st.id,q.districts);
  if(!peaceful)for(const c of cs){const fee=c.society.localTreasury*.3;c.society.localTreasury-=fee;st.gold+=fee;}
  if(peaceful){q.status='resolved';q.outcome='independence';civilStage(s,q,'settlement');return st.id;}
@@ -1334,5 +1334,33 @@ function privateSupplyReview(s,c){
  for(const good of goods){if(c.stock[good]>=Math.max(2,c.demand[good]*2))continue;
  const kind=good===3?2:3,owners=[...Object.values(a.titles).filter(t=>t.kind==='workshop'&&t.city===c.id&&Number(t.key.split(':')[2])===kind).map(t=>t.owner),groupId(c,'artisans'),groupId(c,'merchants'),localId(c)];
  for(const id of new Set(owners))if(privateProcure(s,c,good,id))break;
+ }
+}
+
+function closeSocietyRealm(s,f,victor){
+ const a=s.society.architecture,g=a.governments[f];if(g){g.closed=s.day;g.law=null;g.regent=null;}
+ for(const t of Object.values(a.titles)){for(const k of ['owner','user','beneficiary'])if(t[k]===crownId(f))t[k]=crownId(victor);if(t.lease?.previous===crownId(f))t.lease.previous=crownId(victor);}
+ for(const c of s.cities.filter(c=>c.f===victor)){const sub=a.subjects[localId(c)];if(sub&&sub.overlord===crownId(f)){sub.overlord=crownId(victor);const p=a.people[sub.person];if(p?.role==='lord')p.f=victor;}}
+ for(const p of Object.values(a.people).filter(p=>p.f===f&&p.alive)){const office=Object.entries(a.governments).find(([id,h])=>Number(id)!==f&&h.closed==null&&h.ruler===p.id);if(office){p.f=Number(office[0]);continue;}p.formerOffice=p.office;p.office=null;p.role='former';p.f=victor;}
+ if(s.states[f].provisional)delete s.states[f].provisional;
+ for(const e of s.discovery.expeditions.filter(e=>e.f===f))e.f=s.cities.find(c=>c.id===e.home)?.f??victor;
+ const d=s.discovery;if(d){d.retiredCharts??={};d.retiredCharts[f]={day:s.day,mapped:d.charts[f].filter(Boolean).length,discoveries:Object.keys(d.discoveries[f]).length};d.intel[f]={owners:{},cities:{},routes:{},fleets:{}};d.surveyFailures[f]={};}
+ s.intel[f]={};if(s.playerFaction===f)s.playerFaction=victor;
+}
+function archivePoliticalPeople(s){
+ const a=s.society.architecture,keep=new Set();
+ for(const g of Object.values(a.governments))if(g.closed==null)for(const id of [g.ruler,g.heir,g.regent])if(id!=null)keep.add(id);
+ for(const q of Object.values(a.subjects))keep.add(q.person);
+ for(const q of civilCases(s).filter(q=>q.status==='active'))if(q.claimant!=null)keep.add(q.claimant);
+ for(const p of Object.values(a.people))if(p.alive&&p.spouse!=null)keep.add(p.spouse);
+ a.personArchive??=[];
+ for(const p of Object.values(a.people))if(!keep.has(p.id)&&(!p.alive||p.role==='former')&&s.day-p.born>85*360){a.personArchive.push({id:p.id,name:p.name,dynasty:p.dynasty,born:p.born,lastRole:p.role});delete a.people[p.id];}
+ a.personArchive=a.personArchive.slice(-500);
+}
+function dynasticReview(s){
+ const a=s.society.architecture,live=s.states.filter(st=>!st.defunct&&!st.provisional&&polLive(s,st.id)&&polAI(s,st.id));
+ for(const st of live){const f=st.id,g=a.governments[f],p=a.people[g.ruler];if(!p?.alive||p.age<20||p.age>65||g.institutions.selection==='elective')continue;
+ if(!a.people[p.spouse]?.alive){const choices=live.filter(v=>v.id!==f&&!atWar(s,f,v.id)&&discoveryContact(s,f,v.id)).map(v=>{const h=a.governments[v.id],q=a.people[h.ruler],view=polPair(s,f,v.id),back=polPair(s,v.id,f);return {v,h,q,score:(view.trust+back.trust)/2+(view.dependence+back.dependence)*.15-(view.hostility+back.hostility)*.5};}).filter(x=>x.q?.alive&&x.q.age>=20&&x.q.age<=65&&!a.people[x.q.spouse]?.alive&&x.h.institutions.selection!=='elective'&&x.q.dynasty!==p.dynasty&&x.score>.64).sort((x,y)=>y.score-x.score||x.v.id-y.v.id);if(choices.length)marryRulers(s,f,choices[0].v.id);}
+ const spouse=a.people[p.spouse],heir=a.people[g.heir];if(spouse?.alive&&p.age>=55&&(!heir?.alive||heir.age<16)&&g.legitimacy>=.55){const other=live.find(v=>v.id!==f&&a.governments[v.id].ruler===spouse.id);if(other&&polPair(s,f,other.id).trust>.68)nominateDynasticSuccessor(s,f,other.id);}
  }
 }
