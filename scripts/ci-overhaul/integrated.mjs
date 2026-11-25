@@ -12,8 +12,8 @@ const browser=t=>['visual','playwright','browser-node'].includes(t.kind);
 const read=p=>JSON.parse(readFileSync(p,'utf8'));
 const write=(p,v)=>writeFileSync(p,JSON.stringify(v,null,2));
 
-export function integratedPlan(raw,root){
- const p=fullPlan(raw);
+export function integratedPlan(raw,root,options={}){
+ const p=fullPlan(raw,options);
  const prebuilt=p.tasks.filter(t=>browser(t)&&read(join(root,'apps',t.app,'app.config.json')).runtime!=='quick').map(t=>t.key);
  const keys=new Set(prebuilt);
  const decorate=s=>({...s,needsBuild:s.tasks.some(t=>keys.has(t.key))});
