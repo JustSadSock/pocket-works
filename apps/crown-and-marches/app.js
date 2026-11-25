@@ -5,7 +5,7 @@ import {createBattle,customBattle,battleTick,command,result,FORM,BW,BH} from './
 import {Atlas,Camera,drawNavalScene} from './render.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('atlas'),atlas=new Atlas(canvas),panel=$('panel'),modal=$('modal'),modalbody=$('modalbody'),key='pocket-works:crown-and-marches:campaign';
-const artReview=new URLSearchParams(location.search).get('art');atlas.artCandidate=['relief','engraved','living'].includes(artReview)?artReview:artReview==='reset';
+const artReview=new URLSearchParams(location.search).get('art');atlas.artCandidate=['relief','engraved','living','urban'].includes(artReview)?artReview:artReview==='reset';
 const layers=[['political','Границы'],['geography','Рельеф'],['resource','Ресурсы'],['economy','Экономика'],['population','Население'],['admin','Округа'],['war','Оккупация'],['supply','Снабжение'],['development','Освоение'],['grid','Сетка'],['diplomatic','Отношения'],['interests','Интересы'],['influence','Влияние'],['knowledge','Внедрение'],['charts','Карты']];
 const rel={peace:'Мир',war:'Война',trade:'Торговля',alliance:'Союз',pact:'Ненападение',access:'Военный доступ',tribute:'Дань',vassal:'Вассалитет',self:'Своя держава'};
 const num=x=>Math.floor(x).toLocaleString('ru-RU'),button=(act,label,value='',disabled=false)=>'<button data-act="'+act+'" data-value="'+value+'"'+(disabled?' disabled':'')+'>'+label+'</button>';

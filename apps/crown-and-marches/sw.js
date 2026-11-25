@@ -17,6 +17,8 @@ const APP_SHELL = [
   './landscape-assets.mjs',
   './living-town.mjs',
   './landscape-surface.mjs',
+  './urban-surface.mjs',
+  './urban-fabric.mjs',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

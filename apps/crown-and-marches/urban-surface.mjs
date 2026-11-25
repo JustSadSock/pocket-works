@@ -13,7 +13,14 @@ export function reconstruct(m,x,y,kind='ridges'){
  const dx=x-(Math.floor(x)+.5),dy=y-(Math.floor(y)+.5),anchored=S(Math.min(1,Math.hypot(dx,dy)*3.1));
  const a=x+.38*(noise(x*.8,y*.8)-.5),b=y+.38*(noise(x*.8+61,y*.8-22)-.5);
  let detail=0;
- if(kind==='ridges'){
+ if(kind==='massifs'){
+  // Correct a low-frequency lithologic residual at the original lattice samples.
+  // Unlike the two rejected studies, the residual has no radial cell mask and
+  // no unstable coordinate rotation based on the instantaneous slope.
+  const lith=(u,v)=>{const X=u+.48*(noise(u*.45,v*.45)-.5),Y=v+.48*(noise(u*.45+28,v*.45-9)-.5),r1=1-Math.abs(2*noise(X*.82+Y*.24,Y*.70)-1),r2=1-Math.abs(2*noise(X*1.8+Y*.48,Y*1.34+17)-1);return r1*r1*.77+r2*r2*.23;};
+  const i=Math.floor(x-.5),j=Math.floor(y-.5),u=x-i-.5,f=y-j-.5,correction=L(L(lith(i+.5,j+.5),lith(i+1.5,j+.5),u),L(lith(i+.5,j+1.5),lith(i+1.5,j+1.5),u),f),relief=lith(x,y)-correction;
+  return C(z+relief*Math.min(.064,range*.47)*gate*(.7+.3*ridge),v.lo,v.hi);
+ }else if(kind==='ridges'){
   const r=(u,v)=>1-Math.abs(2*noise(u,v)-1);
   const r1=r(a*2.5,b*2.5),r2=r(a*5.4+13,b*5.4-9),r3=r(a*11.2-7,b*11.2+15);
   detail=(r1*r1-.39)*.58+(r2*r2-.39)*.29+(r3*r3-.39)*.13;
@@ -39,12 +46,12 @@ export async function prepareUrbanSurface(m,bounds,res,political,owners,kind='ri
  const step=Math.max(1,Math.round(res*.24)),wide=Math.max(step+1,Math.round(res*.90));
  for(let y=0;y<h;y++){for(let x=0;x<w;x++){const i=y*w+x,k=i*4,z=H[i],base=Z[i],l=land[i],wx=x0+(x+.5)/res,wy=y0+(y+.5)/res;let col=[222,211,181];if(l>=0){
  const dx=(get(x+step,y,z)-get(x-step,y,z))*res/(2*step),dy=(get(x,y+step,z)-get(x,y-step,z))*res/(2*step),bx=(get(x+wide,y,z)-get(x-wide,y,z))*res/(2*wide),by=(get(x,y+wide,z)-get(x,y-wide,z))*res/(2*wide);
- const gx=(dx*.84+bx*.16)*35,gy=(dy*.84+by*.16)*35,norm=Math.hypot(gx,gy,1),sun=(gx*.61+gy*.53+.59)/norm,slope=Math.hypot(gx,gy),alpine=S((base-.36)/.20);
+ const localWeight=kind==='massifs'?.57:.84,gx=(dx*localWeight+bx*(1-localWeight))*35,gy=(dy*localWeight+by*(1-localWeight))*35,norm=Math.hypot(gx,gy,1),sun=(gx*.61+gy*.53+.59)/norm,slope=Math.hypot(gx,gy),alpine=S((base-.36)/.20);
  let horizon=0;for(const k of [1,3,6,10,16]){const n=Math.max(1,Math.round(k*res*.10));horizon=Math.max(horizon,(get(x-n,y-n,z)-z)/(n/res*Math.SQRT2)*35);}
  const cast=S((horizon-.67)/1.35)*.30*alpine,ambient=L(.79,.53,alpine),lit=C(ambient+Math.max(0,sun)*(.33+.32*alpine)-cast,.30,1.23);
  const broad=noise(wx*.38+11,wy*.38),medium=noise(wx*1.8+9,wy*1.8-14),fine=noise(wx*6.2,wy*6.2),stone=S((base-.41)/.15)*S(slope/1.6);
  let ground=mix([176,160,104],[105,143,83],C(wet[i]*.57+fert[i]*.30+broad*.13));ground=mix(ground,[91,116,65],S(forest[i])*.67);ground=mix(ground,[139,128,96],S((base-.36)/.17));ground=mix(ground,[194,185,160],stone);ground=mix(ground,[231,226,212],S((base-.60)/.17)*(.65+.35*(1-temp[i])));ground=mix(ground,[112,145,91],valley[i]*.38*(1-alpine*.6));
- const texture=(broad-.5)*10+(medium-.5)*12+(fine-.5)*(4+stone*9);ground=ground.map(v=>v*lit+texture);
+ const texture=(broad-.5)*16+(medium-.5)*12+(fine-.5)*(kind==='massifs'?3+stone*4:4+stone*9);ground=ground.map(v=>v*lit+texture);
  const depth=S(l/.48),wave=(noise(wx*.65+18,wy*2.1)-.5)*7+(noise(wx*2,wy*8)-.5)*3,water=mix([37,76,95],[114,160,153],depth).map(v=>v+wave);
  col=mix(water,ground,S((l-.484)/.035));col=mix(col,[203,190,149],(1-S(Math.abs(l-.50)/.024))*.50);
  if(political&&l>.56){const f=m.own[m.at(Math.floor(wx),Math.floor(wy))];if(f>=0&&owners[f])col=mix(col,owners[f],.07);}
