@@ -20,13 +20,13 @@ trap 'exit 143' TERM
 formats=(duel 2vAI 2v1 2v2 3vAI)
 projects=(mobile-chromium mobile-webkit)
 run_case() {
-  local project=$1 format=$2 port=$3
+  local project=$1 format=$2 port=$3 attempt
   local name="$project-$format"
   local dest="$out/$name" state="$scratch/$name"
   mkdir -p "$dest" "$state" || return 1
   local url="https://127.0.0.1:$port"
   worker_start "$wrangler" "$port" "$dest/worker.log" --persist-to "$state" --local-protocol https || return 1
-  for i in {1..100}; do
+  for attempt in {1..100}; do
     if curl --connect-timeout 1 --max-time 2 -kfsS "$url/pocket-id/config" >/dev/null 2>&1; then break; fi
     if ! worker_group_live && ! kill -0 "$worker_pid" 2>/dev/null; then tail -n 50 "$dest/worker.log"; return 1; fi
     sleep 1
