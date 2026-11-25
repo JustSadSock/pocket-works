@@ -6,7 +6,12 @@ on:
       - '.github/workflows/verified-results-shadow.yml'
       - 'scripts/ci-overhaul/attested-shadow*'
       - 'scripts/universal-qa/**'
+      - 'scripts/ci-overhaul/verified-input-impact*'
+      - 'scripts/ci-overhaul/verified-cross-commit*'
+      - '.github/workflows/verified-cross-commit.yml'
       - 'apps/axis-pals/**'
+      - 'shared/**'
+      - 'package*.json'
   pull_request:
     paths:
       - '.github/workflows/verified-results-shadow.yml'

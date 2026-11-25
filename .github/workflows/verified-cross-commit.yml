@@ -1,0 +1,56 @@
+name: Verified Cross Commit Shadow
+on:
+  workflow_run:
+    workflows: [Verified Results Shadow]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+jobs:
+  compare:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/verified-cross-commit.test.mjs
+      - name: Select completed main runs and independently authenticate both
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/verified-pair"
+          mkdir -p "$work"
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/verified-results-shadow.yml/runs?branch=main&status=success&per_page=30" > "$work/runs.json"
+          jq --arg repo "$GITHUB_REPOSITORY" '[.workflow_runs[] | select(.repository.full_name == $repo and .head_repository.full_name == $repo and .path == ".github/workflows/verified-results-shadow.yml" and .head_branch == "main" and .status == "completed" and .conclusion == "success" and (.event == "push" or .event == "workflow_dispatch"))] | sort_by(.created_at) | reverse' "$work/runs.json" > "$work/eligible.json"
+          if [ "$(jq 'length' "$work/eligible.json")" -eq 0 ]; then
+            echo 'No completed main receipts; all tests still execute.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          jq '.[0]' "$work/eligible.json" > "$work/current.json"
+          sha="$(jq -r .head_sha "$work/current.json")"
+          jq --arg sha "$sha" '[.[] | select(.head_sha != $sha)] | .[0] // null' "$work/eligible.json" > "$work/prior.json"
+          if [ "$(jq -r 'type' "$work/prior.json")" = null ]; then
+            echo 'Only one distinct main commit has a successful receipt; all tests still execute.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          for kind in prior current; do
+            meta="$work/$kind.json"
+            run="$(jq -r .id "$meta")"
+            attempt="$(jq -r .run_attempt "$meta")"
+            sha="$(jq -r .head_sha "$meta")"
+            [[ "$run" =~ ^[0-9]+$ && "$attempt" =~ ^[0-9]+$ && "$sha" =~ ^[0-9a-f]{40}$ ]]
+            gh run download "$run" --repo "$GITHUB_REPOSITORY" --name "verified-shadow-receipt-$attempt" --dir "$work/$kind"
+            gh attestation verify "$work/$kind/receipt.json" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-results-shadow.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$sha" --deny-self-hosted-runners
+          done
+          node scripts/ci-overhaul/verified-cross-commit.mjs "$work/prior.json" "$work/current.json" "$work/prior" "$work/current"
