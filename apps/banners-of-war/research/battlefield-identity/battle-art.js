@@ -3,7 +3,7 @@ import {TerrainTiles,renderHeight} from './terrain-tiles.js';
 let cv,g;const S=Math.sin(Math.PI/3),T=Math.cos(Math.PI/3),clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),mix=(a,b,t)=>a+(b-a)*t,smooth=(a,b,x)=>{let t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)},hash=(x,y)=>{let n=Math.imul(x|0,374761393)+Math.imul(y|0,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296};
 let moving=false,motionKind='none',lastCam=null,policy='auto',costs={direct:0,batch:0},trials={direct:0,batch:0},drawSerial=0,terrainKey=null,zoomLevel=null,zoomUntil=0;let atlas,style='A',textures={},treeAsset={},terrainTiles=null,scene,frame=0,cam,ground,playing=false,batch=true,stats={},last=0,w,h,d,cache=new Map(),cacheBytes=0;
 const cap=24*1024*1024,scaledCap=24*1024*1024;let scaledCache=new Map(),scaledBytes=0,scaleHits=0,scaleMisses=0,scaleMs=0;
-let cadence=new Map(),previousDraw=null,compositionLayer=null;
+let cadence=new Map(),previousDraw=null,compositionLayer=null,worldRows=new Map(),worldRowBytes=0;
 function resize(){g.setTransform(d,0,0,d,0,0)}
 const image=url=>new Promise((ok,no)=>{let i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(Error('Missing '+url));i.src=url});
 async function setStyle(){playing=false;let t=performance.now(),meta=await fetch('/art-evidence/mixed-atlas.json').then(r=>{if(!r.ok)throw Error('Missing baked atlas');return r.json()});let pages=await Promise.all(Object.keys(meta.pages).map(i=>image('/art-evidence/page-'+i+'.png')));atlas={pages,meta,loadMs:performance.now()-t,bytes:pages.reduce((n,p)=>n+p.width*p.height*4,0)};
@@ -43,6 +43,23 @@ function blitScaled(ctx,o){
  // Device-aligned integer origin: no additional fractional filtering.
  ctx.drawImage(item.canvas,o.x+item.left/d,o.y+item.top/d,item.canvas.width/d,item.canvas.height/d);
 }
+// World-relative row stamps reuse only contiguous painter-order runs.
+// A fine anchor key (1/64 m) permits translations without changing physics.
+// Each source warrior is drawn at its original world offset; only the cached
+// image is resampled as one group. Strict pixel-diff gate compares to direct.
+function worldRow(row,k){
+ if(k>2.5||row.length<3)return false;
+ let ref=Math.pow(2,Math.ceil(Math.log2(Math.max(.25,k*d)))),a=row[0],rel=row.map(o=>({o,u:o.u-a.u,v:o.v-a.v})),key=ref+'|'+rel.map(p=>p.o.key+','+Math.round(p.u*64)+','+Math.round(p.v*64)).join(';'),item=worldRows.get(key);
+ if(!item){if(stats.missMs>=2.5)return false;let start=performance.now(),left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
+ for(let {o,u,v} of rel){let e=o.e,s=ref/e.ppm;left=Math.min(left,u*ref-e.anchor[0]*s);top=Math.min(top,v*ref-e.anchor[1]*s);right=Math.max(right,u*ref+(e.rect[2]-e.anchor[0])*s);bottom=Math.max(bottom,v*ref+(e.rect[3]-e.anchor[1])*s)}
+ left=Math.floor(left)-1;top=Math.floor(top)-1;right=Math.ceil(right)+1;bottom=Math.ceil(bottom)+1;let W=right-left,H=bottom-top,bytes=W*H*4;if(bytes>128*1024||W<1||H<1)return false;
+ let c=document.createElement('canvas');c.width=W;c.height=H;let ctx=c.getContext('2d');ctx.imageSmoothingEnabled=g.imageSmoothingEnabled;ctx.imageSmoothingQuality=g.imageSmoothingQuality;
+ for(let {o,u,v} of rel)blit(ctx,{...o,x:u*ref-left,y:v*ref-top,scale:ref/o.e.ppm});
+ item={c,left,top,W,H,bytes};while(worldRowBytes+bytes>12*1024*1024&&worldRows.size){let k=worldRows.keys().next().value;worldRowBytes-=worldRows.get(k).bytes;worldRows.delete(k)}
+ worldRows.set(key,item);worldRowBytes+=bytes;stats.misses++;stats.prepBlits+=row.length;stats.missMs+=performance.now()-start;
+ }else{worldRows.delete(key);worldRows.set(key,item);stats.hits++}
+ let s=k/ref;g.drawImage(item.c,a.x+item.left*s,a.y+item.top*s,item.W*s,item.H*s);stats.drawCalls++;return true
+}
 function extent(o){let e=atlas.meta.entries[o.key],s=o.scale;return {l:o.x-e.anchor[0]*s,t:o.y-e.anchor[1]*s,r:o.x+(e.rect[2]-e.anchor[0])*s,b:o.y+(e.rect[3]-e.anchor[1])*s}}
 function cacheRow(row){let boxes=row.map(extent),minX=Math.floor(Math.min(...boxes.map(o=>o.l))),minY=Math.floor(Math.min(...boxes.map(o=>o.t))),maxX=Math.ceil(Math.max(...boxes.map(o=>o.r))),maxY=Math.ceil(Math.max(...boxes.map(o=>o.b))),W=maxX-minX,H=maxY-minY;if(W<1||H<1||W*H*4*d*d>cap/3)return false;
  let key=d+'|'+W+'|'+H+'|'+row.map(o=>[o.key,o.x-minX,o.y-minY,o.scale].join(',')).join(';'),item=cache.get(key);
@@ -70,22 +87,24 @@ function render(s,mode='direct',environmentOnly=false){let start=performance.now
  for(let t of land.trees)items.push({y:t.p.y,tree:t});
  for(let reg of geo.regiments){let center=project(reg.x,reg.y),px=center.x,py=center.y,pad=reg.pad*k+50;if(px<-pad||px>w+pad||py<-pad||py>h+pad)continue;stats.visible++;stats.byType[reg.kind]=(stats.byType[reg.kind]||0)+1;
  for(let group of reg.groups){stats.represented+=group.n;for(let row of group.rows){for(let pt of row.points){let U=cam.axis==='wide'?pt.worldX:pt.u,V=cam.axis==='wide'?pt.worldY:cam.axis==='tall'?pt.worldX:pt.v,x=Math.round(U*k)+originX,y=Math.round(V*k)+originY;if(x<-size||x>w+size||y<-size||y>h+size)continue;
- let o={x,y,scale:k/pt.e.ppm,key:pt.key,e:pt.e};items.push({y,o,group:row.group,eligible:k<12&&row.eligible});
+ let o={x,y,u:U,v:V,scale:k/pt.e.ppm,key:pt.key,e:pt.e};items.push({y,o,group:row.group,eligible:k<12&&row.eligible});
  if(cam.mode==='A'&&pt.flag)flags.push({p:{x:px,y:py},side:reg.side,k,reg});stats.sprites++;if(pt.role)stats[pt.role]=(stats[pt.role]||0)+1;if(pt.contact){stats.localContacts++;if(pt.mismatch)stats.reachMismatch++}
  }}}
  }
  stats.positionMs=performance.now()-profileStart-stats.geometryMs-stats.contactMs;
- if(k>=8){g.fillStyle='#292c202f';g.beginPath();for(let it of items)if(it.o){let p=it.o;g.moveTo(p.x+k*.50,p.y+k*.17);g.ellipse(p.x+k*.24,p.y+k*.17,k*.30,k*.105,.25,0,Math.PI*2)}g.fill()}let sortStart=performance.now();items.sort((a,b)=>a.y-b.y);stats.sortMs=performance.now()-sortStart;let composeStart=performance.now(),target=g;if(mode==='layer'){let W=Math.round(w*d),H=Math.round(h*d);if(!compositionLayer||compositionLayer.width!==W||compositionLayer.height!==H){compositionLayer=document.createElement('canvas');compositionLayer.width=W;compositionLayer.height=H}target=compositionLayer.getContext('2d',{willReadFrequently:true});target.setTransform(d,0,0,d,0,0);target.clearRect(0,0,w,h);target.imageSmoothingEnabled=g.imageSmoothingEnabled;target.imageSmoothingQuality=g.imageSmoothingQuality}for(let i=0;i<items.length;){let it=items[i];if(it.tree){tree(it.tree,target);i++;continue}let end=i+1;if(mode==='batch'&&it.eligible)while(end<items.length&&items[end].eligible&&items[end].group===it.group)end++;if(end===i+1){if(mode==='scaled')blitScaled(target,it.o);else blit(target,it.o);stats.drawCalls++;i++;continue}let run=items.slice(i,end).map(x=>x.o);if(!cacheRow(run))for(let o of run){blit(g,o);stats.drawCalls++}i=end}if(mode==='layer'){g.drawImage(compositionLayer,0,0,w,h);stats.drawCalls++}
+ // Strategic unit mass is a translucent outline of the actual formation, never a replacement for individual sprites.
+ if(cam.mode==='A'){for(let f of flags){let r=f.reg,a=r.a,ca=Math.cos(a),sa=Math.sin(a),pts=[[-r.dim.d/2,-r.dim.w/2],[r.dim.d/2,-r.dim.w/2],[r.dim.d/2,r.dim.w/2],[-r.dim.d/2,r.dim.w/2]].map(([x,y])=>project(r.x+x*ca-y*sa,r.y+x*sa+y*ca));g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.closePath();g.fillStyle=r.side?'#8d3c2d30':'#254f7730';g.fill();g.strokeStyle=r.side?'#8d3c2d70':'#254f7770';g.lineWidth=.7;g.stroke()}}
+ if(k>=8){g.fillStyle='#292c202f';g.beginPath();for(let it of items)if(it.o){let p=it.o;g.moveTo(p.x+k*.50,p.y+k*.17);g.ellipse(p.x+k*.24,p.y+k*.17,k*.30,k*.105,.25,0,Math.PI*2)}g.fill()}let sortStart=performance.now();items.sort((a,b)=>a.y-b.y);stats.sortMs=performance.now()-sortStart;let composeStart=performance.now(),target=g;if(mode==='layer'){let W=Math.round(w*d),H=Math.round(h*d);if(!compositionLayer||compositionLayer.width!==W||compositionLayer.height!==H){compositionLayer=document.createElement('canvas');compositionLayer.width=W;compositionLayer.height=H}target=compositionLayer.getContext('2d',{willReadFrequently:true});target.setTransform(d,0,0,d,0,0);target.clearRect(0,0,w,h);target.imageSmoothingEnabled=g.imageSmoothingEnabled;target.imageSmoothingQuality=g.imageSmoothingQuality}for(let i=0;i<items.length;){let it=items[i];if(it.tree){tree(it.tree,target);i++;continue}let end=i+1;if((mode==='batch'||mode==='world-row')&&it.eligible)while(end<items.length&&items[end].eligible&&items[end].group===it.group)end++;if(end===i+1){if(mode==='scaled')blitScaled(target,it.o);else blit(target,it.o);stats.drawCalls++;i++;continue}let run=items.slice(i,end).map(x=>x.o);if(!(mode==='world-row'?worldRow(run,k):cacheRow(run)))for(let o of run){blit(g,o);stats.drawCalls++}i=end}if(mode==='layer'){g.drawImage(compositionLayer,0,0,w,h);stats.drawCalls++}
  for(let f of flags){let {p,k,reg}=f,ht=Math.max(8,k*1.8),wd=Math.max(6,k*.85);g.strokeStyle='#57432e';g.lineWidth=Math.max(.7,k*.075);g.beginPath();g.moveTo(p.x,p.y);g.lineTo(p.x,p.y-ht);g.stroke();g.fillStyle=f.side?'#97432e':'#315776';g.beginPath();g.moveTo(p.x,p.y-ht);g.lineTo(p.x+wd,p.y-ht+ht*.12);g.lineTo(p.x+wd*.88,p.y-ht*.48);g.lineTo(p.x,p.y-ht*.58);g.fill();g.strokeStyle='#dec89a';g.lineWidth=Math.max(.6,k*.04);g.beginPath();g.moveTo(p.x+wd*.13,p.y-ht*.94);g.lineTo(p.x+wd*.77,p.y-ht*.85);g.stroke();
  if(reg){let a=reg.a,half=reg.dim.w/2,front=reg.dim.d/2,ca=Math.cos(a),sa=Math.sin(a),a0=project(reg.x+front*ca-half*sa,reg.y+front*sa+half*ca),a1=project(reg.x+front*ca+half*sa,reg.y+front*sa-half*ca),mid=project(reg.x+front*ca,reg.y+front*sa),end=project(reg.x+(front+Math.max(9,8/k))*ca,reg.y+(front+Math.max(9,8/k))*sa);g.strokeStyle=reg.side?'#8d3c2d':'#254f77';g.lineWidth=reg.rout?1:2;g.setLineDash(reg.rout||reg.cohesion<55?[3,3]:[]);g.beginPath();g.moveTo(a0.x,a0.y);g.lineTo(a1.x,a1.y);g.stroke();g.setLineDash([]);g.beginPath();g.moveTo(mid.x,mid.y);g.lineTo(end.x,end.y);g.stroke();let ang=Math.atan2(end.y-mid.y,end.x-mid.x);g.beginPath();g.moveTo(end.x,end.y);g.lineTo(end.x-4*Math.cos(ang-.55),end.y-4*Math.sin(ang-.55));g.moveTo(end.x,end.y);g.lineTo(end.x-4*Math.cos(ang+.55),end.y-4*Math.sin(ang+.55));g.stroke();g.fillStyle='#f0e6ce';g.font='bold 9px system-ui';g.textAlign='center';g.fillText({spear:'I',sword:'II',archer:'⌒',knight:'◆',lightHorse:'◇'}[reg.kind],p.x,p.y+10)}
  }
- stats.composeMs=performance.now()-composeStart;stats={...stats,drawMs:performance.now()-start,cacheBytes,camera:{...cam},time:s.time,mode,motion:motionKind,scaleHits,scaleMisses,scaleMs,scaledBytes};return stats}
+ stats.composeMs=performance.now()-composeStart;stats={...stats,drawMs:performance.now()-start,cacheBytes,camera:{...cam},time:s.time,mode,motion:motionKind,scaleHits,scaleMisses,scaleMs,scaledBytes,worldRowBytes};return stats}
 
 export async function initArt(canvas){cv=canvas;g=canvas.getContext('2d',{alpha:false});await setStyle();return {canvas:atlas.pages[0]}}
-export function setArtPolicy(p){if(!['auto','direct','batch','scaled','layer'].includes(p))throw Error('Unknown renderer policy');policy=p;previousDraw=null;costs={direct:0,batch:0};trials={direct:0,batch:0}}
+export function setArtPolicy(p){if(!['auto','direct','batch','scaled','layer','world-row'].includes(p))throw Error('Unknown renderer policy');policy=p;previousDraw=null;costs={direct:0,batch:0};trials={direct:0,batch:0}}
 function getScene(s,layout,C){
  w=layout.w;h=layout.h;d=layout.d;cam={...C};let F=E.forState(s),key=s.seed+'|'+F.W+'|'+F.H+'|'+s.terrain.kind;
- if(!scene||terrainKey!==key){terrainKey=key;scene={F,frames:[s]};geometryCache.clear();cadence.clear();previousDraw=null;scaledCache.clear();scaledBytes=0;initTerrain(s);lastCam=null;zoomLevel=null;zoomUntil=0;cache.clear();cacheBytes=0}
+ if(!scene||terrainKey!==key){terrainKey=key;scene={F,frames:[s]};geometryCache.clear();cadence.clear();previousDraw=null;scaledCache.clear();scaledBytes=0;worldRows.clear();worldRowBytes=0;initTerrain(s);lastCam=null;zoomLevel=null;zoomUntil=0;cache.clear();cacheBytes=0}
  else scene.frames[0]=s;
 }
 export async function warmArt(s,layout,C){getScene(s,layout,C);let t=performance.now();let coarse=await terrainTiles.warm({...cam,k:cam.k/2},w,h,d),detail=await terrainTiles.warm(cam,w,h,d);return {wallMs:performance.now()-t,coarse,detail}}
@@ -95,7 +114,7 @@ export function paintArt(s,layout,C){getScene(s,layout,C);let before=lastCam;mot
  // RAF-to-RAF time includes deferred Canvas raster and compositing, unlike JS submit time.
  // Ignore paused/idle frames and scene changes; learn only from adjacent active draws.
  if(previousDraw&&previousDraw.bucket===bucket){let ms=now-previousDraw.at;if(ms>=4&&ms<120){let samples=cadence.get(bucket)||{},p=samples[previousDraw.mode]||{ms:0,n:0};p.ms=p.n?p.ms*.84+ms*.16:ms;p.n++;samples[previousDraw.mode]=p;cadence.set(bucket,samples)}}
- let choices=['direct','batch','layer'],learned=cadence.get(bucket)||{},mode=policy;
+ let choices=motionKind==='zoom'&&cam.k<=2.5?['direct','batch','layer','world-row']:['direct','batch','layer'],learned=cadence.get(bucket)||{},mode=policy;
  if(policy==='auto'){
   let unknown=choices.find(m=>(learned[m]?.n||0)<3);
   mode=unknown||choices.reduce((best,m)=>learned[m].ms<learned[best].ms?m:best,choices[0]);
