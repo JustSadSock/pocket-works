@@ -56,3 +56,5 @@ Mini Car 3D remains a separate app: no shared modules, linked save games or runt
 - The HUD reports measured force (kN) and relative closing speed (km/h) rather than incorrectly identifying closing speed as delta-v.
 - Brake/reverse gear transitions are independently regression-tested; hidden-key stale state and teardown collider/shadow bookkeeping have been repaired.
 - The new automated screenshot sequence records Kestrel, Bastion and Meridian, driving, and pause states in Chromium and WebKit on mobile and desktop. Real visual approval still requires reviewing those screenshots.
+
+<!-- Disposable CI delivery validation; do not merge. -->
