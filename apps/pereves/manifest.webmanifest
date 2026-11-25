@@ -1,0 +1,24 @@
+{
+  "id": "/apps/pereves/",
+  "name": "ПЕРЕВЕС",
+  "short_name": "Перевес",
+  "description": "Уравновесь кинетические скульптуры, размещая грузы на подвесных перекладинах.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#e6e3ef",
+  "theme_color": "#e6e3ef",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
