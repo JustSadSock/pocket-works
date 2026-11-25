@@ -1,6 +1,7 @@
 name: Verified Input Impact Shadow
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'apps/**'
       - 'shared/**'
@@ -12,6 +13,7 @@ permissions:
   contents: read
 jobs:
   compare:
+    if: contains(github.event.pull_request.labels.*.name, 'ci-canary') || github.event.pull_request.head.ref == 'infra/verified-input-impact-shadow'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
