@@ -11,3 +11,6 @@ if(kind==='balance'&&shard<5){const child=spawnSync(process.execPath,[fileURLToP
 if(kind==='balance'&&shard===5){const child=spawnSync(process.execPath,[fileURLToPath(new URL('political-pressure.mjs',import.meta.url))],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
 
 if(kind==='balance'&&shard===5){const child=spawnSync(process.execPath,[fileURLToPath(new URL('discovery-pairs.mjs',import.meta.url))],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
+
+// Keep the complete society series within the app's existing five computation shards.
+if(kind==='balance'&&shard<5){const child=spawnSync(process.execPath,[fileURLToPath(new URL('society-experiment.mjs',import.meta.url)),String(shard)],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
