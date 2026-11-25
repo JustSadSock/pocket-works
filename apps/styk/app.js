@@ -145,7 +145,6 @@ function updateHud(){
   game.remaining===0?'Приказы исчерпаны · начинайте ход':
   game.edited.includes(u.id)?'Переместите стяг или потяните край линии':'Коснитесь поля для движения · тяните края строя';
  $('play-label').textContent=mode==='battle'?'Идёт бой':mode==='end'?'Сражение окончено':'Выполнить приказы';
- $('execute').textContent='Выполнить ход';
  $('dock').classList.toggle('in-battle',mode==='battle');
 }
 function select(id){

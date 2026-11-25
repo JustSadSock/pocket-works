@@ -1,8 +1,9 @@
+const RELEASE_NOTES = ["Добавлен слайдер плотности 0–100%: он регулирует количество свободного пространства между изображениями без разрешения пересечений.","Изменение плотности сохраняет текущий seed, поэтому композиция предсказуемо сжимается и разжимается вместо случайной перестановки.","Выбранная плотность сохраняется между запусками; значение по умолчанию — 85%."];
 const CACHE_PREFIX = 'rasklad-';
 const CACHE_NAME = 'rasklad-v1.2.0';
-const APP_VERSION = '1.2.0';
-const RELEASE_DATE = '2026-10-01';
-const APP_SHELL = [
+const APP_VERSION = "1.2.0";
+const RELEASE_DATE = "2026-10-01";
+const APP_SHELL = ["../../shared/update-manager.js","../../shared/update-manager.css","../../shared/pwa-utils.js",
   './',
   './index.html',
   './app.config.json',
@@ -34,11 +35,7 @@ self.addEventListener('message', (event) => {
     event.ports?.[0]?.postMessage({
       version: APP_VERSION,
       releaseDate: RELEASE_DATE,
-      releaseNotes: [
-        'Добавлен слайдер плотности раскладки 0–100%.',
-        'Плотность меняется без перерандомивания текущей композиции и сохраняется между запусками.',
-        'Наложения изображений остаются запрещены при любой плотности.'
-      ],
+      releaseNotes: RELEASE_NOTES,
       cacheName: CACHE_NAME
     });
   }

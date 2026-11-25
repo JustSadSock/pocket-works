@@ -68,9 +68,7 @@
   function init() {
     applySettingsToControls();
     bindEvents();
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}), { once: true });
-    }
+    
   }
 
   function bindEvents() {

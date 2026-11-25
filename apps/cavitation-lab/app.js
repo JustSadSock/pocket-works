@@ -1,3 +1,4 @@
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { DEFAULTS, PRESETS, sanitize, simulateBubble, sampleAt } from './physics.js';
 import { resizeCanvas, renderScene, renderGraph, sceneMetrics } from './render.js';
@@ -409,3 +410,5 @@ addEventListener('pagehide',save);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='running'){mode='paused';refreshState();save()}});
 addEventListener('resize',()=>{needGraph=true;dirty=true});
 syncControls();refreshState();requestAnimationFrame(render);
+
+createWorkshopMode({appName:"КАВИТАЦИЯ — лаборатория пузырька",version:"1.3.0",cachePrefix: 'cavitation-lab-',storageNamespace: 'pocket-works:cavitation-lab',onReset(){location.reload();}});

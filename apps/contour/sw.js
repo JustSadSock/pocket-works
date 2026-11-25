@@ -3,7 +3,7 @@ const CACHE_NAME = 'contour-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-11-22';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Пять электрических головоломок, проверка цепи и локальное сохранение."];
+const RELEASE_NOTES = ["Пять процедурно сгенерированных электрических головоломок, локальное сохранение, проверка цепи."];
 const APP_SHELL = [
   './',
   './index.html',

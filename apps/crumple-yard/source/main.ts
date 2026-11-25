@@ -11,7 +11,7 @@ const RELEASE_NOTES = ["Деформация капота, бамперов, р�
 
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
-registerEnhancedUpdate({ appName: 'CRUMPLE // YARD', version: VERSION, releaseNotes: RELEASE_NOTES });
+registerEnhancedUpdate({ appName: 'CRUMPLE // YARD', version: '1.6.0', releaseNotes: RELEASE_NOTES });
 
 const game = new CrumpleGame();
 createWorkshopMode({

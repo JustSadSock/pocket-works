@@ -76,6 +76,16 @@
         "slug": "shevel",
         "spatialDifference": "ТИХИЙ КАДР — узкий лабораторный инструмент с двумя прямоугольными колонками исходника и результата, а не игровая сцена, карта, холст или растягиваемая рабочая область shevel.",
         "interactionDifference": "Вместо партийных действий игры shevel пользователь загружает готовое видео, запускает локальный Open-Unmix и SCNet, сравнивает его звуковые компоненты и скачивает результат."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "A file processing workbench with audio comparison controls replaces the geography map and historical ledger.",
+        "interactionDifference": "Import local media and compare processed audio rather than intervene in simulated societies."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "A source and result audio laboratory replaces the documentary story map and timeline.",
+        "interactionDifference": "Run audio separation and listen to alternative tracks instead of selecting historical scenes."
       }
     ]
   },

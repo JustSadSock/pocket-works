@@ -69,7 +69,7 @@ test('moving or trimming a voice only changes its clip, not the film bed origin'
  const original=[{id:'a',start:1,end:3,offset:0,blob}];
  const moved=editClip(original,'a','move',1,12);
  const trimmed=editClip(moved,'a','left',.3,12);
- assert.equal(trimmed[0].offset,.3);
+ assert.ok(Math.abs(trimmed[0].offset-.3)<1e-9,'clip offset preserves sub-sample precision');
  assert.equal(f.video.currentTime,33.4);
  f.sync.sync();
  assert.ok(Math.abs(f.sources[0].offset-.4)<.001);

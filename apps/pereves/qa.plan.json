@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "files": [
+        "core.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#mobile",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-beam='0'][data-slot='-3']"
+        },
+        {
+          "action": "screenshot"
+        }
+      ],
+      "tier": "smoke"
+    }
+  ]
+}

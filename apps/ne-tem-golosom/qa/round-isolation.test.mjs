@@ -82,5 +82,6 @@ test('changing the film before recording does not copy prior takes into its draf
  assert.equal(h.context.scene.id,'second-film');
  const saved=h.calls.filter(Array.isArray).filter(x=>x[0]==='saved');
  assert.deepEqual(saved.map(x=>x[1]),['round-4-draft','round-4-draft']);
- assert.deepEqual(saved.map(x=>x[2]),[['old-voice'],[]]);
+ // Normalize VM-created arrays into this realm without changing their contents.
+ assert.deepEqual(saved.map(x=>Array.from(x[2])),[['old-voice'],[]]);
 });

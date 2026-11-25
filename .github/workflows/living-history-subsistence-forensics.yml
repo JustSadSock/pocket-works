@@ -18,7 +18,7 @@ concurrency:
 jobs:
   forensic:
     name: family forensic (seed ${{ matrix.seed }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -44,7 +44,7 @@ jobs:
 
   threshold:
     name: work threshold (seed ${{ matrix.seed }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -71,7 +71,7 @@ jobs:
   summary:
     if: always()
     needs: [forensic, threshold]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4

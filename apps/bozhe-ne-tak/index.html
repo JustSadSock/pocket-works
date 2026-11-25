@@ -7,11 +7,12 @@
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
 <link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css">
-<title>БОЖЕ, НЕ ТАК! — Храм ОГО</title></head>
+<title>БОЖЕ, НЕ ТАК! — Храм ОГО</title><link rel="stylesheet" href="../../shared/workshop-mode.css">
+</head>
 <body data-app-preset="game-2d">
 <main class="app-shell" data-app-shell data-fullscreen-app>
 <div id="game" aria-live="off"><div class="boot-screen"><a class="exit" href="../../" data-native-press data-app-control>← Pocket Works</a><div class="loading-text">Пробуждаем бога…</div></div></div>
-</main>
+<div data-ui style="position:absolute;inset:auto 8px 8px auto;z-index:10"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button></div></main>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="БОЖЕ, НЕ ТАК!" data-app-version="0.5.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

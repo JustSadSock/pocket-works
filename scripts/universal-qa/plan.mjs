@@ -11,6 +11,8 @@ export const ISSUE_TITLE = '[qa] pocket-works';
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const IDENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_TASKS = 20;
+// GitHub permits up to 256 jobs per matrix. Keep manual requests tightly bounded.
+const MAX_PR_TASKS = 256;
 
 export function safeApp(root, app) {
   if (typeof app !== 'string' || !SLUG.test(app)) throw Error('Invalid application slug');
@@ -108,7 +110,7 @@ export function loadSuites(root, slug) {
   return checked;
 }
 
-export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke' }) {
+export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke', pullRequest = false }) {
   if (!['smoke', 'deep'].includes(profile)) throw Error('Invalid QA profile');
   if (suite !== 'all' && !IDENT.test(suite)) throw Error('Invalid QA suite selector');
   const tasks = [];
@@ -125,7 +127,8 @@ export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke' }) {
       }
     }
   }
-  if (tasks.length > MAX_TASKS) throw Error('Too many QA jobs (' + tasks.length + ' > ' + MAX_TASKS + '); request one suite/app');
+  const limit = pullRequest ? MAX_PR_TASKS : MAX_TASKS;
+  if (tasks.length > limit) throw Error('Too many QA jobs (' + tasks.length + ' > ' + limit + '); split the request');
   if (new Set(tasks.map(t => t.key)).size !== tasks.length) throw Error('Duplicate task keys');
   return tasks;
 }
@@ -180,7 +183,7 @@ async function main() {
   } else if (request.app === 'all') {
     apps = readdirSync(join(ROOT, 'apps')).filter(slug => SLUG.test(slug) && existsSync(join(ROOT, 'apps', slug, 'app.config.json')));
   } else apps = [request.app];
-  const tasks = resolveTasks(ROOT, { apps, suite: request.suite, profile: request.profile });
+  const tasks = resolveTasks(ROOT, { apps, suite: request.suite, profile: request.profile, pullRequest: eventName === 'pull_request' });
   const matrices = partition(tasks);
   const output = [
     'cpu_matrix=' + JSON.stringify(matrices.cpu),

@@ -290,11 +290,11 @@ function onMoveStick(e){
 }
 function wireInputs(){
  const joy=$('joystick');
- joy.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();joystickPointer=e.pointerId;joy.setPointerCapture(e.pointerId);onMoveStick(e)});
+ joy.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();joystickPointer=e.pointerId;try{joy.setPointerCapture?.(e.pointerId)}catch(error){if(!['InvalidStateError','NotFoundError'].includes(error?.name))throw error};onMoveStick(e)});
  joy.addEventListener('pointermove',e=>{if(joystickPointer===e.pointerId)onMoveStick(e)});
  for(const name of ['pointerup','pointercancel','lostpointercapture'])joy.addEventListener(name,()=>clearStick());
  const look=$('touchLook');
- look.addEventListener('pointerdown',e=>{if(phase!=='play')return;lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};look.setPointerCapture(e.pointerId)});
+ look.addEventListener('pointerdown',e=>{if(phase!=='play')return;lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};try{look.setPointerCapture?.(e.pointerId)}catch(error){if(!['InvalidStateError','NotFoundError'].includes(error?.name))throw error}});
  look.addEventListener('pointermove',e=>{
   if(e.pointerId!==lookPointer||phase!=='play'||!lastLook)return;
   applyLook(e.clientX-lastLook.x,e.clientY-lastLook.y,.004);
@@ -358,7 +358,7 @@ function wireInputs(){
  document.addEventListener('keyup',e=>keyboard.up(e));
  window.addEventListener('blur',()=>{clearInputs();if(phase==='play')pause()});
  const run=$('run');
- run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.classList.add('held');run.setPointerCapture(e.pointerId)});
+ run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.classList.add('held');try{run.setPointerCapture?.(e.pointerId)}catch(error){if(!['InvalidStateError','NotFoundError'].includes(error?.name))throw error}});
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])run.addEventListener(ev,()=>{sprintHeld=false;run.classList.remove('held')});
  $('interact').addEventListener('click',interact);$('fire').addEventListener('click',shoot);
  $('reload').addEventListener('click',reload);$('torch').addEventListener('click',torchToggle);

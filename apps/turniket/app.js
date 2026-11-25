@@ -619,9 +619,7 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
-}
+
 
 updateContinueButton();
 showHome();

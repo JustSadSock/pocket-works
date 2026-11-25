@@ -11,10 +11,11 @@
  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
  <link rel="stylesheet" href="../../shared/update-manager.css">
  <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 </head>
 <body>
  <main id="app" data-app-shell>
-  <header id="topbar">
+  <header id="topbar"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
    <a class="pocket-exit" href="../../" data-app-control aria-label="Назад в Pocket Works">← <span>Pocket Works</span></a>
    <div id="brand"><img src="./icons/icon.svg" alt=""><span>KATANA <em>/</em> ECHO</span></div>
    <div id="status" role="status" aria-live="polite">Выбери режим</div>
@@ -80,4 +81,5 @@
  </main>
  <script type="module" src="./app.js"></script>
  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Katana Echo" data-app-version="0.3.0"></script>
+<script type="module" src="./workshop.js"></script>
 </body></html>

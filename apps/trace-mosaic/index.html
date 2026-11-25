@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     <title>Trace Mosaic</title>
     <link rel="stylesheet" href="./styles.css" />
-  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#172424"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#172424"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
+</head>
   <body>
     <main data-app-shell><a class="pocket-exit" href="../../" data-app-control data-native-press>Pocket Works</a><div id="app"></div></main>
     <script type="module" src="./app.js"></script>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Trace Mosaic" data-app-version="0.4.0"></script></body>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Trace Mosaic" data-app-version="0.4.0"></script><div data-ui style="position:fixed;right:max(8px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));z-index:30"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button></div><script type="module" src="./workshop.js"></script>
+</body>
   </html>

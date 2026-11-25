@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   release-preflight:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,7 +32,7 @@ jobs:
 
   creative-direction:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout app design history
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
         run: npm run validate:creative:changed
 
   platform-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -69,11 +69,17 @@ jobs:
           npm run test:covers
           npm run validate:launcher
           node scripts/test-publish-policy.mjs
+      - name: Verify runtime contracts before full production builds
+        run: |
+          node --test scripts/runtime-repair-transforms.test.mjs scripts/runtime-contract-repair.test.mjs
+          # Mobile output validation needs built enhanced apps and remains in health.
+          npm run validate:updates
+          npm run validate:capabilities
 
   production-packaging:
     needs: release-preflight
     if: github.event_name == 'pull_request' && (startsWith(github.head_ref, 'platform/') || contains(github.event.pull_request.labels.*.name, 'platform-change'))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     # Use the same browser build as exploratory-mobile. A floating Playwright
     # install can otherwise change WebKit actionability independently of code.
@@ -108,7 +114,7 @@ jobs:
 
   change-scope:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository history
         uses: actions/checkout@v4
@@ -129,7 +135,7 @@ jobs:
 
   health:
     needs: release-preflight
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -258,7 +264,7 @@ jobs:
 
   enhanced-presets:
     needs: release-preflight
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -285,7 +291,7 @@ jobs:
 
   browser-quality:
     needs: health
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -324,7 +330,7 @@ jobs:
 
   lighthouse:
     needs: health
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CHROME_PATH: /usr/bin/google-chrome
     steps:

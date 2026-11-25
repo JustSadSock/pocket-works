@@ -9,6 +9,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
 </head>
 <body data-app-preset="canvas">
   <main class="app-shell">
@@ -159,5 +160,6 @@
   <script src="./analysis.js" defer></script>
   <script src="./renderer.js" defer></script>
   <script src="./app.js" defer></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Miniature Lab" data-app-version="1.0.0"></script>
 </body>
 </html>

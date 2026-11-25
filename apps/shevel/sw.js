@@ -4,7 +4,7 @@ const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-10-14';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Мобильная компоновка: холст выше, больше места для многодорожечной шкалы времени.","Синхронная прокрутка объектов, точный playhead, сворачиваемый масштаб и исправление одиночных мазков.","Экспорт GIF и PNG без монтажных направляющих."];
-const APP_SHELL = [
+const APP_SHELL = ["./workshop.js",
   './',
   './index.html',
   './app.config.json',

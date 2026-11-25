@@ -12,10 +12,11 @@
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 </head>
 <body data-app-preset="game-2d">
 <main id="app" data-app-shell>
- <header class="topbar">
+ <header class="topbar"><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
   <a href="../../" class="exit" aria-label="Назад в Pocket Works" data-app-control>
    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7M8 12h12"/></svg>
   </a>
@@ -98,5 +99,6 @@
 </section>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СТЫК" data-app-version="1.0.0"></script>
 <script type="module" src="./app.js"></script>
+<script type="module" src="./workshop.js"></script>
 </body>
 </html>

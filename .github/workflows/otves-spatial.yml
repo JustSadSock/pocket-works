@@ -12,7 +12,7 @@ on:
 
 jobs:
   geometry:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
         run: node --test apps/otves/render-geometry.test.mjs apps/otves/render-materials.test.mjs apps/otves/marble-motion.test.mjs apps/otves/edge-layout.test.mjs apps/otves/instrument-feedback.test.mjs
 
   browser-optics:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

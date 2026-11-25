@@ -9,6 +9,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
 </head>
 <body data-app-preset="canvas">
   <main class="app-shell" id="appShell">
@@ -150,5 +151,6 @@
 
   <script src="./canvas-filter-polyfill.js" defer></script>
   <script src="./app-v2.js" defer></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Toy Lens" data-app-version="1.1.0"></script>
 </body>
 </html>
