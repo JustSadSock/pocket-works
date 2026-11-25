@@ -10,7 +10,7 @@ function noise(x,y,f){x*=f;y*=f;const i=Math.floor(x),j=Math.floor(y),u=smooth(x
 function path(c,points,close=false){c.beginPath();c.moveTo(...points[0]);for(const q of points.slice(1))c.lineTo(...q);if(close)c.closePath();}
 function fill(c,points,color){path(c,points,true);c.fillStyle=color;c.fill();}
 function line(c,points,color,width){path(c,points);c.strokeStyle=color;c.lineWidth=width;c.stroke();}
-function model(s){
+export function model(s){
  const fog=!!(s.discovery&&!s.discovery.fullMap&&!s.autonomous),pf=s.playerFaction??0,known=new Uint8Array(W*H),fresh=new Uint8Array(W*H),own=new Int16Array(W*H).fill(-1);
  for(let i=0;i<known.length;i++){if(!fog||charted(s,pf,i)){known[i]=1;fresh[i]=!fog||freshIntel(s,pf,i);own[i]=fog?observedOwner(s,pf,i):s.owner[i];}}
  const width=W,height=H,m=s.map,at=(x,y)=>x<0||y<0||x>=width||y>=height?-1:y*width+x;

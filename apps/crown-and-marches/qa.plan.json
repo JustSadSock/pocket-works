@@ -151,7 +151,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "living-landscapes-qa.mjs",
+      "entry": "urban-terrain-study.mjs",
       "tier": "smoke"
     },
     {
