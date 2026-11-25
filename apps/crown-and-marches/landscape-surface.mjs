@@ -18,13 +18,13 @@ export async function prepareLivingSurface(m,bounds,res,political,paletteByOwner
  const get=(x,y,fallback)=>{x=clamp(x,0,w-1);y=clamp(y,0,h-1);const i=y*w+x;return land[i]>=0?heights[i]:fallback;};
  // Broad-slope normals and a small directional horizon shadow. Texture
  // follows actual elevation and moisture; random fine detail is suppressed.
- const step=Math.max(1,Math.round(res*.72)),big=Math.max(step+1,Math.round(res*2.2));
+ const small=Math.max(1,Math.round(res*.22)),step=Math.max(small+1,Math.round(res*.58)),big=Math.max(step+1,Math.round(res*1.65));
  for(let y=0;y<h;y++){for(let x=0;x<w;x++){const i=y*w+x,k=i*4,wx=x0+(x+.5)/res,wy=y0+(y+.5)/res,l=land[i],z=heights[i];let col=[222,211,181];if(l>=0){
- const dx=(get(x+step,y,z)-get(x-step,y,z))*res/(2*step),dy=(get(x,y+step,z)-get(x,y-step,z))*res/(2*step),bx=(get(x+big,y,z)-get(x-big,y,z))*res/(2*big),by=(get(x,y+big,z)-get(x,y-big,z))*res/(2*big),gx=(dx*.72+bx*.28)*38,gy=(dy*.72+by*.28)*38;
+ const dx=(get(x+step,y,z)-get(x-step,y,z))*res/(2*step),dy=(get(x,y+step,z)-get(x,y-step,z))*res/(2*step),bx=(get(x+big,y,z)-get(x-big,y,z))*res/(2*big),by=(get(x,y+big,z)-get(x,y-big,z))*res/(2*big),fx=(get(x+small,y,z)-get(x-small,y,z))*res/(2*small),fy=(get(x,y+small,z)-get(x,y-small,z))*res/(2*small),gx=(fx*.48+dx*.42+bx*.1)*46,gy=(fy*.48+dy*.42+by*.1)*46;
  const n=Math.hypot(gx,gy,1),sun=(gx*.58+gy*.48+.66)/n,contrast=clamp((sun-.66)*.70,-.43,.32),slope=Math.hypot(gx,gy),shadow=Math.max(0,get(x-big,y-big,z)-z-.026);
  let ground=mix(palette[0],palette[1],smooth(wet[i]*.62+fert[i]*.38));ground=mix(ground,palette[2],smooth(forest[i])*.72);ground=mix(ground,palette[3],smooth((z-.34)/.17));ground=mix(ground,palette[4],smooth((z-.46)/.17)*smooth(slope*.7));ground=mix(ground,palette[5],smooth((z-.62)/.13)*(.75+.25*(1-temp[i])));
- const tex=(noise(wx*2.3,wy*2.3)-.5)*3;ground=ground.map(v=>v*(1+contrast-Math.min(.15,shadow*1.8))+tex);
- const depth=smooth(l/.48),wave=(noise(wx*.65+18,wy*1.8)-.5)*5;let water=mix([34,72,92],[103,150,147],depth);water=water.map(v=>v+wave);col=mix(water,ground,smooth((l-.47)/.065));const shore=1-smooth(Math.abs(l-.50)/.035);col=mix(col,[211,197,157],shore*.56);
+ const tex=(noise(wx*2.3,wy*2.3)-.5)*2+smooth((z-.36)/.18)*(noise(wx*3.8+wy*.6,wy*2.1)-.5)*Math.min(7,slope*3);ground=ground.map(v=>v*(1+contrast-Math.min(.15,shadow*1.8))+tex);
+ const depth=smooth(l/.48),wave=(noise(wx*.65+18,wy*1.8)-.5)*6+(noise(wx*2,wy*6)-.5)*3;let water=mix([34,72,92],[103,150,147],depth);water=water.map(v=>v+wave);col=mix(water,ground,smooth((l-.485)/.032));const shore=1-smooth(Math.abs(l-.50)/.023);col=mix(col,[211,197,157],shore*.56);
  if(political&&l>.56){const f=m.own[m.at(Math.floor(wx),Math.floor(wy))];if(f>=0&&paletteByOwner[f])col=mix(col,paletteByOwner[f],.085);}
  }d[k]=col[0];d[k+1]=col[1];d[k+2]=col[2];d[k+3]=255;}await yieldIf();}
  q.putImageData(im,0,0);maxSlice=Math.max(maxSlice,performance.now()-last);compute+=performance.now()-last;return {canvas:a,ms:performance.now()-start,compute,maxSlice};
@@ -40,6 +40,6 @@ export function livingRivers(m){
  // Preserve the actual known graph rather than inventing a detour; report
  // clipped segments to reviewers if no admissible curve can be formed.
  if(failed){points.length=0;for(let k=0;k<=20;k++){const t=k/20,x=lerp(a[0],b[0],t),y=lerp(a[1],b[1],t);if((livingLand(m,x,y)??0)<.50)break;points.push([x,y]);}}
- if(points.length>1)out.push({i,j,points,width:clamp(Math.sqrt(m.m.flow?.[i]||60)*.0032,.020,.115),mouth,clipped:!mouth&&Math.hypot(points.at(-1)[0]-b[0],points.at(-1)[1]-b[1])>.03});}
+ if(points.length>1)out.push({i,j,points,source:!incoming.has(i),width:clamp(Math.sqrt(m.m.flow?.[i]||60)*.0032,.020,.115),mouth,clipped:!mouth&&Math.hypot(points.at(-1)[0]-b[0],points.at(-1)[1]-b[1])>.03});}
  return out;
 }
