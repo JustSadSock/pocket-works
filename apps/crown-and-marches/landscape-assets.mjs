@@ -4,9 +4,9 @@ const C=(x,a,b)=>Math.max(a,Math.min(b,x)),R=(n)=>{let x=Math.sin(n*127.1+311.7)
 export const assetTypes=['house','timber','shop','warehouse','market','chapel','church','cathedral','keep','tower','gate','barn','pine','fir','oak','birch','bush','crop'];
 const size={house:[.15,.17,.18],timber:[.16,.18,.21],shop:[.19,.17,.16],warehouse:[.26,.19,.15],market:[.17,.15,.08],chapel:[.13,.20,.21],church:[.19,.34,.32],cathedral:[.28,.40,.39],keep:[.31,.29,.38],tower:[.10,.10,.27],gate:[.19,.09,.23],barn:[.22,.19,.14]};
 export const assetDimensions=size;
-const palettes={stone:[183,174,151],plaster:[222,207,174],wood:[99,75,48],roof:[139,75,46],slate:[85,94,94],glass:[48,56,51],leaf:[76,111,55],bark:[99,77,49],cloth:[191,159,99]};
+export const palettes={stone:[183,174,151],plaster:[222,207,174],wood:[99,75,48],roof:[139,75,46],slate:[85,94,94],glass:[48,56,51],leaf:[76,111,55],bark:[99,77,49],cloth:[191,159,99]};
 const mul=(a,n)=>a.map(v=>C(Math.round(v*n),0,255)),color=a=>'rgb('+a.join(',')+')';
-function mesh(type,v){
+export function mesh(type,v){
  const faces=[];const face=(p,mat,variation=0)=>faces.push({p,mat,variation});
  const box=(x,y,z,w,d,h,mat)=>{const a=[x,y,z],b=[x+w,y,z],c=[x+w,y+d,z],e=[x,y+d,z],A=[x,y,z+h],B=[x+w,y,z+h],D=[x+w,y+d,z+h],E=[x,y+d,z+h];face([a,b,B,A],mat);face([b,c,D,B],mat);face([c,e,E,D],mat);face([e,a,A,E],mat);face([A,B,D,E],mat);};
  const roof=(x,y,z,w,d,h,mat)=>{const a=[x,y,z],b=[x+w,y,z],c=[x+w,y+d,z],e=[x,y+d,z],u=[x+w/2,y,z+h],v=[x+w/2,y+d,z+h];face([a,u,v,e],mat);face([u,b,c,v],mat);face([a,b,u],'plaster');face([e,v,c],'plaster');
