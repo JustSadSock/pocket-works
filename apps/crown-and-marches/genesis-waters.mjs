@@ -4,9 +4,9 @@ const C=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),L=(a,b,t)=>a+(b-a)*t,S=t=>{t=C(t)
 const cache=new WeakMap();
 export function lakeBasins(g){
  if(cache.has(g))return cache.get(g);
- const n=g.land.length,w=g.width,h=g.height,labels=new Int32Array(n),levels=[0],queue=new Int32Array(n);
- for(let i=0;i<n;i++){if(!g.lakeWater?.[i]||labels[i])continue;const id=levels.length;let head=0,tail=1;queue[0]=i;labels[i]=id;const values=[];
- while(head<tail){const j=queue[head++],x=j%w,y=Math.floor(j/w);if(g.lakeWater[j])values.push(g.surface[j]);for(const k of [x?j-1:-1,x<w-1?j+1:-1,y?j-w:-1,y<h-1?j+w:-1])if(k>=0&&!labels[k]&&g.land[k]&&(g.lake[k]>.001||g.lakeWater[k])){labels[k]=id;queue[tail++]=k;}}
+ const n=g.land.length,w=g.width,h=g.height,labels=new Int32Array(n),levels=[0];let queue=new Int32Array(Math.min(n,1024));
+ for(let i=0;i<n;i++){if(!g.lakeWater?.[i]||labels[i])continue;const id=levels.length,datum=g.surface[i];let head=0,tail=1;queue[0]=i;labels[i]=id;const values=[];
+ while(head<tail){const j=queue[head++],x=j%w,y=Math.floor(j/w);if(g.lakeWater[j])values.push(g.surface[j]);for(const k of [x?j-1:-1,x<w-1?j+1:-1,y?j-w:-1,y<h-1?j+w:-1])if(k>=0&&!labels[k]&&g.land[k]&&(g.lake[k]>.001||g.lakeWater[k])&&Math.abs(g.surface[k]-datum)<.006){labels[k]=id;if(tail===queue.length){const next=new Int32Array(Math.min(n,queue.length*2));next.set(queue);queue=next;}queue[tail++]=k;}}
  values.sort((a,b)=>a-b);levels.push(values[Math.floor(values.length/2)]);}
  const W=(w-1)/g.detail,H=(h-1)/g.detail,cells=new Uint8Array(W*H);for(let i=0;i<n;i++)if(g.lakeWater?.[i])cells[Math.min(H-1,Math.floor(Math.floor(i/w)/g.detail))*W+Math.min(W-1,Math.floor((i%w)/g.detail))]=1;
  const result={labels,levels,cells};cache.set(g,result);return result;

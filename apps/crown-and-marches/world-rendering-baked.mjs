@@ -15,6 +15,7 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  const at=(x,y)=>z[C(y,0,h-1)*w+C(x,0,w-1)],sample=(x,y)=>{const i=Math.floor(x),j=Math.floor(y),u=x-i,t=y-j;return L(L(at(i,j),at(i+1,j),u),L(at(i,j+1),at(i+1,j+1),u),t);};
  const light=[-.62,-.49,.61],len=Math.hypot(light[0],light[1]),scale=1/res;
  for(let y=0;y<h;y++){for(let x=0;x<w;x++){const k=y*w+x,o=k*9,wx=v[o],wy=v[o+1],H=v[o+3],wet=v[o+4],fert=v[o+5],forest=v[o+6],land=v[o+7],river=v[o+8],height=z[k];let col=[216,205,178];
+ if(geology==='waters'&&source.water?.kind[k]&&!auditFields){const water=watersMaterial({x:wx,y:wy},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]}),i=k*4;pixels[i]=C(water[0],0,255);pixels[i+1]=C(water[1],0,255);pixels[i+2]=C(water[2],0,255);pixels[i+3]=255;continue;}
  if(river<=1.5){
  const dx=(at(x+1,y)-at(x-1,y))/(2*scale),dy=(at(x,y+1)-at(x,y-1))/(2*scale),norm=Math.hypot(dx,dy,1),nx=-dx/norm,ny=-dy/norm,nz=1/norm,diff=Math.max(0,nx*light[0]+ny*light[1]+nz*light[2]),slope=1-nz;
  let shadow=0;for(const step of [.35,.7,1.2,1.9,2.8,4,5.6,7.4]){const q=sample(x+light[0]/len*step*res,y+light[1]/len*step*res),occ=q-height-step*light[2]/len;shadow=Math.max(shadow,S((occ-.035)/.36));}

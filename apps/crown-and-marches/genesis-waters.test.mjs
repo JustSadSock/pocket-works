@@ -9,3 +9,7 @@ assert.deepEqual(g.bed,before);assert.ok(a.vertices.every(Number.isFinite));asse
 for(let x=2;x<22;x++){const i=4*w+x;g.down[i]=i+1;g.flow[i]=1600;}g.flow[4*w+22]=1600;
 const c=curvedChannels(g,[0,0,6,6],16);for(let x=8;x<=88;x++)assert.ok(c[16*97+x]<0);
 assert.ok(watersMaterial({x:0,y:0,H:.3,wet:.5,fert:.5,slope:.1,river:1,nx:0,ny:0,forest:0,curvature:0},{kind:2,depth:.08,shore:-.08}).every(Number.isFinite));
+
+// Identical local samples at overlapping bounds and authoritative nodes.
+const tile=await naturalWatersSource(s,{}, {bounds:[2,2,4,4],detail:16,vertical:h=>h});
+for(let y=0;y<33;y++)for(let x=0;x<33;x++){const i=y*33+x,j=(y+32)*97+x+32;assert.equal(tile.elevations[i],a.elevations[j]);assert.equal(tile.water.kind[i],a.water.kind[j]);}

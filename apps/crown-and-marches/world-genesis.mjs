@@ -36,14 +36,14 @@ function geology(seed,w,h,land,coast,approach,audit='original'){
 }
 // Priority flood: stable tie-breaking by index, strict downhill outlets.
 // Depressions are measured before filling; the filled surface routes runoff.
-function drainage(height,land,w,h,rain=null){
- const n=w*h,filled=height.slice(),down=new Int32Array(n).fill(-1),basin=new Int32Array(n).fill(-1),order=new Int32Array(n),seen=new Uint8Array(n),heap=new Int32Array(n);let size=0,count=0;
+function drainage(height,land,w,h,rain=null,scratch=null){
+ const n=w*h,take=(key,Type)=>scratch?(scratch[key]??=new Type(n)):new Type(n),filled=take('filled',Float32Array),down=take('down',Int32Array).fill(-1),basin=take('basin',Int32Array).fill(-1),order=take('order',Int32Array),seen=take('seen',Uint8Array).fill(0),heap=take('heap',Int32Array);filled.set(height);let size=0,count=0;
  const less=(a,b)=>filled[a]<filled[b]||filled[a]===filled[b]&&a<b;
  const push=i=>{let k=size++;while(k){const p=(k-1)>>1,j=heap[p];if(!less(i,j))break;heap[k]=j;k=p;}heap[k]=i;};
  const pop=()=>{const i=heap[0],v=heap[--size];if(size){let k=0;while(k*2+1<size){let j=k*2+1;if(j+1<size&&less(heap[j+1],heap[j]))j++;if(!less(heap[j],v))break;heap[k]=heap[j];k=j;}heap[k]=v;}return i;};
  for(let i=0;i<n;i++)if(!land[i]||i%w===0||i%w===w-1||i<w||i>=n-w){seen[i]=1;basin[i]=i;push(i);}
  while(size){const i=pop();order[count++]=i;const x=i%w,y=(i/w)|0;for(const [dx,dy] of D){const X=x+dx,Y=y+dy,j=Y*w+X;if(X<0||Y<0||X>=w||Y>=h||seen[j])continue;seen[j]=1;filled[j]=Math.max(height[j],filled[i]+.000002);down[j]=i;basin[j]=basin[i];push(j);}}
- const flow=new Float32Array(n),lake=new Float32Array(n);
+ const flow=take('flow',Float32Array).fill(0),lake=take('lake',Float32Array).fill(0);
  for(let k=0;k<count;k++){const i=order[k];if(!land[i])continue;lake[i]=Math.max(0,filled[i]-height[i]);flow[i]=rain?(.4+rain[i]*1.2):1;const x=i%w,y=(i/w)|0;let best=down[i],grade=0;for(const [dx,dy] of D){const X=x+dx,Y=y+dy,j=Y*w+X;if(X<0||Y<0||X>=w||Y>=h||filled[j]>=filled[i])continue;const g=(filled[i]-filled[j])/Math.hypot(dx,dy);if(g>grade){grade=g;best=j;}}down[i]=best;if(best>=0)basin[i]=basin[best];}
  for(let k=count-1;k>=0;k--){const i=order[k];if(land[i]&&down[i]>=0)flow[down[i]]+=flow[i];}
  return {filled,down,basin,flow,lake,order};
@@ -61,12 +61,12 @@ function generateInternal(seed,W,H,continental,options,auditProfile){
  for(let y=0;y<h;y++){let vapor=.78,previous=.12;for(let x=0;x<w;x++){const i=y*w+x,z=high[i];if(!mask[i])vapor=.93;else{const rise=Math.max(0,z-previous),fall=Math.max(0,previous-z),precip=Math.min(vapor,.015/r+rise*1.9);rain[i]=C(.16+vapor*.53+precip*r*.8-fall*.35);vapor=C(vapor-precip+.004/r,.14,.93);}previous=z;}}
  // One drainage-driven incision pass and two conservative talus passes.
  // Incision follows connected catchments, not stochastic displacement.
- let hyd=drainage(high,mask,w,h,rain),erosion=new Float32Array(N),removed=0,deposited=0;
+ let scratch=config.revision===LIVING_REVISION?{}:null,hyd=drainage(high,mask,w,h,rain,scratch),erosion=new Float32Array(N),removed=0,deposited=0;
  for(let i=0;i<N;i++){const j=hyd.down[i];if(!mask[i]||j<0||!mask[j]||high[i]<.16)continue;const slope=Math.max(0,(hyd.filled[i]-hyd.filled[j])*r),area=hyd.flow[i]/(r*r),cut=Math.min(.085,Math.max(0,Math.log1p(area)-.5)*Math.sqrt(slope)*.032,high[i]-.135);if(cut<=0)continue;erosion[i]-=cut;erosion[j]+=cut*.22;removed+=cut;deposited+=cut*.22;}
  for(let i=0;i<N;i++)high[i]+=erosion[i];
  for(let pass=0;pass<2;pass++){erosion.fill(0);for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(!mask[i])continue;let j=-1,drop=0;for(const k of [i-1,i+1,i-w,i+w])if(mask[k]&&high[i]-high[k]>drop){drop=high[i]-high[k];j=k;}if(j>=0){const move=Math.max(0,drop-.115/r)*.19;erosion[i]-=move;erosion[j]+=move;}}for(let i=0;i<N;i++)high[i]+=erosion[i];}
  if(config.revision===LIVING_REVISION){hyd=null;erosion=null;}
- hyd=drainage(high,mask,w,h,rain);
+ hyd=drainage(high,mask,w,h,rain,scratch);scratch=null;
  // Standing water is represented by the filled water surface; preserve
  // separate bed height and lake depth for research. Sea remains the same coast.
  const height=new Float32Array(n),moisture=new Float32Array(n),temperature=new Float32Array(n),fert=new Float32Array(n),terrain=new Uint8Array(n),resource=new Int8Array(n).fill(-1),ridge=new Float32Array(n),pass=new Uint8Array(n),delta=new Uint8Array(n),coast=new Uint8Array(n),relief=new Float32Array(n),lakeDepth=new Float32Array(n);

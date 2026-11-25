@@ -9,3 +9,6 @@ Lake candidates are connected positive-depth depressions seeded only by represen
 
 ## Review
 Same three control worlds, 3.2 and 3.3 and waters candidate, Chromium and WebKit. Close local Detail16 vs local Detail8 and authoritative Detail8; RAF camera motion records intervals, FPS, P95/max and CPU submit P95 separately from screenshot readback. Lake system selected only if separate represented basins are nearby; missing features logged. Native memory and exit/physical-bed audits retained. Seven reported mismatches require investigation before changing authoritative routing. No claim of 8/10 or release approval.
+
+## Allocation and exit comparison
+Genesis 3.3 reuses the first fine priority-flood allocation for the post-erosion flood (filled/down/basin/order/seen/heap/flow/lake), with initialization identical to fresh arrays. 16 synthetic fields, 96 result arrays, bit-identical fresh vs reused. Previous revisions retain independent allocations. Lake queue grows as needed and labels separate differing hydraulic levels by a 0.006 tolerance for priority-flood epsilon. Water pixels bypass terrain horizon work; overlapping source bounds tested. Actual RSS and frame results pending CI. Exit comparison now reports added, removed and retained cell cases with original classification, without changing routing.
