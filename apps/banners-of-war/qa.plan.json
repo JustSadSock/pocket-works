@@ -175,7 +175,8 @@
       "kind": "node-test",
       "files": [
         "research/vertical-slice/slice-core.test.mjs",
-        "research/vertical-slice/standalone.test.mjs"
+        "research/vertical-slice/standalone.test.mjs",
+        "research/vertical-slice/slice-evidence.test.mjs"
       ],
       "tier": "smoke"
     },
