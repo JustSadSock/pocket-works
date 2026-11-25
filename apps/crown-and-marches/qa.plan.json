@@ -151,12 +151,6 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "geography-review-qa.mjs",
-      "tier": "smoke"
-    },
-    {
-      "id": "living-landscapes",
-      "kind": "browser-node",
       "entry": "living-landscapes-qa.mjs",
       "tier": "smoke"
     },
