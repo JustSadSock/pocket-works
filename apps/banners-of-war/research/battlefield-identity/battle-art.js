@@ -2,7 +2,8 @@ import {E} from '../../engine.js';
 import {TerrainTiles,renderHeight} from './terrain-tiles.js';
 let cv,g;const S=Math.sin(Math.PI/3),T=Math.cos(Math.PI/3),clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),mix=(a,b,t)=>a+(b-a)*t,smooth=(a,b,x)=>{let t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)},hash=(x,y)=>{let n=Math.imul(x|0,374761393)+Math.imul(y|0,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296};
 let moving=false,motionKind='none',lastCam=null,policy='auto',costs={direct:0,batch:0},trials={direct:0,batch:0},drawSerial=0,terrainKey=null,zoomLevel=null,zoomUntil=0;let atlas,style='A',textures={},treeAsset={},terrainTiles=null,scene,frame=0,cam,ground,playing=false,batch=true,stats={},last=0,w,h,d,cache=new Map(),cacheBytes=0;
-const cap=8*1024*1024;
+const cap=8*1024*1024,scaledCap=24*1024*1024;let scaledCache=new Map(),scaledBytes=0,scaleHits=0,scaleMisses=0,scaleMs=0;
+let cadence=new Map(),previousDraw=null;
 function resize(){g.setTransform(d,0,0,d,0,0)}
 const image=url=>new Promise((ok,no)=>{let i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(Error('Missing '+url));i.src=url});
 async function setStyle(){playing=false;let t=performance.now(),meta=await fetch('/art-evidence/mixed-atlas.json').then(r=>{if(!r.ok)throw Error('Missing baked atlas');return r.json()});let pages=await Promise.all(Object.keys(meta.pages).map(i=>image('/art-evidence/page-'+i+'.png')));atlas={pages,meta,loadMs:performance.now()-t,bytes:pages.reduce((n,p)=>n+p.width*p.height*4,0)};
@@ -25,6 +26,23 @@ function heading(a){return ((Math.round(a/(Math.PI/4))%8)+8)%8}
 function pose(u,q,row,rows,s,seed,contact){if(u.rout)return [5,9,13,17][Math.floor(s.time*6+hash(seed,3)*4)%4];if(u.type==='archer'&&row<Math.max(1,Math.ceil(rows*.65))&&(s.shots||[]).some(a=>a.id===u.id&&Math.hypot(a.x-u.x,a.y-u.y)<40&&s.time-a.time<1.5))return [25,29,33,37][Math.floor(s.time*6+hash(seed,3)*4)%4];if((u.type==='knight'||u.type==='lightHorse'||u.type==='guard')&&u.order?.kind==='charge'&&u.v>.35)return [25,29,33,37][Math.floor(s.time*6+hash(seed,3)*4)%4];if(u.rout)return [5,9,13,17][Math.floor(s.time*6+hash(seed,3)*4)%4];if(contact&&row<Math.max(1,Math.ceil(rows*.26)))return q.pressure>1.1||u.order?.kind==='brace'||u.order?.kind==='hold'?21:[25,29,33,37][Math.floor(s.time*6+hash(seed,3)*4)%4];if(u.v>.2)return [5,9,13,17][Math.floor(s.time*6+hash(seed,3)*4)%4];return 1}
 // Use exact source cropping once per atlas entry, rather than resampling the entire atlas for each soldier.
 function blit(ctx,o,x=0,y=0){let e=o.e||atlas.meta.entries[o.key],s=o.scale,r=e.rect;if(!e.sprite){let c=document.createElement('canvas');c.width=r[2];c.height=r[3];c.getContext('2d').drawImage(atlas.pages[e.page],...r,0,0,r[2],r[3]);e.sprite=c}ctx.drawImage(e.sprite||atlas.pages[e.page],e.sprite?0:r[0],e.sprite?0:r[1],r[2],r[3],o.x-x-e.anchor[0]*s,o.y-y-e.anchor[1]*s,r[2]*s,r[3]*s)}
+// Same atlas pixels, same projection and painter order. Bake the exact screen-size
+// sample once for each sprite, DPR and scale, then issue an unscaled Canvas blit.
+// Like C&M's baked material field, move repeated sampling out of composition.
+function blitScaled(ctx,o){
+ let e=o.e||atlas.meta.entries[o.key],s=o.scale,r=e.rect,f=s*d;
+ let key=o.key+'|'+f+'|'+d,item=scaledCache.get(key);
+ if(!item){
+  let start=performance.now(),left=Math.floor(-e.anchor[0]*f)-1,top=Math.floor(-e.anchor[1]*f)-1,right=Math.ceil((r[2]-e.anchor[0])*f)+1,bottom=Math.ceil((r[3]-e.anchor[1])*f)+1,W=right-left,H=bottom-top;
+  if(W*H*4>scaledCap/8){blit(ctx,o);return}
+  let canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;let g2=canvas.getContext('2d');g2.imageSmoothingEnabled=ctx.imageSmoothingEnabled;g2.imageSmoothingQuality=ctx.imageSmoothingQuality;
+  g2.drawImage(e.sprite||atlas.pages[e.page],e.sprite?0:r[0],e.sprite?0:r[1],r[2],r[3],-e.anchor[0]*f-left,-e.anchor[1]*f-top,r[2]*f,r[3]*f);
+  item={canvas,left,top,bytes:W*H*4};while(scaledBytes+item.bytes>scaledCap&&scaledCache.size){let k=scaledCache.keys().next().value;scaledBytes-=scaledCache.get(k).bytes;scaledCache.delete(k)}
+  scaledCache.set(key,item);scaledBytes+=item.bytes;scaleMisses++;scaleMs+=performance.now()-start;
+ }else{scaledCache.delete(key);scaledCache.set(key,item);scaleHits++}
+ // Device-aligned integer origin: no additional fractional filtering.
+ ctx.drawImage(item.canvas,o.x+item.left/d,o.y+item.top/d,item.canvas.width/d,item.canvas.height/d);
+}
 function extent(o){let e=atlas.meta.entries[o.key],s=o.scale;return {l:o.x-e.anchor[0]*s,t:o.y-e.anchor[1]*s,r:o.x+(e.rect[2]-e.anchor[0])*s,b:o.y+(e.rect[3]-e.anchor[1])*s}}
 function cacheRow(row){let boxes=row.map(extent),minX=Math.floor(Math.min(...boxes.map(o=>o.l))),minY=Math.floor(Math.min(...boxes.map(o=>o.t))),maxX=Math.ceil(Math.max(...boxes.map(o=>o.r))),maxY=Math.ceil(Math.max(...boxes.map(o=>o.b))),W=maxX-minX,H=maxY-minY;if(W<1||H<1||W*H*4*d*d>cap/3)return false;
  let key=d+'|'+W+'|'+H+'|'+row.map(o=>[o.key,o.x-minX,o.y-minY,o.scale].join(',')).join(';'),item=cache.get(key);
@@ -46,7 +64,7 @@ function geometry(s,F){let cacheable=Object.isFrozen(s);let prior=cacheable?geom
  result.contactMs=contactMs;result.geometryMs=performance.now()-start-contactMs;result.cached=false;
  if(cacheable){geometryCache.set(s,result);while(geometryCache.size>26)geometryCache.delete(geometryCache.keys().next().value)}return result}
 
-function render(s,mode=batch,environmentOnly=false){let start=performance.now();resize();const k=cam.k,F=scene.F,groundStart=performance.now(),land=landscape(s),groundMs=performance.now()-groundStart;stats={groundMs,terrain:land.ground,sprites:0,represented:0,visible:0,drawCalls:0,hits:0,misses:0,prepBlits:0,atlasBytes:atlas.bytes,missMs:0,evictions:0,localContacts:0,contactSectors:0,proxy:0,byType:{},reachMismatch:0,atlasLoadMs:atlas.loadMs};
+function render(s,mode='direct',environmentOnly=false){let start=performance.now();scaleHits=scaleMisses=scaleMs=0;resize();const k=cam.k,F=scene.F,groundStart=performance.now(),land=landscape(s),groundMs=performance.now()-groundStart;stats={groundMs,terrain:land.ground,sprites:0,represented:0,visible:0,drawCalls:0,hits:0,misses:0,prepBlits:0,atlasBytes:atlas.bytes,missMs:0,evictions:0,localContacts:0,contactSectors:0,proxy:0,byType:{},reachMismatch:0,atlasLoadMs:atlas.loadMs};
  let items=[],flags=[],profileStart=performance.now(),geo=environmentOnly?{regiments:[],contactSectors:0}:geometry(s,F),originX=Math.round(w/2-cam.u*k),originY=Math.round(h/2-cam.v*k),size=Math.max(4,k*6);
  stats.contactSectors=geo.contactSectors;stats.contactMs=geo.contactMs||0;stats.geometryMs=geo.geometryMs||0;stats.geometryCached=!!geo.cached;
  for(let t of land.trees)items.push({y:t.p.y,tree:t});
@@ -57,20 +75,31 @@ function render(s,mode=batch,environmentOnly=false){let start=performance.now();
  }}}
  }
  stats.positionMs=performance.now()-profileStart-stats.geometryMs-stats.contactMs;
- if(k>=8){g.fillStyle='#292c202f';g.beginPath();for(let it of items)if(it.o){let p=it.o;g.moveTo(p.x+k*.50,p.y+k*.17);g.ellipse(p.x+k*.24,p.y+k*.17,k*.30,k*.105,.25,0,Math.PI*2)}g.fill()}let sortStart=performance.now();items.sort((a,b)=>a.y-b.y);stats.sortMs=performance.now()-sortStart;let composeStart=performance.now();for(let i=0;i<items.length;){let it=items[i];if(it.tree){tree(it.tree);i++;continue}let end=i+1;if(mode&&it.eligible&&motionKind!=='zoom')while(end<items.length&&items[end].eligible&&items[end].group===it.group)end++;if(end===i+1){blit(g,it.o);stats.drawCalls++;i++;continue}let run=items.slice(i,end).map(x=>x.o);if(!cacheRow(run))for(let o of run){blit(g,o);stats.drawCalls++}i=end}
+ if(k>=8){g.fillStyle='#292c202f';g.beginPath();for(let it of items)if(it.o){let p=it.o;g.moveTo(p.x+k*.50,p.y+k*.17);g.ellipse(p.x+k*.24,p.y+k*.17,k*.30,k*.105,.25,0,Math.PI*2)}g.fill()}let sortStart=performance.now();items.sort((a,b)=>a.y-b.y);stats.sortMs=performance.now()-sortStart;let composeStart=performance.now();for(let i=0;i<items.length;){let it=items[i];if(it.tree){tree(it.tree);i++;continue}let end=i+1;if(mode==='batch'&&it.eligible&&motionKind!=='zoom')while(end<items.length&&items[end].eligible&&items[end].group===it.group)end++;if(end===i+1){if(mode==='scaled')blitScaled(g,it.o);else blit(g,it.o);stats.drawCalls++;i++;continue}let run=items.slice(i,end).map(x=>x.o);if(!cacheRow(run))for(let o of run){blit(g,o);stats.drawCalls++}i=end}
  for(let f of flags){let {p,k}=f,ht=Math.max(5,k*1.8),wd=Math.max(4,k*.85);g.strokeStyle='#57432e';g.lineWidth=Math.max(.7,k*.075);g.beginPath();g.moveTo(p.x,p.y);g.lineTo(p.x,p.y-ht);g.stroke();g.fillStyle=f.side?'#97432e':'#315776';g.beginPath();g.moveTo(p.x,p.y-ht);g.lineTo(p.x+wd,p.y-ht+ht*.12);g.lineTo(p.x+wd*.88,p.y-ht*.48);g.lineTo(p.x,p.y-ht*.58);g.fill();g.strokeStyle='#dec89a';g.lineWidth=Math.max(.6,k*.04);g.beginPath();g.moveTo(p.x+wd*.13,p.y-ht*.94);g.lineTo(p.x+wd*.77,p.y-ht*.85);g.stroke()}
- stats.composeMs=performance.now()-composeStart;stats={...stats,drawMs:performance.now()-start,cacheBytes,camera:{...cam},time:s.time,mode:mode?'batch':'direct',motion:motionKind};return stats}
+ stats.composeMs=performance.now()-composeStart;stats={...stats,drawMs:performance.now()-start,cacheBytes,camera:{...cam},time:s.time,mode,motion:motionKind,scaleHits,scaleMisses,scaleMs,scaledBytes};return stats}
 
 export async function initArt(canvas){cv=canvas;g=canvas.getContext('2d',{alpha:false});await setStyle();return {canvas:atlas.pages[0]}}
-export function setArtPolicy(p){if(!['auto','direct','batch'].includes(p))throw Error('Unknown renderer policy');policy=p;costs={direct:0,batch:0};trials={direct:0,batch:0}}
+export function setArtPolicy(p){if(!['auto','direct','batch','scaled'].includes(p))throw Error('Unknown renderer policy');policy=p;previousDraw=null;costs={direct:0,batch:0};trials={direct:0,batch:0}}
 function getScene(s,layout,C){
  w=layout.w;h=layout.h;d=layout.d;cam={...C};let F=E.forState(s),key=s.seed+'|'+F.W+'|'+F.H+'|'+s.terrain.kind;
- if(!scene||terrainKey!==key){terrainKey=key;scene={F,frames:[s]};geometryCache.clear();initTerrain(s);lastCam=null;zoomLevel=null;zoomUntil=0;cache.clear();cacheBytes=0}
+ if(!scene||terrainKey!==key){terrainKey=key;scene={F,frames:[s]};geometryCache.clear();cadence.clear();previousDraw=null;scaledCache.clear();scaledBytes=0;initTerrain(s);lastCam=null;zoomLevel=null;zoomUntil=0;cache.clear();cacheBytes=0}
  else scene.frames[0]=s;
 }
 export async function warmArt(s,layout,C){getScene(s,layout,C);let t=performance.now();let coarse=await terrainTiles.warm({...cam,k:cam.k/2},w,h,d),detail=await terrainTiles.warm(cam,w,h,d);return {wallMs:performance.now()-t,coarse,detail}}
 export function paintArt(s,layout,C){getScene(s,layout,C);let before=lastCam;motionKind=before&&Math.abs(before.k-cam.k)>1e-7?'zoom':before&&(before.x!==cam.x||before.y!==cam.y)?'pan':'none';moving=motionKind!=='none';
  if(motionKind==='zoom'){if(performance.now()>=zoomUntil)zoomLevel=terrainTiles.visible(before,w,h,d)[0]?.l;zoomUntil=performance.now()+180}
- lastCam={...cam};let use=policy==='batch'||policy==='auto'&&motionKind!=='zoom'&&(trials.batch<2&&drawSerial%8===3||trials.batch>1&&(drawSerial%90===12||costs.batch<costs.direct*.92&&drawSerial%90!==0));drawSerial++;
- let r=render(s,use),kind=use?'batch':'direct',cost=Math.max(0,r.drawMs-r.groundMs);costs[kind]=trials[kind]?costs[kind]*.85+cost*.15:cost;trials[kind]++;return {...r,policy,costs:{...costs},trials:{...trials},terrainLevel:r.terrain.level,zoomHold:performance.now()<zoomUntil}}
+ lastCam={...cam};let now=performance.now(),bucket=motionKind+'|'+d+'|'+Math.round(Math.log2(Math.max(.1,cam.k))*2);
+ // RAF-to-RAF time includes deferred Canvas raster and compositing, unlike JS submit time.
+ // Ignore paused/idle frames and scene changes; learn only from adjacent active draws.
+ if(previousDraw&&previousDraw.bucket===bucket){let ms=now-previousDraw.at;if(ms>=4&&ms<120){let samples=cadence.get(bucket)||{},p=samples[previousDraw.mode]||{ms:0,n:0};p.ms=p.n?p.ms*.84+ms*.16:ms;p.n++;samples[previousDraw.mode]=p;cadence.set(bucket,samples)}}
+ let choices=motionKind==='zoom'?['direct','scaled']:['direct','batch','scaled'],learned=cadence.get(bucket)||{},mode=policy;
+ if(policy==='auto'){
+  let unknown=choices.find(m=>(learned[m]?.n||0)<3);
+  mode=unknown||choices.reduce((best,m)=>learned[m].ms<learned[best].ms?m:best,choices[0]);
+  if(!unknown&&drawSerial%120===37)mode=choices[(choices.indexOf(mode)+1)%choices.length];
+ }
+ drawSerial++;let r=render(s,mode),cost=Math.max(0,r.drawMs-r.groundMs);costs[mode]=trials[mode]?costs[mode]*.85+cost*.15:cost;trials[mode]=(trials[mode]||0)+1;
+ previousDraw={at:now,bucket,mode};return {...r,policy,costs:{...costs},trials:{...trials},cadence:JSON.parse(JSON.stringify(learned)),terrainLevel:r.terrain.level,zoomHold:performance.now()<zoomUntil}}
+
 export function pendingArt(){return (terrainTiles?.queue.size||0)+(performance.now()<zoomUntil?1:0)}
