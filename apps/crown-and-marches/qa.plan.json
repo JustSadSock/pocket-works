@@ -151,7 +151,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "terrain-forge-study-qa.mjs",
+      "entry": "geographic-synthesis-qa.mjs",
       "tier": "smoke"
     },
     {

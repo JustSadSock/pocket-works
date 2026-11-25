@@ -1,0 +1,11 @@
+# Geographic Synthesis (isolated study)
+
+No change to campaign, world generator, Forge assets or battles. Baked Terrain remains the rendering control. Erosion, Watersheds and Forge Relief are frozen.
+
+Seven 48 km exemplars are sampled on 125 m WGS84-local grids, stored in QA artifacts with source and resampled hashes. 24 km centered crops use exactly 193x193 samples, min/max normalization, central gradients, strict eight-neighbour extrema and lags 1,2,4 km. Game cell = 1 km is a declared research assumption, not a physical game-map scale. Compare original source heights and visual heights separately. Curvature components are descriptive proxies, not measured geological watersheds.
+
+A: match 12/20 km rotated DEM footprints by coarse shape/relief; blend real high/mid-band residuals with cosine windows and repeated-patch penalty. B: flood from charted drainage channels and major tributary segments; derive interfluve surfaces from valley height, distance and real reference slopes. Both freeze water, unknown land, coast, known settlements, roads, bridges and passes; plains stay unchanged. Strict mode cancels residual at original sample centers. Relaxed mode caps local visual deviation (1.7 world height units for mountain, 0.65 for hill), and reports RMS, slope and macro deviations. These bounds are experimental, not a guarantee of artistic or tactical readability. No visual deformation changes simulation terrain flags. Save digest plus direct map-buffer digest verify no writes. Fog differential mutates only hidden geography in a clone.
+
+Worker receives a known-only snapshot; bounded in-memory cache is keyed by snapshot identity and mode (not persistent chunk streaming). Existing chunk culling remains; optional high-detail LOD is tested at close zoom. Three other scale captures, 3 procedural worlds, paired strict/relaxed on primary, limited additional compatibility views. No automatic adoption or release.
+
+Sources: https://registry.opendata.aws/terrain-tiles/ ; https://github.com/tilezen/joerd/blob/master/docs/attribution.md ; https://pubmed.ncbi.nlm.nih.gov/17495341/ . Source data attributed in per-region provenance. DEM vegetation proxy is not land cover observation.
