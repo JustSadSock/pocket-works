@@ -1,0 +1,25 @@
+{
+  "id": "/apps/print-sheet/",
+  "name": "Print Sheet",
+  "short_name": "Print Sheet",
+  "description": "Фотографии точного размера в сантиметрах: раскладка на A4, кадрирование, копии и PDF для печати.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#e5e8df",
+  "theme_color": "#e5e8df",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

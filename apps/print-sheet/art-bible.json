@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "product": "print-sheet",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "echolot",
+      "evidence": "apps/echolot/visual-direction.json",
+      "lesson": "The instrument retains one focal shape; use one paper metaphor rather than unrelated visual panels."
+    },
+    {
+      "slug": "emergent-kingdoms",
+      "evidence": "apps/emergent-kingdoms/visual-direction.json",
+      "lesson": "Keep editing separate from the actual spatial result, but use discrete paper pages instead of a map."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@page/size",
+      "observation": "The page size descriptor controls physical page dimensions and orientation.",
+      "principle": "Printed output needs a physical paper definition rather than screen pixels.",
+      "application": "Generate an explicit millimetre page rule and matching proof proportions.",
+      "avoid": "Do not rely on a browser viewport as the size of a sheet.",
+      "inspectedAt": "2026-11-24"
+    },
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/object-fit",
+      "observation": "Object fitting distinguishes complete content from a filled and cropped frame.",
+      "principle": "Preserve the source aspect ratio when filling a defined rectangle.",
+      "application": "Use equivalent cover and contain geometry for preview and PDF.",
+      "avoid": "Avoid stretching photos independently along each axis.",
+      "inspectedAt": "2026-11-24"
+    },
+    {
+      "url": "https://helpx.adobe.com/acrobat/using/adjusting-pdf-views.html",
+      "observation": "PDF viewers expose distinct page viewing and magnification modes.",
+      "principle": "Screen magnification is separate from the document's physical page dimensions.",
+      "application": "Keep a paper proof and display its dimensions independently of its screen size.",
+      "avoid": "Avoid implying that the preview on a phone is physical size.",
+      "inspectedAt": "2026-11-24"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "proof",
+      "medium": "Browser DOM proof and manually authored SVG contact-sheet icon.",
+      "composition": "Photo settings adjacent to a literal white A4 document proof.",
+      "interaction": "Commit dimensions and automatically arrange photos on paper.",
+      "motion": "Immediate geometry recomposition and slight physical button response.",
+      "rationale": "The accurate sheet is the primary deliverable and the visual metaphor communicates actual dimensions."
+    },
+    {
+      "id": "darkroom",
+      "medium": "Canvas-led darkroom surface with thumbnails over a black background.",
+      "composition": "Large single floating photograph and a filmstrip along the bottom edge.",
+      "interaction": "Move crop frames directly over images and navigate one at a time.",
+      "motion": "Smooth animated transitions between enlarged photographs and the strip.",
+      "rationale": "Photographic editing would be prominent but multi-photo physical sheet assembly would become harder to inspect."
+    },
+    {
+      "id": "spreadsheet",
+      "medium": "Text-dominant table of photo sizes and numeric output rows.",
+      "composition": "Full width spreadsheet with a separate print command and no paper proof.",
+      "interaction": "Edit quantities in individual cells and submit a completed batch.",
+      "motion": "Focus changes and cell updates without animated transitions.",
+      "rationale": "Very dense input is possible but users cannot see cropping and wasted space before printing."
+    }
+  ],
+  "selection": {
+    "concept": "proof",
+    "reason": "A literal paper proof makes dimensions, cropping, and page boundaries verifiable at a glance.",
+    "rejected": [
+      {
+        "concept": "darkroom",
+        "reason": "A photo-centric crop surface hides the spatial relationship between photos on the final sheet."
+      },
+      {
+        "concept": "spreadsheet",
+        "reason": "A dense numerical table sacrifices the visible page boundaries and crop preview."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "Hand-authored vectors provide a sharp product icon without raster texture dependencies."
+    },
+    {
+      "id": "dom",
+      "availability": "available",
+      "reason": "CSS and DOM represent physical rectangles on responsive mobile screens."
+    }
+  ],
+  "assets": [
+    {
+      "id": "icon",
+      "tool": "svg",
+      "source": "art/icon-design.md",
+      "output": "icons/icon.svg",
+      "role": "The application icon identifies a paper contact sheet with multiple photos.",
+      "acceptance": "The rectangular sheet and three photo slots remain legible at launcher size.",
+      "integration": "Manifest and favicon point to the authored local vector icon.",
+      "provenance": "Original hand-authored SVG shapes, no third-party images used.",
+      "maxBytes": 4096
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Long file names and compact size controls may overflow narrow viewports.",
+      "Paper proof must remain proportional in both orientations."
+    ],
+    "comparisons": [
+      "Portrait versus landscape proof after changing orientation.",
+      "Empty initial paper versus populated photograph arrangement after upload."
+    ]
+  }
+}
