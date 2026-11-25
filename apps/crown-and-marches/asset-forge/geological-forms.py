@@ -133,7 +133,7 @@ scene.render.film_transparent=True
 scene.render.resolution_x=1600
 scene.render.resolution_y=900
 scene.render.resolution_percentage=100
-bpy.ops.wm.save_as_mainfile(filepath=outputs["editable"],compress=True)
+bpy.ops.wm.save_as_mainfile(filepath=outputs["editable"],compress=False)
 bpy.ops.object.select_all(action="DESELECT")
 for obj in objects: obj.select_set(True)
 bpy.ops.export_scene.gltf(filepath=outputs["model"],export_format="GLB",use_selection=True,export_cameras=False,export_lights=False,export_apply=True)
