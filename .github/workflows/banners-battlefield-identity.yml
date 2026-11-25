@@ -9,13 +9,13 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: banners-battlefield-identity-${{ github.ref }}
+  group: banners-battlefield-playable-gate-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   reference:
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 60
+    timeout-minutes: 100
     defaults:
       run:
         shell: bash
@@ -72,6 +72,22 @@ jobs:
           test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Reuse in-flight source bake without cancelling it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json,os,time,urllib.request
+          url="https://api.github.com/repos/JustSadSock/pocket-works/actions/runs/45698329968/jobs"
+          request=urllib.request.Request(url,headers={"Authorization":"Bearer "+os.environ["GH_TOKEN"],"Accept":"application/vnd.github+json"})
+          for i in range(160):
+              with urllib.request.urlopen(request,timeout=30) as r: jobs=json.load(r)["jobs"]
+              done=False
+              for j in jobs:
+                  if j["status"]=="completed" or any(s["name"]=="Save verified source renders" and s["status"]=="completed" for s in j.get("steps",[])):done=True
+              if done:break
+              time.sleep(15)
+          PY
       - name: Restore unchanged troop bake
         id: troop-cache
         uses: actions/cache/restore@v4

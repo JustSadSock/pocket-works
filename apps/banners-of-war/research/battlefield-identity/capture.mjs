@@ -9,8 +9,66 @@ let server=createServer(async(req,res)=>{try{let path=decodeURIComponent(new URL
 await new Promise(ok=>server.listen(0,'127.0.0.1',ok));let address='http://127.0.0.1:'+server.address().port+url,failures=[];
 const save=(name,value)=>writeFile(out+'/'+name,JSON.stringify(value,null,2)),snap=(p,name)=>p.screenshot({path:out+'/'+name+'.png'});
 async function launch(browser,options){let ctx=await browser.newContext(options),p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(address);await p.waitForFunction(()=>!!window.sliceQA,{},{timeout:120000});await p.locator('#start').click();await p.waitForFunction(()=>window.sliceQA.state().phase==='deploy'&&!window.sliceQA.state().menu);await p.evaluate(()=>window.sliceQA.prepare());return {ctx,p,errors}}
-async function firstPlan(p,name){await p.locator('#commit').click();await p.waitForFunction(()=>window.sliceQA.state().phase==='plan');await p.locator('[data-group="foot"]').click();let before=await p.evaluate(()=>window.sliceQA.state());if(before.selected.length<2)throw Error('Foot selection missing');await p.evaluate(ids=>window.sliceQA.focusUnits(ids,35),before.selected);await p.evaluate(()=>window.sliceQA.prepare());let a=await p.evaluate(()=>{let q=window.sliceQA.state().units.find(u=>u.id===0);return window.sliceQA.project({x:q.x+40,y:q.y+8})});await p.locator('[data-tool="route"]').click();let b=await p.evaluate(()=>{let q=window.sliceQA.state().units.find(u=>u.id===0);return window.sliceQA.project({x:q.x+55,y:q.y+17})});let bounds=await p.locator('#field').boundingBox();if(a.x>10&&a.x<bounds.width-10&&a.y>100&&a.y<bounds.height-100){if(name.includes('mobile'))await p.touchscreen.tap(a.x,a.y);else{await p.mouse.move(a.x,a.y);await p.mouse.down();await p.mouse.move(b.x,b.y,{steps:8});await p.mouse.up()}}
- let observed=await p.evaluate(()=>window.sliceQA.state());if(!Object.keys(observed.orders).length){failures.push(name+' direct pointer route not recorded');}if(!Object.keys(observed.orders).length)await p.evaluate(()=>{let u=window.sliceQA.state().units.find(u=>u.id===0);window.sliceQA.qaOrder(0,'advance',[{x:u.x+18,y:u.y+7},{x:u.x+40,y:u.y+14}])});await p.evaluate(()=>{let u=window.sliceQA.state().units.find(u=>u.id===0);window.sliceQA.qaOrder(0,'advance',[{x:u.x+25,y:u.y+6},{x:u.x+55,y:u.y+15}]);window.sliceQA.qaOrder(0,'brace',[{x:u.x+60,y:u.y+15}],null,1);window.sliceQA.qaStage(0,1,'complete',30);window.sliceQA.focusUnits([0,1,2,3,4,5],30)});await p.evaluate(()=>window.sliceQA.prepare());await snap(p,name);return {directGestureOrders:Object.keys(observed.orders).length,orders:(await p.evaluate(()=>window.sliceQA.state())).orders}}
+// This test drives the public controls only. QA reads state and world projection,
+// never sets selection, orders, formation, or resolves a round.
+async function click(p,selector,mobile){let l=p.locator(selector);if(mobile)await l.tap();else await l.click()}
+async function pointer(p,pt,mobile){if(mobile)await p.touchscreen.tap(pt.x,pt.y);else await p.mouse.click(pt.x,pt.y)}
+async function safePoint(p,points){return p.evaluate(points=>{for(let q of points){let a=window.sliceQA.project(q);if(a.x>0&&a.y>0&&a.x<innerWidth&&a.y<innerHeight&&document.elementFromPoint(a.x,a.y)?.id==='field'&&!window.sliceQA.handles().some(h=>Math.hypot(h.screen.x-a.x,h.screen.y-a.y)<22))return a}return null},points)}
+async function groupRouteUI(p,group,mobile){
+ await click(p,'[data-group="'+group+'"]',mobile);
+ let before=await p.evaluate(()=>window.sliceQA.state());if(!before.selected.length)throw Error('No group '+group);
+ await click(p,'#focus',mobile);
+ let us=before.units.filter(u=>before.selected.includes(u.id)),cx=us.reduce((n,u)=>n+u.x,0)/us.length,cy=us.reduce((n,u)=>n+u.y,0)/us.length;
+ let points=[];for(let dx of [55,75,38,100,25])for(let dy of [25,-25,45,-45,0])points.push({x:E.clamp(cx+dx,15,E.W-15),y:E.clamp(cy+dy,15,E.H-15)});
+ let a=await safePoint(p,points);if(!a){await click(p,'#zoomOut',mobile);await p.waitForTimeout(180);a=await safePoint(p,points)}if(!a)throw Error('No unobstructed map target for '+group);
+ await click(p,'[data-tool="route"]',mobile);
+ // Desktop draws a real multi-point path. Mobile uses native touchscreen taps;
+ // the group route is spatially transformed by the normal Campaign controller.
+ if(mobile)await pointer(p,a,true);else{let b=await safePoint(p,points.filter(q=>q.x>cx+55));if(!b)b={x:a.x+12,y:a.y+9};await p.mouse.move(a.x,a.y);await p.mouse.down();await p.mouse.move(a.x+8,a.y+8,{steps:3});await p.mouse.move(b.x,b.y,{steps:8});await p.mouse.up()}
+ let after=await p.evaluate(()=>window.sliceQA.state());for(let id of before.selected)if(!after.orders[id]?.path?.length)throw Error('Missing native group order '+id);
+ if(!mobile&&!before.selected.some(id=>after.orders[id].path.length>1))throw Error('Desktop route missing multiple points');
+ return {group,ids:before.selected,pointerTypes:after.pointerTypes,orders:Object.fromEntries(before.selected.map(id=>[id,after.orders[id]]))};
+}
+async function firstPlan(p,name){let mobile=name.includes('mobile');
+ await click(p,'#commit',mobile);await p.waitForFunction(()=>window.sliceQA.state().phase==='plan');
+ let group=await groupRouteUI(p,'foot',mobile);
+ await click(p,'#brace',mobile);
+ let observed=await p.evaluate(()=>window.sliceQA.state());
+ if(!group.ids.every(id=>observed.orders[id]?.stages?.some(q=>q.kind==='brace'&&q.when==='complete')))throw Error('Native conditional defence not created');
+ await click(p,'#fold',mobile);
+ let before=await p.evaluate(()=>window.sliceQA.state());
+ let option=await p.locator('#form option').evaluateAll(o=>o.find(v=>v.value!=='line'&&v.value!=='spears'&&v.value!=='shield')?.value);if(!option)throw Error('No alternate formation');await p.locator('#form').selectOption(option);
+ let formed=await p.evaluate(()=>window.sliceQA.state());
+ if(JSON.stringify(before.orders)===JSON.stringify(formed.orders))throw Error('Native formation edit did not change order');
+ await click(p,'#undo',mobile);let undone=await p.evaluate(()=>window.sliceQA.state());if(JSON.stringify(undone.orders)!==JSON.stringify(before.orders))throw Error('Native undo mismatch');
+ await click(p,'#redo',mobile);let redone=await p.evaluate(()=>window.sliceQA.state());if(JSON.stringify(redone.orders)!==JSON.stringify(formed.orders))throw Error('Native redo mismatch');
+ await click(p,'#fold',mobile);
+ await p.evaluate(()=>window.sliceQA.prepare());await snap(p,name);
+ let orders=(await p.evaluate(()=>window.sliceQA.state())).orders;
+ return {directGestureOrders:group.ids.length,group,orders,formationUndoRedo:true,input:'native controls + '+(mobile?'touchscreen':'mouse')};
+}
+async function uiCycle(p,name,mobile){
+ let initial=await p.evaluate(()=>window.sliceQA.state()),history=[];
+ if(initial.units.length!==18||Math.round(initial.units.reduce((n,u)=>n+u.n,0))!==1536)throw Error('Incorrect initial army');
+ // Orders are deliberately supplied using group route buttons and native pointers.
+ // Existing standing orders then execute until the genuine result screen.
+ for(let g of ['missile','horse'])await groupRouteUI(p,g,mobile);
+ for(let i=0;i<12;i++){
+  let before=await p.evaluate(()=>window.sliceQA.state());
+  await click(p,'#commit',mobile);await click(p,'#execute',mobile);
+  await p.waitForFunction(()=>window.sliceQA.state().phase==='replay',{},{timeout:120000});
+  let r=await p.evaluate(()=>window.sliceQA.record());
+  if(!r?.frames?.length||r.after.time<=before.time)throw Error('No physical round progression');
+  // Native play/pause and native range input, no state mutation.
+  let scrub=p.locator('#scrub');let box=await scrub.boundingBox();
+  if(box&&box.width>20){await pointer(p,{x:box.x+box.width-6,y:box.y+box.height/2},mobile)}
+  await click(p,'#next',mobile);
+  let s=await p.evaluate(()=>window.sliceQA.state());history.push({round:i+1,time:s.time,result:s.result,contacts:Math.max(...r.frames.map(f=>f.units.filter(u=>u.contact>0).length)),shots:r.frames.reduce((n,f)=>n+(f.shots?.length||0),0),remaining:r.after.units.reduce((n,u)=>n+u.n,0)});
+  if(s.phase==='result')break;
+ }
+ let final=await p.evaluate(()=>window.sliceQA.state());if(final.phase!=='result'||!final.result||!await p.locator('#report').isVisible())throw Error('UI cycle never reached visible result');
+ await snap(p,name+'-result');await save(name+'-cycle.json',{initialUnits:initial.units.length,initialWarriors:1536,history,final,uiOnly:true,input:mobile?'native touch':'native mouse'});return {history,final};
+}
 async function round(p){await p.evaluate(()=>window.sliceQA.qaAll());await p.locator('#commit').click();await p.locator('#execute').click();await p.waitForFunction(()=>window.sliceQA.state().phase==='replay',{},{timeout:120000});let rec=await p.evaluate(()=>window.sliceQA.record());return rec}
 async function desktop(browser){let {ctx,p,errors}=await launch(browser,{viewport:{width:1440,height:900},deviceScaleFactor:1,recordVideo:{dir:out+'/video',size:{width:1440,height:900}}});try{await snap(p,'deployment');let plan=await firstPlan(p,'complex-order');await p.locator('#fit').click();await p.evaluate(()=>window.sliceQA.prepare());await snap(p,'strategic');await p.evaluate(()=>window.sliceQA.focusUnits(window.sliceQA.state().units.map(u=>u.id),30));await p.evaluate(()=>window.sliceQA.prepare());let all=[],history=[];for(let i=0;i<12;i++){let r=await round(p);all.push(...r.frames);history.push({round:i+1,time:r.after.time,result:r.after.result});for(let j=1;j<=12;j++){await p.locator('#scrub').evaluate((e,j)=>{e.value=Number(e.min)+(Number(e.max)-Number(e.min))*j/12;e.dispatchEvent(new Event('input',{bubbles:true}))},j);await p.waitForTimeout(85)}await p.locator('#next').click();let s=await p.evaluate(()=>window.sliceQA.state());if(s.phase==='result')break}await snap(p,'result');let final=await p.evaluate(()=>window.sliceQA.state());if(!final.result)throw Error('No result after full cycle');await save('gameplay-cycle.json',{plan,history,final,errors});
  await p.evaluate(()=>{let d=document.getElementById('report');if(d.open)d.close()});
@@ -26,7 +84,7 @@ async function bench(p,count,name){let frames=benchmarkStates(count),prep=await 
  let s=frames[Math.floor(frames.length/2)],ctx=canvas.getContext('2d');q.policy('direct');q.benchmarkFrame(s,base.x,base.y,base.z);await q.prepare();q.benchmarkFrame(s,base.x,base.y,base.z);let a=ctx.getImageData(0,0,canvas.width,canvas.height).data,direct=canvas.toDataURL();q.policy('batch');q.benchmarkFrame(s,base.x,base.y,base.z);let b=ctx.getImageData(0,0,canvas.width,canvas.height).data,batch=canvas.toDataURL(),c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;let d=c.getContext('2d'),im=d.createImageData(c.width,c.height),changed=0;for(let i=0;i<a.length;i+=4){let delta=Math.max(Math.abs(a[i]-b[i]),Math.abs(a[i+1]-b[i+1]),Math.abs(a[i+2]-b[i+2]));if(delta>5)changed++;im.data[i]=Math.min(255,delta*6);im.data[i+1]=Math.min(255,delta*2);im.data[i+3]=255}d.putImageData(im,0,0);let sameCounts=['static','pan','zoom'].every(m=>{let rows=results.filter(r=>r.motion===m);return rows.every(r=>JSON.stringify(r.counts)===JSON.stringify(rows[0].counts)&&JSON.stringify(r.represented)===JSON.stringify(rows[0].represented))});return {results,sameCounts,changedPixels:changed/(a.length/4),images:{direct,batch,diff:c.toDataURL()}}
  },{frames});let images=r.images;delete r.images;for(let [k,v] of Object.entries(images))await writeFile(out+'/difference-'+name+'-'+count+'-'+k+'.png',Buffer.from(v.split(',')[1],'base64'));return {count,prep,...r}}
 let browser;
-try{browser=await chromium.launch();try{await desktop(browser)}catch(e){failures.push('desktop '+e.stack)}finally{await browser.close();browser=null}
- for(let [name,engine,device] of [['chromium',chromium,devices['Pixel 5']],['webkit',webkit,devices['iPhone 13']]]){browser=await engine.launch();for(let landscape of [false,true]){let opts={...device};if(landscape){opts.viewport={width:device.viewport.height,height:device.viewport.width};opts.screen=opts.viewport}let context;try{let {ctx,p,errors}=await launch(browser,opts);context=ctx;let plan=await firstPlan(p,'mobile-'+name+'-'+(landscape?'landscape':'portrait'));await save('mobile-'+name+'-'+(landscape?'landscape':'portrait')+'.json',{plan,state:await p.evaluate(()=>window.sliceQA.state()),errors});if(!landscape){let results=[];for(let count of [20,60]){let r=await bench(p,count,name);results.push(r);await save('performance-'+name+'.json',results);if(!r.sameCounts)failures.push(name+' changed representative count '+count);if(r.changedPixels>.05)failures.push(name+' pixel mismatch '+count+' '+r.changedPixels);if(r.results.some(x=>!Number.isFinite(x.fps)))failures.push(name+' invalid FPS');}}if(errors.length)throw Error(errors.join(';'))}catch(e){failures.push(name+' '+landscape+' '+e.stack)}finally{if(context)await context.close()}}await browser.close();browser=null}
+try{browser=await chromium.launch();try{await desktop(browser)}catch(e){failures.push('desktop evidence '+e.stack)}try{let {ctx,p,errors}=await launch(browser,{viewport:{width:1440,height:900},deviceScaleFactor:1});try{await firstPlan(p,'desktop-native-order');await uiCycle(p,'desktop-native',false);if(errors.length)throw Error(errors.join(';'))}finally{await ctx.close()}}catch(e){failures.push('desktop native '+e.stack)}finally{await browser.close();browser=null}
+ for(let [name,engine,device] of [['chromium',chromium,devices['Pixel 5']],['webkit',webkit,devices['iPhone 13']]]){browser=await engine.launch();for(let landscape of [false,true]){let opts={...device};if(landscape){opts.viewport={width:device.viewport.height,height:device.viewport.width};opts.screen=opts.viewport}let context;try{let {ctx,p,errors}=await launch(browser,opts);context=ctx;let label='mobile-'+name+'-'+(landscape?'landscape':'portrait'),plan=null,cycle=null;try{plan=await firstPlan(p,label);cycle=await uiCycle(p,label,true)}catch(e){failures.push(label+' native UI: '+e.stack)}await save(label+'.json',{plan,cycle,state:await p.evaluate(()=>window.sliceQA.state()),errors});if(await p.locator('#report').isVisible())await p.locator('#closeReport').tap();if(!landscape){let results=[];for(let count of [20,60]){let r=await bench(p,count,name);results.push(r);await save('performance-'+name+'.json',results);if(!r.sameCounts)failures.push(name+' changed representative count '+count);if(r.changedPixels>.05)failures.push(name+' pixel mismatch '+count+' '+r.changedPixels);if(r.results.some(x=>!Number.isFinite(x.fps)))failures.push(name+' invalid FPS');if(name==='webkit'&&count===60){for(let motion of ['static','pan','zoom']){let a=r.results.filter(x=>x.motion===motion&&x.mode==='auto');if(a.length!==2||a.some(x=>x.fps<30))failures.push('WebKit 60 adaptive '+motion+' below 30 FPS: '+a.map(x=>x.fps.toFixed(2)).join(', '))}}}}if(errors.length)throw Error(errors.join(';'))}catch(e){failures.push(name+' '+landscape+' '+e.stack)}finally{if(context)await context.close()}}await browser.close();browser=null}
  await save('qa-gates.json',{failures});if(failures.length)throw Error(failures.join('\n'))
 }finally{if(browser)await browser.close();server.close()}
