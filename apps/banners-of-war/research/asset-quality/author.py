@@ -17,7 +17,7 @@ if not any(n.type=="TEX_IMAGE" and n.image for o in meshes for mat in o.data.mat
 def find(*names):
     for name in names:
         for b in rig.pose.bones:
-            if b.name.lower().replace("_","").replace(" ","").split(":")[-1]==name.lower().replace("_",""): return b
+            if b.name.lower().replace("_","").replace(" ","").split(":")[-1].endswith(name.lower().replace("_","")): return b
     raise RuntimeError("Missing rig bone "+str(names)+"; "+str([b.name for b in rig.pose.bones]))
 right=find("RightHand","Hand.R","hand_r")
 left=find("LeftHand","Hand.L","hand_l")

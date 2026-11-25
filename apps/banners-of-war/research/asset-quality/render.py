@@ -29,13 +29,16 @@ def team(side):
 # A = restrained material rendering. B = actual silhouette changes to gear, not whole anatomy.
 # C = subsequent artistic raster processing of A, kept on same anchor.
 gear=[o for o in sc.objects if o.name.startswith(("Curved shield","Shield rawhide","Kettle hat","Rolled rim"))]
-base={o.name:o.scale.copy() for o in gear}
+base={o.name:[v.co.copy() for v in o.data.vertices] for o in gear}
 def style(s):
     for o in gear:
-        o.scale=base[o.name].copy()
-        if s=="B":
-            # Mesh-space silhouette reinforcement; head and shield remain independently attached.
-            o.scale.x*=1.13;o.scale.z*=1.08
+        verts=base[o.name]
+        center=sum(verts,Vector((0,0,0)))/len(verts)
+        for v,p in zip(o.data.vertices,verts):
+            q=p-center
+            if s=="B":q.x*=1.13;q.z*=1.08
+            v.co=center+q
+        o.data.update()
     key.data.energy=650 if s=="A" else 900
     fill.data.energy=180 if s=="A" else 115
 def render(name,side,heading,frame,s="A",res=192):

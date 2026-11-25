@@ -1,4 +1,4 @@
-import os,sys,json,shutil,hashlib,urllib.request,subprocess,time
+import os,sys,json,shutil,hashlib,urllib.request,subprocess,time,math
 from pathlib import Path
 from PIL import Image,ImageFilter,ImageEnhance,ImageOps,ImageDraw,ImageFont
 root=Path(__file__).resolve().parents[4]; here=Path(__file__).resolve().parent
