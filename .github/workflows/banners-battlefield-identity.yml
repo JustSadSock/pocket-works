@@ -121,6 +121,50 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  geography-study:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 25
+    env:
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/banners-geography-study
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45693373840
+          artifact-ids: 15059369113
+          path: /tmp/bow-art-baseline
+      - name: Restore original Forge material and vegetation assets
+        shell: bash
+        run: |
+          mkdir -p "$BOW_ART_OUTPUT"
+          python3 - <<'PY'
+          import os,shutil
+          from pathlib import Path
+          root=Path('/tmp/bow-art-baseline');out=Path(os.environ['BOW_ART_OUTPUT'])
+          names=['grass.png','sparse.png','road.png','stone.png','terrain-provenance.json']+[f'{k}.{s}' for k in ['tree1','tree2','tree3','bush'] for s in ['png','json']]
+          for n in names:
+              f=list(root.rglob(n));assert len(f)==1,n;shutil.copyfile(f[0],out/n)
+          PY
+      - name: Matched-camera geographic production
+        shell: bash
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node --check apps/banners-of-war/research/battlefield-identity/geography-study.mjs
+          node apps/banners-of-war/research/battlefield-identity/geography-study.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: banners-artistic-geography
+          path: quality-artifacts/banners-geography-study
+          if-no-files-found: error
+          retention-days: 14
+
   living-motion:
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
@@ -214,10 +258,19 @@ jobs:
           assert len(checks)==864
           (out/'infantry-control-sha256.json').write_text(json.dumps(checks,indent=2))
           PY
-      - name: Preflight actual horse rig, then bake changed cavalry only
+      - name: Author separate infantry previews without replacing controls
+        id: infantry
         run: |
-          python3 -m py_compile apps/banners-of-war/research/battlefield-identity/{troop-bake,prepare,pack,motion-sheet}.py
+          python3 -m py_compile apps/banners-of-war/research/battlefield-identity/{troop-bake,prepare,pack,motion-sheet,artistic-cycles}.py
+          BOW_STAGE=infantry-preview python3 apps/banners-of-war/research/battlefield-identity/prepare.py
+      - name: Preflight actual horse rig, then bake changed cavalry only
+        id: cavalry
+        if: ${{ !cancelled() && (steps.infantry.outcome == 'success' || steps.infantry.outcome == 'failure') }}
+        run: |
           python3 apps/banners-of-war/research/battlefield-identity/prepare.py
+      - name: Encode artistic cycles from original frames
+        if: ${{ !cancelled() && (steps.cavalry.outcome == 'success' || steps.cavalry.outcome == 'failure') }}
+        run: python3 apps/banners-of-war/research/battlefield-identity/artistic-cycles.py
       - name: Pack mixed atlas and harmonize bush foliage
         run: |
           python3 apps/banners-of-war/research/battlefield-identity/pack.py
