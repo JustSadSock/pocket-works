@@ -66,3 +66,31 @@ test('voice reservations cannot exceed total, including music stems',()=>{
  for(const budget of [{total:8,events:8,music:1},{total:100,events:1,music:0},{total:8.5},{total:12,events:0}])assert.throws(()=>planVoiceBudget(budget));
  assert.throws(()=>createBudgetedAudioScene({budget:{total:18,events:4,music:1},stems:[{},{}]}),/reservation/);
 });
+
+test('stinger state guard is checked again after decode; only actual starts duck music',async()=>{
+ const nodes=[],context={state:'running',currentTime:0,sampleRate:48000,destination:{}};
+ const param=()=>({value:1,cancelScheduledValues(){},setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
+ const node=(props={})=>{const n={connect(){},disconnect(){},...props};nodes.push(n);return n};
+ context.createGain=()=>node({gain:param()});
+ context.createBufferSource=()=>node({playbackRate:param(),start(){this.started=true},stop(){}});
+ context.decodeAudioData=async()=>({length:48000,numberOfChannels:1,sampleRate:48000});
+ const b={length:96000,sampleRate:48000,numberOfChannels:1,getChannelData(){}};
+ const graph={initial:'peace',states:{peace:{tempo:120,beatsPerBar:4,bars:1},battle:{tempo:120,beatsPerBar:4,bars:1}},edges:{peace:['battle'],battle:['peace']}};
+ let release,entered;const waiting=new Promise(r=>{entered=r});
+ const scene=createBudgetedAudioScene({context,score:{graph,buffers:{peace:b,battle:b}},budget:{total:8,events:2,music:2},stingers:{discovery:{url:'sample',states:['peace'],duckGain:.4,cooldown:1}},fetcher:()=>{entered();return new Promise(r=>{release=r})}});
+ await scene.music.start();
+ const pending=scene.playStinger('discovery');await waiting;
+ assert.equal(await scene.playStinger('discovery'),false);
+ scene.music.request('battle',{quantize:'immediate',fadeSeconds:0});
+ release({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+ assert.equal(await pending,false);assert.equal(scene.stats.musicDucking.gain,1);
+ context.currentTime=1;scene.music.update();
+ assert.equal(await scene.playStinger('discovery'),false);
+ scene.music.request('peace',{quantize:'immediate',fadeSeconds:0});
+ context.currentTime=2;scene.music.update();
+ assert.equal(await scene.playStinger('discovery'),true);
+ context.currentTime=2.1;assert.equal(scene.stats.musicDucking.gain,.4);
+ assert.equal(await scene.playStinger('discovery'),false);
+ assert.ok(scene.stats.allocated<=8);
+ scene.destroy();assert.equal(scene.stats.allocated,0);
+});
