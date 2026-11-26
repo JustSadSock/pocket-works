@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{readFileSync}from'node:fs';import{decodeClothCache,sampleClothCache}from'./cloth-cache-player-v9.mjs';
+const out=process.env.CHARACTER_EVIDENCE;
+test('precomputed garment cache decodes and interpolates without a simulator',()=>{const meta=JSON.parse(readFileSync(out+'/v9-cloth-game-cache.json')),bytes=readFileSync(out+'/'+meta.file),cache=decodeClothCache(meta,bytes);assert.equal(cache.frameCount,25);assert.ok(cache.vertexCount>150);assert.ok(cache.duration>0);for(const t of [0,.25,.5,.75,cache.duration]){const p=sampleClothCache(cache,t);assert.equal(p.length,cache.vertexCount*3);assert.ok(p.every(Number.isFinite))}assert.ok(meta.maxQuantizationErrorMetres<.0001)});
