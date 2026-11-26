@@ -9,6 +9,20 @@ def bvh(p):
     v=[Vector(p["positions"][i:i+3]) for i in range(0,len(p["positions"]),3)]
     f=[p["indices"][i:i+3] for i in range(0,len(p["indices"]),3)]
     return BVHTree.FromPolygons(v,f,all_triangles=True)
+# Recovery mode: static candidate only, without resurrecting previous
+# wardrobe production or optional cloth simulation.
+recovery=src/"v6-static-collision-input.json"
+if recovery.exists():
+    rows=[]
+    for frame in json.loads(recovery.read_text()):
+        parts=frame["parts"];trees=[bvh(p) for p in parts];pairs=[]
+        for i,p in enumerate(parts):
+            for j in range(i+1,len(parts)):
+                q=parts[j];hits=trees[i].overlap(trees[j])
+                if hits:pairs.append({"a":p["name"],"b":q["name"],"trianglePairs":len(hits),"classification":"covered-anatomy-contact" if min(p["layer"],q["layer"])==0 else "requires-visible-review"})
+        rows.append({"label":"rest","pairs":pairs})
+    (out/"garment-exact-overlap.json").write_text(json.dumps({"v6":{"frames":rows,"elapsedMs":(time.perf_counter()-t)*1000,"note":"Static triangle intersections, includes intended attachments. No artistic approval."}},indent=2))
+    raise SystemExit(0)
 rows=[]
 for frame in json.loads((src/"garment-collision-input.json").read_text()):
     parts=frame["parts"];trees=[bvh(p) for p in parts];pairs=[]
