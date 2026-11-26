@@ -382,7 +382,7 @@ if horse_rig and extended:
     report["verifiedMapping"]=gait_meta
     save_audit()
     print("Validated horse limb chains",json.dumps(gait_meta),flush=True)
-def apply_pose(frame,diagnostic_phase=None):
+def apply_pose(frame,diagnostic_phase=None,charge_progress=None):
     global temporary
     for o in temporary:bpy.data.objects.remove(o,do_unlink=True)
     temporary=[];pivot.rotation_euler.z=0
@@ -394,6 +394,10 @@ def apply_pose(frame,diagnostic_phase=None):
             phase=((frame-41)//4%4)/4 if rapid else ((frame-5)//4%4)/4 if mode=="Walk" else ((frame-25)//4%4)/4 if frame in [25,29,33,37] else 0
             phase=diagnostic_phase if diagnostic_phase is not None else phase
             saved=trot(diagnostic_phase if diagnostic_phase is not None else (frame-65)/16) if frame>=65 else sample_horse(mode,phase)[0]
+            if charge_progress is not None:
+                p=max(0,min(1,(charge_progress-.16)/.68));p=p*p*(3-2*p)
+                idle=sample_horse("Idle",0)[0];gallop=sample_horse("Gallop",phase)[0]
+                saved={n:idle[n].lerp(gallop[n],p) for n in idle}
             for o in human_roots:o.location=human_base[o.name].copy()
         else:
             mode="Idle" if frame in [1,21] else "Gallop" if frame>=25 else "Walk"
@@ -408,6 +412,7 @@ def apply_pose(frame,diagnostic_phase=None):
         sign=1 if point(RH).x>point(LH).x else -1;light=kind=="lightHorse"
         # Different seat, posture and weapon carriage for heavy and light cavalry.
         lean=.30 if rapid and light else .18 if rapid else .12 if frame>=65 else .04
+        if charge_progress is not None:lean=.04+(.30 if light else .18)*charge_progress
         aim(torso,(0,-lean,1))
         aim(RH,(sign*(.40 if light else .48),-.30 if light else -.18,-.72));aim(LH,(-sign*(.40 if light else .48),-.30 if light else -.18,-.72));aim(RK,(0,.38 if light else .24,-1));aim(LK,(0,.38 if light else .24,-1))
         aim(LU,(.10,-.50,-.78));aim(LF,(-.15,-.85,.02))
@@ -416,7 +421,9 @@ def apply_pose(frame,diagnostic_phase=None):
                 d={25:(-.65,-.25,.60),29:(-.45,-.8,.30),33:(.12,-1,-.1),37:(.30,-.55,-.5)}[frame];aim(RU,d);aim(RF,(.10,-1,.12))
             else:
                 d={25:(-.10,-.60,-.20),29:(-.05,-1,.10),33:(-.02,-1,-.05),37:(-.15,-.65,-.45)}[frame];aim(RU,d);aim(RF,(0,-1,.05))
-        elif frame==57 or rapid:aim(RU,(-.10,-.82,-.22));aim(RF,(0,-1,.04))
+        elif frame==57 or rapid:
+            p=charge_progress if charge_progress is not None else 1
+            aim(RU,(-.10,-.43-.39*p,-.68+.46*p));aim(RF,(0,-.75-.25*p,.22-.18*p))
         elif frame==61:aim(RU,(-.12,-.45,-.68));aim(RF,(0,-.7,-.25))
         else:aim(RU,(-.10,-.7,-.60));aim(RF,(0,-1,.12))
     else:
@@ -563,12 +570,17 @@ elif os.environ.get("BOW_RIG_PREFLIGHT"):
     cam.data.ortho_scale=4.8;target=Vector((0,0,1.4))
     cam.location=target+Vector((0,-5,3.4));look(cam,target)
     livery(0)
-    for gait,frame in (("walk",5),("trot",65),("gallop",41)):
+    for gait,frame in (("walk",5),("trot",65),("gallop",41),("charge",41)):
         for i in range(8):
-            apply_pose(frame,i/8);pivot.rotation_euler.z=-pi/2;bpy.context.view_layer.update()
+            apply_pose(frame,i/8,i/7 if gait=="charge" else None);pivot.rotation_euler.z=-pi/2;bpy.context.view_layer.update()
             sc.render.filepath=str(folder/(gait+"-"+str(i)+".png"))
             bpy.ops.render.render(write_still=True)
-    report["diagnosticRendered"]=True;save_audit()
+    report["diagnosticRendered"]=True
+    fps=sc.render.fps/sc.render.fps_base
+    report["diagnosticPeriodsSeconds"]={name.lower():float(exact_action(name).frame_range[1]-exact_action(name).frame_range[0])/fps for name in ("Walk","Gallop")}
+    report["diagnosticPeriodsSeconds"]["trot"]=report["diagnosticPeriodsSeconds"]["walk"]*.72
+    report["diagnosticPeriodsSeconds"]["charge"]=1.6
+    save_audit()
 else:
     # A common physical projection. Larger cavalry frustum with same source pixel/metre.
     ground=0 if horse_rig else z0
