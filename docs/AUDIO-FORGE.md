@@ -429,3 +429,29 @@ The continuous pool ranks estimated audible gain times priority, ignores sources
 The scene facade reserves independent fixed source quotas for continuous loops, one-shot events and music stems; unused slots are not lent between categories. The total applies only to source nodes owned by this facade, not other application audio graphs, reflection/filter nodes, or decoded memory bytes. The family cache remains count-bounded; the caller controls the continuous buffer inventory. A shared mixer supplies three independent buses. The default budget is 24 total (12 continuous, 8 events, 4 music). Scene stats expose allocations, pending events and logical count. Destroy all scene-owned nodes without closing the app's context.
 
 The browser integration test creates 512 logical units in two distant groups, reserves 18 total slots (12 continuous, 4 events, 2 music), switches listener position between groups, checks that retiring voices never exceed the cap, tests eight simultaneous decoded combat requests (four accepted), preserves the music transport, measures real army-bus RMS and update timings, and verifies teardown. Its sounds are simple original synthetic fixtures, not approved battlefield assets; it is a technical integration scenario, not an integrated game or performance claim for a physical mobile device. Five mock/logic regressions cover ranking, retention, timing, cancellation and quota constraints. Browser CI must confirm the expanded scenario.
+
+### Horizontal score director and musical identity auditions
+
+Vertical intensity mixing is retained for variation within a state, not treated as proof of emotional contrast. The new independent original scores share a transformed D–E–F/F#–A–G–E–D motif, but differ in orchestration, harmony, meter, rhythm and tempo:
+
+| State | Tempo / meter | Musical language |
+| --- | --- | --- |
+| peace | 76 BPM / 3/4 | D major, flute, harp, sparse cello |
+| tension | 104 BPM / 5/4 | minor/chromatic harmony, cello, pizzicato, low strings and timpani |
+| battle | 144 BPM / 4/4 | brass calls, string ostinato and accented timpani |
+| aftermath | 68 BPM / 4/4 | cello lament, harp, minor-to-major resolution |
+
+The CI authors MIDI via the existing Forge, renders through FluidSynth, prepares exact bar-length 48 kHz clips with short boundary fades and publishes a state graph, four clips and a sequential state-journey WAV. The journey is an offline storyboard with 0.3 s linear overlap, not a live game recording. State scores require human audition; boundary fades are not evidence of imperceptible musical loop joins. The state graph allows direct peace-to-battle for urgent events but requires aftermath when leaving battle. Independent state loops are the horizontal layer; a future composer can combine vertical stems and transition-specific bridges or stingers.
+
+```js
+const director = createScoreDirector({context, destination, graph, buffers});
+await director.start(); // user gesture for real-time AudioContext
+director.request('tension', {quantize:'bar', fadeSeconds:0.3});
+// Call regularly from the game update loop to finalize and process a queued request.
+director.update();
+director.destroy();
+```
+
+The transport validates the authored frame grid to within one sample, uses the current state's tempo/meter for beat/bar scheduling, and starts a new independent clip with a two-source maximum. Requests during a transition can queue one valid successor; they do not cancel an already scheduled crossfade. Playback and fades follow the audio clock, while `update()` commits completed transitions and releases graph resources. Reserve two source slots if using this standalone director alongside a budgeted scene; it is not yet wired into that facade. No game-specific adapter or authored transition bridge/stinger has been approved yet.
+
+Browser CI also tests actual replacement of a 220 Hz peace clip with a 440 Hz battle clip on different grids using measured spectrum, and reports 30 dense world updates each at 512, 1024 and 4096 logical sources (p50/p95/max, cap and failures). Timings measure host-side reconcile latency, not audio-thread CPU, physical-device performance or end-to-end latency. Dependency installation refreshes APT indexes and retries once after the observed stale ALSA package 404, without skipping Chromium or weakening assertions.
