@@ -35,7 +35,8 @@ test('discovery only for planned Banners work and approved branch',()=>{
  const merge='f'.repeat(40),stale='e'.repeat(40),e={GITHUB_REPOSITORY:REPO,GITHUB_EVENT_NAME:'pull_request',GITHUB_REF:'refs/pull/1355/merge',QA_PR_NUMBER:'1355',QA_HEAD_REPO:REPO,QA_HEAD_REF:APP_BRANCH,QA_HEAD_SHA:source,QA_MERGE_SHA:stale,QA_EXPECTED:'["banners-of-war-completion-lab-0"]'};
  assert.equal(discoveryTarget(e,merge),merge);
  assert.equal(discoveryTarget({...e,QA_SOURCE_SHA:source,PW_QA_INTEGRATION_SOURCE:'1'},issuer),source);
- for(const p of [{QA_PR_NUMBER:'42'},{QA_HEAD_REPO:'fork/repo'},{QA_EXPECTED:'[]'},{QA_HEAD_REF:'other'},{GITHUB_REF:'refs/pull/1411/merge'},{QA_MERGE_SHA:undefined},{QA_SOURCE_SHA:source}])assert.equal(discoveryTarget({...e,...p},issuer),null);
+ assert.equal(discoveryTarget({...e,QA_MERGE_SHA:undefined},merge),merge);
+ for(const p of [{QA_PR_NUMBER:'42'},{QA_HEAD_REPO:'fork/repo'},{QA_EXPECTED:'[]'},{QA_HEAD_REF:'other'},{GITHUB_REF:'refs/pull/1411/merge'},{QA_SOURCE_SHA:source}])assert.equal(discoveryTarget({...e,...p},issuer),null);
 });
 
 test('missing original bundles cannot be accepted',()=>{const root=mkdtempSync(join(tmpdir(),'pw-bundle-'));try{assert.throws(()=>verifyBundles(root,receipts,run));}finally{rmSync(root,{recursive:true,force:true});}});
