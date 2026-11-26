@@ -23,5 +23,10 @@ try{
  for(const [sampleId,model,ratios] of [['nikko-explosion','explosion',[0,.25,.75,1]],['stockholm-rain','rain',[0,.5,1]]]){
   for(const sampleMix of ratios){const name=sampleId+'-'+Math.round(sampleMix*100);jobs.push({name,type:'hybrid',model,seed:123,strength:.65,sampleId,sampleMix,compensateRms:true,output:'generated/'+name+'.wav'});}
  }
+ // Preserve the untrimmed comparisons and audition a manually measured cue.
+ for(const sampleMix of [.25,.75,1]){
+  const name='nikko-explosion-aligned-'+Math.round(sampleMix*100);
+  jobs.push({name,type:'hybrid',model:'explosion',seed:123,strength:.65,sampleId:'nikko-explosion',sampleMix,sampleStart:.59,compensateRms:true,output:'generated/'+name+'.wav'});
+ }
  writeFileSync(path.join(root,'manifest.json'),JSON.stringify({version:2,samples:lib.list(),jobs},null,2)+'\n');
 }finally{lib.close()}
