@@ -21,10 +21,18 @@ for(let j=0;j<rows;j++){
  let samples=[];for(let dx=-10;dx<=10;dx+=1)samples.push({dx,oldClearance:oldZ-F.sample(t,x+dx,y).h,visualHeight:renderHeight(F,t,x+dx,y)});
  water.push({x:x-best.x,y:y-best.y,z,oldZ,samples})
 }
-for(let i=-19;i<=19;i++)for(let j=-23;j<=23;j++){let x=best.x+(i+hash(i,j,1))*7,y=best.y+(j+hash(i,j,2))*7,q=F.sample(t,x,y),road=roadDist(x,y),shore=shorelineField(F,t,x,y),n=hash(i,j,3);
- if(shore<4||road<5||!q.wood)continue;
- if(n<.25+.45*Math.max(0,Math.min(1,((q.canopy||0)-.61)/.35)))trees.push({x:x-best.x,y:y-best.y,z:renderHeight(F,t,x,y),kind:1+Math.floor(hash(i,j,4)*3),height:7+hash(i,j,5)*5,angle:hash(i,j,6)*Math.PI*2});
+// Mature stands and shorter trees on existing woodland margins.
+let candidates=[];
+for(let i=-23;i<=23;i++)for(let j=-28;j<=28;j++){
+ let x=best.x+(i+hash(i,j,1))*6,y=best.y+(j+hash(i,j,2))*6,q=F.sample(t,x,y),road=roadDist(x,y),shore=shorelineField(F,t,x,y);
+ if(shore<3.5||road<5||!q.wood)continue;
+ let can=q.canopy||0,core=Math.max(0,Math.min(1,(can-.58)/.35)),n=hash(i,j,3);
+ if(n>.30+.6*core)continue;
+ let height=(4+hash(i,j,5)*4)*(1-core)+(9+hash(i,j,5)*8)*core;
+ candidates.push({x:x-best.x,y:y-best.y,z:renderHeight(F,t,x,y),kind:1+Math.floor(hash(i,j,4)*3),height,angle:hash(i,j,6)*Math.PI*2,canopy:can,priority:core+n*.1})
 }
+candidates.sort((a,b)=>b.priority-a.priority);
+for(let q of candidates){let gap=2.1+q.height*.19;if(trees.some(a=>Math.hypot(a.x-q.x,a.y-q.y)<Math.max(gap,2.1+a.height*.19)))continue;trees.push(q)}
 if(JSON.stringify(t)!==before)throw Error('Authority mutated');
 writeFileSync(out+'/relief-patch.json',JSON.stringify({seed:s.seed,physicalHash:createHash('sha256').update(before).digest('hex'),best,step,cols,rows,points,water,trees,camera:{scale:300,target:[0,0,points[Math.floor(points.length/2)][2]],offset:[-150,0,150*Math.sqrt(3)]}}));
 console.log(JSON.stringify({best,vertices:points.length,trees:trees.length}));
