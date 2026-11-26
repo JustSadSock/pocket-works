@@ -190,11 +190,30 @@ function waist(ctx,parts,bag){let {J,H}=ctx,y=J('spine03').position[1]-.04,outer
  if(bag){let x=rx+.048,z=cz+.02,hip=J('root').id;out.push(ringSurface(ctx,'belt pouch',materials.leather,[station([x,y-.16,z],[1,0,0],[0,0,-1],.062,.035),station([x,y-.08,z],[1,0,0],[0,0,-1],.077,.048),station([x,y-.022,z],[1,0,0],[0,0,-1],.06,.035)],14,{...garmentRules.bag,rigid:hip}))}
  return out
 }
-function headwear(ctx,style,identity,helmet){let {body,H,J}=ctx,eye=J('eye.L').position,head=J('head'),hair=identity.hair??'short',base=compact(body,face=>face.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]>H-(hair==='cropped'?.045:.075)||(v[1]>eye[1]-(hair==='long'?.10:.045)&&v[2]<head.position[2]-.015)}));base.name=helmet?'iron skullcap':'scalp '+hair;base.color=helmet?materials.iron:identity.hairColor??[.12,.075,.035];base.component='equipment';base.layer=4;base.region='head';
- for(let i=0;i<base.positions.length;i++)base.positions[i]+=base.normals[i]*(helmet?.014:hair==='long'?.014:.007);
+function headwear(ctx,style,identity,helmet,revision=4){let {body,H,J}=ctx,eye=J('eye.L').position,head=J('head'),hair=identity.hair??'short',base=compact(body,face=>face.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]>H-(hair==='cropped'?.045:.075)||(v[1]>eye[1]-(hair==='long'?.10:.045)&&v[2]<head.position[2]-.015)}));base.name=helmet?'iron skullcap':'scalp '+hair;base.color=helmet?materials.iron:identity.hairColor??[.12,.075,.035];base.component='equipment';base.layer=4;base.region='head';
+ if(revision===5){
+ // Directional sculpted locks are derived from the same anatomical scalp.
+ // No separate smooth cap: silhouette and ridges respond to hair style.
+ const color=base.color.slice();
+ for(let i=0;i<base.positions.length;i+=3){
+   const v=base.positions.slice(i,i+3),n=base.normals.slice(i,i+3),d=sub(v,head.position);
+   const angle=Math.atan2(d[0],d[2]),rise=clamp((v[1]-eye[1])/(H-eye[1]),0,1);
+   let offset;
+   if(helmet){
+     offset=.014;v[1]+=.048*rise*rise;v[0]*=1-.16*rise*rise;
+   }else{
+     const count=hair==='cropped'?15:hair==='long'?7:10;
+     const ridge=.5+.5*Math.cos(count*angle+3.4*rise+.65*Math.sin(3*angle));
+     offset=.004+(hair==='cropped'?.004:hair==='long'?.019:.013)*ridge*ridge;
+     if(hair==='long'&&d[2]<0)v[1]-=.032*(1-rise)*(.5+.5*Math.cos(angle*5));
+   }
+   base.positions.splice(i,3,...add(v,mul(n,offset)));
+ }
+ base.color=color;
+}else for(let i=0;i<base.positions.length;i++)base.positions[i]+=base.normals[i]*(helmet?.014:hair==='long'?.014:.007);
  if(helmet){ // rim follows source head; separate nasal plate, not painted skin
  let p=part('helmet nasal',materials.iron,'equipment'),z=eye[2]+.022,y=eye[1];p.layer=4;p.region='head';for(let v of [[-.016,y-.045,z],[.016,y-.045,z],[.020,y+.068,z-.014],[-.020,y+.068,z-.014]])push(p,v,[[head.id,1]]);p.indices=[0,1,2,0,2,3];return [normals(base),normals(p)]}
- let out=[normals(base)];if(identity.beard){let p=compact(body,f=>f.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]<eye[1]-.035&&v[1]>head.position[1]-.065&&v[2]>head.position[2]+.028&&Math.abs(v[0])<.075}));p.name='beard';p.color=base.color;p.layer=4;p.region='face';for(let i=0;i<p.positions.length;i++)p.positions[i]+=p.normals[i]*.008;out.push(normals(p))}return out
+ let out=[normals(base)];if(identity.beard){let p=compact(body,f=>f.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]<eye[1]-.035&&v[1]>head.position[1]-.065&&v[2]>head.position[2]+.028&&Math.abs(v[0])<.075}));p.name='beard';p.color=base.color;p.layer=4;p.region='face';for(let i=0;i<p.positions.length;i+=3){const x=p.positions[i],y=p.positions[i+1],offset=revision===5?.004+.010*(.5+.5*Math.cos(x*145+y*25))**2:.008;for(let k=0;k<3;k++)p.positions[i+k]+=p.normals[i+k]*offset}out.push(normals(p))}return out
 }
 function identityBody(ctx,id){let {body,H,J}=ctx,eye=J('eye.L').position,head=J('head').position;let p=structuredClone(body);for(let i=0;i<p.positions.length;i+=3){let [x,y,z]=p.positions.slice(i,i+3);if(y>head[1]-.04&&z>head[2]+.015){let w=clamp((y-head[1]+.04)/.12,0,1);p.positions[i]=x*(1+(id.faceWidth??0)*w);p.positions[i+2]=z+(id.nose??0)*Math.exp(-((x/.025)**2)-((y-eye[1]+.022)/.035)**2)}}
  p.color=id.skin??body.color;return normals(p)}
@@ -202,7 +221,7 @@ export function draftGarments(source,{style='historical-miniature',kit='tunic',m
  if(!kits[kit]||!['pattern','template','hybrid'].includes(method))throw Error('Unknown garment specification');let ctx=context(source),colors=identity.colors??{},parts=[],ids=kits[kit];
  for(let id of ids){let color=materials[colors[id]??(id==='quilted'?'charcoal':id==='cloak'?'madder':id==='trousers'?'charcoal':id==='shirt'?'linen':'wool')];if(!color)throw Error('Unknown garment material');
  if(['shirt','tunic','quilted'].includes(id))parts.push(...(surfaceRevision===5?productionTorso(ctx,id,style,method,color,ids.includes('quilted')):torso(ctx,id,style,method,color)));else if(id==='trousers')parts.push(...trousers(ctx,style,method,color,surfaceRevision));else if(id==='boots')parts.push(...boots(ctx,style,surfaceRevision));else if(id==='cloak')parts.push(cape(ctx,style,color))}
- if(ids.includes('belt'))parts.push(...waist(ctx,parts,ids.includes('bag')));parts.push(...headwear(ctx,style,identity,ids.includes('helmet')));return parts
+ if(ids.includes('belt'))parts.push(...waist(ctx,parts,ids.includes('bag')));parts.push(...headwear(ctx,style,identity,ids.includes('helmet'),surfaceRevision));return parts
 }
 // Bind one authored source template to stable anatomical indices, then
 // transfer its offsets across morphs. No independent clothing meshes per person.
