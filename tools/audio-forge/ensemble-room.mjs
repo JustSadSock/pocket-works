@@ -78,5 +78,6 @@ export function renderEnsembleRoom({stems,stage=ensembleStage,preset='chamber',t
  if(!Number.isFinite(peak)||peak<1e-8)throw Error('Silent or invalid room');
  const master=Math.min(1,.8/peak),mix=new Float32Array(total*2);
  for(let i=0;i<mix.length;i++){direct[i]*=master;wet[i]*=master;mix[i]=direct[i]+wet[i];}
+ for(const a of [mix,direct,wet])a[a.length-2]=a[a.length-1]=0;
  return {mix,direct,wet,sampleRate:SR,channels:2,frames:total,sourceFrames:frames,master,layout,preset,nominalRt60:r.rt60,wetRms:Math.sqrt(wetEnergy/(total*2))*master};
 }
