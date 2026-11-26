@@ -36,3 +36,11 @@ test('hybrid families expand with explicit sample and ratio',()=>{
   assert.equal(jobs.length,4);assert.ok(jobs.every(j=>j.type==='hybrid'&&j.sampleId==='steel'&&j.sampleMix===.25));
   assert.throws(()=>expandManifest({version:2,jobs:[],families:[{...f,sampleMix:undefined}]}));
 });
+
+test('hybrid cue offsets are explicit, bounded and propagated',()=>{
+  const family={id:'cue',model:'explosion',outputDir:'generated',variants:2,sampleId:'source',sampleMix:.75,sampleStart:.59,compensateRms:true};
+  const build=f=>expandManifest({version:2,jobs:[],families:[f]});
+  assert.ok(build(family).every(j=>j.sampleStart===.59&&j.compensateRms===true));
+  for(const sampleStart of [-1,Infinity,3601,'0.59']) assert.throws(()=>build({...family,sampleStart}));
+  assert.throws(()=>build({...family,sampleId:undefined,sampleMix:undefined}));
+});
