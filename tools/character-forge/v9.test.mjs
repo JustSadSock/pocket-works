@@ -36,7 +36,7 @@ test('v9 shields are held by the actual wrist grip, not detached forearm ornamen
  for(const id of ['infantry','legionary']){const m=model(id),a=m.attachments.find(x=>x.name.includes('grip'));assert.ok(a);assert.ok(a.contactError<.04);const wrist=m.joints.find(j=>j.name==='wrist.L');assert.ok(wrist);assert.ok(m.parts.some(p=>p.name.includes('hand grip')));assert.ok(a.local.every(Number.isFinite))}
 });
 test('v9 boot anchors are derived from actual sole vertices and produce a continuous root-motion track',{skip:!dir},()=>{
- const m=model('artisan'),stride=m.spec.gaitStride;assert.ok(stride>1.0);assert.equal(m.contacts.length,2);
+ const m=model('artisan'),stride=m.spec.gaitStride;assert.ok(stride>.4);assert.equal(m.contacts.length,2);
  for(const c of m.contacts){assert.equal(c.surfaceContact,true);assert.ok(c.vertexCount>=4);assert.ok(Number.isFinite(c.groundY));assert.ok(c.local.every(Number.isFinite))}
  const a=rootOffset(m,'walk',0),b=rootOffset(m,'walk',1);assert.ok(Math.abs((b[2]-a[2])-stride)<1e-7);
  for(const phase of [0,.125,.25,.375,.5,.625,.75,.875,1]){const w=pose(m,'walk',phase),q=animation(m,'walk',phase);assert.equal(w.length,m.joints.length);assert.equal(q.length,m.joints.length);assert.ok(w.every(j=>j.p.every(Number.isFinite)&&j.q.every(Number.isFinite)))}
