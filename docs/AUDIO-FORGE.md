@@ -556,3 +556,30 @@ await scene.music.start();
 The loader preflights unique source PCM and two worst-case bridge composite groups before any fetch, then downloads sequentially and verifies each payload. It accepts only the Forge canonical 44-byte header, not arbitrary WAV containers or compressed formats. It does not load stingers or the offline audition mixes. It bounds retained PCM estimates, not network/decoder transient allocations or overall browser process memory. On failed or cancelled load no usable partial score is returned; caller can retry. At 394004a the actual 12-file adaptive pack has 48,143,472 bytes base PCM and 81,086,640 bytes reserved including bridge composites. A local Node 22.16 check of the exact repository loader against that downloaded CI artifact passed all 12 checks, rejected a smaller memory quota before fetching and rejected deliberately corrupted audio. The context was mocked; actual browser playback is separately tested.
 
 The browser matrix now depends on the same-run platform-smoke output and downloads its generated score artifact. A second browser test loads the actual authored score into the budgeted scene, verifies memory parity, plays peace → tension → battle → aftermath → peace, measures output RMS and checks the four-voice cap and unchanged transport clocks while varying intensity. Previous synthetic spectral tests are retained. The authored test is a technical integration proof, not a recording, artistic approval or an integration into any game. At 394004a all four primary workflows passed, including 12/12 Validate jobs, both synthetic unified composer browser checks, and all 22 authored WAV hashes.
+
+### Banners of War adapter (research-only staging)
+
+The first game adapter is staged in `tools/audio-forge/adapters/banners-of-war.js`. It is not imported by any published app and does not include an audio asset pack. The original game contract was inspected at Banners PR #1355 HEAD 5cf0a72622621ac0dc0d5e1a88cbd9a0369e2616, `apps/banners-of-war/research/battlefield-identity/battle-audio.js`. The caller supplies the game's existing `audible(F,s,u)` and `soundEvents(F,s,cam,prior,dt)` exports, rather than reimplementing the simulation or event extraction. The game branch remains unchanged.
+
+```js
+const adapter = createBannersAudioAdapter({
+  context, destination, F, soundEvents, audible,
+  assets: approvedAssets // {approved:true,families,ambient,score,stingers}
+});
+await adapter.unlock(); // in a user gesture
+// Call update at a bounded cadence (e.g. 10–20 Hz):
+await adapter.update(snapshot,camera,{active:true,playing:true,speed:1});
+// Public result screen (not inferred from hidden units):
+await adapter.update(snapshot,camera,{active:true,playing:false,outcome:'victory'});
+adapter.configure({muted:false,fx:0.65,ambient:0.4,music:0.55});
+adapter.reset(); // on battle replacement/seek
+adapter.destroy();
+```
+
+Asset approval is an explicit caller assertion, not an automated art decision. No built-in URLs or unapproved assets are included. Families accept the seven legacy event names and optional exact variant keys such as step:2. The adapter preserves the legacy camera pan and speed-scaled gain/rate; family settings can disable extra pitch/gain jitter. Wind, water and forest loops use the original terrain-based level laws. It owns neither the context nor the application's settings persistence/capture destination. Caller must attach those and use one audio backend at a time.
+
+Only units admitted by the actual game visibility rule are considered for music and effects. The latest visible-ID set and update epoch are rechecked after asynchronous effect decoding to prevent stale sounds. One-shot requests do not block the game update on network/decode; overlapping update calls return false. Pausing resets event history, seek/discontinuity resets the score, inactive screens mute the buses and retire the ambience, while the score clock may continue. Music requests use the existing graph; visible nearby contacts drive battle, nearby visible opponents tension, six simulated seconds of aftermath follow contact loss, and only an explicit public result can request a victory/defeat reaction. A result reaction is attempted once when the aftermath state is settled, including on the stopped simulation's result screen; a result that never reaches aftermath does not force a stinger. This policy is a first candidate, not gameplay or artistic approval.
+
+Four mock regression scenarios passed, plus an isolated execution with the actual pinned game extractor. Native CI checks out only the pinned audio-contract source in a separate directory and tests actual event extraction, fog isolation, playback and teardown with synthetic technical fixtures. The full game and its published runtime are deliberately not changed.
+
+At Sound Forge HEAD 00a9246, both Chromium and WebKit passed the authored 12-file musical journey. The 44.1 kHz contexts retained the 48 kHz authored buffer grid, 81,086,640-byte reserved PCM and four-voice transition cap. Load times were 320.9 and 209 ms respectively on CI runners. All five requested state visits produced nonzero measured audio and preserved the transport while changing intensity. These are technical results, not human listening or game artistic approval.
