@@ -2,6 +2,7 @@ import {spatialProfile,createSpatialMixer} from './spatial-audio.js';
 import {createDynamicEmitter,createAdaptiveMusic} from './continuous-audio.js';
 import {createSoundFamilyPlayer} from './sound-family.js';
 import {createScoreDirector} from './score-director.js';
+import {createMusicDucker} from './music-ducking.js';
 const bounded=(value,fallback,min,max,label)=>{
  const n=value??fallback;
  if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)throw Error('Invalid '+label);
@@ -98,28 +99,34 @@ export function createBudgetedAudioScene({context,destination=context?.destinati
   const key='music-stinger:'+id;
   if(Object.hasOwn(eventFamilies,key))throw Error('Stinger family collision');
   eventFamilies[key]={variants:[d.url],gain:bounded(d.gain,.8,0,1,'stinger gain'),pitchCents:0,gainSpread:0};
-  stingerDefs.set(id,{key,cooldown:bounded(d.cooldown,1,0,60,'stinger cooldown'),priority:bounded(d.priority,5,0,10,'stinger priority'),last:-Infinity,pending:false});
+  const states=d.states===undefined?null:d.states;
+  if(states!==null&&(!score||!Array.isArray(states)||!states.length||states.some(s=>typeof s!=='string'||!Object.hasOwn(score.graph?.states??{},s))))throw Error('Invalid stinger state compatibility');
+  stingerDefs.set(id,{key,states:states&&new Set(states),duckGain:bounded(d.duckGain,1,0,1,'duck gain'),duckHold:bounded(d.duckHold,0,0,10,'duck hold'),cooldown:bounded(d.cooldown,1,0,60,'stinger cooldown'),priority:bounded(d.priority,5,0,10,'stinger priority'),last:-Infinity,pending:false});
  }
- let mixer,world,events,music,closed=false;
+ let mixer,world,events,music,ducker,closed=false;
  try{
   mixer=createSpatialMixer({context,destination,volume});
   world=createVirtualAudioWorld({context,destination:mixer.bus('world'),maxVoices:quota.continuous,maxSources});
   events=createSoundFamilyPlayer({context,destination:mixer.bus('events'),families:eventFamilies,fetcher,random,maxVoices:quota.events,maxBuffers,maxDecodedBytes:maxEventDecodedBytes});
-  if(score)music=createScoreDirector({context,destination:mixer.bus('music'),graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,volume:score.volume,maxDecodedBytes:maxScoreDecodedBytes});
-  else if(stems.length)music=createAdaptiveMusic({context,destination:mixer.bus('music'),stems,bpm,beatsPerBar});
- }catch(e){music?.destroy();events?.destroy();world?.destroy();mixer?.destroy();throw e;}
+  if(score||stems.length)ducker=createMusicDucker({context,destination:mixer.bus('music')});
+  if(score)music=createScoreDirector({context,destination:ducker.input,graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,volume:score.volume,maxDecodedBytes:maxScoreDecodedBytes});
+  else if(stems.length)music=createAdaptiveMusic({context,destination:ducker.input,stems,bpm,beatsPerBar});
+ }catch(e){music?.destroy();ducker?.destroy();events?.destroy();world?.destroy();mixer?.destroy();throw e;}
  return {
   world,events,music,quota,mixer,
+  async preloadStinger(id){const d=stingerDefs.get(id);return !closed&&!!d&&await events.preload(d.key);},
   async playStinger(id){
    const d=stingerDefs.get(id);
    if(closed||!d||d.pending||context.currentTime-d.last<d.cooldown)return false;
+   const compatible=()=>!closed&&(!d.states||(d.states.has(music.state.current)&&!music.state.pending&&context.currentTime>=(music.state.bridgeUntil??0)));
+   if(!compatible())return false;
    d.pending=true;
-   try{const ok=await events.play(d.key,{priority:d.priority,rate:1});if(ok)d.last=context.currentTime;return ok;}finally{d.pending=false;}
+   try{return await events.play(d.key,{priority:d.priority,rate:1,canStart:compatible,onStart:({time,duration})=>{d.last=time;if(ducker&&d.duckGain<1)ducker.trigger({gain:d.duckGain,duration:Math.min(60,Math.max(duration,d.duckHold))});}});}finally{d.pending=false;}
   },
-  destroy(){if(closed)return;closed=true;music?.destroy();events.destroy();world.destroy();mixer.destroy();},
+  destroy(){if(closed)return;closed=true;music?.destroy();ducker?.destroy();events.destroy();world.destroy();mixer.destroy();},
   get stats(){
    const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=score?(music?.state.voices??0):(music?.state.active?musicCount:0);
-   return {continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending,eventDecodedBytes:events.stats.decodedBytes,scoreReservedBytes:score?(music?.memory.reservedBytes??0):0};
+   return {musicDucking:ducker?.state??{gain:1,until:null},continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending,eventDecodedBytes:events.stats.decodedBytes,scoreReservedBytes:score?(music?.memory.reservedBytes??0):0};
   }
  };
 }
