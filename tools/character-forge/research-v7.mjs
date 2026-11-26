@@ -4,7 +4,7 @@ import {join} from 'node:path';
 import {glb,inspectGLB} from './glb.mjs';
 import {sculptCitizen} from './sculpt-v7.mjs';
 import {profiles,materialMaps,png,raster,commonBounds} from './material-study.mjs';
-const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(out,n))),write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2)),A=read('v6-citizen.model.json'),start=performance.now(),{model:B,diagnostics}=sculptCitizen(A),C=structuredClone(B),sculptMs=performance.now()-start,maps={},mapStart=performance.now();
+const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(out,n))),write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2)),A=read('v6-citizen.model.json'),start=performance.now(),{model:B,diagnostics}=sculptCitizen(A,read('makehuman-base.json')),C=structuredClone(B),sculptMs=performance.now()-start,maps={},mapStart=performance.now();
 for(const kind of Object.keys(profiles)){
  const m=maps[kind]=materialMaps(kind);
  for(const channel of ['color','normal','roughness'])write('v7-material-'+kind+'-'+channel+'.png',png(m.size,m.size,m[channel]));
@@ -19,7 +19,7 @@ for(const [label,m] of Object.entries(models)){
  if(JSON.stringify(m.joints)!==JSON.stringify(A.joints))throw Error('Rig changed');
  if(JSON.stringify(m.parts[0].positions)!==JSON.stringify(A.parts[0].positions))throw Error('Anatomy changed');
  records.push({label,triangles:m.statistics.triangleCount,vertices:m.statistics.vertices,exportMs,bytes:data.length,images:doc.images?.length??0,views:[]});
- if(label!=='C')allCollisions.push({label,parts:m.parts.filter(p=>p.layer).map(p=>({name:p.name,layer:p.layer,positions:p.positions,indices:p.indices}))});
+ if(label!=='C')allCollisions.push({label,parts:m.parts.filter(p=>p.layer||/source body/.test(p.name)).map(p=>({name:p.name,layer:p.layer??0,positions:p.positions,indices:p.indices}))});
 }
 for(const view of views){
  const bounds=commonBounds([A,B,C],view);
