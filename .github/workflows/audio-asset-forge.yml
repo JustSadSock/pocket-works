@@ -102,13 +102,13 @@ jobs:
             soxi "$file"
             count=$((count + 1))
           done < .audio-forge-generated.txt
-          test "$count" -eq 15
+          test "$count" -eq 23
 
       - name: Test sample library and hybrid engine
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/sample-library.test.mjs
+          node --test tools/audio-forge/sample-library.test.mjs tools/audio-forge/persistent-library.test.mjs
           rm -rf .audio-forge-hybrid
           node tools/audio-forge/hybrid-smoke.mjs .audio-forge-hybrid
           node tools/audio-forge/run_manifest.mjs --manifest .audio-forge-hybrid/manifest.json --base .audio-forge-hybrid
@@ -144,6 +144,43 @@ jobs:
         with:
           name: audio-asset-forge-smoke-${{ github.run_id }}
           path: .audio-forge-smoke/generated/
+          if-no-files-found: error
+          retention-days: 7
+
+  field-recording-audition:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install audio decoder
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+      - name: Import pinned recordings and render auditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/field-recordings.mjs .audio-forge-field
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-forge-field/manifest.json --base .audio-forge-field
+          count=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            soxi "$file"
+            count=$((count + 1))
+          done < .audio-forge-generated.txt
+          test "$count" -eq 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-field-recordings-${{ github.run_id }}
+          path: |
+            .audio-forge-field/generated/
+            .audio-forge-field/objects/
+            .audio-forge-field/manifest.json
+            .audio-forge-field/catalog.sqlite
           if-no-files-found: error
           retention-days: 7
 
