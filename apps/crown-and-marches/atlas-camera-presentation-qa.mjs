@@ -14,7 +14,7 @@ const candidates=['cultural','historical','organic'];
 for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
  let browser=null;
  try{
-  browser=await type.launch(engine==='chromium'?{args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{});
+  browser=await type.launch(engine==='chromium'?{args:['--no-sandbox']}:{});
   for(const candidate of candidates){
    const context=await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'});
    const page=await context.newPage(),pageErrors=[];
