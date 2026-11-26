@@ -3,7 +3,7 @@
 import {prepareTerrain} from './world-rendering-gl.mjs';
 import {contourSource,chartedContourSource,scaleTerrainSource} from './genesis-contours.mjs';
 import {model} from './geography-review.mjs';
-import {overviewMaterial} from './atlas-material-fields.mjs';
+import {overviewMaterial,identityBiome,atlasPaper} from './atlas-material-fields.mjs';
 import {atlasMaterial} from './genesis-atlas-visual.mjs';
 import {watersMaterial} from './genesis-waters.mjs';
 import {livingMaterial} from './genesis-living-visual.mjs';
@@ -18,9 +18,9 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  // Bilinear horizon lookup removes nearest-texel shadow striping.
  const at=(x,y)=>z[C(y,0,h-1)*w+C(x,0,w-1)],sample=(x,y)=>{const i=Math.floor(x),j=Math.floor(y),u=x-i,t=y-j;return L(L(at(i,j),at(i+1,j),u),L(at(i,j+1),at(i+1,j+1),u),t);};
  const light=[-.62,-.49,.61],len=Math.hypot(light[0],light[1]),scale=1/res;
- for(let y=0;y<h;y++){for(let x=0;x<w;x++){const k=y*w+x,o=k*9,wx=v[o],wy=v[o+1],H=v[o+3],wet=v[o+4],fert=v[o+5],forest=v[o+6],land=v[o+7],river=v[o+8],height=z[k];let col=[216,205,178];const ink=source.ink?.[k]??1;
+ for(let y=0;y<h;y++){for(let x=0;x<w;x++){const k=y*w+x,o=k*9,wx=v[o],wy=v[o+1],H=v[o+3],wet=v[o+4],fert=v[o+5],forest=v[o+6],land=v[o+7],river=v[o+8],height=z[k];let col=[216,205,178];const ink=source.ink?.[k]??1,paper=source.identity&&source.ink?atlasPaper(wx,wy):[216,205,178];
  if(source.diagnostic){const i=k*4;pixels.set([203,196,177,255],i);continue;}
- if(geology==='waters'&&source.water?.kind[k]&&!auditFields){const water=watersMaterial({x:wx,y:wy},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]}),i=k*4;pixels[i]=C(L(216,water[0],ink),0,255);pixels[i+1]=C(L(205,water[1],ink),0,255);pixels[i+2]=C(L(178,water[2],ink),0,255);pixels[i+3]=255;continue;}
+ if(geology==='waters'&&source.water?.kind[k]&&!auditFields){const water=watersMaterial({x:wx,y:wy},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]}),i=k*4;pixels[i]=C(L(paper[0],water[0],ink),0,255);pixels[i+1]=C(L(paper[1],water[1],ink),0,255);pixels[i+2]=C(L(paper[2],water[2],ink),0,255);pixels[i+3]=255;continue;}
  if(river<=1.5){
  const dx=(at(x+1,y)-at(x-1,y))/(2*scale),dy=(at(x,y+1)-at(x,y-1))/(2*scale),norm=Math.hypot(dx,dy,1),nx=source.normalField?.[k*3]??-dx/norm,ny=source.normalField?.[k*3+1]??-dy/norm,nz=source.normalField?.[k*3+2]??1/norm,diff=Math.max(0,nx*light[0]+ny*light[1]+nz*light[2]),slope=1-nz;
  let shadow=0;for(const step of (overview?[.7,2.8,5.6]:[.35,.7,1.2,1.9,2.8,4,5.6,7.4])){const q=sample(x+light[0]/len*step*res,y+light[1]/len*step*res),occ=q-height-step*light[2]/len;shadow=Math.max(shadow,S((occ-.035)/.36));}
@@ -34,6 +34,7 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  base=mix(base,talus,Math.max(rock,S((H-.49)/.13)*.55));base=mix(base,[225,221,203],S((H-.60)/.12)*S((nz-.35)/.55)*.65);
  variation=geology?0:(broad-.5)*11+(med-.5)*8+(fine-.5)*5+(scree-.5)*rock*10;}
  if(geology==='waters'&&source.water){const curvature=at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1)-4*height;base=overview?overviewMaterial({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature},source.water.shore[k]):(source.polish?atlasMaterial:watersMaterial)({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature,river,continuous:source.scaleSurface},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]});}else if(geology==='living'){const curvature=at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1)-4*height;base=livingMaterial({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature,river});}else if(geology==='synthesis'){const steep=S((slope-.12)/.53),alpine=S((H-.43)/.22),curvature=(at(x+2,y)+at(x-2,y)+at(x,y+2)+at(x,y-2)-4*height),exposure=C((-nx-ny)*.35+.5),soil=mix([133,119,81],[93,125,76],wet),turf=mix(soil,[157,151,94],fert*.63),cliff=mix([115,113,104],[195,187,169],exposure),talus=mix([136,123,101],[179,168,143],S((curvature+.04)/.16));base=mix(turf,[57,83,50],forest*(1-alpine)*.84);base=mix(base,talus,alpine*S((slope-.03)/.44)*.78);base=mix(base,cliff,steep*(.55+.45*alpine));base=mix(base,[225,222,210],S((H-.66)/.14)*(1-steep*.72));}else if(geology){const steep=S((slope-.12)/.47),alpine=S((H-.40)/.23),exposure=C((nx+ny)*.35+.5),soil=mix([137,121,84],[83,117,71],wet),grass=mix(soil,[148,154,91],fert*.7),scree=mix([133,126,108],[190,179,151],exposure),cliff=mix([116,114,106],[205,198,179],exposure);base=mix(grass,[55,84,52],forest*(1-alpine)*.85);base=mix(base,scree,alpine*.72);base=mix(base,cliff,steep*(.35+.65*alpine));base=mix(base,[226,227,216],S((H-.68)/.12)*(1-steep*.65));}
+ if(source.identity&&source.water)base=identityBiome(base,{x:wx,y:wy,H,wet,fert,forest,slope},source.water.shore[k]);
  const direct=diff*(1-shadow*.88),ambient=(overview?.52:.61)-.12*S((H-.35)/.24);if(auditFields){normals.set([nx,ny,nz],k*3);lighting.set([direct,ambient],k*2);materials.set(base,k*3);}
  col=base.map((v,i)=>v*(ambient+(overview?.74:.58)*direct)+variation+[2,5,10][i]*(1-direct));
  if(geology==='waters'&&source.water){if(source.water.kind[k])col=base;}else{
@@ -42,7 +43,7 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  else{const shore=1-S(Math.abs(land-.52)/.06);col=mix(col,[191,175,130],shore*.76);
  if(river<.014){const opacity=1-S((river+.010)/.024);col=mix(col,mix([49,93,108],[111,144,120],S((river+.06)/.07)),opacity);}}}
  }
- const i=k*4;if(detailMask){const known=river<=1.5?ink:0,rock=S((H-.29)/.25)*S((Math.abs(at(x+1,y)-at(x-1,y))+Math.abs(at(x,y+1)-at(x,y-1)))*res*.8);detailMask[i]=Math.round(C(forest*(1-rock))*255);detailMask[i+1]=Math.round(rock*255);detailMask[i+2]=Math.round(C(wet)*255);detailMask[i+3]=Math.round(known*255);}pixels[i]=C(L(216,col[0],ink),0,255);pixels[i+1]=C(L(205,col[1],ink),0,255);pixels[i+2]=C(L(178,col[2],ink),0,255);pixels[i+3]=255;
+ const i=k*4;if(detailMask){const known=river<=1.5?ink:0,rock=S((H-.29)/.25)*S((Math.abs(at(x+1,y)-at(x-1,y))+Math.abs(at(x,y+1)-at(x,y-1)))*res*.8);const canopy=source.identity?forest*(.65+.55*noise(wx*.32+11,wy*.32))*S((forest+.15*noise(wx*1.2,wy*1.2))/.35):forest;detailMask[i]=Math.round(C(canopy*(1-rock))*255);detailMask[i+1]=Math.round(rock*255);detailMask[i+2]=Math.round(C(wet)*255);detailMask[i+3]=Math.round(known*255);}pixels[i]=C(L(paper[0],col[0],ink),0,255);pixels[i+1]=C(L(paper[1],col[1],ink),0,255);pixels[i+2]=C(L(paper[2],col[2],ink),0,255);pixels[i+3]=255;
  }await b.yield();check();}
  const bakeMs=performance.now()-started-(sourceOverride?0:source.stats.ms),bakeSlice=b.max,meshStart=performance.now();
  // Two independent index/vertex buffers share one pre-baked material field.
