@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {produceRoleV9} from './roles-v9.mjs';
+import {produceRoleV9,roleMorphs} from './roles-v9.mjs';
 import {glb,inspectGLB} from './glb.mjs';
 import {pose,deform,rootOffset,animation} from './core.mjs';
 import {profiles,materialMaps} from './material-study.mjs';
 const dir=process.env.CHARACTER_EVIDENCE_SOURCE;
 const load=n=>JSON.parse(readFileSync(dir+'/makehuman-'+n+'.json'));
 const roleIds=['artisan','merchant','infantry','legionary'];
-function model(id,style='historical-miniature',name='base'){return produceRoleV9(load(name),id,null,{style})}
+function model(id,style='historical-miniature',name=roleMorphs[id].morph){return produceRoleV9(load(name),id,null,{style})}
 function finite(m){
  for(const p of m.parts){
   assert.equal(p.normals.length,p.positions.length,p.name+' normals');
@@ -21,12 +21,12 @@ function finite(m){
  }
 }
 test('v9 four roles share the source anatomy but carry distinct construction and equipment',{skip:!dir},()=>{
- const base=model('artisan').joints;
+ const base=model('artisan').joints.map(j=>({name:j.name,parent:j.parent,role:j.role}));
  for(const id of roleIds){
-  const m=model(id);assert.deepEqual(m.joints,base);assert.equal(m.spec.artRevision,'v9');assert.equal(m.spec.motionRevision,'v9');assert.equal(m.spec.contactCorrection,'path-v9');assert.equal(m.spec.lod,'source');assert.equal(m.contacts.length,2);assert.ok(m.statistics.triangleCount<150000);assert.ok(m.joints.length<512);finite(m);
+  const m=model(id);assert.deepEqual(m.joints.map(j=>({name:j.name,parent:j.parent,role:j.role})),base);assert.equal(m.spec.artRevision,'v9');assert.equal(m.spec.motionRevision,'v9');assert.equal(m.spec.contactCorrection,'path-v9');assert.equal(m.spec.lod,'source');assert.equal(m.contacts.length,2);assert.ok(m.statistics.triangleCount<150000);assert.ok(m.joints.length<512);finite(m);
   const bin=glb(m),doc=inspectGLB(bin);assert.ok(bin.length<32000000);assert.ok(doc.animations.some(a=>a.name==='walk'));const root=m.joints.find(j=>j.parent<0);assert.ok(doc.animations.find(a=>a.name==='walk').channels.some(c=>c.target.node===root.id&&c.target.path==='translation'));
  }
- const a=model('artisan'),merchant=model('merchant'),inf=model('infantry'),roman=model('legionary');
+ const a=model('artisan'),merchant=model('merchant'),inf=model('infantry'),roman=model('legionary');assert.notDeepEqual(a.joints.map(j=>j.position),inf.joints.map(j=>j.position));
  assert.ok(a.parts.some(p=>p.name==='wooden mallet handle'));assert.ok(a.parts.some(p=>p.name==='rolled linen sleeve cuff L'));
  assert.ok(merchant.parts.some(p=>p.name==='merchant chaperon crown'));assert.ok(merchant.parts.some(p=>p.name==='merchant long wool robe'));assert.ok(merchant.parts.some(p=>p.name==='merchant shoulder goods'));
  assert.ok(inf.parts.some(p=>p.name==='interlinked mail aventail and collar'));assert.equal(inf.roleDiagnostics.brigandinePlates,12);assert.ok(inf.parts.some(p=>p.name==='rounded bascinet skull'));assert.ok(inf.parts.some(p=>p.name==='steel vambrace L'));assert.ok(inf.parts.some(p=>p.name==='steel articulated tasset L'));
