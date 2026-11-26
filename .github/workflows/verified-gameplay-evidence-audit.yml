@@ -31,7 +31,9 @@ jobs:
       - run: node --test scripts/ci-overhaul/gameplay-evidence-audit.test.mjs
   audit:
     needs: contract
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'infra/gameplay-portability-evidence')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -48,8 +50,8 @@ jobs:
       - name: Authenticate and reconstruct completed experiment
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN: ${{ inputs.source_run }}
-          HISTORICAL_RUN: ${{ inputs.historical_run }}
+          SOURCE_RUN: ${{ github.event_name == 'pull_request' && '45825802669' || inputs.source_run }}
+          HISTORICAL_RUN: ${{ github.event_name == 'pull_request' && '45828846126' || inputs.historical_run }}
         shell: bash
         run: |
           set -euo pipefail

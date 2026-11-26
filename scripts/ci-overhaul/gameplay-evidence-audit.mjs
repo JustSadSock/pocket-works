@@ -42,6 +42,29 @@ export function summarizeTimings(sourceJobs,replayJobs,trial,replay){
  const sum=key=>rows.reduce((n,r)=>n+r[key],0);
  return {scope:'observed whole-job durations; different phases and runners, not net CI savings',sourceJobSeconds:sum('sourceSeconds'),trialJobSeconds:sum('trialSeconds'),replayJobSeconds:sum('replaySeconds'),trialHitShards:rows.filter(r=>r.trialDecision==='reuse-shadow').length,replayHitShards:rows.filter(r=>r.replayDecision==='reuse-shadow').length,rows};
 }
+// Diagnostic counterfactual only. No execution policy is changed here.
+export function portabilityProfile(trial,cross){
+ const categories=['exact','kernel-only','cpu-only','cpu-and-kernel','other'];
+ const counts=Object.fromEntries(categories.map(k=>[k,{shards:0,cases:0,freshMatchedCases:0}]));
+ const passes=[];
+ for(const [mode,report] of [['same-run',trial],['historical',cross]]){
+  if(report.productionAuthorization!==false||report.allowResultReuse!==false||report.allowImpactSkipping!==false||report.gameplayCases!==1868||report.shards!==8||!Array.isArray(report.perShard)||report.perShard.length!==8)fail('Incomplete non-production portability evidence');
+  const local=Object.fromEntries(categories.map(k=>[k,{shards:0,cases:0,freshMatchedCases:0}]));
+  for(const [i,r] of report.perShard.entries()){
+   const n=i<4?234:233,fields=r.changedFields;
+   if(r.shard!==i||!Array.isArray(fields)||fields.some(k=>typeof k!=='string')||new Set(fields).size!==fields.length)fail('Invalid environment difference evidence');
+   const hit=r.decision==='reuse-shadow';
+   if(hit?(r.semanticComparison!=='not-executed'||r.reusedGameplayCases!==n||r.freshGameplayCases!==0||r.reason!==null||fields.length!==0):(r.decision!=='execute'||r.semanticComparison!=='match'||r.reusedGameplayCases!==0||r.freshGameplayCases!==n||typeof r.reason!=='string'))fail('Unverified portability comparison');
+   const key=hit?'exact':r.reason!=='Execution environment differs'?'other':eq(fields,['kernel'])?'kernel-only':eq(fields,['cpu'])?'cpu-only':eq([...fields].sort(),['cpu','kernel'])?'cpu-and-kernel':'other';
+   for(const c of [local[key],counts[key]]){c.shards++;c.cases+=n;c.freshMatchedCases+=hit?0:n;}
+  }
+  const observed=local.exact.cases;
+  if(observed!==report.reusedGameplayCases||1868-observed!==report.freshGameplayCases)fail('Portability counts differ from audited totals');
+  passes.push({mode,observedReusedCases:observed,categories:local,kernelOnlyCounterfactualCases:observed+local['kernel-only'].cases});
+ }
+ const observed=counts.exact.cases,kernelOnly=counts['kernel-only'].cases,total=3736;
+ return {schema:1,scope:'diagnostic only; no eligibility change, no estimated runner savings',totalReplayCases:total,observedReusedCases:observed,observedReuseFraction:observed/total,observedFreshMatchedCases:total-observed,categories:counts,passes,kernelOnlyCounterfactualCases:observed+kernelOnly,kernelOnlyCounterfactualFraction:(observed+kernelOnly)/total,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+}
 export function audit(root){
  const source=json(join(root,'source.json')),replay=json(join(root,'replay.json')),sha=validateRuns(source,replay);
  const names=Array.from({length:8},(_,i)=>String(i)),primary=join(root,'primary'),same=join(root,'same'),historical=join(root,'historical');
@@ -64,7 +87,7 @@ export function audit(root){
  const matrix=prefix=>names.map(n=>prefix+' ('+n+')');
  const sourceJobs=jobSeconds(json(join(root,'source-jobs.json')),['contract',...matrix('execute'),...matrix('attest'),...matrix('trial'),'aggregate'],source.run_attempt);
  const replayJobs=jobSeconds(json(join(root,'replay-jobs.json')),[...matrix('replay'),'aggregate'],replay.run_attempt);
- return {schema:1,kind:'verified-gameplay-completed-pair-audit',...common,planDigest:PLAN,source:SOURCE,replayRun:replay.id,replayAttempt:replay.run_attempt,trial,cross,timings:summarizeTimings(sourceJobs,replayJobs,trial,cross),productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+ return {schema:1,kind:'verified-gameplay-completed-pair-audit',...common,planDigest:PLAN,source:SOURCE,replayRun:replay.id,replayAttempt:replay.run_attempt,trial,cross,timings:summarizeTimings(sourceJobs,replayJobs,trial,cross),portability:portabilityProfile(trial,cross),productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{const [root,out]=process.argv.slice(2),r=audit(root);writeFileSync(out,JSON.stringify(r,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(r,null,2));}
