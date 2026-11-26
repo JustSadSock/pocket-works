@@ -25,7 +25,7 @@ jobs:
       - name: Verify geometry, skinning, determinism, composition and budgets
         run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs
       - name: Produce focused morphology, animal and sprite candidates
-        run: node tools/character-forge/native-v4.mjs
+        run: CHARACTER_V7_FOCUS=1 node tools/character-forge/native-v4.mjs
       - name: Compare actual pinned CMU motion
         run: |
           python3 tools/character-forge/fetch-control-motion.py
@@ -150,7 +150,9 @@ jobs:
           exit "$status"
       - name: Compare one matched transparent frame through existing Art Forge bake
         if: always()
-        run: python3 tools/character-forge/sprite-bake.py
+        run: |
+          python3 tools/character-forge/sprite-bake.py
+          CHARACTER_SURFACE_BAKE=1 python3 tools/character-forge/sprite-bake.py
       - name: Optional Blender garment intersections and cloth control
         if: always()
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py'
