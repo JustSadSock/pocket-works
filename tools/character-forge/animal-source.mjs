@@ -1,4 +1,5 @@
 import {readFileSync,writeFileSync} from 'node:fs';import {join} from 'node:path';import {build,pose,deform} from './core.mjs';import {part,push,normals} from './hybrid-human.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {resolveProfile} from './morphology.mjs';
+import {repairElephant} from './elephant-strain-v7.mjs';
 const out=process.env.CHARACTER_EVIDENCE,reg=JSON.parse(readFileSync(new URL('animal-morphs.json',import.meta.url))),provenance=JSON.parse(readFileSync(join(out,'animal-source-provenance.json'))),report=[];
 const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),norm=a=>Math.hypot(...a);
 const bounds=parts=>parts.reduce((b,p)=>{for(let i=0;i<p.positions.length;i++) {let k=i%3;b[k][0]=Math.min(b[k][0],p.positions[i]);b[k][1]=Math.max(b[k][1],p.positions[i])}return b},[[Infinity,-Infinity],[Infinity,-Infinity],[Infinity,-Infinity]]);
@@ -62,7 +63,10 @@ for(let family of ['horse','elephant']){
     for(const j of candidate.joints)if(j.parent>=0)j.local=sub(j.position,candidate.joints[j.parent].position);
     candidate.spec.style='low-poly';candidate.spec.sourceAdapter='V5 bounded stylized proportions on source topology; unapproved';
     candidate.parts=m.parts.map(src=>{let p=part(src.name,src.color,'body');for(let i=0;i<src.positions.length;i+=3){let q=warp(src.positions.slice(i,i+3));push(p,q,bind(q,candidate))}p.indices=src.indices.slice();return normals(p)});
-    const recovered=elephantRebind(m),set=[['native',native],['source',m],['rebound',recovered]],rest=x=>x.joints.map(()=>[0,0,0,1]),diag=[];
+    const recovered=elephantRebind(m),repair=repairElephant(m,recovered,{render:name==='base',write:(file,data)=>writeFileSync(join(out,file),data)});
+    writeFileSync(join(out,'source-v7-elephant-'+name+'-strain.json'),JSON.stringify(repair.report,null,2));
+    if(name==='base')writeFileSync(join(out,'source-v7-elephant-local.glb'),glb(repair.model));
+    const set=[['native',native],['source',m],['rebound',recovered]],rest=x=>x.joints.map(()=>[0,0,0,1]),diag=[];
     for(const [label,x] of set){
       const stem='source-v5-elephant-'+name+'-'+label;
       if(label==='rebound')writeFileSync(join(out,stem+'.glb'),glb(x));
