@@ -399,3 +399,33 @@ music.setIntensity(0.9, {quantize:'bar', fadeSeconds:0.4});
 The transport schedules the next grid boundary at least 30 ms ahead using the AudioContext clock. No JS timer is used for audio scheduling. The requested target is visible immediately in state.targets; state.transitionAt is the scheduled start time of the most recent transition, not a completion flag. A new request cancels prior scheduled automation, holds the computed current gain, and replaces the transition. The stems keep their original transport start time. Supply genuinely grid-aligned authored stems; the runtime does not stretch or retune arbitrary loops to match the declared BPM. The browser test also checks a real beat-quantized transition and the rendered battle frequency.
 
 The original Chromium and WebKit Web Audio checks passed at 256358b, but upload-artifact excluded the two hidden output directories. The upload steps now explicitly permit hidden files only in the generated audio and browser report paths. The corrected CI must pass again before acceptance.
+
+### Virtual audio world and reserved scene budget
+
+`shared/capabilities/virtual-audio.js` adds a bounded continuous-emitter pool and an optional integration facade. Example:
+
+```js
+const scene = createBudgetedAudioScene({
+  context, budget: {total:18, events:4, music:2},
+  families, stems, maxSources:4096
+});
+await scene.music?.start();
+// In the game update loop, supply a snapshot, not a node per soldier.
+await scene.world.reconcile({
+  listener: {x: cameraX,y: cameraY}, heading: cameraAngle,
+  sources: units.map(unit => ({
+    id: String(unit.id), buffer: marchLoop, position: unit.position,
+    priority: unit.isCommander ? 3 : 1, volume: 0.8,
+    referenceDistance: 8, maxDistance: 70, zone: 'open'
+  }))
+});
+await scene.events.play('impact', {priority:2});
+scene.music?.setIntensity(0.8, {quantize:'beat'});
+scene.destroy();
+```
+
+The continuous pool ranks estimated audible gain times priority, ignores sources below a configurable floor, and gives retained sources a 15% score bonus by default to reduce churn. Stable IDs break ties. It keeps retiring voices inside the physical budget while their gain fades (35 ms automation, 50 ms default retirement interval). The caller reconciles again to release elapsed retirements and activate new candidates; no background scheduler is installed. Use a regular cadence such as 10–20 Hz and await each reconciliation; overlapping requests return false rather than queueing stale snapshots. Newly audible loops start at an offset based on the shared audio-clock origin (or explicit per-source phaseOrigin) and use a 25 ms fade-in. Buffers are supplied by the caller and can be shared across thousands of logical emitters. This is virtualization, not buffer streaming, automatic geometry occlusion, or voice aggregation.
+
+The scene facade reserves independent fixed source quotas for continuous loops, one-shot events and music stems; unused slots are not lent between categories. The total applies only to source nodes owned by this facade, not other application audio graphs, reflection/filter nodes, or decoded memory bytes. The family cache remains count-bounded; the caller controls the continuous buffer inventory. A shared mixer supplies three independent buses. The default budget is 24 total (12 continuous, 8 events, 4 music). Scene stats expose allocations, pending events and logical count. Destroy all scene-owned nodes without closing the app's context.
+
+The browser integration test creates 512 logical units in two distant groups, reserves 18 total slots (12 continuous, 4 events, 2 music), switches listener position between groups, checks that retiring voices never exceed the cap, tests eight simultaneous decoded combat requests (four accepted), preserves the music transport, measures real army-bus RMS and update timings, and verifies teardown. Its sounds are simple original synthetic fixtures, not approved battlefield assets; it is a technical integration scenario, not an integrated game or performance claim for a physical mobile device. Five mock/logic regressions cover ranking, retention, timing, cancellation and quota constraints. Browser CI must confirm the expanded scenario.
