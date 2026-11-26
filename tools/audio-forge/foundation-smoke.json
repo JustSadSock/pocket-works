@@ -818,6 +818,42 @@
       "outputDir": "generated",
       "format": "wav",
       "source": "original"
+    },
+    {
+      "id": "sword-v2",
+      "model": "sword-v2",
+      "seed": 100,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    },
+    {
+      "id": "glass-v2",
+      "model": "glass-v2",
+      "seed": 101,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    },
+    {
+      "id": "gear",
+      "model": "gear",
+      "seed": 102,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    },
+    {
+      "id": "chain",
+      "model": "chain",
+      "seed": 103,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
     }
   ]
 }
