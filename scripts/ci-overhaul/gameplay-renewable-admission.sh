@@ -35,4 +35,7 @@ git -C "$controller/audit-source" checkout --quiet --detach "$ACTUAL_QA_SOURCE"
     jq -n '{decision:"execute",reason:"Admission revoked after preflight",productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false}' > "$RUNNER_TEMP/decision.json"
     node "$outer/scripts/ci-overhaul/gameplay-renewable-admission.mjs" finish "$out" "$evidence" "$dest" "$RUNNER_TEMP/decision.json"
   elif [[ "$status" != 0 ]]; then exit "$status"; fi
+  mkdir "$dest/raw" "$dest/mount-proofs"
+  cp -a "$out/." "$dest/raw/"
+  for name in source audit; do for stage in before inside after; do cp "$RUNNER_TEMP/gameplay-$name-$stage.json" "$dest/mount-proofs/$name-$stage.json"; done; done
 )
