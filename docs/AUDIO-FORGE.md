@@ -351,3 +351,37 @@ mixer.setBusVolume('combat', 0.6);
 Coordinates use consistent game-world units; heading is radians, zero points along +x and +y is right at that heading. Inverse-square-style attenuation, a soft range cutoff, zone-specific absorption and caller-supplied occlusion (0–1) determine level and lowpass. Zones open/forest/stone/interior specify one short early reflection, not full reverberation or ray tracing. Reflected tails occupy voice budget until cleanup; stopping a player also clears them. The mixer provides up to 16 independently adjustable buses and a compressor when supported, not a guaranteed brickwall limiter. Spatial state is sampled at play time; moving emitters, geometry-derived occlusion, Doppler, continuous loops and browser audio fidelity are future work. Existing non-spatial callers are unchanged. Unit tests mock the audio graph; real browser audio tests remain necessary.
 
 Hybrid jobs and families may specify `sampleStart` in seconds (0–3600) to cue a source without changing the archived original. SoX decodes with input headroom before RMS matching. In the verified Nikko recording, the main impact begins near 0.60 s; the new 0.59 s cue reduces the roughly 0.61 s peak delay to about 0.02 s. The field recording job preserves the seven previous comparisons and adds three aligned variants (25/75/100%); ten generated WAVs in total. Short recordings are zero-padded by the mixer. Do not interpret an original field recording as automatically suitable for an event without checking its timing and content.
+
+### Continuous audio: moving emitters, seamless loops and adaptive stems
+
+`shared/capabilities/continuous-audio.js` provides three opt-in APIs. It uses the application's AudioContext and optional mixer buses; it never closes the context.
+
+```js
+const ambience = makeSeamlessLoop(context, decodedRain, {crossfadeSeconds: 0.25});
+const emitter = createDynamicEmitter({
+  context, destination: mixer.bus('ambience'), buffer: ambience,
+  spatial: {source: {x: 0,y: 20}, listener: {x: 0,y: 0}, zone: 'forest'}
+});
+await emitter.start(); // call in a user gesture on mobile
+emitter.update({source: {x: 15,y: 20}, listener: {x: 1,y: 0}, occlusion: 0.4, zone: 'forest'});
+const music = createAdaptiveMusic({
+  context, destination: mixer.bus('music'),
+  stems: [
+    {id:'harmony', buffer:harmony, base:1, gain:0.85},
+    {id:'melody', buffer:melody, threshold:0.15, width:0.45, base:0.15},
+    {id:'pulse', buffer:pulse, threshold:0.45, width:0.45}
+  ]
+});
+await music.start();
+music.setIntensity(0.8, {fadeSeconds: 1.5});
+emitter.destroy();
+music.destroy();
+```
+
+Emitters smooth gain, stereo position, lowpass and early reflection without restarting the buffer. Game code supplies spatial state and owns the update cadence; there is no automatic geometry, Doppler or emitter virtualization yet. Each emitter has independent nodes; use a game-side limit for large crowds. Destroy releases nodes and cancels an outstanding unlock. Nonlooping dynamic sources terminate at source end (the last reflection is not preserved); ordinary family voices retain their existing reflection-tail handling.
+
+Loop preparation uses a raised-cosine overlap between beginning and end, shortening the clip by the overlap. The resulting seam joins originally adjacent samples rather than forcing silence. This is appropriate for continuous ambience; it does not guarantee an inaudible join for arbitrary tonal content. For rhythmically exact music, author stems at the intended length rather than independently trimming them. Mono/stereo buffers only; minimum duration must exceed twice the requested overlap.
+
+Music stems share exact sample rate and frame count and start on a single audio-clock timestamp; intensity ramps stem gains without retriggering. Up to eight stems, gain thresholds/widths and per-track base gain. No automatic score composition, bar-quantized transitions or state-specific tempo changes yet. The composer must prepare compatible stems.
+
+CI runs four new mock lifecycle regressions and a separate Chromium/WebKit real Web Audio matrix (offline loop render, spectral measurements of two stem mixes, live context unlock by a click, moving emitter, intensity update and restart). Browser job artifacts contain measured JSON. The continuous audition job generates an 8-second seamless rain loop, three original 16-second synchronized 120 BPM stems, and a 48-second offline preview that moves from calm to full intensity and back. The preview uses the same pure gain law; it is not a browser audio capture or an artistic approval.
