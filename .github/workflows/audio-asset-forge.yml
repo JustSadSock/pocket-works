@@ -204,6 +204,25 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Render expressive instrument and material auditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/artistic-lab.mjs .audio-artistic-lab
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-artistic-lab/manifest.json --base .audio-artistic-lab
+          node tools/audio-forge/artistic-catalog.mjs .audio-artistic-lab
+          test "$(find .audio-artistic-lab/generated/music -name '*.wav' | wc -l)" -eq 6
+          test "$(find .audio-artistic-lab/generated/effects -name '*.wav' | wc -l)" -eq 24
+
+      - name: Upload artistic auditions and research library
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-artistic-lab-${{ github.run_id }}
+          path: .audio-artistic-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
   field-recording-audition:
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
     runs-on: ubuntu-24.04
