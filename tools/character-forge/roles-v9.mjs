@@ -78,12 +78,12 @@ function bascinet(m){
  grid(p,rows.length,N+1);finish(p,.004);
  const z=centerZ+rz*.86,visor=addPart(m,'bascinet brow and visor',[.27,.30,.31],'metal','face protection');
  for(const [x,y] of [[-.060,base+.025],[.060,base+.025],[.055,base+.066],[-.055,base+.066]])push(visor,[h.position[0]+x,y,z],[[h.id,1]]);
- visor.indices=[0,1,2,0,2,3];normals(visor);
- const slit=addPart(m,'bascinet eye slit',[.035,.032,.028],'leather','face');for(const [x,y] of [[-.048,base+.044],[.048,base+.044],[.046,base+.050],[-.046,base+.050]])push(slit,[h.position[0]+x,y,z+.002],[[h.id,1]]);slit.indices=[0,1,2,0,2,3];normals(slit);
+ visor.indices=[0,1,2,0,2,3];finish(visor,.003);
+ const slit=addPart(m,'bascinet eye slit',[.035,.032,.028],'leather','face');for(const [x,y] of [[-.048,base+.044],[.048,base+.044],[.046,base+.050],[-.046,base+.050]])push(slit,[h.position[0]+x,y,z+.002],[[h.id,1]]);slit.indices=[0,1,2,0,2,3];finish(slit,.002);
  for(const side of [-1,1]){
   const cheek=addPart(m,'bascinet cheek guard '+side,[.31,.34,.35],'metal','head armour'),x=h.position[0]+side*rx*.78;
   for(const [xx,y,zz] of [[x,base+.025,centerZ+rz*.2],[x+side*.012,base-.065,centerZ+rz*.54],[x-side*.015,base-.105,centerZ+rz*.26],[x-side*.012,base-.015,centerZ+rz*.12]])push(cheek,[xx,y,zz],[[h.id,1]]);
-  cheek.indices=side>0?[0,1,2,0,2,3]:[0,2,1,0,3,2];normals(cheek);
+  cheek.indices=side>0?[0,1,2,0,2,3]:[0,2,1,0,3,2];finish(cheek,.003);
  }
  const neck=J(m,'neck01');tube(m,'mail aventail lower edge',[{p:[h.position[0]-.105,neck.position[1]+.015,neck.position[2]-.01],r:.012,ws:[[neck.id,.7],[h.id,.3]]},{p:[h.position[0],neck.position[1]-.045,neck.position[2]-.045],r:.012,ws:[[neck.id,1]]},{p:[h.position[0]+.105,neck.position[1]+.015,neck.position[2]-.01],r:.012,ws:[[neck.id,.7],[h.id,.3]]}],[.27,.29,.30],'metal',8,.002);
 }
