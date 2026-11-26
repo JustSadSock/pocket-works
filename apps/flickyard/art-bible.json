@@ -27,6 +27,11 @@
       "slug": "folkarium",
       "evidence": "apps/folkarium/visual-direction.json inspected; memory.json is absent; covers/folkarium.jpg exists as a legacy cover with unknown capture state and was not treated as verified evidence.",
       "lesson": "Avoid manuscript spreads, notation grids and instrument inspectors; the training world must remain an unobstructed horizontal arena."
+    },
+    {
+      "slug": "petlya-17",
+      "evidence": "apps/petlya-17/visual-direction.json and app.config.json inspected; apps/petlya-17/visual-memory/memory.json is absent and no verified screenshot capture was available.",
+      "lesson": "Avoid a 3D driving cockpit, horizon perspective and peripheral vehicle telemetry; keep mouse aim coordinates flat, predictable and independent of camera movement."
     }
   ],
   "references": [
@@ -148,19 +153,35 @@
     }
   ],
   "constraints": {
-    "viewport": [1366, 768],
+    "viewport": [
+      1366,
+      768
+    ],
     "textureBytes": 0,
     "triangles": 0,
     "targetFps": 60
   },
   "verification": {
-    "states": ["initial", "action", "settled"],
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
     "risks": [
       "Pointer Lock may be denied or released by Escape; visible-cursor fallback and pause behavior must remain reliable.",
       "The target field must keep accurate CSS-pixel coordinates across high-DPI displays and browser resizing.",
       "The left rail and result ledger must not cover the active target field on narrow landscape and portrait screens.",
       "Target speed and impact fragments must not create frame-time spikes during rapid repeated hits."
     ],
-    "comparisons": ["press", "pereves", "echolot", "emergent-kingdoms", "folkarium", "bzyn", "kalibr"]
+    "comparisons": [
+      "press",
+      "pereves",
+      "echolot",
+      "emergent-kingdoms",
+      "folkarium",
+      "bzyn",
+      "kalibr",
+      "petlya-17"
+    ]
   }
 }

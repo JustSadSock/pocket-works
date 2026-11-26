@@ -10,7 +10,7 @@
     "paletteLogic": "Deep green-black recedes behind the reticle, parchment carries all readable text, rust marks active targets and hit response, and brass is reserved for the central scoring rings.",
     "typography": "Georgia carries the workshop's measured editorial voice, while compact monospace labels identify drill codes, times and scores without competing with the live target.",
     "signature": "A hit spins the target plate off its axis and releases a short spray of enamel and steel fragments; the impact ring remains briefly where the target was.",
-    "distinction": "Unlike Press's file ledger, Pereves's suspended balance sculpture, Echolot's sonar instrument, Emergent Kingdoms's map and Folkarium's notation spread, Flickyard is a mouse-first open range with moving physical targets."
+    "distinction": "Unlike Press's file ledger, Pereves's suspended balance sculpture, Echolot's sonar instrument, Emergent Kingdoms's map and Folkarium's notation spread, Flickyard is a mouse-first open range with moving physical targets. It also avoids Petlya 17's 3D cockpit, road perspective and vehicle telemetry."
   },
   "architecture": {
     "spatialLayout": "full-bleed-world",
@@ -46,6 +46,11 @@
         "slug": "folkarium",
         "spatialDifference": "Folkarium is a landscape manuscript spread with instrument columns and an editable staff; Flickyard is a full-bleed arena with a small external drill rail.",
         "interactionDifference": "Folkarium edits pitches and auditions musical parts; Flickyard tracks mouse coordinates, target timing and hit registration."
+      },
+      {
+        "slug": "petlya-17",
+        "spatialDifference": "Petlya 17 uses a 3D coastal racetrack viewed from a cockpit with perimeter telemetry; Flickyard uses a flat 2D target range, an equipment side rail and a separate score ledger.",
+        "interactionDifference": "Petlya 17 continuously steers, accelerates and brakes a vehicle; Flickyard moves a reticle directly and registers discrete shots or continuous tracking time."
       }
     ]
   },
@@ -64,8 +69,15 @@
   },
   "evidence": {
     "entry": "./",
-    "interaction": { "type": "click", "selector": "#launchButton" },
+    "interaction": {
+      "type": "click",
+      "selector": "#launchButton"
+    },
     "expectedChange": "The menu overlay disappears, the live HUD appears and a target becomes available for direct mouse aiming in the range.",
-    "capture": ["initial", "action", "settled"]
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
   }
 }
