@@ -385,3 +385,17 @@ Loop preparation uses a raised-cosine overlap between beginning and end, shorten
 Music stems share exact sample rate and frame count and start on a single audio-clock timestamp; intensity ramps stem gains without retriggering. Up to eight stems, gain thresholds/widths and per-track base gain. No automatic score composition, bar-quantized transitions or state-specific tempo changes yet. The composer must prepare compatible stems.
 
 CI runs four new mock lifecycle regressions and a separate Chromium/WebKit real Web Audio matrix (offline loop render, spectral measurements of two stem mixes, live context unlock by a click, moving emitter, intensity update and restart). Browser job artifacts contain measured JSON. The continuous audition job generates an 8-second seamless rain loop, three original 16-second synchronized 120 BPM stems, and a 48-second offline preview that moves from calm to full intensity and back. The preview uses the same pure gain law; it is not a browser audio capture or an artistic approval.
+
+### Beat/bar-quantized adaptive transitions
+
+The default `setIntensity(value, {fadeSeconds})` remains immediate. Supply the score's BPM and meter at player creation, then optionally request a beat- or bar-aligned transition:
+
+```js
+const music = createAdaptiveMusic({context, stems, bpm:120, beatsPerBar:4});
+await music.start();
+music.setIntensity(0.9, {quantize:'bar', fadeSeconds:0.4});
+```
+
+The transport schedules the next grid boundary at least 30 ms ahead using the AudioContext clock. No JS timer is used for audio scheduling. The requested target is visible immediately in state.targets; state.transitionAt is the scheduled start time of the most recent transition, not a completion flag. A new request cancels prior scheduled automation, holds the computed current gain, and replaces the transition. The stems keep their original transport start time. Supply genuinely grid-aligned authored stems; the runtime does not stretch or retune arbitrary loops to match the declared BPM. The browser test also checks a real beat-quantized transition and the rendered battle frequency.
+
+The original Chromium and WebKit Web Audio checks passed at 256358b, but upload-artifact excluded the two hidden output directories. The upload steps now explicitly permit hidden files only in the generated audio and browser report paths. The corrected CI must pass again before acceptance.
