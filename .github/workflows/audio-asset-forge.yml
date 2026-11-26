@@ -11,12 +11,14 @@ on:
     paths:
       - ".github/workflows/audio-asset-forge.yml"
       - "tools/audio-forge/**"
+      - "shared/capabilities/sound-family.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
   pull_request:
     paths:
       - ".github/workflows/audio-asset-forge.yml"
       - "tools/audio-forge/**"
+      - "shared/capabilities/sound-family.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
 
@@ -90,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
