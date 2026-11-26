@@ -21,12 +21,12 @@ const json=p=>JSON.parse(read(p,4_000_000));
 const git=(cwd,args)=>execFileSync('git',args,{cwd,encoding:'utf8'}).trim();
 export function resolveCandidate(pr,controller,mainSource){
  if(!SHA.test(controller)||pr?.number!==APP_PR||pr.head?.repo?.full_name!==REPO||pr.head?.ref!==APP_BRANCH||pr.base?.repo?.full_name!==REPO||pr.base?.ref!=='main')fail('Unapproved app branch');
- if(pr.state==='open'&&pr.merged===false&&SHA.test(pr.head.sha))return {source:pr.head.sha,sourceRef:APP_BRANCH,sourcePR:APP_PR};
+ if(pr.state==='open'&&pr.merged===false&&pr.mergeable===true&&SHA.test(pr.head.sha)&&SHA.test(pr.base?.sha)&&SHA.test(pr.merge_commit_sha))return {source:pr.merge_commit_sha,sourceRef:'refs/pull/'+APP_PR+'/merge',sourcePR:APP_PR};
  if(pr.state==='closed'&&pr.merged===true&&SHA.test(mainSource)&&SHA.test(pr.merge_commit_sha))return {source:mainSource,sourceRef:'main',sourcePR:APP_PR};
  fail('No approved app candidate');
 }
 export function validateRenewalManifest(m,expected,mainOnly=true){
- if(!m||m.workflow!==RENEWAL_WORKFLOW||!SHA.test(m.source)||!SHA.test(m.sourceTree)||m.sourcePR!==APP_PR||!['main',APP_BRANCH].includes(m.sourceRef))fail('Invalid renewal identity');
+ if(!m||m.workflow!==RENEWAL_WORKFLOW||!SHA.test(m.source)||!SHA.test(m.sourceTree)||m.sourcePR!==APP_PR||!['main',APP_BRANCH,'refs/pull/'+APP_PR+'/merge'].includes(m.sourceRef))fail('Invalid renewal identity');
  validateManifest({...m,source:SOURCE,sourceTree:SOURCE_TREE,workflow:WORKFLOW},'source',false);
  if(mainOnly&&(m.ref!=='refs/heads/main'||!['push','schedule','workflow_dispatch'].includes(m.event)))fail('Not a main renewal');
  // Legacy validation only knows push/dispatch; schedule is normalized below by caller.

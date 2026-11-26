@@ -9,7 +9,7 @@ dest="$4"
 export ACTUAL_QA_SOURCE="$(git -C "$source" rev-parse HEAD)"
 export ACTUAL_QA_CONTROLLER="$(git -C "$controller" rev-parse HEAD)"
 export RENEWAL_SOURCE_JSON="$RUNNER_TEMP/actual-source.json"
-jq -n --arg source "$ACTUAL_QA_SOURCE" --arg tree "$(git -C "$source" rev-parse HEAD^{tree})" '{source:$source,sourceTree:$tree,sourceRef:"app/banners-of-war",sourcePR:1355}' > "$RENEWAL_SOURCE_JSON"
+jq -n --arg source "$ACTUAL_QA_SOURCE" --arg tree "$(git -C "$source" rev-parse HEAD^{tree})" '{source:$source,sourceTree:$tree,sourceRef:"refs/pull/1355/merge",sourcePR:1355}' > "$RENEWAL_SOURCE_JSON"
 # No tracked or untracked mutation of the actual candidate is allowed.
 test -z "$(git -C "$source" status --porcelain)"
 test -z "$(git -C "$controller" status --porcelain)"
