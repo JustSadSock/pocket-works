@@ -139,6 +139,9 @@ jobs:
           python3 tools/character-forge/forge-bridge.py || status=1
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/makehuman-base.glb" CHARACTER_BRIDGE_LABEL=makehuman python3 tools/character-forge/forge-bridge.py || status=1
           exit "$status"
+      - name: Compare one matched transparent frame through existing Art Forge bake
+        if: always()
+        run: python3 tools/character-forge/sprite-bake.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -146,6 +149,7 @@ jobs:
           path: |
             quality-artifacts/character-bridge/roundtrip-*
             quality-artifacts/character-bridge/forge-*.log
+            quality-artifacts/character-bridge/sprite-*.*
           retention-days: 14
   studio:
     runs-on: ubuntu-24.04
