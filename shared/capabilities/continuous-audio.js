@@ -60,8 +60,12 @@ export function createDynamicEmitter({context,destination=context?.destination,b
     if(graph.delay)automate(graph.delay.delayTime,profile.delay,t,seconds);
   }
   return {
-    async start(){
+    async start({offsetSeconds=0,fadeInSeconds=0}={}){
       if(closed||starting||source)return false;
+      const offset=number(offsetSeconds,0,0,1e12,'offset');
+      const fade=number(fadeInSeconds,0,0,2,'fade in');
+      const duration=buffer.length/buffer.sampleRate;
+      if(!loop&&offset>=duration)return false;
       starting=true;const token=++epoch;const nodes=[];
       try{
         const offline=typeof context.startRendering==='function';
@@ -79,7 +83,12 @@ export function createDynamicEmitter({context,destination=context?.destination,b
         }
         source=s;graph={source:s,filter,gain,pan,delay,wet,nodes};updateNodes(0);
         s.onended=()=>{if(source===s)dispose()};
-        s.start();return true;
+        if(fade>0){
+          const t=context.currentTime;
+          gain.gain.cancelScheduledValues(t);gain.gain.setValueAtTime(0,t);
+          gain.gain.linearRampToValueAtTime(level*profile.gain,t+fade);
+        }
+        s.start(0,loop?offset%duration:offset);return true;
       }catch{if(graph)dispose();else for(const n of nodes)try{n.disconnect()}catch{};return false}
       finally{starting=false}
     },
