@@ -72,6 +72,7 @@ jobs:
       - name: Verify runtime contracts before full production builds
         run: |
           node --test scripts/runtime-repair-transforms.test.mjs scripts/runtime-contract-repair.test.mjs
+          node --test shared/launcher-visible-apps.test.mjs
           # Mobile output validation needs built enhanced apps and remains in health.
           npm run validate:updates
           npm run validate:capabilities
