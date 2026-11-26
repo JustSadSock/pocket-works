@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {TASK,REPO,WORKFLOW,makeShadowReceipt} from './attested-shadow.mjs';
-import {admitTrial,parity,REPLAY_WORKFLOW} from './verified-reuse-admission.mjs';
+import {admitTrial,parity,REPLAY_WORKFLOW,compareEnvironment} from './verified-reuse-admission.mjs';
 const now=1800000000000;
 const environment={contract:'readonly-offline-container-v2',imageDigest:'1'.repeat(64),toolchainDigest:'2'.repeat(64),externalInputsDigest:'3'.repeat(64),containerConfigDigest:'4'.repeat(64),kernelDigest:'5'.repeat(64),executionContractDigest:'6'.repeat(64),os:'linux',arch:'x64',node:'v22.12.0'};
 const mountedInputs={schema:1,digest:'8'.repeat(64),files:6,directories:4,bytes:42,productionAuthorization:false,reuse:false};
@@ -51,4 +51,19 @@ test('completed same-commit upstream can be replayed only by distinct bound repl
  assert.equal(admitTrial(root,run,bundle,replay,environment,now).decision,'reuse-trial');
  for(const bad of [{...replay,upstreamRun:99},{...replay,upstreamAttempt:2},{...replay,run:run.id},{...replay,commit:target.commit},{...replay,workflow:WORKFLOW}])
   assert.equal(admitTrial(root,run,bundle,bad,environment,now).decision,'execute');
+}));
+
+test('environment diagnostics keep strict matching for every field, including unknown additions',()=>{
+ const same=compareEnvironment(environment,{...environment});
+ assert.equal(same.match,true);assert.deepEqual(same.changedFields,[]);
+ for(const [key,value] of [['kernelDigest','9'.repeat(64)],['imageDigest','9'.repeat(64)],['node','v22.13.0'],['extraContract','extra']]){
+  const r=compareEnvironment(environment,{...environment,[key]:value});
+  assert.equal(r.match,false);assert.deepEqual(r.changedFields,[key]);
+  assert.notEqual(r.priorFingerprint,r.currentFingerprint);
+ }
+});
+test('actual admission mismatch identifies fields and does not reuse',()=>fixture(({root,run,bundle,target})=>{
+ const a=admitTrial(root,run,bundle,target,{...environment,kernelDigest:'9'.repeat(64)},now);
+ assert.equal(a.decision,'execute');assert.deepEqual(a.environmentComparison.changedFields,['kernelDigest']);
+ assert.equal(a.environmentComparison.match,false);
 }));
