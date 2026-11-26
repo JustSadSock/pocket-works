@@ -54,7 +54,7 @@ export async function buildContours(m,bounds,{detail=8,vertical,yieldRow=async()
  const wet=p.map(a=>a.v>0),saddle=wet[0]===wet[2]&&wet[1]===wet[3]&&wet[0]!==wet[1];let diag=true;
  if(saddle){stats.diagonalSaddles++;const center=(p[0].v+p[1].v+p[2].v+p[3].v)/4;diag=(center>0)===wet[0];}
  emit(clipWet(diag?[p[0],p[1],p[2]]:[p[0],p[1],p[3]]),kind);emit(clipWet(diag?[p[0],p[2],p[3]]:[p[1],p[2],p[3]]),kind);}
- for(let y=ty;y<Y;y+=4)for(let x=tx;x<X;x+=4){let step=Math.min(4,X-x,Y-y);if(step===4){block(x,y,4,1);block(x,y,4,2);}else for(let j=y;j<Math.min(y+4,Y);j++)for(let i=x;i<Math.min(x+4,X);i++){block(i,j,1,1);block(i,j,1,2);}}
+ const interior=polish&&detail===4?8:4;for(let y=ty;y<Y;y+=interior)for(let x=tx;x<X;x+=interior){let step=Math.min(interior,X-x,Y-y);if(step===interior){block(x,y,interior,1);block(x,y,interior,2);}else for(let j=y;j<Math.min(y+interior,Y);j++)for(let i=x;i<Math.min(x+interior,X);i++){block(i,j,1,1);block(i,j,1,2);}}
  if(data.length)chunks.push({vertices:Float32Array.from(data),x0:x0+tx/detail,y0:y0+ty/detail,x1:x0+X/detail,y1:y0+Y/detail,zmin,zmax});await pause();}
  return {chunks,stats:{...stats,detail,ms:clock()-begin,maxSlice:Math.max(maxSlice,clock()-last),bytes:chunks.reduce((n,c)=>n+c.vertices.byteLength,0)}};
 }

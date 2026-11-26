@@ -13,7 +13,7 @@ export class AtlasCampaignSurface{
  // Center uses the real viewport (including insets), not the logical camera
  // center; the 2D overlays and picking therefore line up with the GPU map.
  const view={x:(w/2-cam.ox)/cam.s,y:(h/2-cam.oy)/cam.s,s:cam.s,datum:0},left=C(Math.floor(-cam.ox/cam.s),0,W),top=C(Math.floor(-cam.oy/cam.s),0,H),right=C(Math.ceil((w-cam.ox)/cam.s),0,W),bottom=C(Math.ceil((h-cam.oy)/cam.s),0,H);
- const quantum=8,bounds=[Math.max(0,Math.floor((left-5)/quantum)*quantum),Math.max(0,Math.floor((top-5)/quantum)*quantum),Math.min(W,Math.ceil((right+5)/quantum)*quantum),Math.min(H,Math.ceil((bottom+5)/quantum)*quantum)],key=revision+'|'+bounds.join(':');
+ const quantum=8,margin=detail===8?8:5,bounds=[Math.max(0,Math.floor((left-margin)/quantum)*quantum),Math.max(0,Math.floor((top-margin)/quantum)*quantum),Math.min(W,Math.ceil((right+margin)/quantum)*quantum),Math.min(H,Math.ceil((bottom+margin)/quantum)*quantum)],key=revision+'|'+bounds.join(':');
  const usable=a=>a&&a.revision===revision&&a.bounds[0]<=left&&a.bounds[1]<=top&&a.bounds[2]>=right&&a.bounds[3]>=bottom;
  if(!usable(this.active)&&!this.pending&&this.status!=='error'){
  const epoch=this.epoch,cached=this.cache.get(key);this.status='loading';
