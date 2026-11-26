@@ -1,0 +1,109 @@
+name: Simulation Performance Contract Shadow
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/simulation-performance-contracts.yml'
+      - 'scripts/ci-overhaul/simulation-performance-contracts*'
+permissions:
+  contents: read
+concurrency:
+  group: simulation-performance-contracts-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contract:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test scripts/ci-overhaul/simulation-performance-contracts.test.mjs
+  current-plan:
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 9a235c0c003ed150ebaa77340fd8964df1d5c731
+          path: audit-source
+          persist-credentials: false
+      - name: Check partition of current Banners candidate
+        env:
+          SOURCE_SHA: 9a235c0c003ed150ebaa77340fd8964df1d5c731
+        run: |
+          test "$(git -C audit-source rev-parse HEAD)" = "$SOURCE_SHA"
+          node scripts/ci-overhaul/simulation-performance-contracts.mjs plan "$PWD/audit-source" current-plan.json
+  execute:
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        phase: [legacy, gameplay, performance]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 11c8e8411b20e8465cafcc0bad51b1f0a6cff2d1
+          path: audit-source
+          persist-credentials: false
+      - name: Execute original or separate fresh phase
+        env:
+          SOURCE_SHA: 11c8e8411b20e8465cafcc0bad51b1f0a6cff2d1
+          PHASE: ${{ matrix.phase }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C audit-source rev-parse HEAD)" = "$SOURCE_SHA"
+          src="$RUNNER_TEMP/split-source"
+          out="$RUNNER_TEMP/split-output"
+          mkdir -p "$src" "$out"
+          git -C audit-source archive HEAD apps/banners-of-war shared scripts package.json package-lock.json | tar -xf - -C "$src"
+          image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
+          docker pull "$image"
+          opts=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp -e SOURCE_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e GITHUB_SHA --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$PWD/scripts/ci-overhaul,dst=/audit,readonly" --mount "type=bind,src=$out,dst=/out" -w /work)
+          if [ "$PHASE" = legacy ]; then
+            docker run "${opts[@]}" "$image" node apps/banners-of-war/completion-runner.mjs 0 8 /out
+            docker run "${opts[@]}" "$image" node /audit/simulation-performance-contracts.mjs plan /work /out/plan.json
+          else
+            docker run "${opts[@]}" "$image" node /audit/simulation-performance-contracts.mjs phase /work 0 "$PHASE" /out
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: split-${{ github.run_attempt }}-${{ matrix.phase }}
+          path: ${{ runner.temp }}/split-output/
+          if-no-files-found: error
+          retention-days: 7
+  compare:
+    needs: [execute, current-plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: split-${{ github.run_attempt }}-*
+          path: samples
+      - name: Compare original matrix with split phases
+        env:
+          SOURCE_SHA: 11c8e8411b20e8465cafcc0bad51b1f0a6cff2d1
+        run: |
+          root="samples/split-$GITHUB_RUN_ATTEMPT"
+          node scripts/ci-overhaul/simulation-performance-contracts.mjs compare "$root-legacy/plan.json" "$root-legacy" "$root-gameplay" "$root-performance" comparison.json
+          cat comparison.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulation-performance-contract-comparison
+          path: comparison.json
+          if-no-files-found: warn
