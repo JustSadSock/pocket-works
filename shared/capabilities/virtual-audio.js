@@ -89,6 +89,7 @@ export function planVoiceBudget({total=24,events=8,music=4}={}){
 export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,volume=.7}={}){
  const quota=planVoiceBudget(budget);
  if(!Array.isArray(stems)||stems.length>quota.music)throw Error('Music stems exceed voice reservation');
+ const musicCount=stems.length;
  let mixer,world,events,music,closed=false;
  try{
   mixer=createSpatialMixer({context,destination,volume});
@@ -100,7 +101,7 @@ export function createBudgetedAudioScene({context,destination=context?.destinati
   world,events,music,quota,mixer,
   destroy(){if(closed)return;closed=true;music?.destroy();events.destroy();world.destroy();mixer.destroy();},
   get stats(){
-   const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=music?.state.active?stems.length:0;
+   const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=music?.state.active?musicCount:0;
    return {continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending};
   }
  };
