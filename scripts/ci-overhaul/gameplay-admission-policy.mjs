@@ -49,21 +49,25 @@ function context(){return {run:Number(process.env.GITHUB_RUN_ID),attempt:Number(
 function readEvidence(root){
  // The workflow verifies the pinned ZIP digest and source GitHub attestation
  // before this marker is created. A failed acquisition must not create it.
- if(!eq(readdirSync(root).sort(),['authenticated.json','bundle','probe.json','probe-run.json','pr.json','receipt.json','upstream.json']))fail('Missing authenticated evidence');
+ if(!eq(readdirSync(root).sort(),['authenticated.json','bundle','pr.json','probe-run.json','probe.json','receipt.json','upstream.json']))fail('Missing authenticated evidence');
  const marker=json(join(root,'authenticated.json'));
  if(!eq(marker,{sourceRun:SOURCE_RUN,probeRun:PROBE_RUN,artifact:PROBE_ARTIFACT,shard:Number(process.env.SHARD)}))fail('Wrong authentication marker');
  const receipt=json(join(root,'receipt.json'));
  if(!eq(receipt,makeReceipt(join(root,'bundle'),receipt.issuedAt)))fail('Receipt differs from signed original bundle');
  const probe=validatePolicyEvidence(json(join(root,'probe.json')),json(join(root,'probe-run.json')),json(join(root,'pr.json')));
- return {receipt,probe,upstream:json(join(root,'upstream.json'))};
+ const upstream=json(join(root,'upstream.json')),m=receipt.manifest,row=probe.perShard[m.shard];
+ if(upstream.id!==SOURCE_RUN||upstream.run_attempt!==1||upstream.head_sha!==CONTROLLER||upstream.path!==WORKFLOW||upstream.repository?.full_name!==REPO||upstream.head_repository?.full_name!==REPO||upstream.head_branch!=='main'||upstream.status!=='completed'||upstream.conclusion!=='success'||upstream.event!==m.event||m.run!==SOURCE_RUN||m.attempt!==1||m.auditCommit!==CONTROLLER||m.auditTree!==TREE||m.shard!==Number(process.env.SHARD)||row.sourceSemanticDigest!==receipt.gameplaySemanticDigest||!eq(row.sourceEnvironment,m.environment))fail('Untrusted or unrelated baseline');
+ return {receipt,probe,upstream};
 }
 export function aggregateAdmission(rows,ctx){
  if(!Array.isArray(rows)||rows.length!==8)fail('Incomplete policy matrix');
- let reused=0,fresh=0,measurements=0,perf=0,portable=0,canaries=0;
+ let reused=0,fresh=0,measurements=0,perf=0,portable=0,canaries=0,authenticatedShards=0;
  const ordered=[...rows].sort((a,b)=>a.shard-b.shard);
  for(const [i,r] of ordered.entries()){
   if(r.schema!==1||r.policy!==POLICY||r.shard!==i||r.run!==ctx.run||r.attempt!==ctx.attempt||r.commit!==ctx.commit||r.source!==SOURCE||r.controller!==CONTROLLER||r.planDigest!==PLAN||Object.keys(flags).some(k=>r[k]!==false)||r.gameplayCases!==nCases(i)||r.freshGameplayCases+r.reusedGameplayCases!==nCases(i)||!Number.isInteger(r.freshGameplayMeasurements)||r.freshGameplayMeasurements!==(r.freshGameplayCases?([4,5].includes(i)?428:430):0)||r.semanticMatch===false)fail('Invalid policy coverage '+i);
   const hit=r.admission?.decision==='reuse-shadow';
+  if(r.admission?.policy!==POLICY||Object.keys(flags).some(k=>r.admission[k]!==false)||typeof r.authenticatedBaseline!=='boolean'||(hit&&!r.authenticatedBaseline)||(!hit&&r.authenticatedBaseline!==(r.semanticComparison==='match')))fail('Invalid baseline or admission flags');
+  authenticatedShards+=Number(r.authenticatedBaseline);
   if(hit?(r.reusedGameplayCases!==nCases(i)||r.freshGameplayCases!==0||r.semanticMatch!==null||r.semanticComparison!=='not-executed'||!['exact','observed-directed-pair'].includes(r.admission.eligibility)):(r.admission?.decision!=='execute'||r.reusedGameplayCases!==0||r.freshGameplayCases!==nCases(i)||!['match','no-authenticated-baseline'].includes(r.semanticComparison)||r.semanticMatch!==(r.semanticComparison==='match'?true:null)))fail('Misleading execution evidence');
   if(i===(ctx.run+ctx.attempt)%8){if(hit)fail('Canary was skipped');canaries++;}
   const sizes=({0:[150],4:[26],5:[40],6:[60],7:[100]})[i]??[];
@@ -72,7 +76,7 @@ export function aggregateAdmission(rows,ctx){
   if(hit&&r.admission.eligibility==='observed-directed-pair')portable+=r.reusedGameplayCases;
  }
  if(fresh+reused!==1868||perf!==5||canaries!==1)fail('Incomplete matrix');
- return {schema:1,policy:POLICY,...ctx,source:SOURCE,controller:CONTROLLER,planDigest:PLAN,gameplayCases:1868,freshGameplayCases:fresh,reusedGameplayCases:reused,portableReusedCases:portable,freshGameplayMeasurements:measurements,freshPerformanceCases:perf,freshPerformanceMeasurements:perf*2,mandatoryCanaryShards:canaries,scope:'shadow only; required production QA unchanged',...flags,perShard:ordered};
+ return {schema:1,policy:POLICY,...ctx,source:SOURCE,controller:CONTROLLER,planDigest:PLAN,gameplayCases:1868,freshGameplayCases:fresh,reusedGameplayCases:reused,portableReusedCases:portable,freshGameplayMeasurements:measurements,freshPerformanceCases:perf,freshPerformanceMeasurements:perf*2,mandatoryCanaryShards:canaries,authenticatedShards,evidenceReady:authenticatedShards===8,scope:'shadow only; required production QA unchanged',...flags,perShard:ordered};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{
@@ -92,13 +96,13 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
     const hit=d.decision==='reuse-shadow',perf=phase(target,'performance',p,m),g=hit?null:phase(target,'gameplay',p,m);
     if(hit&&readdirSync(target).includes('gameplay'))fail('Ambiguous gameplay execution');
     const comparison=evidence?summarizeGameplayComparison(evidence.receipt,d,g):{gameplayCases:g.cases,freshGameplayCases:g.cases,reusedGameplayCases:0,freshGameplayMeasurements:g.measurements,semanticMatch:null,semanticComparison:'no-authenticated-baseline'};
-    report={schema:1,policy:POLICY,run:ctx.run,attempt:ctx.attempt,commit:ctx.commit,shard:ctx.shard,source:SOURCE,controller:CONTROLLER,planDigest:PLAN,admission:d,...comparison,performance:perf.performance,freshPerformanceMeasurements:perf.measurements,...flags};out=dest;
+    report={schema:1,policy:POLICY,run:ctx.run,attempt:ctx.attempt,commit:ctx.commit,shard:ctx.shard,source:SOURCE,controller:CONTROLLER,planDigest:PLAN,admission:d,authenticatedBaseline:!!evidence,...comparison,performance:perf.performance,freshPerformanceMeasurements:perf.measurements,...flags};out=dest;
    }
   }else if(mode==='aggregate'){
    const [root,dest]=a,names=Array.from({length:8},(_,i)=>'admission-'+ctx.attempt+'-'+i);
    if(process.env.MATRIX_RESULT!=='success'||!eq(readdirSync(root).sort(),names))fail('Missing shard reports');
    report=aggregateAdmission(names.map(n=>json(join(root,n,'report.json'))),{run:ctx.run,attempt:ctx.attempt,commit:ctx.commit});out=dest;
   }else fail('Unknown policy command');
-  writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));if(report.semanticMatch===false)process.exitCode=1;
+  writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));if(report.semanticMatch===false||mode==='aggregate'&&!report.evidenceReady)process.exitCode=1;
  }catch(e){console.error(e.message);process.exitCode=1;}
 }

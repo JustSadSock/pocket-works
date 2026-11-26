@@ -81,6 +81,9 @@ jobs:
             export GITHUB_SHA=2521b436264b904b4c7e88ac9e00a59c0cbbc688
             source scripts/ci-overhaul/verified-gameplay-offline.sh
             prepare_gameplay source
+            if [[ -f "$RUNNER_TEMP/admission-evidence/authenticated.json" ]]; then
+              ADMISSION_EVIDENCE="$RUNNER_TEMP/admission-evidence" ADMISSION_TARGET="$out" node --test "$outer/scripts/ci-overhaul/gameplay-admission-policy-fixture.mjs"
+            fi
             GITHUB_SHA="$outer_sha" node "$outer/scripts/ci-overhaul/gameplay-admission-policy.mjs" admit "$out" "$RUNNER_TEMP/admission-evidence" "$RUNNER_TEMP/decision.json"
             run_gameplay_phase performance
             if ! jq -e '.decision=="reuse-shadow" and .productionAuthorization==false and .allowResultReuse==false' "$RUNNER_TEMP/decision.json" >/dev/null; then
@@ -116,6 +119,7 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.shadow.result }}
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: admission-aggregate-${{ github.run_attempt }}
           path: aggregate.json
