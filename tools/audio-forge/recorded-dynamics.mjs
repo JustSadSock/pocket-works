@@ -38,7 +38,10 @@ export function renderDynamicNote({low,high,midi,seconds,curve,mode='morph'}={})
   // The control uses the same pressure curve, gains, and high-layer sample
   // offset, isolating the dynamic-layer crossfade as far as practicable.
   const x=read(low.samples,(i+offsets[0])*rates[0])*gains[0],y=read(high.samples,(i+offsets[1])*rates[1])*gains[1];
-  const mix=mode==='fixed-high'?y:x*(1-t)+y*t;
+  // Compensate predictable energy loss for imperfectly correlated takes.
+  // Bound compensation: this does not cancel ongoing phase drift or beating.
+  const c=clamp(best.correlation,0,1),correction=Math.min(1.35,1/Math.sqrt((1-t)**2+t*t+2*c*t*(1-t)));
+  const mix=mode==='fixed-high'?y:(x*(1-t)+y*t)*correction;
   const v=mix*p*Math.min(1,i/attack,(frames-1-i)/release);
   if(!Number.isFinite(v)||Math.abs(v)>=.999)throw Error('Invalid dynamic PCM');
   a[i]=v;peak=Math.max(peak,Math.abs(v));energy+=v*v;if(i)maxStep=Math.max(maxStep,Math.abs(a[i]-a[i-1]));
