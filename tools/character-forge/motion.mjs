@@ -30,6 +30,7 @@ export function motionFrame(model,action,phase,quat){
    if(attached&&j.role==='pelvis')a=-pitch*.65;
    if(attached&&j.role==='spine')a=-pitch*.8;
  }
+ if(model.spec.garment?.identity?.posture&&j.role==='spine')a+=model.spec.garment.identity.posture;
  if(action==='turn'&&j.parent<0)return quat([0,1,0],.6*Math.sin(phase*TAU));
  if(action==='guard'&&j.role==='arm.upper')a=-.25;if(action==='interact'&&j.role==='arm.lower')a=.35*Math.sin(phase*TAU);
  return quat(j.axis,clamp(a,-j.limitDegrees*Math.PI/180,j.limitDegrees*Math.PI/180))

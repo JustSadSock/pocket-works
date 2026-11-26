@@ -52,7 +52,7 @@ function boots(ctx,style){let {J,H,vs}=ctx,N=style==='low-poly'?8:16,r=garmentRu
  // Actual independent closed shoe volume; flattened sole and broad toe box,
  // deliberately no digit anatomy or individual toe weights.
  let rings=[station([cx,.008,cz],[1,0,0],[0,0,-1],rx*.95,rz,0,1,[[f.id,1]]),station([cx,.032,cz],[1,0,0],[0,0,-1],rx,rz,0,1,[[f.id,1]]),station([cx,.075,cz-.012],[1,0,0],[0,0,-1],rx*.91,rz*.90,0,1,[[f.id,1]]),station(f.position.map((v,i)=>i===1?v+.05:v),[1,0,0],[0,0,-1],rx*.8,rz*.42,0,1,[[f.id,.7],[k.id,.3]]),station(lerp(f.position,k.position,.42),[1,0,0],[0,0,-1],rx*.95,rz*.48,0,1,[[k.id,1]])];
- parts.push(ringSurface(ctx,'boot '+s,materials.leather,rings,N,{...r}));parts.push(ringSurface(ctx,'boot welt '+s,materials.charcoal,rings.slice(0,2).map(q=>({...q,rad:a=>q.rad(a).map(x=>x+.003)})),N,{...r,thickness:.004}))}
+ let shoe=ringSurface(ctx,'boot '+s,materials.leather,rings,N,{...r});let center=push(shoe,[cx,.008,cz],[[f.id,1]]);for(let i=0;i<N;i++)shoe.indices.push(center,(i+1)%N,i);parts.push(normals(shoe));parts.push(ringSurface(ctx,'boot welt '+s,materials.charcoal,rings.slice(0,2).map(q=>({...q,rad:a=>q.rad(a).map(x=>x+.003)})),N,{...r,thickness:.004}))}
  return parts
 }
 function cape(ctx,style,color){let {H,J}=ctx,p=part('cloak',color),n=style==='low-poly'?8:20,rows=style==='low-poly'?4:10,neck=J('neck01').position; p.layer=3;p.region='back/shoulder';p.thickness=.004;
