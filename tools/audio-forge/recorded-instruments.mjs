@@ -1,5 +1,6 @@
 // Offline multisample candidate. Finite recorded notes, no invented loop points,
 // no fake sampled legato. Pitch is measured rather than trusting filenames.
+import {renderSustainedNote} from './recorded-sustain.mjs';
 const SR=48000;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function prepareRecordedNote(pcm,expectedMidi){
@@ -52,6 +53,14 @@ export function renderRecordedPhrase({zones,notes,seconds,maxShift=5}={}){
   const z=[...zones].sort((a,b)=>Math.abs(a.expectedMidi-n.midi)-Math.abs(b.expectedMidi-n.midi)||b.expectedMidi-a.expectedMidi)[0];
   if(Math.abs(z.expectedMidi-n.midi)>maxShift)throw Error('Sample pitch coverage exceeded');
   const rate=2**((n.midi-z.measuredMidi)/12),frames=end-start;
+  if(n.sustain===true){
+   const r=renderSustainedNote({zone:z,midi:n.midi,seconds:frames/SR,pressure:n.pressure,curve:n.curve,loop:z.loop});
+   if(r.frames!==frames)throw Error('Sustain grid mismatch');
+   out.set(r.samples,start);
+   choices.push({midi:n.midi,source:z.id??null,measuredMidi:z.measuredMidi,rate,startFrame:start,frames,wraps:r.wraps,maxWrapStep:r.maxWrapStep});
+   continue;
+  }
+  if(n.curve!==undefined)throw Error('Pressure curve requires explicit sustain mode');
   if((frames-1)*rate+1>=z.samples.length)throw Error('Recorded sample too short for note');
   const gain=Math.min(.6/Math.max(z.peak,.001),.18/z.rms)*n.pressure;
   const attack=Math.min(240,frames/4),release=Math.min(3840,frames/3);
