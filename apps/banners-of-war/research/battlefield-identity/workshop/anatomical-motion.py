@@ -19,7 +19,11 @@ def finger_chains(hand):
         bs.sort(key=lambda b:len(b.parent_recursive))
         if len(bs)>=2 and all(b in desc(bs[0]) for b in bs):result[digit]=bs
     return result
+posed_hands={};pending_cuts=[]
 def hand_frame(hand):
+    if hand.name in posed_hands:
+        q=posed_hands[hand.name];m=rig.matrix_world@hand.matrix
+        return (m@q["center"],*((m.to_3x3()@v).normalized() for v in q["axes"]),q["width"]),{}
     f=finger_chains(hand)
     if not all(k in f for k in ("index","middle","ring","pinky","thumb")):
         return None,f
@@ -47,15 +51,35 @@ audit["sourceObjects"]=[{"name":o.name,"type":o.type,"hidden":o.hide_render,"par
 obsolete=[o for o in sc.objects if o.type=="MESH" and o.name.startswith(("Ash spear","Forged spear","Sword grip","Sword crossguard","Forged sword blade","Curved shield","Shield rawhide","Shield boss"))]
 for o in obsolete:o.hide_render=True
 audit["retiredEquipment"]=[o.name for o in obsolete];save()
-if any(hand_frame(h)[0] is None for h in (R,L)):
-    # Do not call a hand without anatomical finger joints a verified grip.
-    # Retain source hand closeups for a separate posed-hand mesh if needed.
-    audit["issues"].append("Finger chain incomplete; separate anatomically posed hand required")
-    for label,h in (("right",R),("left",L)):
-        target=point(h);cam.data.ortho_scale=.42;cam.location=target+Vector((.5,-.8,.35));look(cam,target)
-        sc.render.filepath=str(folder/("unarticulated-"+label+".png"));bpy.ops.render.render(write_still=True)
-    save()
-    raise ValueError("Hand articulation unavailable; see audit")
+# Separate posed glove only when the source lacks digit articulation.
+def separate_hand(hand):
+    deps=bpy.context.evaluated_depsgraph_get();weighted=[]
+    for o in core:
+        names={g.index:g.name for g in o.vertex_groups};region={b.name for b in desc(hand)}
+        indices=[v.index for v in o.data.vertices if sum(g.weight for g in v.groups if names.get(g.group) in region)>.65]
+        if not indices:continue
+        ev=o.evaluated_get(deps);me=ev.to_mesh()
+        try:
+            if len(me.vertices)!=len(o.data.vertices):raise ValueError("Hand topology mismatch")
+            weighted.extend(ev.matrix_world@me.vertices[i].co for i in indices)
+        finally:ev.to_mesh_clear()
+        group=o.vertex_groups.new(name="Workshop cut "+hand.name);group.add(indices,1,"REPLACE");pending_cuts.append((o,group.name))
+    if len(weighted)<12:raise ValueError("No reliable hand region "+hand.name)
+    wrist=point(hand);centroid=sum(weighted,Vector((0,0,0)))/len(weighted);forward=(centroid-wrist).normalized()
+    import numpy as np
+    d=np.array([tuple(v-wrist) for v in weighted]);u=np.array(tuple(forward));p=d-np.outer(d@u,u);_,_,vh=np.linalg.svd(p,full_matrices=False)
+    across=Vector(vh[0]).normalized();normal=across.cross(forward).normalized()
+    if normal.dot(Vector((1 if point(hand).x>0 else -1,0,0)))<0:normal=-normal
+    width=max(.055,min(.10,float(np.percentile(p@np.array(tuple(across)),95)-np.percentile(p@np.array(tuple(across)),5))))
+    length=max(.12,min(.19,max((v-wrist).dot(forward) for v in weighted)));center=wrist+forward*length*.55+normal*width*.24
+    inv=(rig.matrix_world@hand.matrix).inverted()
+    posed_hands[hand.name]={"center":inv@center,"axes":[inv.to_3x3()@v for v in (across,forward,normal)],"width":width,"length":length,"wrist":inv@wrist,"objects":[]}
+    audit["hands"][hand.name]["posedGlove"]={"width":width,"length":length,"maskedSourceVertices":len(weighted)}
+for h in (R,L):
+    if hand_frame(h)[0] is None:separate_hand(h)
+for o,name in pending_cuts:
+    modifier=o.modifiers.new("Replace source hand only","MASK");modifier.vertex_group=name;modifier.invert_vertex_group=True;modifier.threshold=.5
+bpy.context.view_layer.update();save()
 def world_of(b):return rig.matrix_world@b.matrix
 def local(b,p):return world_of(b).inverted()@Vector(p)
 def world_pos(b,p):return world_of(b)@Vector(p)
@@ -72,7 +96,37 @@ def bend_digit(bs,center,axis,rad,amount=1):
         target=(tangent*.83-radial.normalized()*.30).normalized()
         desired=v.normalized().lerp(target,amount*(.82 if j==0 else .94))
         rotate_axis(b,v,desired)
+def make_posed_glove(hand,center,axis,rad):
+    q=posed_hands[hand.name]
+    for o in q["objects"]:bpy.data.objects.remove(o,do_unlink=True)
+    (c,a,f,n,w),_=hand_frame(hand);wrist=world_pos(hand,q["wrist"]);length=q["length"]
+    axis=Vector(axis).normalized();n=(n-axis*n.dot(axis)).normalized();f=(f-axis*f.dot(axis)-n*f.dot(n)).normalized()
+    if f.length<.5:f=axis.cross(n).normalized()
+    vs=[];fs=[]
+    def sweep(points,radii,side):
+        start=len(vs);N=10
+        for j,p in enumerate(points):
+            t=(points[min(j+1,len(points)-1)]-points[max(j-1,0)]).normalized();a=(side-t*side.dot(t)).normalized()
+            if a.length<.5:a=t.cross(Vector((0,0,1))).normalized()
+            b=t.cross(a).normalized();rx,ry=radii[j]
+            for k in range(N):
+                ang=2*math.pi*k/N;vs.append(tuple(p+a*rx*math.cos(ang)+b*ry*math.sin(ang)))
+        for j in range(len(points)-1):
+            for k in range(N):fs.append((start+j*N+k,start+j*N+(k+1)%N,start+(j+1)*N+(k+1)%N,start+(j+1)*N+k))
+        fs.append(tuple(start+k for k in reversed(range(N))));fs.append(tuple(start+(len(points)-1)*N+k for k in range(N)))
+    palmEnd=wrist+f*length*.55
+    sweep([wrist-f*.012,wrist+f*.017,palmEnd-f*.025,palmEnd],[(w*.31,.021),(w*.39,.023),(w*.50,.024),(w*.46,.020)],axis)
+    for k in range(4):
+        along=(1.5-k)*w*.24;digit=rad+.011;r=.0105 if k<3 else .009
+        sweep([palmEnd+axis*along-n*.009,center+axis*along+f*digit-n*.007,center+axis*along+n*digit+f*.006,center+axis*along-f*digit+n*.005],[(r,r*.88),(r,r*.88),(r*.90,r*.8),(r*.66,r*.65)],axis)
+    sweep([wrist+f*length*.28+axis*w*.41,center+axis*w*.58-f*.012,center+axis*w*.42+n*(rad+.012),center+axis*w*.20+n*(rad+.012)],[(.016,.013),(.014,.012),(.012,.011),(.009,.009)],f)
+    ob=mesh("Posed leather glove "+hand.name,vs,fs,leather,None)
+    for poly in ob.data.polygons:poly.use_smooth=True
+    attach(ob,hand);q["objects"]=[ob]
 def curl_hand(hand,center,axis,rad):
+    if hand.name in posed_hands:
+        make_posed_glove(hand,center,axis,rad)
+        return
     for name,bs in finger_chains(hand).items():
         bend_digit(bs,center,axis,rad,.78 if name=="thumb" else 1)
 def rigid_mesh(name,v,f,matl,b):
@@ -160,6 +214,9 @@ def inspect_contacts():
                     n=names.get(g.group,"");weights[n]=weights.get(n,0)+g.weight
             groups.append(max(weights,key=weights.get) if weights else "")
         bodies.append((tree,groups))
+    for name,q in posed_hands.items():
+        for o in q["objects"]:
+            tree,_,tris=bvh(o);bodies.append((tree,[name]*len(tris)))
     result=[];rightNames={b.name for b in desc(R)};leftNames={b.name for b in desc(L)}
     for o in swordParts+shieldParts:
         tree,_,_=bvh(o);allowed=rightNames if o==grip else leftNames if o==handle else {LF.name} if o==strap else set()
