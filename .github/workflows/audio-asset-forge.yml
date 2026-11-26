@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -377,6 +377,22 @@ jobs:
         with:
           name: sound-forge-recorded-articulations-${{ github.run_id }}
           path: .audio-recorded-articulations/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Import expanded recorded bank and render connected phrases
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-legato-lab.mjs .audio-recorded-legato .audio-recorded-articulations
+          test "$(find .audio-recorded-legato/sources -name '*.wav' | wc -l)" -eq 12
+          test "$(find .audio-recorded-legato -maxdepth 1 -name '*.wav' | wc -l)" -eq 13
+          test -s .audio-recorded-legato/recorded-quartet-study.wav
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recorded-legato-${{ github.run_id }}
+          path: .audio-recorded-legato/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
