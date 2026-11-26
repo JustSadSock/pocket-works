@@ -313,11 +313,10 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -o Acquire::Retries=3
-          if ! npx playwright install-deps chromium webkit; then
+          if ! npx playwright install --with-deps chromium webkit; then
             sudo apt-get update -o Acquire::Retries=3
-            npx playwright install-deps chromium webkit
+            npx playwright install --with-deps chromium webkit
           fi
-          npx playwright install chromium webkit
 
       - name: Assemble browser test site
         run: npm run build:quality-site
