@@ -14,20 +14,17 @@ function tube(m,name,stations,color,kind='leather',sides=12,thickness=.004){
  const p=addPart(m,name,color,kind),centers=stations.map(s=>s.p);
  for(let r=0;r<stations.length;r++){
   const s=stations[r],axis=unit(sub(centers[Math.min(r+1,centers.length-1)],centers[Math.max(0,r-1)])),helper=Math.abs(axis[1])>.88?[1,0,0]:[0,1,0],u=unit([axis[1]*helper[2]-axis[2]*helper[1],axis[2]*helper[0]-axis[0]*helper[2],axis[0]*helper[1]-axis[1]*helper[0]]),v=[axis[1]*u[2]-axis[2]*u[1],axis[2]*u[0]-axis[0]*u[2],axis[0]*u[1]-axis[1]*u[0]];
-  for(let k=0;k<sides;k++){const a=tau*k/sides,q=add(s.p,add(mul(u,Math.cos(a)*s.r),mul(v,Math.sin(a)*s.r)));push(p,q,s.ws)}
+  for(let k=0;k<=sides;k++){const a=tau*k/sides,q=add(s.p,add(mul(u,Math.cos(a)*s.r),mul(v,Math.sin(a)*s.r)));push(p,q,s.ws)}
  }
- grid(p,stations.length,sides);return finish(p,thickness);
+ grid(p,stations.length,sides+1);return finish(p,thickness);
 }
 function ellipsoid(m,name,c,r,ws,color,kind='leather',rows=8,cols=16){
  const p=addPart(m,name,color,kind);
  for(let i=0;i<=rows;i++){const a=Math.PI*i/rows;for(let k=0;k<=cols;k++){const b=tau*k/cols,v=[c[0]+r[0]*Math.sin(a)*Math.cos(b),c[1]+r[1]*Math.cos(a),c[2]+r[2]*Math.sin(a)*Math.sin(b)];push(p,v,ws)}}
  grid(p,rows+1,cols+1);return finish(p,.003);
 }
-function torus(m,name,c,u,v,n,R,r,ws,color=[.31,.34,.35]){
- const p=addPart(m,name,color,'metal','mail'),M=8,S=4;
- for(let i=0;i<=M;i++)for(let k=0;k<=S;k++){const a=tau*i/M,b=tau*k/S,rad=add(mul(u,Math.cos(a)),mul(v,Math.sin(a))),q=add(c,add(mul(rad,R),mul(add(mul(rad,Math.cos(b)),mul(n,Math.sin(b))),r)));push(p,q,ws)}
- grid(p,M+1,S+1);return normals(p);
-}
+function appendTorus(p,c,u,v,n,R,r,ws){const M=8,S=4;for(let i=0;i<=M;i++)for(let k=0;k<=S;k++){const a=tau*i/M,b=tau*k/S,rad=add(mul(u,Math.cos(a)),mul(v,Math.sin(a))),q=add(c,add(mul(rad,R),mul(add(mul(rad,Math.cos(b)),mul(n,Math.sin(b))),r)));push(p,q,ws)}const base=p.positions.length/3-(M+1)*(S+1);for(let i=0;i<M;i++)for(let k=0;k<S;k++){const a=base+i*(S+1)+k,b=a+1,c=b+S+1,d=a+S+1;p.indices.push(a,b,c,a,c,d)}}
+function torus(m,name,c,u,v,n,R,r,ws,color=[.31,.34,.35]){const p=addPart(m,name,color,'metal','mail');appendTorus(p,c,u,v,n,R,r,ws);return normals(p)}
 function panelAt(tunic,row,t,k){
  const N=tunic.pattern.ringCount,a=row*N+((k%N)+N)%N,b=(row+1)*N+((k%N)+N)%N;
  const va=tunic.positions.slice(a*3,a*3+3),vb=tunic.positions.slice(b*3,b*3+3);
@@ -42,33 +39,33 @@ function curvedPatch(m,tunic,name,rows,from,to,color,kind='metal',offset=.018,th
  grid(p,rows.length,N);return finish(p,thickness);
 }
 function mailCurtain(m,tunic){
- const N=tunic.pattern.ringCount,sections=[[2,.18],[2,.48],[2,.78],[3,.08],[3,.34]],centers=[];
+ const N=tunic.pattern.ringCount,sections=[[2,.18],[2,.48],[2,.78],[3,.08],[3,.34]],centers=[],p=addPart(m,'interlinked mail aventail and collar',[.30,.34,.36],'metal','mail');
  for(const [row,t] of sections)for(let k=0;k<N;k+=2){
   const a=panelAt(tunic,row,t,k),b=panelAt(tunic,row,t,k+1),c=panelAt(tunic,row,t,k-1),center=a.v,centerLine=tunic.pattern.sections[row].center;
   const u=unit(sub(b.v,c.v)),n=radial(center,centerLine),v=unit([u[1]*n[2]-u[2]*n[1],u[2]*n[0]-u[0]*n[2],u[0]*n[1]-u[1]*n[0]]);
   centers.push({c:add(center,mul(n,.006)),u,v,n,ws:a.ws});
  }
- for(let i=0;i<centers.length;i++){const x=centers[i];torus(m,'interlinked mail rings '+i,x.c,x.u,x.v,x.n,.009,.0022,x.ws,[.30,.34,.36])}
- return {rings:centers.length};
+ for(const x of centers)appendTorus(p,x.c,x.u,x.v,x.n,.009,.0022,x.ws);normals(p);
+ return {rings:centers.length,parts:1};
 }
 function rivet(m,name,p,ws,size=.008,color=[.55,.36,.14]){return ellipsoid(m,name,p,[size,size,size*.65],ws,color,'metal',4,8)}
 function curvedBand(m,tunic,name,t0,t1,color=[.40,.43,.43],offset=.032){
  const p=addPart(m,name,color,'metal','torso armour'),N=tunic.pattern.ringCount;
- for(const t of [t0,t1])for(let k=0;k<N;k++){const a=panelAt(tunic,2,t,k),center=mix(tunic.pattern.sections[2].center,tunic.pattern.sections[3].center,t),n=radial(a.v,center),v=add(a.v,mul(n,offset+.004*Math.sin(k*tau/N)));push(p,v,a.ws)}
- grid(p,2,N);return finish(p,.006);
+ for(const t of [t0,t1])for(let k=0;k<=N;k++){const a=panelAt(tunic,2,t,k),center=mix(tunic.pattern.sections[2].center,tunic.pattern.sections[3].center,t),n=radial(a.v,center),v=add(a.v,mul(n,offset+.004*Math.sin(k*tau/N)));push(p,v,a.ws)}
+ grid(p,2,N+1);return finish(p,.006);
 }
 function shield(m,roman){
- const wrist=J(m,'wrist.L'),fore=J(m,'lowerarm01.L'),center=[wrist.position[0]-.045,wrist.position[1]-(roman?.045:.035),wrist.position[2]+.105],w=roman?.245:.175,h=roman?.46:.29,thick=.034,N=16,R=20,ws=[[fore.id,.35],[wrist.id,.65]],p=addPart(m,roman?'curved Roman scutum':'heater shield',[.34,.075,.035],'leather','shield');
- const point=(u,v,back=false)=>{const shape=roman?(.96+.04*Math.cos(v*Math.PI/2)):(1-.27*Math.max(0,-v)),x=center[0]+u*w*shape,y=center[1]+v*h,z=center[2]+(roman?.105:.045)*(1-u*u)+.012*Math.cos(v*Math.PI/2)-(back?thick:0);return [x,y,z]};
+ const wrist=J(m,'wrist.L'),fore=J(m,'lowerarm01.L'),curvature=roman?.105:.045,thick=.034,center=[wrist.position[0],wrist.position[1]-(roman?.045:.035),wrist.position[2]-curvature+thick+.02],w=roman?.245:.175,h=roman?.46:.29,N=16,R=20,ws=[[fore.id,.35],[wrist.id,.65]],p=addPart(m,roman?'curved Roman scutum':'heater shield',[.34,.075,.035],'leather','shield');
+ const point=(u,v,back=false)=>{const shape=roman?(.96+.04*Math.cos(v*Math.PI/2)):(1-.27*Math.max(0,-v)),x=center[0]+u*w*shape,y=center[1]+v*h,z=center[2]+curvature*(1-u*u)+.012*Math.cos(v*Math.PI/2)-(back?thick:0);return [x,y,z]};
  for(const back of [false,true])for(let r=0;r<=R;r++)for(let c=0;c<=N;c++){const u=-1+2*c/N,v=-1+2*r/R;push(p,point(u,v,back),ws)}
  const stride=(R+1)*(N+1);
  for(let r=0;r<R;r++)for(let c=0;c<N;c++){let a=r*(N+1)+c,b=a+1,d=a+N+1,e=d+1;p.indices.push(a,b,e,a,e,d);let A=stride+a,B=stride+b,D=stride+d,E=stride+e;p.indices.push(A,E,B,A,D,E)}
  for(let r=0;r<R;r++)for(let c of [0,N]){let a=r*(N+1)+c,b=a+N+1;p.indices.push(a,b,stride+b,a,stride+b,stride+a)}
  for(let c=0;c<N;c++){let a=c,b=c+1;p.indices.push(a,stride+a,stride+b,a,stride+b,b);a=R*(N+1)+c;b=a+1;p.indices.push(a,b,stride+b,a,stride+b,stride+a)}
  finish(p,.003);
- const gripZ=center[2]-(roman?.105:.045)-thick-.004,gripY=wrist.position[1],gripX=wrist.position[0]-.045;
+ const gripZ=center[2]+curvature-thick+.006,gripY=wrist.position[1],gripX=wrist.position[0];
  tube(m,roman?'scutum hand grip':'heater shield hand grip',[{p:[gripX,gripY-.085,gripZ],r:.015,ws:[[wrist.id,1]]},{p:[gripX,gripY+.085,gripZ],r:.015,ws:[[wrist.id,1]]}],[.16,.075,.035],'leather',10,.002);
- tube(m,'shield forearm retaining strap',[{p:[fore.position[0]-.035,fore.position[1]-.035,gripZ],r:.012,ws:[[fore.id,.8],[wrist.id,.2]]},{p:[fore.position[0]+.035,fore.position[1]+.035,gripZ],r:.012,ws:[[fore.id,.8],[wrist.id,.2]]}],[.15,.08,.035],'leather',8,.002);
+ for(const t of [.28,.72]){const c=mix(fore.position,wrist.position,t),u=unit(sub(wrist.position,fore.position));tube(m,'shield forearm retaining strap '+t,[{p:add(c,mul(u,-.012)),r:.050,ws:[[fore.id,1-t],[wrist.id,t]]},{p:add(c,mul(u,.012)),r:.050,ws:[[fore.id,1-t],[wrist.id,t]]}],[.15,.08,.035],'leather',12,.002)}
  ellipsoid(m,roman?'scutum umbo':'heater shield boss',[center[0],center[1],center[2]+(roman?.105:.045)+.012],[roman?.055:.034,roman?.055:.034,.022],ws,[.48,.43,.31],'metal',6,12);
  m.attachments??=[];m.attachments.push({name:roman?'scutum grip':'heater shield grip',joint:'wrist.L',local:sub([gripX,gripY,gripZ],wrist.position),contactError:0});
 }
@@ -102,7 +99,7 @@ function imperialHelmet(m){
   for(const v of [[x,base+.015,h.position[2]+rz*.25],[x+side*.012,base-.075,h.position[2]+rz*.50],[x-side*.014,base-.105,h.position[2]+rz*.24],[x-side*.012,base-.012,h.position[2]+rz*.10]])push(cheek,v,[[h.id,1]]);
   cheek.indices=side>0?[0,1,2,0,2,3]:[0,2,1,0,3,2];normals(cheek);
  }
- const neck=J(m,'neck01');curvedPatch(m,m.parts.find(p=>p.name==='tunic'), 'imperial neck guard',[ [3,.82],[3,.94],[4,.08] ],18,30,[.34,.36,.34],'metal',.05,.004);
+ const neck=J(m,'neck01');curvedPatch(m,m.parts.find(p=>p.name==='tunic'), 'imperial neck guard',[ [3,.72],[3,.86],[3,.98] ],18,30,[.34,.36,.34],'metal',.05,.004);
  // Short, restrained crest socket; no oversized brush that swallows the bowl.
  ellipsoid(m,'imperial crest socket',[h.position[0],base+.145,h.position[2]-.012],[.035,.018,.045],[[h.id,1]],[.38,.24,.10],'metal',5,10);
 }
@@ -198,8 +195,8 @@ export function produceRoleV9(source,id,identityOverride=null,{style='historical
  if(id==='merchant')role=merchantKit(m);
  if(id==='infantry')role=infantryKit(m);
  if(id==='legionary')role=legionaryKit(m);
- contacts(m);
  if(style==='low-poly')lowPolyTransform(m);else m.spec.style='historical-miniature';
+ contacts(m);
  m.spec.artHistoricalReference=id==='infantry'?'late-14th-century coat-of-plates, mail and bascinet':id==='legionary'?'2nd-century CE lorica segmentata and scutum':'medieval civilian craft/trade clothing';
  m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'v0.9 role-specific cut, equipment and material construction'}];
  m.statistics={...m.statistics,triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),roleV9Ms:performance.now()-start};
