@@ -85,6 +85,692 @@
       "post": {
         "normalizeDb": -5
       }
+    },
+    {
+      "name": "medieval-control",
+      "type": "music",
+      "tempo": 104,
+      "seed": 38,
+      "synthGain": 0.45,
+      "output": "generated/medieval-control.wav",
+      "tracks": [
+        {
+          "program": 109,
+          "pan": 53,
+          "volume": 100,
+          "expression": 100,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D4",
+              "beat": 0,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "F4",
+              "beat": 1,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 2,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "A4",
+              "beat": 3,
+              "duration": 1.75,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 5,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "E4",
+              "beat": 6,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "D4",
+              "beat": 7,
+              "duration": 2.75,
+              "velocity": 78
+            }
+          ]
+        },
+        {
+          "program": 24,
+          "pan": 80,
+          "volume": 76,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "C3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "G3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "E4",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "D3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            }
+          ]
+        }
+      ],
+      "post": {
+        "normalizeDb": -5
+      }
+    },
+    {
+      "name": "medieval-expressive",
+      "type": "music",
+      "tempo": 104,
+      "seed": 38,
+      "synthGain": 0.45,
+      "output": "generated/medieval-expressive.wav",
+      "tracks": [
+        {
+          "program": 109,
+          "pan": 53,
+          "volume": 100,
+          "expression": 100,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D4",
+              "beat": 0,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "F4",
+              "beat": 1,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 2,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "A4",
+              "beat": 3,
+              "duration": 1.75,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 5,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "E4",
+              "beat": 6,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "D4",
+              "beat": 7,
+              "duration": 2.75,
+              "velocity": 78
+            }
+          ],
+          "performance": {
+            "curves": {
+              "expression": [
+                {
+                  "beat": 0,
+                  "value": 65
+                },
+                {
+                  "beat": 1.5,
+                  "value": 95
+                },
+                {
+                  "beat": 3.5,
+                  "value": 112
+                },
+                {
+                  "beat": 4.7,
+                  "value": 78
+                },
+                {
+                  "beat": 5,
+                  "value": 70
+                },
+                {
+                  "beat": 7.3,
+                  "value": 105
+                },
+                {
+                  "beat": 9.7,
+                  "value": 55
+                }
+              ],
+              "breath": [
+                {
+                  "beat": 0,
+                  "value": 55
+                },
+                {
+                  "beat": 3.5,
+                  "value": 100
+                },
+                {
+                  "beat": 4.7,
+                  "value": 60
+                },
+                {
+                  "beat": 7.5,
+                  "value": 90
+                },
+                {
+                  "beat": 9.7,
+                  "value": 45
+                }
+              ]
+            },
+            "vibrato": {
+              "depthCents": 10,
+              "rateHz": 5,
+              "delayBeats": 0.24
+            },
+            "attackBend": {
+              "cents": -14,
+              "durationBeats": 0.12
+            }
+          }
+        },
+        {
+          "program": 24,
+          "pan": 80,
+          "volume": 76,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "C3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "G3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "E4",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "D3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            }
+          ],
+          "performance": {
+            "curves": {
+              "expression": [
+                {
+                  "beat": 0,
+                  "value": 65
+                },
+                {
+                  "beat": 3.8,
+                  "value": 95
+                },
+                {
+                  "beat": 6.8,
+                  "value": 76
+                },
+                {
+                  "beat": 9.9,
+                  "value": 52
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "post": {
+        "normalizeDb": -5
+      }
+    },
+    {
+      "name": "orchestral-control",
+      "type": "music",
+      "tempo": 88,
+      "seed": 38,
+      "synthGain": 0.45,
+      "output": "generated/orchestral-control.wav",
+      "tracks": [
+        {
+          "program": 42,
+          "pan": 53,
+          "volume": 100,
+          "expression": 100,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D4",
+              "beat": 0,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "F4",
+              "beat": 1,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 2,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "A4",
+              "beat": 3,
+              "duration": 1.75,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 5,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "E4",
+              "beat": 6,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "D4",
+              "beat": 7,
+              "duration": 2.75,
+              "velocity": 78
+            }
+          ]
+        },
+        {
+          "program": 48,
+          "pan": 80,
+          "volume": 76,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "C3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "G3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "E4",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "D3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            }
+          ]
+        }
+      ],
+      "post": {
+        "normalizeDb": -5
+      }
+    },
+    {
+      "name": "orchestral-expressive",
+      "type": "music",
+      "tempo": 88,
+      "seed": 38,
+      "synthGain": 0.45,
+      "output": "generated/orchestral-expressive.wav",
+      "tracks": [
+        {
+          "program": 42,
+          "pan": 53,
+          "volume": 100,
+          "expression": 100,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D4",
+              "beat": 0,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "F4",
+              "beat": 1,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 2,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "A4",
+              "beat": 3,
+              "duration": 1.75,
+              "velocity": 78
+            },
+            {
+              "note": "G4",
+              "beat": 5,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "E4",
+              "beat": 6,
+              "duration": 1,
+              "velocity": 78
+            },
+            {
+              "note": "D4",
+              "beat": 7,
+              "duration": 2.75,
+              "velocity": 78
+            }
+          ],
+          "performance": {
+            "curves": {
+              "expression": [
+                {
+                  "beat": 0,
+                  "value": 65
+                },
+                {
+                  "beat": 1.5,
+                  "value": 95
+                },
+                {
+                  "beat": 3.5,
+                  "value": 112
+                },
+                {
+                  "beat": 4.7,
+                  "value": 78
+                },
+                {
+                  "beat": 5,
+                  "value": 70
+                },
+                {
+                  "beat": 7.3,
+                  "value": 105
+                },
+                {
+                  "beat": 9.7,
+                  "value": 55
+                }
+              ],
+              "breath": [
+                {
+                  "beat": 0,
+                  "value": 55
+                },
+                {
+                  "beat": 3.5,
+                  "value": 100
+                },
+                {
+                  "beat": 4.7,
+                  "value": 60
+                },
+                {
+                  "beat": 7.5,
+                  "value": 90
+                },
+                {
+                  "beat": 9.7,
+                  "value": 45
+                }
+              ]
+            },
+            "vibrato": {
+              "depthCents": 22,
+              "rateHz": 5,
+              "delayBeats": 0.24
+            },
+            "attackBend": {
+              "cents": -28,
+              "durationBeats": 0.12
+            }
+          }
+        },
+        {
+          "program": 48,
+          "pan": 80,
+          "volume": 76,
+          "humanizeBeats": 0,
+          "humanizeVelocity": 0,
+          "notes": [
+            {
+              "note": "D3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 0,
+              "duration": 4,
+              "velocity": 65
+            },
+            {
+              "note": "C3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "G3",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "E4",
+              "beat": 4,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "D3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "A3",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            },
+            {
+              "note": "F4",
+              "beat": 7,
+              "duration": 3,
+              "velocity": 65
+            }
+          ],
+          "performance": {
+            "curves": {
+              "expression": [
+                {
+                  "beat": 0,
+                  "value": 65
+                },
+                {
+                  "beat": 3.8,
+                  "value": 95
+                },
+                {
+                  "beat": 6.8,
+                  "value": 76
+                },
+                {
+                  "beat": 9.9,
+                  "value": 52
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "post": {
+        "normalizeDb": -5
+      }
     }
   ],
   "families": [
