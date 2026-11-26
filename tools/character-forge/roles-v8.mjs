@@ -75,8 +75,8 @@ function sheath(m,tunic,roman){
  for(let i=0;i<4;i++){const t=i/3,x=root[0]-s*.045*t,y=root[1]+.07-t*length,z=root[2]-.04+.10*t,w=.027*(1-.45*t);for(const [dx,dz] of [[-w,-.013],[w,-.013],[w,.013],[-w,.013],[-w,-.013]])push(p,[x+dx,y,z+dz],ws)}
  grid(p,4,5);return sewLining(p,.005);
 }
-export function produceRole(source,id,identityOverride=null){
- const role=roles[id],start=performance.now(),identity={...role.identity,...identityOverride},base=dress(source,{style:'historical-miniature',kit:'tunic',method:'hybrid',surfaceRevision:6,identity}),m=sculptCitizen(base,source).model,tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount;
+export function produceRole(source,id,identityOverride=null,style='historical-miniature'){
+ const role=roles[id],start=performance.now(),identity={...role.identity,...identityOverride},base=dress(source,{style,kit:'tunic',method:'hybrid',surfaceRevision:6,identity}),m=sculptCitizen(base,source).model,tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount;
  tunic.color=role.tunic.slice();m.spec.artRole=id;if(id==='infantry'||id==='legionary')m.spec.actions=['idle'];m.spec.miniaturePose='v8';m.spec.motionRevision='v4';m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'Shared v8 historical role patterns'}];
  // Tailoring uses actual seam stations. Unequal hem lengths, a small bias
  // across panels and folds taper at the belt, without shrinking clearance.
