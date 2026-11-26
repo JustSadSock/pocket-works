@@ -57,6 +57,7 @@ jobs:
         run: |
           source scripts/ci-overhaul/verified-gameplay-offline.sh
           prepare_gameplay source
+          if [[ "$SHARD" = 0 ]]; then AUDITED_PLAN="$out/plan.json" node --test scripts/ci-overhaul/verified-gameplay-matrix-fixture.mjs; fi
           run_gameplay_phase gameplay
           verify_gameplay_mounts
           node "$tool" check "$out"
@@ -151,7 +152,7 @@ jobs:
           fi
           verify_gameplay_mounts
           node "$tool" finish bundle signed/receipt.json "$out" "$RUNNER_TEMP/admission.json" "$RUNNER_TEMP/trial.json"
-          cat "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
+          jq "del(.planShard)" "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

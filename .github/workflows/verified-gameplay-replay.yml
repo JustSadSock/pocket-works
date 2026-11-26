@@ -73,7 +73,7 @@ jobs:
           fi
           verify_gameplay_mounts
           node "$tool" finish "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/signed/receipt.json" "$out" "$RUNNER_TEMP/admission.json" "$RUNNER_TEMP/trial.json" "$RUNNER_TEMP/upstream.json"
-          cat "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
+          jq "del(.planShard)" "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

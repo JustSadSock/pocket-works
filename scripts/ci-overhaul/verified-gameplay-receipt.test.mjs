@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {summarizeGameplayComparison,decide,validateManifest,validatePhase,SOURCE,SOURCE_TREE,PLAN,WORKFLOW,REPLAY_WORKFLOW} from './verified-gameplay-receipt.mjs';
+import {aggregateReplay,summarizeGameplayComparison,decide,validateManifest,validatePhase,SOURCE,SOURCE_TREE,PLAN,WORKFLOW,REPLAY_WORKFLOW} from './verified-gameplay-receipt.mjs';
 import {createHash} from 'node:crypto';
 const h='a'.repeat(64),mount={schema:1,digest:h,files:20,directories:4,bytes:1000,productionAuthorization:false,reuse:false};
 const s={schema:1,shard:0,repository:'JustSadSock/pocket-works',workflow:WORKFLOW,role:'source',source:SOURCE,sourceTree:SOURCE_TREE,auditCommit:'b'.repeat(40),auditTree:'c'.repeat(40),run:12,attempt:1,ref:'refs/heads/main',event:'push',sourceMount:mount,auditMount:mount,environment:{contract:'banners-offline-phase-v1',image:'be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb',arch:'x64',node:'v22.12.0',config:h,cpu:h,kernel:h,toolchain:h,uid:1001,gid:1001},productionAuthorization:false};
@@ -50,4 +50,9 @@ test('shard identity cannot be substituted, and zero-performance shards are vali
  assert.deepEqual(validatePhase(p,'performance',report,records,m).performance,[]);
  assert.throws(()=>validatePhase(p,'performance',{...report,shard:0},records,m));
  assert.throws(()=>validatePhase(p,'performance',report,[{}],m));
+});
+
+test('aggregate refuses absent or incomplete shard evidence',()=>{
+ assert.throws(()=>aggregateReplay([],{}));
+ assert.throws(()=>aggregateReplay(Array(8).fill({shard:0}),{}));
 });

@@ -165,6 +165,9 @@ export function aggregateReplay(rows,expected){
  if(hash(plans)!==PLAN||freshGameplayCases+reusedGameplayCases!==1868||freshPerformanceCases!==5||freshPerformanceMeasurements!==10||historicalGameplayMeasurements!==3436)throw Error('Incomplete global audited plan');
  return {schema:3,...expected,planDigest:PLAN,shards:8,gameplayCases:1868,freshGameplayCases,reusedGameplayCases,freshGameplayMeasurements,historicalGameplayMeasurements,freshPerformanceCases,freshPerformanceMeasurements,semanticComparison:reusedGameplayCases===1868?'not-executed':reusedGameplayCases===0?'match':'partial-match',perShard,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 }
+function validateReceiptShard(receipt,target,plan){
+ if(receipt.shard!==target.shard||receipt.gameplayCases!==plan.shards[target.shard].gameplay.length||receipt.sourceMeasurements!==expectedMeasurements(plan.shards[target.shard].gameplay))throw Error('Signed receipt does not cover target shard');
+}
 function verifiedReceipt(bundle,path){
  const r=json(path),expected=makeReceipt(bundle,r.issuedAt);
  if(!eq(r,expected))throw Error('Signed receipt differs from original evidence');
@@ -192,17 +195,17 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    console.log(JSON.stringify(r));
   }else if(mode==='admit'){
    // Caller must first authenticate the exact receipt with gh attestation verify.
-   const [bundle,path,targetDir,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(targetDir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);validatePlan(json(join(targetDir,'plan.json')),t);
+   const [bundle,path,targetDir,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(targetDir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);const p=validatePlan(json(join(targetDir,'plan.json')),t);validateReceiptShard(r,t,p);
    const u=replayUpstream(t,upstreamPath),d=decide(r,t,Date.now(),u);writeFileSync(out,JSON.stringify(d,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(d));
   }else if(mode==='finish'){
    const [bundle,path,dir,admissionPath,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(dir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);
-   const p=validatePlan(json(join(dir,'plan.json')),t),d=json(admissionPath),u=replayUpstream(t,upstreamPath),expected=decide(r,t,Date.now(),u);
+   const p=validatePlan(json(join(dir,'plan.json')),t),d=json(admissionPath),u=replayUpstream(t,upstreamPath),expected=decide(r,t,Date.now(),u);validateReceiptShard(r,t,p);
    if(!eq(d,expected))throw Error('Admission changed');
    const perf=phaseBundle(dir,'performance',p,t),hit=d.decision==='reuse-shadow';
    const g=hit?null:phaseBundle(dir,'gameplay',p,t);
    if(hit&&readdirSync(dir).includes('gameplay'))throw Error('Ambiguous gameplay execution');
    const report={schema:3,shard:t.shard,source:SOURCE,auditCommit:t.auditCommit,auditTree:t.auditTree,planDigest:PLAN,planShard:p.shards[t.shard],mode:t.role==='replay'?'verified-gameplay-cross-run':'verified-gameplay-trial',sourceRun:r.manifest.run,sourceAttempt:r.manifest.attempt,targetRun:t.run,targetAttempt:t.attempt,admission:d,...summarizeGameplayComparison(r,d,g),freshPerformanceCases:perf.cases,freshPerformanceMeasurements:perf.measurements,freshPerformanceResults:perf.performance,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
-   writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));if(report.semanticMatch===false)process.exitCode=1;
+   writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({...report,planShard:undefined},null,2));if(report.semanticMatch===false)process.exitCode=1;
   }else if(mode==='aggregate'){
    const [root,out]=a,run=Number(process.env.GITHUB_RUN_ID),attempt=Number(process.env.GITHUB_RUN_ATTEMPT),cross=process.env.GITHUB_EVENT_NAME==='workflow_run';
    if(process.env.MATRIX_RESULT!=='success'||!int(run)||!int(attempt)||process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!==REPO||!SHA.test(process.env.GITHUB_SHA))throw Error('Incomplete replay matrix');
