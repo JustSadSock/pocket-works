@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { expandManifest, renderPhysics, arrangeTracks } from './foundation.mjs';
+import { compileExpression } from './expression.mjs';
 
 const ROOT = process.cwd();
 const GENERATED_LIST = path.join(ROOT, '.audio-forge-generated.txt');
@@ -187,9 +188,10 @@ function buildMidi(job, midiPath) {
 
   events.push({ tick: 0, priority: 0, bytes: [0xff, 0x51, 0x03, (microseconds >> 16) & 0xff, (microseconds >> 8) & 0xff, microseconds & 0xff] });
   if (tracks) {
-    for (const track of tracks) {
+    for (const [index, track] of tracks.entries()) {
       events.push({ tick: 0, priority: 0, bytes: [0xc0 | track.channel, track.program] });
       for (const [cc,value] of track.controls) events.push({ tick: 0, priority: 0, bytes: [0xb0 | track.channel, cc, value] });
+      events.push(...compileExpression({...job.tracks[index], tempo}, track.notes, track.channel));
     }
   } else events.push({ tick: 0, priority: 1, bytes: [0xc0 | channel, program] });
 
