@@ -31,7 +31,7 @@ jobs:
                 if(files.length>0 && files.length<300){
                   const workshop=files.some(f=>f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/')||f.filename==='.github/workflows/banners-focused-art-workshop.yml');
                   const production=files.some(f=>(f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/')&&!f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/'))||(f.filename.startsWith('apps/banners-of-war/')&&!f.filename.includes('/research/')));
-                  if(workshop&&!production)full=false;
+                  if(!production)full=false;
                 }
               }catch(e){core.warning('Exact change scope unavailable: '+e.message)}
             }
