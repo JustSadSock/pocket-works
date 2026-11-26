@@ -24,7 +24,7 @@ const capability=zones.map(({samples,...z})=>z);
 // Select only complete paired roots for a morphed sustain. A finite-only
 // sample remains in the source catalog but cannot silently fill a looped zone.
 const parts=[
- {id:'bass',instrument:'cello-section',articulation:'arco-vib',group:'strings',pan:.24,gain:.34,pitches:[[50],[46],[43],[45],[50],[55],[45],[50]]},
+ {id:'bass',instrument:'cello-section',articulation:'arco-vib',group:'strings',pan:.24,gain:.34,pitches:[[50],[46],[55],[45],[50],[55],[45],[50]]},
  {id:'melody',instrument:'violin',articulation:'arco-vib',group:'strings',pan:-.46,gain:.31,pitches:[[69,72],[74,72],[70,69],[69,73],[77,76],[74,72],[73,69],[66,69]]},
  {id:'counterline',instrument:'clarinet',articulation:'sustain',group:'woodwind',pan:.2,gain:.24,pitches:[[65,62],[65,70],[67,65],[64,61],[65,69],[70,67],[64,61],[62,66]]},
  {id:'highline',instrument:'flute',articulation:'non-vibrato',group:'woodwind',pan:.52,gain:.17,pitches:[[81,77],[77,74],[79,77],[76,73],[81,84],[82,79],[81,76],[78,74]]},
