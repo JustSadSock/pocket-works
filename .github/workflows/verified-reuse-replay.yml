@@ -1,0 +1,79 @@
+name: Verified Reuse Replay
+on:
+  workflow_run:
+    workflows: ["Verified Results Shadow"]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+concurrency:
+  group: verified-reuse-replay-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+jobs:
+  replay:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.repository.full_name == github.repository &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_sha == github.sha &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/verified-reuse-admission.test.mjs
+      - name: Verify and replay the exact completed source attempt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_RUN: ${{ github.event.workflow_run.id }}
+          UPSTREAM_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$UPSTREAM_RUN" =~ ^[0-9]+$ && "$UPSTREAM_ATTEMPT" =~ ^[0-9]+$ && "$UPSTREAM_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$UPSTREAM_SHA" = "$(git rev-parse HEAD)"
+          source scripts/ci-overhaul/verified-offline-task.sh
+          prepare_verified_task
+          docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$taskout,dst=/work/qa-artifacts" -w /work -e "PW_QA_TASK=$task" -e "EXPECTED_MOUNT_DIGEST=$mounted" "$image" node --input-type=module -e 'import {mountedFingerprint} from "./scripts/ci-overhaul/verified-mounted-inputs.mjs";if(mountedFingerprint(process.cwd()).digest!==process.env.EXPECTED_MOUNT_DIGEST)throw Error("Container mount differs from host")'
+          work="$RUNNER_TEMP/replay"
+          mkdir -p "$work"
+          jq --argjson run "$UPSTREAM_RUN" --argjson attempt "$UPSTREAM_ATTEMPT" '.workflow=".github/workflows/verified-reuse-replay.yml" | .upstreamRun=$run | .upstreamAttempt=$attempt' "$out/source.json" > "$work/target.json"
+          report="$out/admission.json"
+          find_candidate() {
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$UPSTREAM_RUN" > "$work/run.json" || return 1
+            jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$UPSTREAM_SHA" --argjson id "$UPSTREAM_RUN" --argjson attempt "$UPSTREAM_ATTEMPT" '.id==$id and .run_attempt==$attempt and .head_sha==$sha and .repository.full_name==$repo and .head_repository.full_name==$repo and .path==".github/workflows/verified-results-shadow.yml" and .head_branch=="main" and .status=="completed" and .conclusion=="success" and (.event=="push" or .event=="workflow_dispatch")' "$work/run.json" || return 1
+            gh run download "$UPSTREAM_RUN" --repo "$GITHUB_REPOSITORY" --name "verified-shadow-receipt-$UPSTREAM_ATTEMPT" --dir "$work/bundle" || return 1
+            gh attestation verify "$work/bundle/receipt.json" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-results-shadow.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$UPSTREAM_SHA" --deny-self-hosted-runners || return 1
+            node scripts/ci-overhaul/verified-reuse-admission.mjs "$work/run.json" "$work/bundle" "$work/target.json" "$out/environment.json" "$report" || return 1
+          }
+          if ! find_candidate; then
+            printf '%s\n' '{"schema":1,"decision":"execute","reason":"Exact upstream authenticated evidence unavailable","productionAuthorization":false}' > "$report"
+          fi
+          if jq -e '.decision=="reuse-trial" and .productionAuthorization==false' "$report" >/dev/null; then
+            node scripts/ci-overhaul/verified-mounted-inputs.mjs measure "$src" > "$RUNNER_TEMP/receipt-mount-after.json"
+            cmp "$RUNNER_TEMP/receipt-mount-before.json" "$RUNNER_TEMP/receipt-mount-after.json"
+            jq -n --argjson admission "$(cat "$report")" '{schema:1,mode:"historical-replay",executed:false,admission:$admission,productionAuthorization:false}' > "$out/replay.json"
+          else
+            run_verified_task
+            jq -e '.success==true and .exitCode==0 and .signal==null and .timedOut==false' "$out/evidence.json"
+            jq -n --argjson admission "$(cat "$report")" --argjson result "$(cat "$out/evidence.json")" '{schema:1,mode:"fresh-replay",executed:true,admission:$admission,result:$result,productionAuthorization:false}' > "$out/replay.json"
+          fi
+          cat "$out/replay.json"
+          cat "$out/replay.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-replay-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipt-input/replay.json
+          retention-days: 7
+          if-no-files-found: error

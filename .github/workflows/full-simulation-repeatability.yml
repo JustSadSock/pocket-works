@@ -1,0 +1,84 @@
+name: Full Simulation Repeatability Shadow
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/full-simulation-repeatability.yml'
+      - 'scripts/ci-overhaul/full-simulation-repeatability*'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: full-simulation-repeatability-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  audit:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: crown
+            app: crown-and-marches
+            sha: 1ad4c63131d2ae3a46598da963d5a6101471687b
+            task: '{"key":"crown-and-marches-balance-experiments-3","app":"crown-and-marches","suite":"balance-experiments","kind":"node","seed":3,"install":false}'
+          - kind: banners
+            app: banners-of-war
+            sha: 11c8e8411b20e8465cafcc0bad51b1f0a6cff2d1
+            task: '{"key":"banners-of-war-completion-lab-0","app":"banners-of-war","suite":"completion-lab","kind":"node","seed":0,"install":false}'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/full-simulation-repeatability.test.mjs
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+          path: audit-source
+          persist-credentials: false
+      - name: Execute two complete original QA tasks in isolated containers
+        env:
+          APP: ${{ matrix.app }}
+          KIND: ${{ matrix.kind }}
+          SOURCE_SHA: ${{ matrix.sha }}
+          TASK: ${{ matrix.task }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C audit-source rev-parse HEAD)" = "$SOURCE_SHA"
+          src="$RUNNER_TEMP/full-source"
+          out="$RUNNER_TEMP/full-output"
+          mkdir -p "$src" "$out/1" "$out/2" "$out/plan"
+          git -C audit-source archive HEAD "apps/$APP" shared scripts package.json package-lock.json | tar -xf - -C "$src"
+          mkdir "$src/qa-artifacts"
+          docker pull node:22-bookworm-slim
+          image="$(docker image inspect --format '{{index .RepoDigests 0}}' node:22-bookworm-slim)"
+          [[ "$image" =~ @sha256:[0-9a-f]{64}$ ]]
+          common=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp --mount "type=bind,src=$src,dst=/work,readonly" -w /work)
+          if [ "$KIND" = banners ]; then
+            docker run "${common[@]}" --mount "type=bind,src=$out/plan,dst=/plan" "$image" node --input-type=module -e 'import {numberCases} from "./apps/banners-of-war/numbers-lab.mjs";import {finalCases} from "./apps/banners-of-war/final-integration-lab.mjs";import {antiquityCases} from "./apps/banners-of-war/antiquity-lab.mjs";import {originalCases,extraCases,historicalCases} from "./apps/banners-of-war/completion-lab.mjs";import {writeFileSync} from "node:fs";const kinds=[...numberCases().map(()=>"numerical-superiority"),...originalCases().map(()=>"original"),...extraCases().map(()=>"independent"),...historicalCases().map(()=>"historical"),...antiquityCases().map(()=>"antiquity"),...finalCases().map(()=>"final-integration"),...[26,40,60,100,150].map(()=>"performance")].filter((_,i)=>i%8===0);writeFileSync("/plan/expected.json",JSON.stringify(kinds));'
+          fi
+          for n in 1 2; do
+            echo "Full original $KIND task, attempt $n"
+            if ! docker run "${common[@]}" --mount "type=bind,src=$out/$n,dst=/work/qa-artifacts" -e "PW_QA_TASK=$TASK" "$image" node scripts/universal-qa/run.mjs > "$out/run-$n.log" 2>&1; then
+              tail -c 12000 "$out/run-$n.log"
+              exit 1
+            fi
+            key="$(jq -r .key <<< "$TASK")"
+            jq -e '.success == true and .exitCode == 0 and .signal == null and .timedOut == false' "$out/$n/$key/result.json"
+          done
+          node scripts/ci-overhaul/full-simulation-repeatability.mjs "$KIND" "$out/1/$key" "$out/2/$key" "$out/plan/expected.json" "$out/comparison.json" | tee "$out/summary.json"
+          cat "$out/summary.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-simulation-repeatability-${{ matrix.kind }}
+          path: |
+            ${{ runner.temp }}/full-output/comparison.json
+            ${{ runner.temp }}/full-output/summary.json
+          if-no-files-found: warn
+          retention-days: 7
