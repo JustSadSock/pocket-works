@@ -21,6 +21,9 @@ jobs:
       matrix:
         include:
           - role: sword
+            motion: static-gear
+            label: static-gear
+          - role: sword
             motion: march
             label: sword-march
           - role: sword
@@ -68,6 +71,8 @@ jobs:
           test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Verify articulated hand source
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-hand-source.py
       - name: Resolve actual research motion capture source
         if: matrix.role == 'retarget'
         run: |
@@ -85,7 +90,7 @@ jobs:
       - name: Single-character anatomical probe
         run: |
           mkdir -p "$BOW_ART_OUTPUT"
-          python3 -m py_compile apps/banners-of-war/research/battlefield-identity/workshop/{sword-motion,anatomical-motion,archer-motion,retarget-walk,review-cameras,encode-probes}.py
+          python3 -m py_compile apps/banners-of-war/research/battlefield-identity/workshop/{sword-motion,anatomical-motion,articulated-hand,archer-motion,retarget-walk,review-cameras,encode-probes}.py
           source="$(find /tmp/bow-source -name spearman.blend -print -quit)"
           test -n "$source"
           script="apps/banners-of-war/research/battlefield-identity/workshop/anatomical-motion.py"

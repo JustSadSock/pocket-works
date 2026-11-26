@@ -92,5 +92,6 @@ for motion,period in spec[role]:
         perView.append(frames)
         encode(frames,motion+"-"+view,period)
     encode(list(zip(*perView)),motion+"-synchronized",period,True)
+if audit.get("staticEquipment") and not audit["staticEquipment"]["pass"]:deferred.append({"motion":"equipped motion","reason":"Static equipment gate rejected; no native motion cycle generated"})
 if role=="archer":deferred.append({"motion":"shot","reason":"Static anchor only; wait for direct artistic approval"})
-(root/"clip-index.json").write_text(json.dumps({"clips":clips,"deferred":deferred,"nativeFramesRetained":True,"interpolation":False,"artisticApproval":False,"anatomicalPreflight":audit.get("preflight",audit.get("staticGate"))},indent=2))
+(root/"clip-index.json").write_text(json.dumps({"clips":clips,"deferred":deferred,"nativeFramesRetained":True,"interpolation":False,"artisticApproval":False,"anatomicalPreflight":audit.get("preflight",audit.get("staticGate",audit.get("staticEquipment")))},indent=2))

@@ -60,6 +60,14 @@ srcBasis=Matrix((sourceAcross,sourceForward,sourcePalm)).transposed()
 srcLength=max((sourceRig.matrix_world@b.tail-sourceWrist).dot(sourceForward) for b in digits["middle"])
 if not .08<srcLength<.30:raise ValueError("Unexpected source hand length")
 audit["articulatedHandSource"]={"file":hand_file.name,"joints":{k:[b.name for b in v] for k,v in digits.items()},"wrist":wristBone.name,"width":sourceWidth,"length":srcLength,"skinMeshes":[o.name for o in sourceMeshes]}
+# Match the source palm/knuckle line to the target sleeve frame rather
+# than assuming its old procedural grip centre is anatomically meaningful.
+for target in (R,L):
+    if target.name not in posed_hands:continue
+    q=posed_hands[target.name]
+    sx=max(.65,min(1.45,q["width"]*.77/sourceWidth));sy=max(.65,min(1.45,q["length"]/srcLength));sz=(sx+sy)*.5
+    a0,f0,n0=q["axes"];kn=srcBasis.inverted()@(sourceKnuckle-sourceWrist)
+    q["center"]=q["wrist"]+a0*(kn.x*sx)+f0*(kn.y*sy)+n0*(kn.z*sz+.018)+f0*.008
 save()
 def source_rotate(b,axis,angle):
     # Rotate the original articulated joint in its current world frame.
@@ -108,7 +116,13 @@ def make_posed_glove(hand,center,axis,rad):
     for o in sourceMeshes:
         ev=o.evaluated_get(bpy.context.evaluated_depsgraph_get());me=ev.to_mesh()
         try:
-            vs=[tuple(wrist+transform@(ev.matrix_world@v.co-sourceWrist)) for v in me.vertices]
+            vs=[]
+            for v in me.vertices:
+                p=ev.matrix_world@v.co-sourceWrist;along=p.dot(sourceForward)
+                # Bury only the proximal cap under the existing sleeve;
+                # blend the adjustment away across the wrist, not fingers.
+                seam=max(0,min(1,(.025-along)/.025))
+                vs.append(tuple(wrist+transform@p-f*(.012*seam)))
             fs=[tuple(p.vertices) for p in me.polygons]
             if transform.determinant()<0:fs=[tuple(reversed(p)) for p in fs]
         finally:ev.to_mesh_clear()
