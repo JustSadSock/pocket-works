@@ -14,7 +14,7 @@ function bounded(value, fallback, min, max, label) {
   if (typeof n !== 'number' || !Number.isFinite(n) || n < min || n > max) throw new Error('Invalid '+label);
   return n;
 }
-const models = new Set(['sword', 'shield', 'glass', 'explosion', 'rain', 'sword-v2', 'glass-v2', 'gear', 'chain']);
+const models = new Set(['sword', 'shield', 'glass', 'explosion', 'rain', 'sword-v2', 'glass-v2', 'gear', 'chain', 'boot-earth', 'hoof-earth', 'armor-leather', 'shield-wood']);
 export function expandManifest(manifest) {
   if (!manifest || ![1,2].includes(manifest.version) || !Array.isArray(manifest.jobs)) throw new Error('Invalid audio manifest');
   if (manifest.version === 1) return manifest.jobs;
@@ -59,7 +59,7 @@ export function expandManifest(manifest) {
 export function renderPhysics(job) {
   if (!models.has(job.model)) throw new Error('Unknown physics model');
   const sr = 48000;
-  const dur = bounded(job.duration, ({sword:.65,shield:.5,glass:1.3,explosion:2.4,rain:6,'sword-v2':.75,'glass-v2':1.5,gear:1.6,chain:1.4})[job.model],.08,20,'duration');
+  const dur = bounded(job.duration, ({sword:.65,shield:.5,glass:1.3,explosion:2.4,rain:6,'sword-v2':.75,'glass-v2':1.5,gear:1.6,chain:1.4,'boot-earth':.42,'hoof-earth':.58,'armor-leather':.68,'shield-wood':.62})[job.model],.08,20,'duration');
   const strength = bounded(job.strength,.65,.1,1,'strength');
   const r = rng(bounded(job.seed,42,0,0xffffffff,'seed'));
   const frames = Math.round(dur*sr), out = new Float32Array(frames*2);
@@ -87,7 +87,36 @@ export function renderPhysics(job) {
     }
   }
   const shift=(.87+r()*.26)*(.85+.2*strength);
-  if(job.model==='sword-v2'){
+  if(job.model==='boot-earth'){
+    // Heel compression, granular soil slip, then toe release. No tuned resonances.
+    burst(.003,.055,.9,42,420,0,5);
+    burst(.009,.085,.55,180,1800,-.08,4);
+    for(let i=0;i<20;i++)burst(.014+r()*.11,.008+r()*.022,.09+r()*.13,600,5400,r()*.35-.175,4);
+    burst(.16+r()*.035,.11,.26,250,2400,.07,3);
+  } else if(job.model==='hoof-earth'){
+    // Two coupled impacts with unequal amplitudes, compressed dirt and grit.
+    for(const [at,weight] of [[.006,1],[.085+r()*.055,.45+r()*.24]]){
+      burst(at,.018,weight*.85,450,5800,0,6);
+      burst(at+.002,.12,weight*1.1,38,430,0,5);
+      ring(at,91*shift,.105,weight*.22,0,8,-.13);
+      for(let i=0;i<13;i++)burst(at+r()*.075,.012+r()*.022,weight*.13,720,6800,r()*.35-.175,5);
+    }
+  } else if(job.model==='armor-leather'){
+    // Irregular plate contact and leather friction, not a pitched chime.
+    for(let i=0;i<9;i++){
+      const at=.009+i*.052+r()*.045,pan=r()*.44-.22,amp=.16+r()*.34;
+      burst(at,.018+r()*.035,amp,950,10000,pan,5);
+      burst(at+.009,.035+r()*.032,amp*.5,100,1250,pan,3);
+      for(let k=0;k<3;k++)ring(at,(1100+r()*7000)*shift,.025+r()*.04,amp*.09,pan,9);
+    }
+  } else if(job.model==='shield-wood'){
+    // Wooden core with a metal rim and short hand/strap damping.
+    burst(.002,.023,1.05,190,8100,0,6);
+    burst(.006,.12,.9,55,740,0,5);
+    for(const [f,a] of [[137,.25],[263,.17],[489,.10],[917,.065]])ring(.004,f*shift,.11+r()*.055,a,0,8,-.04);
+    for(let i=0;i<7;i++)burst(.007+r()*.07,.012+r()*.026,.16,900,6800,r()*.44-.22,6);
+    burst(.1+r()*.04,.08,.14,120,1600,0,5);
+  } else if(job.model==='sword-v2'){
     // Hard steel contact, brief slipping contact and inharmonic blade modes.
     burst(.001,.012,1.3,2600,18500,0,6);
     burst(.004,.06,.38,1100,9800,0,5);
