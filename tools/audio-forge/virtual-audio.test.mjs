@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createVirtualAudioWorld} from '../../shared/capabilities/virtual-audio.js';
+import {createVirtualAudioWorld,planVoiceBudget,createBudgetedAudioScene} from '../../shared/capabilities/virtual-audio.js';
 const buffer={length:48000,sampleRate:48000,numberOfChannels:1,getChannelData(){return new Float32Array(48000)}};
 const listener={x:0,y:0};
 function fixture(options={}){
@@ -59,4 +59,10 @@ test('destroy during asynchronous activation and overlapping updates do not leak
  assert.equal(await world.reconcile({listener,sources:[at('b',0)]}),false);
  world.destroy();release(true);
  assert.equal(await pending,false);assert.equal(world.stats.active,0);assert.ok(entries[0].destroyed);
+});
+
+test('voice reservations cannot exceed total, including music stems',()=>{
+ assert.deepEqual(planVoiceBudget({total:18,events:4,music:2}),{total:18,events:4,music:2,continuous:12});
+ for(const budget of [{total:8,events:8,music:1},{total:100,events:1,music:0},{total:8.5},{total:12,events:0}])assert.throws(()=>planVoiceBudget(budget));
+ assert.throws(()=>createBudgetedAudioScene({budget:{total:18,events:4,music:1},stems:[{},{}]}),/reservation/);
 });
