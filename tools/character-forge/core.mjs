@@ -113,7 +113,7 @@ function bird(b){if(b.spec.version===2)return avian(b);let h=b.spec.morphology.h
  b.components.push({name:'bird',family:'avian',root,template:'avian-v1'})}
 export function build(spec){let s=validate(spec),b=new Builder(s),t=performance.now();
  if(s.version===2&&(!Array.isArray(s.modules)||s.modules.some(x=>!['unarmed','no-headwear','no-bag'].includes(x))))throw Error('Unknown equipment option');
- if(s.version===2&&!['v2','v3'].includes(s.anatomy))throw Error('Unknown anatomy revision');
+ if(s.version===2&&!['v2','v3','v4'].includes(s.anatomy))throw Error('Unknown anatomy revision');
  if(s.version===2&&!['transported','legacy-rings','implicit'].includes(s.surface))throw Error('Unsupported surface');
  if(s.family==='humanoid')human(b,'',[0,0,0],-1,s.morphology.height,recipes[s.recipe].outfit);
  else if(s.family==='bird')bird(b);else if(s.version===2)animal(b,s.family,human);else quadruped(b,s.family);
@@ -133,7 +133,7 @@ export function animation(model,action,phase){if(!model.spec.actions.includes(ac
  return quat(j.axis,Math.max(-j.limitDegrees*Math.PI/180,Math.min(j.limitDegrees*Math.PI/180,angle)))})
 }
 export function poseFrom(model,qs){let world=[];for(let j of model.joints){let p=j.parent<0?null:world[j.parent];world.push({q:p?qmul(p.q,qs[j.id]):qs[j.id],p:p?add(p.p,rotate(p.q,j.local)):j.position})}return world}
-export function rootOffset(model,action,phase){if(model.spec.motionRevision!=='v3'||!['walk','run'].includes(action))return [0,0,0];let h=model.spec.morphology.height??1.7,t=phase*Math.PI*2,f=model.spec.family;return [h*(f==='humanoid'?.018:.008)*Math.sin(t),h*(f==='elephant'?.005:.012)*(1-Math.cos(t*2)),h*.009*Math.sin(t*2)]}
+export function rootOffset(model,action,phase){if(!['v3','v4'].includes(model.spec.motionRevision)||!['walk','run'].includes(action))return [0,0,0];let h=model.spec.morphology.height??1.7,t=phase*Math.PI*2,f=model.spec.family;return model.spec.motionRevision==='v4'&&['horse','elephant'].includes(f)?[h*(f==='elephant'?.012:.016)*Math.sin(t),h*(f==='elephant'?.009:.018)*(1-Math.cos(t*2)),h*.012*Math.sin(t*2+.3)]:[h*(f==='humanoid'?.018:.008)*Math.sin(t),h*(f==='elephant'?.005:.012)*(1-Math.cos(t*2)),h*.009*Math.sin(t*2)]}
 export function pose(model,action,phase){let w=poseFrom(model,animation(model,action,phase)),d=rootOffset(model,action,phase);return w.map(v=>({...v,p:add(v.p,d)}))}
 export function correctFootHeight(model,input,phase){let q=input.map(v=>v.slice()),diagnostics=[];const duty={humanoid:.62,horse:.66,dog:.62,elephant:.76}[model.spec.family]??.62;
  for(let c of model.contacts){if(((phase+(c.phase??0))%1+1)%1>=duty)continue;let j=model.joints[c.joint];if(j.name.startsWith('rider/')||j.name.startsWith('crew/'))continue;let chain=[],parent=j.parent;while(parent>=0&&model.joints[parent].role.startsWith('leg.')){chain.push(parent);parent=model.joints[parent].parent}if(!chain.length)continue;

@@ -18,8 +18,18 @@ export function motionFrame(model,action,phase,quat){
  if(j.role==='spine')a=(fam==='elephant'?.022:.045)*Math.sin(phase*TAU*2);
  if(j.role==='neck'&&move&&!attached)a=.06*Math.sin(phase*TAU*2+.7);
  if(j.role==='tail'||j.role==='trunk')a=.10*Math.sin(phase*TAU+j.id*.35);
- if(attached&&move){if(j.role==='spine')a=-.045*Math.sin(phase*TAU*2);if(j.role==='arm.lower')a=.025*Math.sin(phase*TAU*2+.6);if(model.spec.motionRevision==='v3'){if(j.role==='pelvis')a=-.035*Math.sin(phase*TAU*2+.35);if(j.role==='head')a=.025*Math.sin(phase*TAU*2-.45);if(j.role==='leg.upper')a=.035*Math.sin(phase*TAU*2+(left?0:.6));if(j.role==='leg.lower')a=-.025*Math.sin(phase*TAU*2)}}
+ if(attached&&move){if(j.role==='spine')a=-.045*Math.sin(phase*TAU*2);if(j.role==='arm.lower')a=.025*Math.sin(phase*TAU*2+.6);if(['v3','v4'].includes(model.spec.motionRevision)){if(j.role==='pelvis')a=-.035*Math.sin(phase*TAU*2+.35);if(j.role==='head')a=.025*Math.sin(phase*TAU*2-.45);if(j.role==='leg.upper')a=.035*Math.sin(phase*TAU*2+(left?0:.6));if(j.role==='leg.lower')a=-.025*Math.sin(phase*TAU*2)}}
  if(j.role.startsWith('wing')){let s=left?-1:1;if(action==='fly')a=s*(j.role==='wing'?sampleCurve(phase,[[0,-.6],[.32,.65],[.70,-.85],[1,-.6]]):.35*Math.sin(phase*TAU+.8));else a=s*.10;}
+ if(model.spec.motionRevision==='v4'&&move&&['horse','elephant'].includes(fam)){
+   let t=phase*TAU,horse=fam==='horse',roll=(horse?.035:.055)*Math.sin(t),pitch=(horse?.047:.022)*Math.sin(2*t+.25);
+   if(j.parent<0)return quat([0,0,1],roll);
+   if(j.role==='spine'&&!attached)a=pitch;
+   if(j.role==='neck'&&!attached)a=-pitch*.72+.025*Math.sin(t-.4);
+   if(j.role==='head'&&!attached)a=-pitch*.30+.018*Math.sin(t-.8);
+   if(j.role==='mount')a=-pitch*.4;
+   if(attached&&j.role==='pelvis')a=-pitch*.65;
+   if(attached&&j.role==='spine')a=-pitch*.8;
+ }
  if(action==='turn'&&j.parent<0)return quat([0,1,0],.6*Math.sin(phase*TAU));
  if(action==='guard'&&j.role==='arm.upper')a=-.25;if(action==='interact'&&j.role==='arm.lower')a=.35*Math.sin(phase*TAU);
  return quat(j.axis,clamp(a,-j.limitDegrees*Math.PI/180,j.limitDegrees*Math.PI/180))
