@@ -56,6 +56,13 @@ jobs:
           jq -e '.state=="open" and .mergeable==true and .head.repo.full_name=="JustSadSock/pocket-works" and .head.ref=="app/banners-of-war" and .base.ref=="main"' <<< "$info"
           export QA_HEAD_SHA="$(jq -er '.head.sha' <<< "$info")"
           actual="$(jq -er '.merge_commit_sha' <<< "$info")"
+          gh api "repos/$GITHUB_REPOSITORY/git/commits/$actual" > "$RUNNER_TEMP/app-merge.json"
+          base="$(jq -er '.base.sha' <<< "$info")"
+          head="$(jq -er '.head.sha' <<< "$info")"
+          jq -e --arg actual "$actual" --arg base "$base" --arg head "$head" '.sha==$actual and (.parents|length)==2 and .parents[0].sha==$base and .parents[1].sha==$head' "$RUNNER_TEMP/app-merge.json" >/dev/null
+          export GITHUB_REF=refs/pull/1355/merge
+          export QA_SOURCE_SHA="$QA_HEAD_SHA"
+          export PW_QA_INTEGRATION_SOURCE=1
           node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/discovered"
           report="$RUNNER_TEMP/discovered/discovery.json"
           jq -e '.status=="authenticated-candidate" and .authenticatedSubjects==9 and .verifiedBundles==8' "$report"

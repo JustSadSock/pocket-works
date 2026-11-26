@@ -60,7 +60,14 @@ jobs:
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/pulls/1355" > "$RUNNER_TEMP/app-pr.json"
           node scripts/ci-overhaul/gameplay-renewal.mjs select "$RUNNER_TEMP/app-pr.json" "$RUNNER_TEMP/selection.json"
-          echo "source=$(jq -er '.source' "$RUNNER_TEMP/selection.json")" >> "$GITHUB_OUTPUT"
+          source="$(jq -er '.source' "$RUNNER_TEMP/selection.json")"
+          if [[ "$(jq -er '.sourceRef' "$RUNNER_TEMP/selection.json")" == refs/pull/1355/merge ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/git/commits/$source" > "$RUNNER_TEMP/app-merge.json"
+            base="$(jq -er '.base.sha' "$RUNNER_TEMP/app-pr.json")"
+            head="$(jq -er '.head.sha' "$RUNNER_TEMP/app-pr.json")"
+            jq -e --arg source "$source" --arg base "$base" --arg head "$head" '.sha==$source and (.parents|length)==2 and .parents[0].sha==$base and .parents[1].sha==$head' "$RUNNER_TEMP/app-merge.json" >/dev/null
+          fi
+          echo "source=$source" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.resolve.outputs.source }}
