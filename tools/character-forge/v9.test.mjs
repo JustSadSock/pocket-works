@@ -24,7 +24,7 @@ test('v9 four roles share the source anatomy but carry distinct construction and
  const base=model('artisan').joints.map(j=>({name:j.name,parent:j.parent,role:j.role}));
  for(const id of roleIds){
   const m=model(id);assert.deepEqual(m.joints.map(j=>({name:j.name,parent:j.parent,role:j.role})),base);assert.equal(m.spec.artRevision,'v9');assert.equal(m.spec.motionRevision,'v9');assert.equal(m.spec.contactCorrection,'path-v9');assert.equal(m.spec.lod,'source');assert.equal(m.contacts.length,2);assert.ok(m.statistics.triangleCount<150000);assert.ok(m.joints.length<512);finite(m);
-  const bin=glb(m),doc=inspectGLB(bin);assert.ok(bin.length<32000000);assert.ok(doc.animations.some(a=>a.name==='walk'));const root=m.joints.find(j=>j.parent<0);assert.ok(doc.animations.find(a=>a.name==='walk').channels.some(c=>c.target.node===root.id&&c.target.path==='translation'));
+  const bin=glb(m),doc=inspectGLB(bin);assert.ok(bin.length<32000000);const root=m.joints.find(j=>j.parent<0);if(id==='artisan'){assert.deepEqual(m.spec.actions,['idle','walk']);assert.ok(doc.animations.some(a=>a.name==='walk'));assert.ok(doc.animations.find(a=>a.name==='walk').channels.some(c=>c.target.node===root.id&&c.target.path==='translation'))}else{assert.deepEqual(m.spec.actions,['idle']);assert.ok(!doc.animations.some(a=>a.name==='walk'))}
  }
  const a=model('artisan'),merchant=model('merchant'),inf=model('infantry'),roman=model('legionary');assert.notDeepEqual(a.parts[0].positions,inf.parts[0].positions);
  assert.ok(a.parts.some(p=>p.name==='wooden mallet handle'));assert.ok(a.parts.some(p=>p.name==='rolled linen sleeve cuff L'));
