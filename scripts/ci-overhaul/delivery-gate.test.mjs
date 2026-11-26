@@ -5,8 +5,11 @@ const policy={schema:1,enabled:true,allowResultReuse:false,allowImpactSkipping:f
 const request={policy,request:'sharded',eventName:'pull_request',sameRepo:true,count:2};
 test('default legacy, explicit disabled policy, fork and manual requests cannot choose sharded',()=>{
  assert.equal(selectDeliveryRoute(request),'sharded');
+ assert.equal(selectDeliveryRoute({...request,prNumber:1355,headRef:'app/banners-of-war'}),'legacy');
+ assert.equal(selectDeliveryRoute({...request,prNumber:1355,headRef:'app/banners-of-war',sameRepo:false}),'legacy');
  for(const p of [{policy:null},{policy:{...policy,enabled:false}},{policy:{...policy,allowResultReuse:true}},{policy:{...policy,allowImpactSkipping:true}},{request:'legacy'},{sameRepo:false},{eventName:'workflow_dispatch'}])assert.equal(selectDeliveryRoute({...request,...p}),'legacy');
  assert.equal(selectDeliveryRoute({...request,count:0}),'no-app-suites');
+ assert.equal(selectDeliveryRoute({...request,prNumber:1413,headRef:'fix/verified-results-merge-discovery'}),'sharded');
  assert.throws(()=>selectDeliveryRoute({...request,count:-1}),/task count/);
 });
 const legacy={plan:'success',route:'legacy',count:2,hasCpu:true,hasBrowser:true,legacyCpu:'success',legacyBrowser:'success',summary:'success',candidate:'skipped'};
