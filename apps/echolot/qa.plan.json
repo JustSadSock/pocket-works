@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "files": [
+        "core.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#radar",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#scan"
+        },
+        {
+          "action": "screenshot"
+        }
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "production",
+      "kind": "browser-node",
+      "entry": "qa/production-verify.mjs",
+      "tier": "smoke",
+      "install": true
+    }
+  ]
+}
