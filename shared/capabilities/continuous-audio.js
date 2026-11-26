@@ -95,6 +95,13 @@ export function createDynamicEmitter({context,destination=context?.destination,b
     get profile(){return {...profile}}
   };
 }
+// Pure gain law shared with offline audition production.
+export function stemGainAtIntensity(stem,intensity){
+  const value=number(intensity,0,0,1,'intensity');
+  const base=number(stem.base,0,0,1,'base'),gain=number(stem.gain,1,0,1,'stem gain');
+  const threshold=number(stem.threshold,0,0,1,'threshold'),width=number(stem.width,.25,.01,1,'width');
+  return gain*(base+(1-base)*clamp((value-threshold)/width,0,1));
+}
 // All stems are authored on the same sample grid and are started on one audio clock.
 // Intensity changes gains rather than restarting the underlying transport.
 export function createAdaptiveMusic({context,destination=context?.destination,stems,intensity=0,volume=.7}={}){
@@ -111,7 +118,7 @@ export function createAdaptiveMusic({context,destination=context?.destination,st
   if(tracks.some(s=>s.buffer.length!==tracks[0].buffer.length||s.buffer.sampleRate!==tracks[0].buffer.sampleRate))throw new Error('Stems must have identical sample grids');
   const master=context.createGain();master.gain.value=masterVolume;master.connect(destination);
   let voices=[],closed=false,starting=false,epoch=0,startTime=null;
-  const target=s=>s.gain*(s.base+(1-s.base)*clamp((value-s.threshold)/s.width,0,1));
+  const target=s=>stemGainAtIntensity(s,value);
   function dispose(){
     const old=voices;voices=[];startTime=null;
     for(const v of old){try{v.source.stop()}catch{};try{v.source.disconnect()}catch{};try{v.gain?.disconnect()}catch{}}
