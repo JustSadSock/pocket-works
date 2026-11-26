@@ -24,7 +24,7 @@ function fixture(){
   const nodes=[];
   const param=()=>({value:1,setTargetAtTime(value){this.value=value}});
   const make=(kind,props={})=>{const node={kind,connections:[],connect(dest){this.connections.push(dest)},disconnect(){this.connections=[];this.disconnected=true},...props};nodes.push(node);return node};
-  const context={state:'running',sampleRate:48000,currentTime:0,destination:{},createGain:()=>make('gain',{gain:param()}),createBiquadFilter:()=>make('filter',{frequency:param(),Q:param()}),createStereoPanner:()=>make('pan',{pan:param()}),createDelay:()=>make('delay',{delayTime:param()}),createBufferSource:()=>make('source',{playbackRate:param(),start(){this.started=true},stop(){this.onended?.()}}),async decodeAudioData(){return {}},createDynamicsCompressor:()=>make('compressor',Object.fromEntries(['threshold','knee','ratio','attack','release'].map(k=>[k,param()])))};
+  const context={state:'running',sampleRate:48000,currentTime:0,destination:{},createGain:()=>make('gain',{gain:param()}),createBiquadFilter:()=>make('filter',{frequency:param(),Q:param()}),createStereoPanner:()=>make('pan',{pan:param()}),createDelay:()=>make('delay',{delayTime:param()}),createBufferSource:()=>make('source',{playbackRate:param(),start(){this.started=true},stop(){this.onended?.()}}),async decodeAudioData(){return {length:480,numberOfChannels:1}},createDynamicsCompressor:()=>make('compressor',Object.fromEntries(['threshold','knee','ratio','attack','release'].map(k=>[k,param()])))};
   return {context,nodes};
 }
 test('mixer bus isolation, volume and teardown',()=>{
