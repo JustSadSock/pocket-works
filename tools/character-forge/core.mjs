@@ -36,7 +36,7 @@ class Builder{
  joint(name,parent,p,role,axis=[1,0,0],limit=90){if(this.joints.some(j=>j.name===name)||parent>=this.joints.length||parent<-1)throw Error('Invalid hierarchy');const id=this.joints.length;this.joints.push({id,name,parent,position:p,local:parent<0?p:sub(p,this.joints[parent].position),role,axis:unit(axis),limitDegrees:limit});return id}
  socket(name,joint,point,role){this.sockets.push({name,joint,local:sub(point,this.joints[joint].position),role})}
  part(name,color,joint){const p={name,component:classifyPart(name),color:palette[color]??color,positions:[],normals:[],indices:[],joints:[],weights:[],binding:joint};this.parts.push(p);return p}
- vertex(p,v,n,j,k=j,w=1){p.positions.push(...v);p.normals.push(...unit(n));p.joints.push(j,k,0,0);p.weights.push(w,1-w,0,0);return p.positions.length/3-1}
+ vertex(p,v,n,j,k=j,w=1){p.positions.push(...v);p.normals.push(...unit(n));if(j===k){p.joints.push(j,0,0,0);p.weights.push(1,0,0,0)}else{p.joints.push(j,k,0,0);p.weights.push(w,1-w,0,0)}return p.positions.length/3-1}
  // Connected indexed surface with capped rings; weights interpolate at each anatomical bend.
  loft(name,stations,color,sideCount=this.profile.sides){
   const p=this.part(name,color,stations[0].j),N=sideCount;let priorU=null;

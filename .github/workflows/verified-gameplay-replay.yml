@@ -13,6 +13,12 @@ concurrency:
   cancel-in-progress: false
 jobs:
   replay:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      SHARD: ${{ matrix.shard }}
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.repository.full_name == github.repository &&
@@ -48,8 +54,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$UPSTREAM_RUN" > "$RUNNER_TEMP/upstream.json"
           jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$GITHUB_SHA" --argjson run "$UPSTREAM_RUN" --argjson attempt "$UPSTREAM_ATTEMPT" '.id==$run and .run_attempt==$attempt and .repository.full_name==$repo and .head_repository.full_name==$repo and .path==".github/workflows/verified-gameplay-receipt.yml" and .head_sha==$sha and .head_branch=="main" and .status=="completed" and .conclusion=="success" and (.event=="push" or .event=="workflow_dispatch")' "$RUNNER_TEMP/upstream.json"
-          gh run download "$UPSTREAM_RUN" --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-input-$UPSTREAM_ATTEMPT" --dir "$RUNNER_TEMP/bundle"
-          gh run download "$UPSTREAM_RUN" --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-receipt-$UPSTREAM_ATTEMPT" --dir "$RUNNER_TEMP/signed"
+          gh run download "$UPSTREAM_RUN" --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-input-$UPSTREAM_ATTEMPT-$SHARD" --dir "$RUNNER_TEMP/bundle"
+          gh run download "$UPSTREAM_RUN" --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-receipt-$UPSTREAM_ATTEMPT-$SHARD" --dir "$RUNNER_TEMP/signed"
           gh attestation verify "$RUNNER_TEMP/signed/receipt.json" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-gameplay-receipt.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
       - name: Independent exact-commit replay with mandatory fresh performance
         env:
@@ -67,11 +73,40 @@ jobs:
           fi
           verify_gameplay_mounts
           node "$tool" finish "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/signed/receipt.json" "$out" "$RUNNER_TEMP/admission.json" "$RUNNER_TEMP/trial.json" "$RUNNER_TEMP/upstream.json"
-          cat "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
+          jq "del(.planShard)" "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gameplay-cross-run-${{ github.run_attempt }}
+          name: gameplay-cross-run-${{ github.run_attempt }}-${{ matrix.shard }}
           path: ${{ runner.temp }}/trial.json
           if-no-files-found: warn
+          retention-days: 7
+
+  aggregate:
+    needs: replay
+    if: ${{ always() && needs.replay.result == 'success' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gameplay-cross-run-${{ github.run_attempt }}-*
+          path: reports
+      - run: |
+          node scripts/ci-overhaul/verified-gameplay-receipt.mjs aggregate reports aggregate.json
+          cat aggregate.json >> "$GITHUB_STEP_SUMMARY"
+        env:
+          MATRIX_RESULT: ${{ needs.replay.result }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gameplay-cross-run-aggregate-${{ github.run_attempt }}
+          path: aggregate.json
+          if-no-files-found: error
           retention-days: 7
