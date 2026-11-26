@@ -1,0 +1,237 @@
+name: Production Verified Delivery Integration
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/gameplay-production-delivery.yml'
+      - '.github/workflows/universal-qa.yml'
+      - 'scripts/ci-overhaul/gameplay-production-delivery*'
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+  pull-requests: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/gameplay-production-delivery.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/ci-overhaul/gameplay-renewable-admission.test.mjs
+  prepare:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/gameplay-production-delivery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    outputs:
+      source: ${{ steps.discover.outputs.source }}
+      issuer: ${{ steps.discover.outputs.issuer }}
+      cpu: ${{ steps.plan.outputs.cpu }}
+      expected: ${{ steps.plan.outputs.expected }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Freeze actual Banners merge and discover authenticated source
+        id: discover
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QA_PR_NUMBER: '1355'
+          QA_HEAD_REPO: JustSadSock/pocket-works
+          QA_HEAD_REF: app/banners-of-war
+          QA_EXPECTED: '["banners-of-war-completion-lab-0"]'
+        shell: bash
+        run: |
+          set -euo pipefail
+          info="$(gh api "repos/$GITHUB_REPOSITORY/pulls/1355")"
+          jq -e '.state=="open" and .mergeable==true and .head.repo.full_name=="JustSadSock/pocket-works" and .head.ref=="app/banners-of-war" and .base.ref=="main"' <<< "$info"
+          export QA_HEAD_SHA="$(jq -er '.head.sha' <<< "$info")"
+          actual="$(jq -er '.merge_commit_sha' <<< "$info")"
+          node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/discovered"
+          report="$RUNNER_TEMP/discovered/discovery.json"
+          jq -e '.status=="authenticated-candidate" and .authenticatedSubjects==9 and .verifiedBundles==8' "$report"
+          issuer="$(jq -er .issuer "$report")"
+          [[ "$actual" =~ ^[a-f0-9]{40}$ && "$issuer" =~ ^[a-f0-9]{40}$ ]]
+          echo "source=$actual" >> "$GITHUB_OUTPUT"
+          echo "issuer=$issuer" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.discover.outputs.source }}
+          path: candidate
+          persist-credentials: false
+      - name: Reconstruct original task plan
+        id: plan
+        run: |
+          node --input-type=module <<'NODE'
+          import {resolveTasks,partition} from './scripts/universal-qa/plan.mjs';
+          import {appendFileSync} from 'node:fs';
+          const tasks=resolveTasks(process.cwd()+'/candidate',{apps:['banners-of-war'],suite:'completion-lab',profile:'deep'});
+          if(tasks.length!==8||tasks.some((t,i)=>t.seed!==i))throw Error('Changed original plan');
+          appendFileSync(process.env.GITHUB_OUTPUT,'cpu='+JSON.stringify(partition(tasks).cpu)+'\nexpected='+JSON.stringify(tasks.map(t=>t.key))+'\nmatrix='+JSON.stringify(tasks.map(task=>({task,control:false})).concat({task:tasks[0],control:true}))+'\n');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: delivery-discovery-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/discovered/
+          if-no-files-found: error
+          retention-days: 7
+  execute:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      PW_QA_TASK: ${{ toJSON(matrix.task) }}
+      PW_QA_PRODUCTION_VERIFIED: '1'
+      QA_PR_NUMBER: '1355'
+      QA_HEAD_REPO: JustSadSock/pocket-works
+      QA_HEAD_REF: app/banners-of-war
+      ACTUAL_SOURCE: ${{ needs.prepare.outputs.source }}
+      TASK_KEY: ${{ matrix.task.key }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.issuer }}
+          path: verified-controller
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        if: matrix.control == false
+        with:
+          name: delivery-discovery-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/discovered
+      - name: Execute production hit-only adapter on actual merge checkout
+        id: verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_REF=refs/pull/1355/merge
+          export GITHUB_SHA="$ACTUAL_SOURCE"
+          status=0
+          bash scripts/ci-overhaul/gameplay-production-delivery.sh "$PWD/candidate" "$PWD/verified-controller" "$RUNNER_TEMP/discovered" "$PWD/candidate/qa-artifacts/$TASK_KEY" || status=$?
+          case "$status" in
+            0) echo 'reuse=true' >> "$GITHUB_OUTPUT";;
+            75) echo 'reuse=false' >> "$GITHUB_OUTPUT";;
+            *) exit "$status";;
+          esac
+          if [[ "${{ matrix.control }}" == true ]]; then test "$status" = 75; fi
+      - name: Execute ordinary app-owned task on declined admission
+        if: steps.verified.outputs.reuse != 'true'
+        working-directory: candidate
+        run: node scripts/universal-qa/run.mjs
+      - name: Require exactly one task evidence type
+        run: |
+          dir="candidate/qa-artifacts/$TASK_KEY"
+          if [[ "${{ steps.verified.outputs.reuse }}" == true ]]; then
+            test ! -e "$dir/result.json"
+            test -f "$dir/verified-delivery.json"
+          else
+            test ! -e "$dir/verified-delivery.json"
+            jq -e --arg key "$TASK_KEY" '.success==true and .key==$key and .exitCode==0' "$dir/result.json"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.control == false
+        with:
+          name: qa-${{ matrix.task.key }}
+          path: candidate/qa-artifacts/${{ matrix.task.key }}/
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.control == true
+        with:
+          name: delivery-fallback-control
+          path: candidate/qa-artifacts/${{ matrix.task.key }}/
+          if-no-files-found: error
+          retention-days: 7
+  gate:
+    needs: [prepare, execute]
+    if: always() && needs.prepare.result == 'success' && needs.execute.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PW_QA_PRODUCTION_VERIFIED: '1'
+      QA_PR_NUMBER: '1355'
+      QA_HEAD_REPO: JustSadSock/pocket-works
+      QA_HEAD_REF: app/banners-of-war
+      ACTUAL_SOURCE: ${{ needs.prepare.outputs.source }}
+      QA_CPU_MATRIX: ${{ needs.prepare.outputs.cpu }}
+      QA_BROWSER_MATRIX: '{"include":[]}'
+      QA_EXPECTED: ${{ needs.prepare.outputs.expected }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: delivery-discovery-${{ github.run_attempt }}
+          path: discovered
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: qa-*
+          path: qa-collected
+      - uses: actions/download-artifact@v4
+        with:
+          name: delivery-fallback-control
+          path: fallback-control
+      - name: Exercise mandatory mixed gate on independently collected task evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_REF=refs/pull/1355/merge
+          export GITHUB_SHA="$ACTUAL_SOURCE"
+          test ! -e fallback-control/verified-delivery.json
+          jq -e '.success==true and .key=="banners-of-war-completion-lab-0"' fallback-control/result.json
+          node scripts/ci-overhaul/gameplay-production-delivery.mjs mixed "$PWD/candidate" "$PWD/qa-collected" "$PWD/discovered"
+          jq -e '.success==true and .expected==8 and .passed==8 and (.verifiedTasks+.freshTasks)==8 and .allowImpactSkipping==false' qa-collected/summary.json
+          mkdir tampered
+          cp -a qa-collected/qa-* tampered/
+          rm -rf tampered/qa-banners-of-war-completion-lab-0
+          if node scripts/ci-overhaul/gameplay-production-delivery.mjs mixed "$PWD/candidate" "$PWD/tampered" "$PWD/discovered" > rejected.log 2>&1; then echo 'Missing task accepted'; exit 1; fi
+          grep -F 'Missing or ambiguous task evidence' rejected.log
+          test ! -e tampered/summary.json
+          # Check the unchanged stable delivery verdict consumes the mandatory summary.
+          QA_PLAN_RESULT=success QA_ROUTE=legacy QA_COUNT=8 QA_HAS_CPU=true QA_HAS_BROWSER=false QA_CPU_RESULT=success QA_BROWSER_RESULT=skipped QA_SUMMARY_RESULT=success QA_CANDIDATE_RESULT=skipped node scripts/ci-overhaul/delivery-gate.mjs gate
+          cat qa-collected/summary.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-delivery-verdict-${{ github.run_attempt }}
+          path: |
+            qa-collected/summary.json
+            qa-collected/SUMMARY.md
+            rejected.log
+          if-no-files-found: warn
+          retention-days: 7
