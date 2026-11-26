@@ -11,6 +11,7 @@ on:
       - 'scripts/ci-overhaul/verified-mounted-inputs*'
       - 'scripts/ci-overhaul/verified-reuse-admission*'
       - '.github/workflows/verified-reuse-replay.yml'
+      - 'scripts/ci-overhaul/verified-replay-summary*'
       - 'scripts/ci-overhaul/verified-offline-task.sh'
       - '.github/workflows/verified-cross-commit.yml'
       - 'apps/axis-pals/**'
@@ -38,7 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/attested-shadow.test.mjs scripts/ci-overhaul/verified-results.test.mjs scripts/ci-overhaul/verified-mounted-inputs.test.mjs scripts/ci-overhaul/verified-cross-commit.test.mjs scripts/ci-overhaul/verified-reuse-admission.test.mjs
+      - run: node --test scripts/ci-overhaul/attested-shadow.test.mjs scripts/ci-overhaul/verified-results.test.mjs scripts/ci-overhaul/verified-mounted-inputs.test.mjs scripts/ci-overhaul/verified-cross-commit.test.mjs scripts/ci-overhaul/verified-reuse-admission.test.mjs scripts/ci-overhaul/verified-replay-summary.test.mjs
   execute:
     needs: contract
     if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)

@@ -12,6 +12,13 @@ const sha=/^[0-9a-f]{40}$/;
 export const REPLAY_WORKFLOW='.github/workflows/verified-reuse-replay.yml';
 const git=(root,args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
 const fallback=reason=>({schema:1,decision:'execute',reason,productionAuthorization:false});
+// Diagnose strict mismatches without treating any field as ignorable.
+export function compareEnvironment(prior,current){
+ const before=environmentFingerprint(prior),after=environmentFingerprint(current);
+ const fields=[...new Set([...Object.keys(prior),...Object.keys(current)])].sort();
+ const changed=fields.filter(k=>!Object.hasOwn(prior,k)||!Object.hasOwn(current,k)||canonical(prior[k])!==canonical(current[k]));
+ return {match:before===after,changedFields:changed,priorFingerprint:before,currentFingerprint:after};
+}
 export function admitTrial(root,priorRun,bundle,target,environment,now=Date.now()){
  try{
   const p=checkRun(root,priorRun,bundle,now);
@@ -28,13 +35,15 @@ export function admitTrial(root,priorRun,bundle,target,environment,now=Date.now(
    throw Error('Missing v2 mounted evidence');
   if(!target.mountedInputs||canonical(target.mountedInputs)!==canonical(p.source.mountedInputs))
    throw Error('Actual mounted inputs differ');
-  if(environmentFingerprint(environment)!==p.environmentFingerprint)throw Error('Execution environment differs');
+  const difference=compareEnvironment(p.environment,environment);
+  if(!difference.match)return {...fallback('Execution environment differs'),environmentComparison:difference};
+  if(difference.priorFingerprint!==p.environmentFingerprint)throw Error('Prior fingerprint differs');
   if(!compareInputs(root,p.source.commit,target.commit,TASK).inputMatch)throw Error('Scoped inputs differ');
   return {schema:1,decision:'reuse-trial',task:TASK,taskDigest:taskDigest(TASK),
    sourceRun:p.source.run,sourceAttempt:p.source.attempt,sourceCommit:p.source.commit,
    targetRun:target.run,targetAttempt:target.attempt,targetCommit:target.commit,targetTree:target.tree,
    evidenceDigest:p.evidenceDigest,environmentFingerprint:p.environmentFingerprint,mountedDigest:p.source.mountedInputs.digest,
-   productionAuthorization:false};
+   environmentComparison:difference,productionAuthorization:false};
  }catch(e){return fallback(e.message);}
 }
 export function parity(trial,fresh,tree,run,attempt,commit){
