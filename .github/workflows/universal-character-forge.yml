@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: character-forge-v4-${{ github.ref }}
+  group: character-forge-v6-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   core:
@@ -82,12 +82,12 @@ jobs:
           python3 tools/character-forge/makehuman-adapter.py
           node tools/character-forge/makehuman-export.mjs
           CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v4.test.mjs
-          node tools/character-forge/garment-research.mjs
-      - name: Render original human comparison boards
+          node tools/character-forge/recovery-v6.mjs
+      - name: Render one static human recovery candidate and reference
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg
-          python3 tools/character-forge/evidence-v4.py
+          python3 tools/character-forge/evidence-v6.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
