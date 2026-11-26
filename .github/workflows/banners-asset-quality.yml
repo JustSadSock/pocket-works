@@ -28,7 +28,7 @@ jobs:
                 const r=await github.rest.repos.compareCommits({owner:context.repo.owner,repo:context.repo.repo,base:context.payload.before,head:context.payload.after});
                 const files=r.data.files||[];
                 if(files.length>0&&files.length<300){
-                  full=files.some(f=>f.filename==='.github/workflows/banners-asset-quality.yml'||f.filename.startsWith('tools/art-forge/')||(f.filename.startsWith('apps/banners-of-war/')&&!f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/')));
+                  full=files.some(f=>f.filename.startsWith('tools/art-forge/')||(f.filename.startsWith('apps/banners-of-war/')&&!f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/')));
                 }
               }catch(e){core.warning('Comparison unavailable: '+e.message)}
             }
