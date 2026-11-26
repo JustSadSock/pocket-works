@@ -455,3 +455,23 @@ director.destroy();
 The transport validates the authored frame grid to within one sample, uses the current state's tempo/meter for beat/bar scheduling, and starts a new independent clip with a two-source maximum. Requests during a transition can queue one valid successor; they do not cancel an already scheduled crossfade. Playback and fades follow the audio clock, while `update()` commits completed transitions and releases graph resources. Reserve two source slots if using this standalone director alongside a budgeted scene; it is not yet wired into that facade. No game-specific adapter or authored transition bridge/stinger has been approved yet.
 
 Browser CI also tests actual replacement of a 220 Hz peace clip with a 440 Hz battle clip on different grids using measured spectrum, and reports 30 dense world updates each at 512, 1024 and 4096 logical sources (p50/p95/max, cap and failures). Timings measure host-side reconcile latency, not audio-thread CPU, physical-device performance or end-to-end latency. Dependency installation refreshes APT indexes and retries once after the observed stale ALSA package 404, without skipping Chromium or weakening assertions.
+
+### Authored musical bridges within the scene budget
+
+The score graph now supports an optional `bridges` map keyed by "from:to". Supply decoded bridge audio in the same format as the destination clip via `bridgeBuffers`. Each bridge is bounded to 15 seconds. The director prepares a composite buffer containing the one-shot bridge followed by the destination loop, and sets the source loop boundaries to exclude the bridge. The destination beat clock begins at the end of the bridge. No third source is required during the transition. The extra composite PCM allocation is temporary and not covered by the source-count quota; a future memory budget must account for this. Requests can still queue one successor and cannot interrupt an already scheduled bridge. The director's state.bridgeUntil is the associated bridge end timestamp, not a boolean playback status.
+
+```js
+const scene = createBudgetedAudioScene({
+  context, budget:{total:18,events:4,music:2}, families,
+  score:{graph,buffers,bridgeBuffers}
+});
+await scene.music.start();
+scene.music.request('tension',{quantize:'bar',fadeSeconds:0.3});
+// Game tick:
+scene.music.update();
+scene.destroy();
+```
+
+Horizontal score and vertical stems are mutually exclusive within this facade for now; two music slots are required for horizontal playback. The browser integration verifies the bridge tone before the destination, its absence after the destination loops, and the scene quota during transition. The CI produces four original bridge phrases (peace→tension, tension→battle, battle→aftermath, aftermath→peace) and a separate bridge-journey listening proof, retaining the original crossfade-only control. Neither the authored bridges nor the resulting music have received artistic approval. The proof is offline, while browser checks use test tones; real score playback in an actual game is still a separate integration milestone.
+
+At f3d09d8 both browsers passed 30 dense updates at each of 512/1024/4096 sources with zero activation failures and 12 continuous voices maximum. Chromium p95: 0.9/0.6/3.3 ms; WebKit p95: 1/1/2 ms. These are host-side timings on CI runners, not audio-thread profiling.
