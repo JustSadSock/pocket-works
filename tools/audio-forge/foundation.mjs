@@ -120,6 +120,7 @@ export function renderPhysics(job) {
   if(!Number.isFinite(peak)||peak<=0) throw new Error('Silent or invalid synthesis');
   const gain=(.38+.5*strength)/peak;
   for(let i=0;i<out.length;i++) out[i]*=gain;
+  out[0]=out[1]=out[out.length-2]=out[out.length-1]=0;
   return {samples:out,sampleRate:sr,channels:2};
 }
 function pitchKey(note){
