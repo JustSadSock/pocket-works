@@ -222,7 +222,14 @@ jobs:
         run: |
           set -euo pipefail
           npm install --prefix "$RUNNER_TEMP/audio-browser" --no-save --no-package-lock playwright@1.55.0
-          "$RUNNER_TEMP/audio-browser/node_modules/.bin/playwright" install --with-deps ${{ matrix.browser }}
+          browser_cli="$RUNNER_TEMP/audio-browser/node_modules/.bin/playwright"
+          # Refresh stale runner package indexes; retry dependency install once.
+          sudo apt-get update -o Acquire::Retries=3
+          if ! "$browser_cli" install-deps ${{ matrix.browser }}; then
+            sudo apt-get update -o Acquire::Retries=3
+            "$browser_cli" install-deps ${{ matrix.browser }}
+          fi
+          "$browser_cli" install ${{ matrix.browser }}
           echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/audio-browser/node_modules/playwright" >> "$GITHUB_ENV"
       - name: Run real Web Audio checks
         run: node tools/audio-forge/browser-runtime.mjs ${{ matrix.browser }} .audio-runtime-browser
