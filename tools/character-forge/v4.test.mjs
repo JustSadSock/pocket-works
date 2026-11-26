@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {build,rootOffset,pose} from './core.mjs';import {glb,inspectGLB} from './glb.mjs';import {readFileSync} from 'node:fs';import {dress,draftGarments,bindTemplate,garmentAudit,measuredLimbRadii,sewLining} from './garment.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {build,rootOffset,pose} from './core.mjs';import {glb,inspectGLB} from './glb.mjs';import {readFileSync} from 'node:fs';import {dress,draftGarments,bindTemplate,garmentAudit,measuredLimbRadii,sewLining,anatomicalSection,assertTailoredSections} from './garment.mjs';
 const spec=recipe=>({version:2,recipe,style:'historical-miniature',lod:'medium',anatomy:'v4',motionRevision:'v4',actions:['idle','walk'],composite:recipe==='rider'});
 test('v4 animal geometry and translation channel; prior species remain available',()=>{for(let r of ['horse','elephant','rider','dog','bird']){let m=build(spec(r));assert.ok(m.parts.length>5);assert.ok(m.parts.every(p=>p.positions.every(Number.isFinite)));let d=inspectGLB(glb(m));assert.ok(d.animations.find(a=>a.name==='walk').channels.some(c=>c.target.path==='translation'));if(r==='horse')assert.ok(m.parts.some(p=>p.name==='foreL-sole'));if(r==='elephant')assert.ok(m.parts.some(p=>p.name.startsWith('shaped pinna')))}});
 test('source garment methods preserve anatomy and unique skin weights',{skip:!process.env.CHARACTER_EVIDENCE_SOURCE},()=>{const dir=process.env.CHARACTER_EVIDENCE_SOURCE,load=n=>JSON.parse(readFileSync(dir+'/makehuman-'+n+'.json')),base=load('base'),src=load('tall-heavy'),opt={style:'historical-miniature',kit:'warrior',identity:{}},temp=bindTemplate(base,draftGarments(base,{...opt,method:'pattern'}));let a=dress(src,{...opt,method:'pattern'}),b=dress(src,{...opt,method:'template'},temp),c=dress(src,{...opt,method:'hybrid'});assert.ok(c.parts.some(p=>p.name==='boot L'));assert.ok(c.parts.some(p=>p.name==='quilted'));assert.ok(c.parts.some(p=>p.name==='iron skullcap'));assert.equal(b.parts.find(p=>p.name==='shirt').indices.length,temp.find(p=>p.name==='shirt').indices.length);assert.notDeepEqual(a.parts.find(p=>p.name==='shirt').positions,c.parts.find(p=>p.name==='shirt').positions);for(let m of [a,b,c])assert.ok(glb(m).length>10000);assert.ok(src.fitting);let boot=c.parts.find(p=>p.name==='boot L');for(let i=0;i<boot.weights8.length;i++)if(boot.weights8[i]>0)assert.ok(!c.joints[boot.joints8[i]].name.startsWith('toe'));assert.ok(c.parts[0].indices.length<src.parts[0].indices.length)});
@@ -46,4 +46,22 @@ test('v5 actual source continuous garment across six morphs and two art directio
      assert.ok(glb(m).length>10000);
    }
  }
+});
+
+test('v6 rejects the v5 waist explosion even for a closed mesh',()=>{
+ const sections=[{y:1,region:'bodice',center:[0,0],half:[.14,.09],radii:[.15,.10],radius:[.18,.13]},{y:1.15,region:'bodice',center:[0,0],half:[.15,.10],radii:[.16,.11],radius:[.19,.14]}];
+ assert.equal(assertTailoredSections(sections,'tunic',1.75),true);
+ assert.throws(()=>assertTailoredSections([{...sections[0],radius:[.75,.25]},sections[1]],'tunic',1.75),/Oversized/);
+ assert.throws(()=>assertTailoredSections([sections[1],sections[0]],'tunic',1.75),/Unordered/);
+});
+test('v6 excludes metacarpal-owned points from measured waist across real morphs',{skip:!process.env.CHARACTER_EVIDENCE_SOURCE},()=>{
+ for(const name of ['base','young-woman','older-woman','older-man','tall-heavy','short-light']){
+   const src=JSON.parse(readFileSync(process.env.CHARACTER_EVIDENCE_SOURCE+'/makehuman-'+name+'.json')),body=src.parts[0],vs=Array.from({length:body.positions.length/3},(_,i)=>body.positions.slice(i*3,i*3+3)),y=src.joints.find(j=>j.name==='spine03').position[1]-.04,H=Math.max(...vs.map(v=>v[1]));
+   const q=anatomicalSection({source:src,body,vs},y,'bodice');assert.ok(q.rejected>0);assert.ok(q.half[0]<H*.15);assert.ok(q.radii[0]<H*.18);
+ }
+});
+test('v6 static citizen uses a continuous garment and local belt attachment',{skip:!process.env.CHARACTER_EVIDENCE_SOURCE},()=>{
+ const src=JSON.parse(readFileSync(process.env.CHARACTER_EVIDENCE_SOURCE+'/makehuman-base.json')),m=dress(src,{surfaceRevision:6,kit:'tunic',style:'historical-miniature',method:'hybrid'}),p=m.parts.find(p=>p.name==='tunic'),belt=m.parts.find(p=>p.name==='waist belt'),pouch=m.parts.find(p=>p.name==='belt pouch');
+ assertClosed(p);assertClosed(belt);assert.equal(p.pattern.revision,6);assert.equal(belt.attachment.garment,'tunic');assert.equal(pouch.attachment.station,p.pattern.waistIndex);
+ const xs=belt.positions.filter((_,i)=>i%3===0),s=p.pattern.sections[p.pattern.waistIndex];assert.ok(Math.max(...xs)-Math.min(...xs)<2*(s.radius[0]+.055));assert.ok(glb(m).length>10000);
 });
