@@ -94,7 +94,7 @@ function quadruped(b,type){
  b.egg('head',p(0,ele?.89:1.04,.64),[.15*h*w,.15*h,.19*h],c,head);
  if(!ele){b.egg('muzzle',p(0,.96,.79),[.085*h,.085*h,.12*h],dog?'dark':c,head);b.egg('nose',p(0,.97,.88),[.075*h,.05*h,.045*h],'dark',head)}
  for(let s of [-1,1]){
-  b.egg('ear'+s,p(s*(ele?.17:.085),ele?.93:1.18,.60),[ (ele?.13:.036)*h,(ele?.19:.08)*h,.045*h],c,head);
+  const ear=ele?J('ear'+(s<0?'L':'R'),head,[s*.12,.92,.60],'ear',[0,0,1],32):head;b.egg('ear'+s,p(s*(ele?.17:.085),ele?.93:1.18,.60),[ (ele?.13:.036)*h,(ele?.19:.08)*h,.045*h],c,ear);
   b.egg('eye'+s,p(s*.139,ele?.93:1.08,.71),[.012*h,.015*h,.012*h],'dark',head);
   if(ele){let a=p(s*.12,.83,.72),mid=p(s*.15,.64,.87),tip=p(s*.15,.70,1.01);b.loft('tusk'+s,[{p:a,r:[.036*h,.036*h],j:head},{p:mid,r:[.023*h,.023*h],j:head},{p:tip,r:[.002*h,.002*h],j:head}],'ivory')}
   for(let front of [false,true]){let n=(front?'fore':'hind')+(s<0?'L':'R'),z=front?.28:-.33,x=s*.17*w,a=[x,.63,z],k=[x,.34,z+(front?.02:-.08)],f=[x,.065,z+.025],u=J(n+'-upper',front?chest:root,a,'leg.upper',[1,0,0],80),l=J(n+'-lower',u,k,'leg.lower',[1,0,0],110),foot=J(n+'-foot',l,f,'foot',[1,0,0],45);b.limb(n,[p(...a),p(...k),p(...f)],[ (ele?.106:.086)*h*w,(ele?.079:.047)*h*w,(ele?.072:.031)*h*w],[u,l,foot],c);b.egg(n+'-hoof',p(x,.043,z+.048),[(ele?.091:.051)*h,.043*h,(ele?.105:.067)*h],ele?c:'dark',foot);b.contacts.push({joint:foot,role:'sole',local:[0,-.065*h,.023*h],phase:(front===(s<0))?0:.5})}
