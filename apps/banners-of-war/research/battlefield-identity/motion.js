@@ -17,7 +17,8 @@ export function annotateMotionFrames(frames,prior=new Map()){
 }
 export function motionPose(u,q,row,rows,s,seed,contact,extended=false){
  const horse=mounted(u),v=Math.abs(u.v||0),coh=clamp((q.cohesion??u.cohesion??100)/100,0,1),disorder=1-coh;
- const phaseOffset=hash(u.id,17)*.35+hash(seed,3)*(.10+.9*disorder);
+ // A coherent regiment shares a gait; individual drift grows nonlinearly with actual cohesion loss.
+ const phaseOffset=hash(u.id,17)*.35+hash(seed,3)*(.035+.965*disorder*disorder);
  const cycle=(length,poses)=>{let distance=u.motionDistance??s.time*v;return poses[Math.floor((distance/length+phaseOffset)*poses.length)%poses.length]};
  const attack=[25,29,33,37],walk=[5,9,13,17],fast=extended?[41,45,49,53]:horse?attack:walk;
  const timeCycle=(period,poses)=>poses[Math.floor((s.time/period+phaseOffset)*poses.length)%poses.length];
