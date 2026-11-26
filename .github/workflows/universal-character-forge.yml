@@ -23,14 +23,14 @@ jobs:
         with:
           node-version: 22
       - name: Verify geometry, skinning, determinism, composition and budgets
-        run: node --test tools/character-forge/core.test.mjs
+        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs
       - name: Generate original models and benchmark 1, 10, 100 variants
-        run: node tools/character-forge/research.mjs "$CHARACTER_EVIDENCE"
+        run: node tools/character-forge/research-v2.mjs "$CHARACTER_EVIDENCE"
       - name: Convert original previews to PNG and video
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg fonts-dejavu-core
-          python3 tools/character-forge/evidence.py
+          python3 tools/character-forge/evidence-v2.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -41,7 +41,7 @@ jobs:
     needs: core
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,15 +54,15 @@ jobs:
       - name: Install isolated comparison tools without modifying lockfile
         run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0 three@0.180.0
       - name: Actual native GLB and Canvas group probes
-        run: node tools/character-forge/browser.mjs quality-artifacts/character-forge
+        run: node tools/character-forge/browser-v2.mjs quality-artifacts/character-forge
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: character-forge-browser
           path: |
-            quality-artifacts/character-forge/browser-report.json
+            quality-artifacts/character-forge/browser-report-v2.json
             quality-artifacts/character-forge/glb-*.png
-            quality-artifacts/character-forge/groups-*.png
+            quality-artifacts/character-forge/group-*.png
           retention-days: 14
   morph-source:
     runs-on: ubuntu-24.04
@@ -71,8 +71,13 @@ jobs:
       CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/character-morph
     steps:
       - uses: actions/checkout@v4
-      - name: Measure pinned MakeHuman source and height morphs
-        run: python3 tools/character-forge/morph-source.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Import MakeHuman source skin, morphs and original weights
+        run: |
+          python3 tools/character-forge/makehuman-adapter.py
+          node tools/character-forge/makehuman-export.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -80,7 +85,7 @@ jobs:
           path: quality-artifacts/character-morph
           retention-days: 14
   art-forge-bridge:
-    needs: core
+    needs: [core, morph-source]
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 20
@@ -96,19 +101,33 @@ jobs:
         with:
           name: character-forge-core
           path: quality-artifacts/character-bridge
+      - uses: actions/download-artifact@v4
+        with:
+          name: character-forge-morph
+          path: quality-artifacts/character-bridge/morph
       - name: Install verified editor
         run: |
           apt-get update
           apt-get install -y --no-install-recommends python3-pil xz-utils libgl1 libx11-6 libxi6 libxrender1
           cd /tmp
           archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          curl -fsSL --retry 2 -o "$archive" "https://download.blender.org/release/Blender5.2/$archive"
-          curl -fsSL --retry 2 -o blender.sha256 "https://download.blender.org/release/Blender5.2/blender-${BLENDER_VERSION}.sha256"
-          grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict
+          verified=false
+          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" blender.sha256
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
       - name: Re-import original composite creature through Universal Art Forge v2
-        run: python3 tools/character-forge/forge-bridge.py
+        run: |
+          python3 tools/character-forge/forge-bridge.py
+          CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/makehuman-base.glb" CHARACTER_BRIDGE_LABEL=makehuman python3 tools/character-forge/forge-bridge.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -116,4 +135,23 @@ jobs:
           path: |
             quality-artifacts/character-bridge/roundtrip-*
             quality-artifacts/character-bridge/forge-*.log
+          retention-days: 14
+  studio:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install local browser test
+        run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0
+      - name: Exercise actual studio controls and export
+        run: node tools/character-forge/studio-test.mjs quality-artifacts/character-studio
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: character-forge-studio
+          path: quality-artifacts/character-studio
           retention-days: 14

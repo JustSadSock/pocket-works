@@ -3,11 +3,13 @@ No runtime publish, registry edit, or independent production mechanism."""
 import os,sys,json,shutil,subprocess
 from pathlib import Path
 root=Path.cwd();evidence=Path(os.environ["CHARACTER_EVIDENCE"]).resolve()
+label=os.environ.get("CHARACTER_BRIDGE_LABEL","rider")
+input_path=Path(os.environ.get("CHARACTER_BRIDGE_INPUT",str(evidence/"rider-historical-miniature-medium/character.glb")))
 scratch=root/"apps/character-forge-research-temp"
 if scratch.exists():raise ValueError("Staging owner already exists")
 try:
     source=scratch/"asset-forge";source.mkdir(parents=True)
-    shutil.copyfile(evidence/"rider-miniature/character.glb",source/"candidate.glb")
+    shutil.copyfile(input_path,source/"candidate.glb")
     (source/"import.py").write_text("""import bpy,os,json
 bpy.ops.wm.read_factory_settings(use_empty=True)
 inputs=json.loads(os.environ['ART_FORGE_INPUTS']);outputs=json.loads(os.environ['ART_FORGE_OUTPUTS'])
@@ -22,7 +24,10 @@ bpy.ops.export_scene.gltf(filepath=outputs['model'],export_format='GLB',export_a
     for op in ("plan","build","check"):
         args=[sys.executable,"tools/art-forge/forge.py",op,"--app",scratch.name,"--blender",os.environ["BLENDER"]]
         if op=="build":args.append("--allow-authored-python")
-        r=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(evidence/("forge-"+op+".log")).write_text(r.stdout)
+        r=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(evidence/("forge-"+label+"-"+op+".log")).write_text(r.stdout)
         if r.returncode:raise ValueError("Art Forge "+op+" failed")
-    for f in ("public/character.glb","public/forge-index.json","asset-forge/generated/character.blend"):shutil.copyfile(scratch/f,evidence/("roundtrip-"+Path(f).name))
+    for f in ("public/character.glb","public/forge-index.json","asset-forge/generated/character.blend"):shutil.copyfile(scratch/f,evidence/("roundtrip-"+label+"-"+Path(f).name))
+    env=dict(os.environ,CHARACTER_BRIDGE_ORIGINAL=str(input_path),CHARACTER_BRIDGE_REIMPORT=str(scratch/"public/character.glb"),CHARACTER_BRIDGE_REPORT=str(evidence/("roundtrip-"+label+"-audit.json")))
+    cmd=[os.environ["BLENDER"],"--background","--factory-startup","--disable-autoexec","--python-exit-code","1","--python",str(root/"tools/character-forge/roundtrip-audit.py")]
+    subprocess.run(cmd,env=env,check=True)
 finally:shutil.rmtree(scratch,ignore_errors=True)
