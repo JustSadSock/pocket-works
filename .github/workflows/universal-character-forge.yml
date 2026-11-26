@@ -23,14 +23,18 @@ jobs:
         with:
           node-version: 22
       - name: Verify geometry, skinning, determinism, composition and budgets
-        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs
-      - name: Generate original models and benchmark 1, 10, 100 variants
-        run: node tools/character-forge/research-v2.mjs "$CHARACTER_EVIDENCE"
+        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs
+      - name: Produce focused morphology, animal and sprite candidates
+        run: node tools/character-forge/native-v3.mjs
+      - name: Compare actual pinned CMU motion
+        run: |
+          python3 tools/character-forge/fetch-control-motion.py
+          node tools/character-forge/capture-comparison.mjs
       - name: Convert original previews to PNG and video
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg fonts-dejavu-core
-          python3 tools/character-forge/evidence-v2.py
+          python3 tools/character-forge/evidence-v3.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -54,15 +58,14 @@ jobs:
       - name: Install isolated comparison tools without modifying lockfile
         run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0 three@0.180.0
       - name: Actual native GLB and Canvas group probes
-        run: node tools/character-forge/browser-v2.mjs quality-artifacts/character-forge
+        run: node tools/character-forge/sprite-browser.mjs quality-artifacts/character-forge
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: character-forge-browser
           path: |
-            quality-artifacts/character-forge/browser-report-v2.json
-            quality-artifacts/character-forge/glb-*.png
-            quality-artifacts/character-forge/group-*.png
+            quality-artifacts/character-forge/sprite-browser.json
+            quality-artifacts/character-forge/sprite-5000-*.png
           retention-days: 14
   morph-source:
     runs-on: ubuntu-24.04
@@ -78,6 +81,12 @@ jobs:
         run: |
           python3 tools/character-forge/makehuman-adapter.py
           node tools/character-forge/makehuman-export.mjs
+          node tools/character-forge/human-research.mjs
+      - name: Render original human comparison boards
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg
+          python3 tools/character-forge/evidence-v3.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -126,8 +135,10 @@ jobs:
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
       - name: Re-import original composite creature through Universal Art Forge v2
         run: |
-          python3 tools/character-forge/forge-bridge.py
-          CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/makehuman-base.glb" CHARACTER_BRIDGE_LABEL=makehuman python3 tools/character-forge/forge-bridge.py
+          status=0
+          python3 tools/character-forge/forge-bridge.py || status=1
+          CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/makehuman-base.glb" CHARACTER_BRIDGE_LABEL=makehuman python3 tools/character-forge/forge-bridge.py || status=1
+          exit "$status"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
