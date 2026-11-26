@@ -157,7 +157,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "genesis-hydrography-qa.mjs",
+      "entry": "genesis-atlas-qa.mjs",
       "tier": "smoke"
     },
     {
