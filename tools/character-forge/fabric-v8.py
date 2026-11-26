@@ -13,7 +13,18 @@ files=json.loads(fetch(api,2_000_000))
 record={"asset":"rough_linen","page":"https://polyhaven.com/a/rough_linen","license":"CC0-1.0","authors":["colormass (photography)","Rico Cilliers (processing)"],"api":api,"files":{}}
 channels={}
 for name,channel in [("diff","color"),("nor_gl","normal"),("rough","roughness")]:
-    entry=files[name]["1k"]["jpg"];data=fetch(entry["url"],12_000_000)
+    # API display keys are not necessarily the map filename abbreviations.
+    def leaves(x):
+        if isinstance(x,dict):
+            if isinstance(x.get("url"),str):yield x
+            for v in x.values():yield from leaves(v)
+        elif isinstance(x,list):
+            for v in x:yield from leaves(v)
+    suffix="/rough_linen_"+name+"_1k.jpg"
+    entry=next((x for x in leaves(files) if x["url"].split("?")[0].endswith(suffix)),None)
+    if entry is None:
+        raise ValueError("Missing verified 1k map "+name+"; API keys: "+str(list(files)))
+    data=fetch(entry["url"],12_000_000)
     if entry.get("md5") and hashlib.md5(data).hexdigest()!=entry["md5"]:raise ValueError("Asset checksum mismatch")
     record["files"][channel]={"url":entry["url"],"sha256":hashlib.sha256(data).hexdigest(),"bytes":len(data)}
     (out/("v8-linen-original-"+channel+".jpg")).write_bytes(data)
