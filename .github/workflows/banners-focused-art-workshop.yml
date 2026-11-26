@@ -97,7 +97,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-iii-${{ matrix.label }}
+          name: focused-iv-${{ matrix.label }}
           path: quality-artifacts/focused-${{ matrix.label }}
           if-no-files-found: error
           retention-days: 14
@@ -172,7 +172,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-iii-historic-relief
+          name: focused-iv-historic-relief
           path: quality-artifacts/focused-relief
           if-no-files-found: error
           retention-days: 14
@@ -243,21 +243,24 @@ jobs:
             mkdir -p "$dest"
             cp -al "$frozen/." "$dest/"
             work="$root"
-            if [ "$revision" = baseline ]; then work="$root/.paired-baseline"; fi
+            expected="${{ github.sha }}"
+            if [ "$revision" = baseline ]; then work="$root/.paired-baseline"; expected="${{ matrix.baseline }}"; fi
             (
               cd "$work"
               sha256sum apps/banners-of-war/engine.js apps/banners-of-war/research/battlefield-identity/{capture.mjs,battle-art.js,slice.js,slice-renderer.js,terrain-tiles.js,motion.js} > "$dest/runtime-sha256.txt"
-              BOW_ART_OUTPUT="$dest" BOW_BENCH_PROTOCOL="$protocol" node "$script"
+              BOW_EXPECTED_REVISION="$expected" BOW_PROVENANCE_DEST="$dest" python3 "$root/apps/banners-of-war/research/battlefield-identity/workshop/verify-revision.py"
+              BOW_ART_OUTPUT="$dest" BOW_BENCH_REVISION="$expected" BOW_BENCH_PROTOCOL="$protocol" node "$script"
             ) || echo "Runner failure for $pair" >> "$parent/runner-failures.txt"
           done
           BOW_PAIR_ROOT="$parent" python3 "$root/apps/banners-of-war/research/battlefield-identity/workshop/paired-summary.py"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-iii-paired-${{ matrix.atlas }}
+          name: focused-iv-paired-${{ matrix.atlas }}
           path: |
             quality-artifacts/paired-${{ matrix.atlas }}/*/paired-result.json
             quality-artifacts/paired-${{ matrix.atlas }}/*/runtime-sha256.txt
+            quality-artifacts/paired-${{ matrix.atlas }}/*/source-provenance.json
             quality-artifacts/paired-${{ matrix.atlas }}/*/difference-*.png
             quality-artifacts/paired-${{ matrix.atlas }}/*summary.json
             quality-artifacts/paired-${{ matrix.atlas }}/*failures.txt

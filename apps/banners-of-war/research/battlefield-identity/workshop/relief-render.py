@@ -50,7 +50,9 @@ def smooth_mask(value,lo,hi):
     t=saturate(mathop(n,l,"DIVIDE",mathop(n,l,"SUBTRACT",value,lo),hi-lo))
     return mathop(n,l,"MULTIPLY",mathop(n,l,"MULTIPLY",t,t),mathop(n,l,"SUBTRACT",3,mathop(n,l,"MULTIPLY",2,t)))
 def scan(name,kind,scale,noncolor=False):
-    im=bpy.data.images.load(str(out/(name+"-"+kind+".jpg")),check_existing=True)
+    records=json.loads((out/"local-scans.json").read_text())
+    file=next(r["file"] for r in records if r["asset"]==name and r["map"]==kind)
+    im=bpy.data.images.load(str(out/file),check_existing=True)
     if noncolor:im.colorspace_settings.name="Non-Color"
     node=n.new("ShaderNodeTexImage");node.image=im;node.extension="REPEAT"
     v=n.new("ShaderNodeVectorMath");v.operation="SCALE";l.new(coord,v.inputs[0]);v.inputs["Scale"].default_value=scale;l.new(v.outputs[0],node.inputs["Vector"])

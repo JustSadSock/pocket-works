@@ -20,6 +20,7 @@ async function cgroup(){let r={};for(let p of ['/sys/fs/cgroup/cpu.max','/sys/fs
 let browser;
 try{
  const start=await cgroup(),protocol=process.env.BOW_BENCH_PROTOCOL;
+ if(!/^[a-f0-9]{40}$/.test(process.env.BOW_BENCH_REVISION||''))throw Error('Missing verified CI revision');
  browser=await webkit.launch();let {ctx,p,errors}=await launch(browser,{...devices['iPhone 13']});
  try{
   let env=await p.evaluate(()=>{let c=document.getElementById('field');return {ua:navigator.userAgent,dpr:devicePixelRatio,viewport:[innerWidth,innerHeight],screen:[screen.width,screen.height],canvas:[c.width,c.height],css:[c.clientWidth,c.clientHeight],audio:window.sliceQA.audioStatus(),visibility:document.visibilityState}});
@@ -34,7 +35,7 @@ try{
   if(zoom.length!==2||zoom.some(x=>x.fps<30))violations.push('WebKit zoom below 30 FPS');
   if(protocol==='warm')for(let m of ['static','pan'])if(r.results.filter(x=>x.motion===m&&x.mode==='auto').some(x=>x.fps<30))violations.push(m+' below 30 FPS');
   if(errors.length)violations.push(...errors);
-  await save('paired-result.json',{protocol,revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),browser:browser.version(),node:process.version,cpu:os.cpus().map(c=>({model:c.model,speed:c.speed})),parallelism:os.availableParallelism(),memory:os.totalmem(),start,end:await cgroup(),env,after,physicalSHA256:digest(JSON.stringify(physical)),assets,warmup:warm?.results.map(x=>({motion:x.motion,mode:x.mode,fps:x.fps})),r,violations});
+  await save('paired-result.json',{protocol,revision:process.env.BOW_BENCH_REVISION,sourceProvenance:JSON.parse(await readFile(out+'/source-provenance.json','utf8')),browser:browser.version(),node:process.version,cpu:os.cpus().map(c=>({model:c.model,speed:c.speed})),parallelism:os.availableParallelism(),memory:os.totalmem(),start,end:await cgroup(),env,after,physicalSHA256:digest(JSON.stringify(physical)),assets,warmup:warm?.results.map(x=>({motion:x.motion,mode:x.mode,fps:x.fps})),r,violations});
   console.log(JSON.stringify({protocol,zoom:zoom.map(x=>x.fps),violations}));
  }finally{await ctx.close()}
 }finally{if(browser)await browser.close();server.close()}
