@@ -498,3 +498,17 @@ await scene.playStinger('victory');
 Stingers use the existing one-shot quota/cache, with no random detuning or gain jitter, and a per-ID cooldown measured on the audio clock. Concurrent duplicate requests are rejected. They do not restart the score. They are immediate event reactions after decode (preload through the family player if required); no harmonic transposition, bar scheduling, reserved stinger-only slot or automatic music ducking yet. The original score package now renders three additional authored stingers: victory, defeat and discovery. Artistic audition is required.
 
 At fdc77e1 the actual browser bridge checks passed in Chromium and WebKit: during bridge ~-35.61 dB; after destination loop ~-117.6 dB. Both 4096-source stress sweeps had zero activation failures and a 12 continuous-source cap. P95 3.4/2 ms respectively. The unrelated Validate Pocket Works WebKit landscape job failed to fetch an obsolete ALSA package (HTTP 404); the same APT index refresh and bounded dependency retry used by the Audio Forge workflow has been added to validate.yml without weakening test requirements.
+
+### Context-aware musical reactions and ducking
+
+Optional stinger configuration now includes `states` (allowed horizontal score state IDs), `duckGain` (0–1, default 1, no attenuation), and `duckHold` (minimum hold seconds). The scene exposes `preloadStinger(id)` and `playStinger(id)`. An allowlisted reaction is rejected during pending state transitions or a bridge, and admission is checked again after asynchronous decoding. This is an author-supplied compatibility rule, not automatic harmonic analysis. Reactions without an allowlist preserve the earlier behaviour.
+
+On successful playback only, a separate gain stage attenuates the music bus with a 35 ms attack, hold for the actual decoded playback duration (or configured minimum), and 180 ms release. Overlapping reactions conservatively preserve the strongest attenuation until the longest hold ends. User volume is unaffected; an interrupted/stolen reaction may retain its nominal duck envelope. No new source slot is required. `scene.stats.musicDucking` reports computed envelope gain and end time. Example:
+
+```js
+stingers: {
+  discovery: {url:'audio/discovery.wav', states:['peace'], duckGain:0.35, duckHold:0.4, cooldown:2}
+}
+```
+
+The browser fixture now checks a real spectrum recovery of more than 6 dB, preloading, cooldown and state rejection. Mock regression coverage includes overlap, release, asynchronous admission and invalid input. At 4141d1e the previous native browser checks passed with 8,820 bytes retained effects PCM and 1,632,000 bytes score reservation in each engine. The independent platform quality gate rejected the separated Playwright install commands, so validate.yml now retries the original required `npx playwright install --with-deps chromium webkit` command after refreshing APT; the validator is unchanged.
