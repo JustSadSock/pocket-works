@@ -4,11 +4,13 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT, loadSuites, resolveTasks, safeApp } from './plan.mjs';
+import { selectSplit } from './fresh-split.mjs';
 
 const outputRoot = resolve(ROOT, 'qa-artifacts');
 const isInside = (base, file) => file.startsWith(base + '/') || file === base;
 
 function jobArgs(task, suite, output) {
+  if (selectSplit(ROOT, task, suite)) return [process.execPath, [join(ROOT, 'scripts/universal-qa/fresh-split.mjs'), 'run', String(task.seed), output]];
   const dir = safeApp(ROOT, task.app);
   const absolute = path => resolve(dir, path);
   if (suite.kind === 'node-test') {

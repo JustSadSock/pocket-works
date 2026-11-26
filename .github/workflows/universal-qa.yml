@@ -28,6 +28,9 @@ permissions:
   contents: read
   actions: read
 
+env:
+  PW_QA_SPLIT_BANNERS: ${{ vars.PW_QA_SPLIT_BANNERS || '1' }}
+
 concurrency:
   group: universal-qa-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -60,7 +63,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test planning and reporting infrastructure
-        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs
+        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/universal-qa/fresh-split.test.mjs
       - name: Prepare application QA matrix
         id: plan
         env:

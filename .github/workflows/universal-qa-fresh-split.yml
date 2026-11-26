@@ -1,0 +1,88 @@
+name: Universal QA Fresh Split Integration
+on:
+  pull_request:
+    paths:
+      - 'scripts/universal-qa/fresh-split*'
+      - 'scripts/universal-qa/run.mjs'
+      - '.github/workflows/universal-qa-fresh-split.yml'
+permissions:
+  contents: read
+concurrency:
+  group: fresh-split-integration-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  integration:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: legacy
+            shard: 0
+            cases: 234
+            performance: 1
+          - mode: sharded
+            shard: 1
+            cases: 234
+            performance: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/universal-qa/fresh-split.test.mjs
+      - uses: actions/checkout@v4
+        with:
+          ref: bc46efee8cbfefad4a41651030a318140aa6b56e
+          path: audit-source
+          persist-credentials: false
+      - name: Test actual Universal QA runner in a local immutable candidate checkout
+        env:
+          MODE: ${{ matrix.mode }}
+          SHARD: ${{ matrix.shard }}
+          CASES: ${{ matrix.cases }}
+          PERFORMANCE: ${{ matrix.performance }}
+          PW_QA_SPLIT_BANNERS: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C audit-source rev-parse HEAD)" = bc46efee8cbfefad4a41651030a318140aa6b56e
+          # Local-only overlay of the platform scripts, no app files modified.
+          cp -a scripts/universal-qa/. audit-source/scripts/universal-qa/
+          cp -a scripts/ci-overhaul/. audit-source/scripts/ci-overhaul/
+          git -C audit-source add scripts
+          git -C audit-source -c user.name=QA -c user.email=qa@example.invalid commit -qm 'Local integration overlay'
+          cd audit-source
+          git diff --exit-code bc46efee8cbfefad4a41651030a318140aa6b56e HEAD -- apps
+          export PW_QA_TASK="$(node --input-type=module -e 'import {resolveTasks,ROOT} from "./scripts/universal-qa/plan.mjs";const t=resolveTasks(ROOT,{apps:["banners-of-war"],suite:"completion-lab",profile:"deep"});console.log(JSON.stringify(t.find(x=>x.seed===Number(process.env.SHARD))))')"
+          node --input-type=module -e 'import {selectSplit} from "./scripts/universal-qa/fresh-split.mjs";import {ROOT,loadSuites} from "./scripts/universal-qa/plan.mjs";const s=loadSuites(ROOT,"banners-of-war").find(s=>s.id==="completion-lab"),t=JSON.parse(process.env.PW_QA_TASK);if(!selectSplit(ROOT,t,s,"1")||selectSplit(ROOT,t,s,"0"))throw Error("Admission or rollback failed")'
+          if [ "$MODE" = legacy ]; then
+            node scripts/universal-qa/run.mjs
+          else
+            export PW_QA_SHARD="$(jq -n --argjson task "$PW_QA_TASK" '{id:"cpu-plain-001",pool:"cpu-plain",tasks:[$task]}')"
+            node scripts/ci-overhaul/run-shard.mjs
+          fi
+          key="$(jq -r .key <<< "$PW_QA_TASK")"
+          export EVIDENCE="qa-artifacts/$key"
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          import {verdict} from './scripts/ci-overhaul/canary-evidence.mjs';
+          const t=JSON.parse(process.env.PW_QA_TASK),dir=process.env.EVIDENCE,read=f=>JSON.parse(readFileSync(dir+'/'+f,'utf8'));
+          const result=read('result.json'),s=read('split-contract.json'),summary=read('completion-'+t.seed+'-summary.json');
+          const v=verdict([t],[result],execFileSync('git',['rev-parse','HEAD^{tree}'],{encoding:'utf8'}).trim());
+          if(!v.success||s.mode!=='fresh-split-v1'||s.reused!==false||s.gameplayCases!==Number(process.env.CASES)||s.performanceCases!==Number(process.env.PERFORMANCE)||s.phases.length!==2||s.phases.some(p=>p.completed!==p.expected)||summary.completed!==s.gameplayCases+s.performanceCases)throw Error('Incomplete actual task evidence');
+          console.log(JSON.stringify({mode:process.env.MODE,task:t,verdict:v,split:s,summary},null,2));
+          writeFileSync(dir+'/integration-verdict.json',JSON.stringify(v,null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universal-fresh-split-${{ matrix.mode }}-${{ github.run_attempt }}
+          path: audit-source/qa-artifacts/
+          if-no-files-found: warn
+          retention-days: 7
