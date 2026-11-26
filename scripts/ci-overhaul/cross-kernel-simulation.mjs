@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync,readdirSync,lstatSync,appendFileSync} from 'n
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {canonical,digest} from './verified-results.mjs';
-import {readRun} from './full-simulation-repeatability.mjs';
+import {compareFull} from './full-simulation-repeatability.mjs';
 export const IMAGE='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb';
 export const CASES={"crown":{"sha":"1ad4c63131d2ae3a46598da963d5a6101471687b","app":"crown-and-marches","count":18},"banners":{"sha":"11c8e8411b20e8465cafcc0bad51b1f0a6cff2d1","app":"banners-of-war","count":235}};
 const HEX=/^[0-9a-f]{64}$/;
@@ -24,10 +24,14 @@ function validate(r,kind,replica,context){
   r.measurementCount!==(kind==='crown'?1638:432)||!HEX.test(r.measurementDigest))throw Error('Incomplete original task projection');
 }
 export function sample(kind,replica,env,dir,expected,context){
- const x=readRun(kind,dir,expected),r={schema:1,kind,replica,source:CASES[kind].sha,...context,environment:env,
-  coverage:x.coverage,semanticDigests:x.semantics,rawDigests:x.raw,durationMs:x.durationMs,
-  measurementCount:x.measurements.length,measurementDigest:digest(JSON.stringify(x.measurements)),productionAuthorization:false};
- validate(r,kind,replica,context);return {report:r,measurements:x.measurements};
+ // The existing full audit validates and projects the one completed directory.
+ // Passing the same immutable output twice only repeats report parsing, not simulation.
+ const x=compareFull(kind,dir,dir,expected);
+ if(!x.semanticMatch||!x.rawMatch)throw Error('Inconsistent projection of a single task output');
+ const measurements=x.freshMeasurements[0],r={schema:1,kind,replica,source:CASES[kind].sha,...context,environment:env,
+  coverage:x.coverage,semanticDigests:x.semanticDigests[0],rawDigests:x.rawDigests[0],durationMs:x.durationMs[0],
+  measurementCount:measurements.length,measurementDigest:digest(JSON.stringify(measurements)),productionAuthorization:false};
+ validate(r,kind,replica,context);return {report:r,measurements};
 }
 export function compareKernel(rows,context){
  if(!Number.isSafeInteger(context.run)||context.run<1||!Number.isSafeInteger(context.attempt)||context.attempt<1||! /^[a-f0-9]{40}$/.test(context.auditCommit)||!Array.isArray(rows)||rows.length!==4)throw Error('Incomplete experiment');
