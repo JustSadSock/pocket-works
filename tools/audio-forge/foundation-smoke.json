@@ -1,0 +1,137 @@
+{
+  "version": 2,
+  "jobs": [
+    {
+      "name": "ensemble",
+      "type": "music",
+      "seed": 26,
+      "tempo": 104,
+      "synthGain": 0.45,
+      "output": "generated/ensemble.wav",
+      "tracks": [
+        {
+          "program": 109,
+          "legato": 0.07,
+          "pan": 54,
+          "modulation": 12,
+          "notes": [
+            {
+              "note": "D4",
+              "beat": 0,
+              "duration": 1,
+              "velocity": 76
+            },
+            {
+              "note": "F4",
+              "beat": 1,
+              "duration": 1,
+              "velocity": 76
+            },
+            {
+              "note": "G4",
+              "beat": 2,
+              "duration": 1,
+              "velocity": 76
+            },
+            {
+              "note": "A4",
+              "beat": 3,
+              "duration": 1,
+              "velocity": 76
+            },
+            {
+              "note": "G4",
+              "beat": 4,
+              "duration": 1,
+              "velocity": 76
+            },
+            {
+              "note": "E4",
+              "beat": 5,
+              "duration": 1,
+              "velocity": 76
+            },
+            {
+              "note": "D4",
+              "beat": 6,
+              "duration": 1,
+              "velocity": 76
+            }
+          ]
+        },
+        {
+          "program": 48,
+          "pan": 82,
+          "volume": 80,
+          "notes": [
+            {
+              "note": "D3",
+              "beat": 0,
+              "duration": 4
+            },
+            {
+              "note": "C3",
+              "beat": 4,
+              "duration": 2
+            },
+            {
+              "note": "D3",
+              "beat": 6,
+              "duration": 1
+            }
+          ]
+        }
+      ],
+      "post": {
+        "normalizeDb": -5
+      }
+    }
+  ],
+  "families": [
+    {
+      "id": "sword",
+      "model": "sword",
+      "seed": 100,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    },
+    {
+      "id": "shield",
+      "model": "shield",
+      "seed": 101,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    },
+    {
+      "id": "glass",
+      "model": "glass",
+      "seed": 102,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    },
+    {
+      "id": "explosion",
+      "model": "explosion",
+      "seed": 103,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    },
+    {
+      "id": "rain",
+      "model": "rain",
+      "seed": 104,
+      "variants": 2,
+      "outputDir": "generated",
+      "format": "wav",
+      "source": "original"
+    }
+  ]
+}
