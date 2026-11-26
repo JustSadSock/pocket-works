@@ -74,7 +74,7 @@
             <p id="techHint" class="tech-hint">WebP обычно занимает меньше места, чем JPEG. Если файл уже меньше результата, останется оригинал.</p>
           </div>
           <div id="packSettings" class="hidden"><label for="archiveName" class="setting-label">Название архива</label><input class="control" id="archiveName" type="text" value="Мой архив" maxlength="90" autocomplete="off" spellcheck="false"><p class="tech-hint">Файлы сохраняют свои имена и структуру папок. ZIP сжимается без потери качества.</p></div>
-          <div id="unpackSettings" class="hidden"><p class="tech-hint">Поддерживаются обычные ZIP с методами STORE и DEFLATE. Пароли и ZIP64 не поддерживаются.</p></div>
+          <div id="unpackSettings" class="hidden"><p class="tech-hint">Поддерживаются обычные ZIP с методами STORE и DEFLATE. Пароли и ZIP64 не поддерживаются. После распаковки нажми «Просмотр» у файла, чтобы открыть его без скачивания.</p></div>
           <div class="spacer"></div>
           <div id="sizeReport" class="size-report hidden">
             <div class="report-head"><span>РЕЗУЛЬТАТ</span><strong id="saving">−0%</strong></div>
@@ -94,7 +94,7 @@
       </div>
     </section>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пресс" data-app-version="1.1.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пресс" data-app-version="1.2.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

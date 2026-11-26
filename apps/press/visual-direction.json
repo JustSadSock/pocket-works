@@ -4,7 +4,7 @@
   "product": "press",
   "direction": {
     "premise": "Compact offline file workshop: bytes are physically compressed between two plates; privacy and measurable savings dominate the utility.",
-    "composition": "A dark, narrow operation rail sits to the left of a light editorial workspace. Files stack as narrow ledger rows; a right-hand measuring press compares original/result byte lengths.",
+    "composition": "A dark, narrow operation rail sits to the left of a light editorial workspace. Files stack as narrow ledger rows; a right-hand measuring press compares original/result byte lengths. An inline archive preview expands across the selected ledger row, using the same ivory surface and orange rule rather than a separate modal.",
     "shapeLanguage": "Squarish mechanical stamps, narrow technical rules, angular plates and precise flat edges; no rounded cards.",
     "surfaceAndMaterial": "Warm light limestone workstation with an opaque graphite press rail and flat oxidized orange mechanical lever. No paper texture, glass or dark neon.",
     "paletteLogic": "Ivory #f3f0e8 preserves image neutrality; graphite #242924 is operation equipment; restrained rust-orange #ce632d denotes active force and live progress; green signals verified savings.",
@@ -19,8 +19,8 @@
     "chromeTopology": "other",
     "dominantMotion": "immediate",
     "primaryVerb": "Choose photos, videos, files or a ZIP; process on-device; save actual output.",
-    "physicalFeedback": "File rows appear on selection, real processing percentage and size reports update, verified outputs enable download; errors remain on failed rows.",
-    "spatialRationale": "Desktop keeps four operations in a fixed vertical rail and settings beside the queue; phone folds the rail to four single-tap operation tabs and stacks settings below files.",
+    "physicalFeedback": "File rows appear on selection, real processing percentage and size reports update, verified outputs enable download; errors remain on failed rows. An expanded row contains the browser's actual media controls or inert selectable text; opening another preview stops playback and releases its object URL.",
+    "spatialRationale": "Desktop keeps five operations in a fixed vertical rail and settings beside the queue; phone folds the rail to five single-tap operation tabs and stacks settings below files. A preview spans the selected file row without covering navigation or other files.",
     "comparisons": [
       {
         "slug": "folkarium",
@@ -56,6 +56,16 @@
         "slug": "rivals-field-notes",
         "spatialDifference": "Rivals Field Notes uses two stacked player lineups and dossiers; Press uses file import and output panes with parallel byte measurements.",
         "interactionDifference": "No player profiling or interactive dossiers, only local processing of selected files."
+      },
+      {
+        "slug": "petlya-17",
+        "spatialDifference": "Petlya 17 uses a full-screen 3D cockpit with peripheral telemetry; Press preserves a fixed operation rail, file ledger and settings column, with an inline preview expanding only the selected row.",
+        "interactionDifference": "Continuous steering, throttle and braking in a simulated race contrast with discrete ZIP extraction, opening one file, browser-native playback and saving output."
+      },
+      {
+        "slug": "pereves",
+        "spatialDifference": "Pereves centers a suspended sculpture on a lavender gallery wall and a separate weight table; Press uses an ivory file ledger with a graphite rail and a rectangular preview bounded by the selected row.",
+        "interactionDifference": "Placing weights changes simulated lever torque and spring settling in Pereves; Press opens actual extracted bytes as media or inert text and closes the previous preview immediately."
       }
     ]
   },
@@ -69,7 +79,7 @@
     "anticipation": "Drop border responds immediately to files dragged over.",
     "response": "Live progress and updated results; controls lock only while processing.",
     "followThrough": "Measured savings replaces the neutral settings area and output controls become available.",
-    "interruption": "Cancel uses AbortController and retains results already completed; no unstable auto-resume of video after backgrounding.",
+    "interruption": "Cancel uses AbortController and retains results already completed; no unstable auto-resume of video after backgrounding. Changing files or modes stops the previous media preview and releases its URL.",
     "reducedMotion": "Animation and transition durations forced to zero."
   },
   "evidence": {
