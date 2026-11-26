@@ -16,12 +16,12 @@ export class AtlasCampaignSurface{
  const quantum=8,margin=detail===8?8:5,bounds=[Math.max(0,Math.floor((left-margin)/quantum)*quantum),Math.max(0,Math.floor((top-margin)/quantum)*quantum),Math.min(W,Math.ceil((right+margin)/quantum)*quantum),Math.min(H,Math.ceil((bottom+margin)/quantum)*quantum)],key=revision+'|'+bounds.join(':');
  const usable=a=>a&&a.revision===revision&&a.bounds[0]<=left&&a.bounds[1]<=top&&a.bounds[2]>=right&&a.bounds[3]>=bottom;
  if(!usable(this.active)&&!this.pending&&this.status!=='error'){
- const epoch=this.epoch,cached=this.cache.get(key);this.status='loading';
+ const epoch=this.epoch;let cached=this.cache.get(key),cacheKey=key,region=bounds;if(!cached){for(const [k,item] of this.cache.items){const t=item.value;if(k.startsWith(revision+'|')&&t.bounds[0]<=left&&t.bounds[1]<=top&&t.bounds[2]>=right&&t.bounds[3]>=bottom){cached=this.cache.get(k);cacheKey=k;region=t.bounds;break;}}}this.status='loading';const started=performance.now();
  this.pending=(async()=>{const terrain=cached??await prepareGeographicCandidate(s,view,{bounds,detail,contourDetail,vertical,polish:true});if(epoch!==this.epoch)return;
- if(!cached)this.cache.put(key,terrain,terrain.stats.bytes);this.active?.renderer.dispose();const renderer=new BakedTerrainGL(this.canvas,terrain,{chunked:true,adaptive:true});this.active={key,revision,bounds,renderer};this.status='ready';
+ if(!cached)this.cache.put(key,terrain,terrain.stats.bytes);this.active?.renderer.dispose();const renderer=new BakedTerrainGL(this.canvas,terrain,{chunked:true,adaptive:true});this.active={key:cacheKey,revision,bounds:region,renderer};this.lastPrepMs=performance.now()-started;this.status='ready';
  })().catch(e=>{if(epoch===this.epoch){this.status='error';this.error=String(e.message||e);}}).finally(()=>{if(epoch===this.epoch)this.pending=null;});
  }
- atlas.reviewPending=!!this.pending;atlas.canvas.dataset.atlasSurface=this.status||'loading';atlas.canvas.dataset.atlasCacheBytes=String(this.cache.bytes);atlas.canvas.dataset.atlasCacheHits=String(this.cache.hits);atlas.canvas.dataset.atlasCacheEvictions=String(this.cache.evictions);if(this.status==='error')atlas.canvas.dataset.atlasError=this.error;
+ atlas.reviewPending=!!this.pending;atlas.canvas.dataset.atlasSurface=this.status||'loading';atlas.canvas.dataset.atlasCacheBytes=String(this.cache.bytes);atlas.canvas.dataset.atlasPrepMs=String(this.lastPrepMs??0);atlas.canvas.dataset.atlasCacheHits=String(this.cache.hits);atlas.canvas.dataset.atlasCacheEvictions=String(this.cache.evictions);if(this.status==='error')atlas.canvas.dataset.atlasError=this.error;
  if(!usable(this.active))return false;
  const dpr=quality==='low'?1:Math.min(1.5,devicePixelRatio||1),pw=Math.max(1,Math.round(w*dpr)),ph=Math.max(1,Math.round(h*dpr));
  if(this.canvas.width!==pw||this.canvas.height!==ph){this.canvas.width=pw;this.canvas.height=ph;}

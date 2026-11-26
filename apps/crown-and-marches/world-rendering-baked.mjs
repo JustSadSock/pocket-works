@@ -23,15 +23,15 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  if(river<=1.5){
  const dx=(at(x+1,y)-at(x-1,y))/(2*scale),dy=(at(x,y+1)-at(x,y-1))/(2*scale),norm=Math.hypot(dx,dy,1),nx=-dx/norm,ny=-dy/norm,nz=1/norm,diff=Math.max(0,nx*light[0]+ny*light[1]+nz*light[2]),slope=1-nz;
  let shadow=0;for(const step of [.35,.7,1.2,1.9,2.8,4,5.6,7.4]){const q=sample(x+light[0]/len*step*res,y+light[1]/len*step*res),occ=q-height-step*light[2]/len;shadow=Math.max(shadow,S((occ-.035)/.36));}
- const broad=noise(wx*.38+11,wy*.38),med=noise(wx*1.7+9,wy*1.7-7),fine=noise(wx*7.6,wy*7.6);
+ const atlasBake=source.polish&&geology==='waters'&&source.water;let base,variation=0;if(!atlasBake){const broad=noise(wx*.38+11,wy*.38),med=noise(wx*1.7+9,wy*1.7-7),fine=noise(wx*7.6,wy*7.6);
  const grass=mix([177,162,105],[99,138,83],C(wet*.53+fert*.28+broad*.19)),wood=mix([58,91,57],[89,112,64],med);
- let base=mix(grass,wood,S((forest-.15)/.8)*.82),rock=S((H-.38)/.16)*(.37+.63*S((slope-.08)/.55));
+ base=mix(grass,wood,S((forest-.15)/.8)*.82),rock=S((H-.38)/.16)*(.37+.63*S((slope-.08)/.55));
  // Strata follow elevation and the actual slope normal rather than a
  // repeating cell-coordinate texture. Rock and scree have distinct tones.
  const strike=(-ny*wx+nx*wy),grain=noise(strike*2.2+height*.37,height*5.6),scree=noise(wx*4.7+height*1.9,wy*4.7-height*.8);
  const stone=mix([128,125,111],[206,194,166],S((grain-.18)/.72)),talus=mix(stone,[166,152,118],S((nz-.22)/.65)*.22);
  base=mix(base,talus,Math.max(rock,S((H-.49)/.13)*.55));base=mix(base,[225,221,203],S((H-.60)/.12)*S((nz-.35)/.55)*.65);
- const variation=geology?0:(broad-.5)*11+(med-.5)*8+(fine-.5)*5+(scree-.5)*rock*10;
+ variation=geology?0:(broad-.5)*11+(med-.5)*8+(fine-.5)*5+(scree-.5)*rock*10;}
  if(geology==='waters'&&source.water){const curvature=at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1)-4*height;base=(source.polish?atlasMaterial:watersMaterial)({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature,river},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]});}else if(geology==='living'){const curvature=at(x+1,y)+at(x-1,y)+at(x,y+1)+at(x,y-1)-4*height;base=livingMaterial({x:wx,y:wy,H,wet,fert,forest,slope,nx,ny,curvature,river});}else if(geology==='synthesis'){const steep=S((slope-.12)/.53),alpine=S((H-.43)/.22),curvature=(at(x+2,y)+at(x-2,y)+at(x,y+2)+at(x,y-2)-4*height),exposure=C((-nx-ny)*.35+.5),soil=mix([133,119,81],[93,125,76],wet),turf=mix(soil,[157,151,94],fert*.63),cliff=mix([115,113,104],[195,187,169],exposure),talus=mix([136,123,101],[179,168,143],S((curvature+.04)/.16));base=mix(turf,[57,83,50],forest*(1-alpine)*.84);base=mix(base,talus,alpine*S((slope-.03)/.44)*.78);base=mix(base,cliff,steep*(.55+.45*alpine));base=mix(base,[225,222,210],S((H-.66)/.14)*(1-steep*.72));}else if(geology){const steep=S((slope-.12)/.47),alpine=S((H-.40)/.23),exposure=C((nx+ny)*.35+.5),soil=mix([137,121,84],[83,117,71],wet),grass=mix(soil,[148,154,91],fert*.7),scree=mix([133,126,108],[190,179,151],exposure),cliff=mix([116,114,106],[205,198,179],exposure);base=mix(grass,[55,84,52],forest*(1-alpine)*.85);base=mix(base,scree,alpine*.72);base=mix(base,cliff,steep*(.35+.65*alpine));base=mix(base,[226,227,216],S((H-.68)/.12)*(1-steep*.65));}
  const direct=diff*(1-shadow*.88),ambient=.61-.12*S((H-.35)/.24);if(auditFields){normals.set([nx,ny,nz],k*3);lighting.set([direct,ambient],k*2);materials.set(base,k*3);}
  col=base.map((v,i)=>v*(ambient+.58*direct)+variation+[2,5,10][i]*(1-direct));
