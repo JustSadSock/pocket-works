@@ -12,7 +12,34 @@ concurrency:
   group: banners-battlefield-playable-gate-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  scope:
+    runs-on: ubuntu-24.04
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+      - name: Determine whether full production is warranted
+        id: scope
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Fail open if the exact synchronize range is unavailable.
+            let full=true;
+            if(context.eventName==='pull_request' && context.payload.action==='synchronize' && context.payload.before && context.payload.after){
+              try{
+                const r=await github.rest.repos.compareCommits({owner:context.repo.owner,repo:context.repo.repo,base:context.payload.before,head:context.payload.after});
+                const files=r.data.files||[];
+                if(files.length>0 && files.length<300){
+                  const workshop=files.some(f=>f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/')||f.filename==='.github/workflows/banners-focused-art-workshop.yml');
+                  const production=files.some(f=>(f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/')&&!f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/'))||(f.filename.startsWith('apps/banners-of-war/')&&!f.filename.includes('/research/')));
+                  if(workshop&&!production)full=false;
+                }
+              }catch(e){core.warning('Exact change scope unavailable: '+e.message)}
+            }
+            core.setOutput('full',String(full));
+            core.notice(full?'Full production required':'Workshop-only update: full production intentionally deferred; dispatch this workflow for final acceptance');
   reference:
+    needs: scope
+    if: needs.scope.outputs.full == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 100
@@ -122,6 +149,8 @@ jobs:
           retention-days: 14
 
   geography-study:
+    needs: scope
+    if: needs.scope.outputs.full == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 25
@@ -166,6 +195,8 @@ jobs:
           retention-days: 14
 
   living-motion:
+    needs: scope
+    if: needs.scope.outputs.full == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 120
