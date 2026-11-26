@@ -325,3 +325,29 @@ Imports use the rights and SHA-256 checks above, content-addressed objects and a
 The independent field-recording-audition CI job imports three specifically reviewed public-domain Wikimedia Commons recordings. Source records are pinned to the reviewed revision, exact download URL, byte count and published SHA-1; SHA-256 is computed after retrieval and checked on vault resolution. Sources: Fg2's Nikko festival explosion recordings (revisions 1237586287 and 1151334253) and Caesar's rain/thunder recording (revision 1129569613). The importer fails closed on unavailable or changed bytes. No credentials or external AI. The field recording archive includes originals, catalog, manifest and seven dry/hybrid render WAVs. A successful import does not imply artistic acceptance.
 
 The opt-in `compensateRms: true` field reduces the level dip when mixing independent sources, with a maximum 2x gain and peak ceiling; default mixing remains unchanged. New opt-in physical models `sword-v2`, `glass-v2`, `gear`, `chain` target metallic brightness, brittle fragments and distinct mechanisms. The previous models remain as controls. Foundation CI now renders 23 files. Real recording comparisons and new effects require human listening.
+
+### Spatial audio runtime (opt-in)
+
+`shared/capabilities/spatial-audio.js` exposes `spatialProfile` and `createSpatialMixer`. Use one existing AudioContext and route separate family players to named mixer buses:
+
+```js
+const mixer = createSpatialMixer({context, volume: 0.7});
+const player = createSoundFamilyPlayer({
+  context, destination: mixer.bus('combat'), families
+});
+await player.play('blade', {
+  gain: 0.8, priority: 2,
+  spatial: {
+    source: {x: 24, y: 15},
+    listener: {x: 10, y: 10},
+    heading: 0, referenceDistance: 5, maxDistance: 120,
+    occlusion: 0.5, zone: 'forest'
+  }
+});
+mixer.setBusVolume('combat', 0.6);
+// On teardown: player.destroy(); mixer.destroy();
+```
+
+Coordinates use consistent game-world units; heading is radians, zero points along +x and +y is right at that heading. Inverse-square-style attenuation, a soft range cutoff, zone-specific absorption and caller-supplied occlusion (0–1) determine level and lowpass. Zones open/forest/stone/interior specify one short early reflection, not full reverberation or ray tracing. Reflected tails occupy voice budget until cleanup; stopping a player also clears them. The mixer provides up to 16 independently adjustable buses and a compressor when supported, not a guaranteed brickwall limiter. Spatial state is sampled at play time; moving emitters, geometry-derived occlusion, Doppler, continuous loops and browser audio fidelity are future work. Existing non-spatial callers are unchanged. Unit tests mock the audio graph; real browser audio tests remain necessary.
+
+Hybrid jobs and families may specify `sampleStart` in seconds (0–3600) to cue a source without changing the archived original. SoX decodes with input headroom before RMS matching. In the verified Nikko recording, the main impact begins near 0.60 s; the new 0.59 s cue reduces the roughly 0.61 s peak delay to about 0.02 s. The field recording job preserves the seven previous comparisons and adds three aligned variants (25/75/100%); ten generated WAVs in total. Short recordings are zero-padded by the mixer. Do not interpret an original field recording as automatically suitable for an event without checking its timing and content.
