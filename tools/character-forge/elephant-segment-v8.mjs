@@ -73,7 +73,7 @@ function segmented(source,{passes=4,selfWeight=.45,neighborWeight=.55,geoScale=.
    for(let i=0;i<n;i++){push(q,vs[i],[...sm[i]]);const names=weights(q,i).map(([j])=>m.joints[j].name),l=labels[i];if(l.leg>.8&&l.tr<.35&&names.some(n=>n.startsWith('tail-')))forbidden.tailFoot++;if(l.ear>.75&&names.some(n=>/^fore/.test(n)))forbidden.earFore++;if(l.tr>.8&&names.some(n=>/^fore|^hind|^chest$/.test(n)))forbidden.trunkShoulder++;if(!rigid&&names.some(n=>/^(fore|hind)[LR]/.test(n)&&n[4]!== (vs[i][0]<0?'L':'R')))forbidden.crossLimb++}
    q.indices=p.indices.slice();m.parts[pi]=normals(q);regions.push({name:p.name,counts:Object.fromEntries([...new Set(dominant)].map(k=>[k,dominant.filter(x=>x===k).length]))});vertexRegions.push(dominant);
  }
- m.spec.sourceAdapter='v8 semantic region + mesh geodesic segmentation; experimental';return {m,regions,vertexRegions,forbidden};
+ m.spec.sourceAdapter='v9 semantic region + mesh geodesic segmentation; experimental';return {m,regions,vertexRegions,forbidden};
 }
 function compare(m,vertexRegions){
  return phases.map(phase=>{const w=pose(m,'walk',phase),ratios=[],heat=[],regional={};
