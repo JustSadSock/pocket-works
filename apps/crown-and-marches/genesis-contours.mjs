@@ -8,16 +8,17 @@ function cubic(a,b,c,d,t){const u=(c-a)*.5,v=(d-b)*.5;return C((2*t*t*t-3*t*t+1)
 // Scalar fields use physical bed, not a second interpolation of binary water.
 // An inland component must have a represented seed; the only allowed visual
 // extension is within half a coarse cell of an existing represented fine node.
-export function contourField(m){
+export function contourField(m,{polish=false}={}){
  const g=m.geography,r=g.detail,w=g.width,h=g.height,W=(w-1)/r,H=(h-1)/r,basins=g.lakeId?{labels:g.lakeId,levels:g.lakeLevels}:lakeBasins(g);
  const at=(x,y)=>C(y,0,h-1)*w+C(x,0,w-1);
  const scalar=(X,Y,get)=>{const x=Math.floor(X),y=Math.floor(Y),u=X-x,v=Y-y;return L(L(get(at(x,y)),get(at(x+1,y)),u),L(get(at(x,y+1)),get(at(x+1,y+1)),u),v);};
  const bed=(X,Y)=>{const x=Math.floor(X),y=Math.floor(Y),u=X-x,v=Y-y,rr=k=>cubic(g.bed[at(x-1,k)],g.bed[at(x,k)],g.bed[at(x+1,k)],g.bed[at(x+2,k)],u);return cubic(rr(y-1),rr(y),rr(y+1),rr(y+2),v);};
+ const smoothScalar=(X,Y,get)=>{const base=scalar(X,Y,get);if(!polish)return base;const x=Math.floor(X),y=Math.floor(Y),u=X-x,v=Y-y,a=get(at(x,y)),b=get(at(x+1,y)),c=get(at(x+1,y+1)),d=get(at(x,y+1));if((a>0)===(c>0)&&(b>0)===(d>0)&&(a>0)!==(b>0))return base;const row=k=>cubic(get(at(x-1,k)),get(at(x,k)),get(at(x+1,k)),get(at(x+2,k)),u);return C(cubic(row(y-1),row(y),row(y+1),row(y+2),v),Math.min(a,b,c,d),Math.max(a,b,c,d));};
  function sample(X,Y){
- const fx=X*r,fy=Y*r,x=Math.floor(fx),y=Math.floor(fy),z=bed(fx,fy),coast=scalar(fx,fy,i=>g.land[i]?Math.max(.0001,g.bed[i]-.12):Math.min(-.0001,g.bed[i]-.12));
+ const fx=X*r,fy=Y*r,x=Math.floor(fx),y=Math.floor(fy),z=bed(fx,fy),coast=smoothScalar(fx,fy,i=>g.land[i]?Math.max(.0001,g.bed[i]-.12):Math.min(-.0001,g.bed[i]-.12));
  let id=0,best=Infinity;for(let dy=0;dy<=1;dy++)for(let dx=0;dx<=1;dx++){const j=at(x+dx,y+dy),label=basins.labels[j],d=(fx-x-dx)**2+(fy-y-dy)**2;if(label&&d<best){id=label;best=d;}}
  let distance=Infinity,level=id?basins.levels[id]:0,physical=-1,limit=-1;
- if(g.lakeId){if(id){physical=level-z;const support=scalar(fx,fy,i=>{const d=level-g.bed[i];return g.lakeId[i]===id?Math.max(.000001,d):Math.min(-.000001,d);});const lake=Math.min(physical,support,coast);return {bed:z,coast,lake,level,id,physical,limit:Infinity,distance:0,coarseLand:!!m.land[C(Math.floor(Y),0,H-1)*W+C(Math.floor(X),0,W-1)]};}return {bed:z,coast,lake:-1,level:0,id:0,physical:-1,limit:Infinity,distance:Infinity,coarseLand:!!m.land[C(Math.floor(Y),0,H-1)*W+C(Math.floor(X),0,W-1)]};}
+ if(g.lakeId){if(id){physical=level-z;const support=smoothScalar(fx,fy,i=>{const d=level-g.bed[i];return g.lakeId[i]===id?Math.max(.000001,d):Math.min(-.000001,d);});const lake=Math.min(physical,support,coast);return {bed:z,coast,lake,level,id,physical,limit:Infinity,distance:0,coarseLand:!!m.land[C(Math.floor(Y),0,H-1)*W+C(Math.floor(X),0,W-1)]};}return {bed:z,coast,lake:-1,level:0,id:0,physical:-1,limit:Infinity,distance:Infinity,coarseLand:!!m.land[C(Math.floor(Y),0,H-1)*W+C(Math.floor(X),0,W-1)]};}
  if(id){const range=Math.ceil(r*.5)+1;for(let dy=-range;dy<=range;dy++)for(let dx=-range;dx<=range;dx++){const j=at(x+dx,y+dy);if(g.lakeWater[j]&&basins.labels[j]===id)distance=Math.min(distance,Math.hypot(fx-x-dx,fy-y-dy)/r);}
  physical=level-z;limit=(.5-distance)*.08;
  }
@@ -34,7 +35,7 @@ export function clipWet(tri){
 }
 export function contourColor(kind,depth,grade=0){const q=smooth(depth/(kind===1?.035:.052)),rock=smooth(grade/.12),shallow=kind===1?[85-rock*22,108-rock*16,110-rock*11]:[99-rock*23,119-rock*19,110-rock*10],deep=kind===1?[38,65,83]:[44,72,80];return deep.map((v,i)=>L(shallow[i],v,q));}
 export async function buildContours(m,bounds,{detail=8,vertical,yieldRow=async()=>{},diagnostic=false,allow=null,polish=false}={}){
- const f=contourField(m),[x0,y0,x1,y1]=bounds,w=(x1-x0)*detail+1,h=(y1-y0)*detail+1,n=w*h,sea=new Float32Array(n),lake=new Float32Array(n),bed=new Float32Array(n),ids=new Int32Array(n),levels=new Float32Array(n),coarse=new Uint8Array(n),permitted=allow?new Uint8Array(n):null,stats={sea:0,lake:0,shoreSegments:0,axisSegments:0,coarseMismatch:0,lakeOutside:0,coarseLakeDry:0,coarseBoundaryEdges:0,fineBoundaryEdges:0,lakeMaskBoundaryEdges:0,physicalLimited:0,extensionLimited:0,diagonalSaddles:0},begin=clock();let last=begin,maxSlice=0;
+ const f=contourField(m,{polish}),[x0,y0,x1,y1]=bounds,w=(x1-x0)*detail+1,h=(y1-y0)*detail+1,n=w*h,sea=new Float32Array(n),lake=new Float32Array(n),bed=new Float32Array(n),ids=new Int32Array(n),levels=new Float32Array(n),coarse=new Uint8Array(n),permitted=allow?new Uint8Array(n):null,stats={sea:0,lake:0,shoreSegments:0,axisSegments:0,coarseMismatch:0,lakeOutside:0,coarseLakeDry:0,coarseBoundaryEdges:0,fineBoundaryEdges:0,lakeMaskBoundaryEdges:0,physicalLimited:0,extensionLimited:0,diagonalSaddles:0},begin=clock();let last=begin,maxSlice=0;
  const g=m.geography,scan=(a,w,h)=>{let edges=0;for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(x+1<w&&a[i]!==a[i+1])edges++;if(y+1<h&&a[i]!==a[i+w])edges++;}return edges;};if(!allow){stats.coarseBoundaryEdges=scan(m.land,f.W,f.H);stats.fineBoundaryEdges=scan(g.land,g.width,g.height);stats.lakeMaskBoundaryEdges=scan(g.lakeWater,g.width,g.height);}
  const pause=async()=>{const t=clock();if(t-last>6){maxSlice=Math.max(maxSlice,t-last);await yieldRow();last=clock();}};
  for(let y=0;y<h;y++){for(let x=0;x<w;x++){const i=y*w+x,X=x0+x/detail,Y=y0+y/detail;if(allow&&!allow(X,Y)){sea[i]=lake[i]=-1;continue;}if(permitted)permitted[i]=1;const p=f.sample(X,Y);sea[i]=-p.coast;lake[i]=p.lake;bed[i]=p.bed;ids[i]=p.id;levels[i]=p.level;coarse[i]=+p.coarseLand;stats.coarseMismatch+=+(p.coarseLand===(p.coast<0||p.lake>0));stats.lakeOutside+=+(p.coarseLand&&p.lake>0);stats.coarseLakeDry+=+(!p.coarseLand&&p.coast>=0&&p.lake<=0);if(p.id&&p.physical>0){stats.physicalLimited+=+(p.physical<=p.limit);stats.extensionLimited+=+(p.limit<p.physical);}}await pause();}
@@ -71,13 +72,13 @@ export class SpatialLRU {
 export async function contourSource(s,cam,{bounds,detail=8,contourDetail=8,vertical,yieldRow=async()=>{},diagnostic=false,polish=false}={}){
  if(s.mapVersion!==3||!s.autonomous||(s.discovery&&!s.discovery.fullMap&&!s.autonomous))throw Error('Explicit revealed v3 required for contour source');
  const m=s.map,g=m.geography,cache=bakedCache.get(g)??new SpatialLRU();bakedCache.set(g,cache);const key=[...bounds,detail,contourDetail,diagnostic,polish].join(':');const hit=cache.get(key);if(hit)return {...hit,stats:{...hit.stats,cacheHit:true,cacheBytes:cache.bytes,cacheHits:cache.hits,cacheMisses:cache.misses,cacheEvictions:cache.evictions}};
- const source=await naturalWatersSource(s,cam,{bounds,detail,vertical,yieldRow}),field=contourField(m),[x0,y0]=bounds,begin=clock();
+ const source=await naturalWatersSource(s,cam,{bounds,detail,vertical,yieldRow}),field=contourField(m,{polish}),[x0,y0]=bounds,begin=clock();
  // Keep a physical terrain bed underneath the independent clipped water.
  // Lake surface and ocean plane are not baked into terrain or materials.
  for(let y=0;y<source.rows;y++){for(let x=0;x<source.cols;x++){const i=y*source.cols+x,o=i*9,X=x0+x/detail,Y=y0+y/detail,p=field.sample(X,Y),wet=p.coast<0||p.lake>0,z=p.coast<0?-(Math.max(0,.12-p.bed)*3.1+.025):vertical(p.bed);
  source.vertices[o+2]=z;source.vertices[o+3]=p.bed;source.vertices[o+7]=1;source.elevations[i]=z;source.water.kind[i]=0;source.water.depth[i]=0;source.water.shore[i]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));if(wet)source.vertices[o+8]=1;else source.vertices[o+8]=Math.max(.016,source.vertices[o+8]);
  }if(y%8===0)await yieldRow();}
- source.contours=await buildContours(m,bounds,{detail:contourDetail,vertical,yieldRow,diagnostic,polish});const rivers=polish?reachRibbons(g,bounds,{vertical,threshold:contourDetail<=4?58:25,overview:contourDetail<=4}):riverRibbons(g,bounds,{vertical,threshold:contourDetail<=4?58:25});source.contours.chunks.push(...rivers.chunks);source.contours.stats.rivers=rivers.stats;source.contours.stats.bytes+=rivers.stats.bytes;source.diagnostic=diagnostic;source.polish=polish;
+ source.contours=await buildContours(m,bounds,{detail:contourDetail,vertical,yieldRow,diagnostic,polish});const rivers=polish?reachRibbons(g,bounds,{vertical,threshold:25,overview:contourDetail<=4}):riverRibbons(g,bounds,{vertical,threshold:contourDetail<=4?58:25});source.contours.chunks.push(...rivers.chunks);source.contours.stats.rivers=rivers.stats;source.contours.stats.bytes+=rivers.stats.bytes;source.diagnostic=diagnostic;source.polish=polish;
  source.stats={...source.stats,ms:source.stats.ms+clock()-begin,contours:source.contours.stats,bytes:source.stats.bytes+source.contours.stats.bytes,cacheHit:false};cache.put(key,source,source.stats.bytes);source.stats.cacheBytes=cache.bytes;source.stats.cacheHits=cache.hits;source.stats.cacheMisses=cache.misses;source.stats.cacheEvictions=cache.evictions;return source;
 }
 export function configureContourCache(g,limit){clearContourCache(g);bakedCache.set(g,new SpatialLRU(limit));}
@@ -119,7 +120,7 @@ export function connectedLakePairs(g){
 // interpolation stencil and each ribbon endpoint. Fog boundary uses the
 // previous known-cell source. No full-world contour cache or global audit.
 export async function chartedContourSource(s,source,known,{contourDetail=8,vertical,yieldRow=async()=>{},polish=false}={}){
- const m=s.map,g=m.geography,r=g.detail,W=(g.width-1)/r,H=(g.height-1)/r,[x0,y0]=source.bounds,n=source.cols*source.rows,field=contourField(m);
+ const m=s.map,g=m.geography,r=g.detail,W=(g.width-1)/r,H=(g.height-1)/r,[x0,y0]=source.bounds,n=source.cols*source.rows,field=contourField(m,{polish});
  const allow=(X,Y)=>{for(let y=Math.max(0,Math.floor(Y-1));y<=Math.min(H-1,Math.floor(Y+1));y++)for(let x=Math.max(0,Math.floor(X-1));x<=Math.min(W-1,Math.floor(X+1));x++)if(!known[y*W+x])return false;return true;};
  const water={kind:new Uint8Array(n),depth:new Float32Array(n),shore:new Float32Array(n)};let refined=0;
  for(let y=0;y<source.rows;y++){for(let x=0;x<source.cols;x++){const i=y*source.cols+x,o=i*9,X=x0+x/source.detail,Y=y0+y/source.detail;
@@ -128,6 +129,6 @@ export async function chartedContourSource(s,source,known,{contourDetail=8,verti
  source.vertices[o+2]=source.elevations[i]=z;source.vertices[o+3]=p.bed;source.vertices[o+7]=1;source.vertices[o+8]=wet?1:Math.max(.016,source.vertices[o+8]);water.shore[i]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));refined++;
  }if(y%8===0)await yieldRow();}
  source.water=water;source.contours=await buildContours(m,source.bounds,{detail:contourDetail,vertical,yieldRow,allow,polish});
- const ribbons=polish?reachRibbons(g,source.bounds,{vertical,threshold:contourDetail<=4?58:25,allow,overview:contourDetail<=4}):riverRibbons(g,source.bounds,{vertical,threshold:contourDetail<=4?58:25,allow});source.polish=polish;source.contours.chunks.push(...ribbons.chunks);source.contours.stats.bytes+=ribbons.stats.bytes;source.contours.stats.rivers=ribbons.stats;
+ const ribbons=polish?reachRibbons(g,source.bounds,{vertical,threshold:25,allow,overview:contourDetail<=4}):riverRibbons(g,source.bounds,{vertical,threshold:contourDetail<=4?58:25,allow});source.polish=polish;source.contours.chunks.push(...ribbons.chunks);source.contours.stats.bytes+=ribbons.stats.bytes;source.contours.stats.rivers=ribbons.stats;
  source.stats={...source.stats,chartedFine:true,refined,coarseFallbackSamples:n-refined,contours:source.contours.stats,bytes:source.stats.bytes+water.kind.byteLength+water.depth.byteLength+water.shore.byteLength+source.contours.stats.bytes};return source;
 }

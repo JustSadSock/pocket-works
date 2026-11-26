@@ -5,8 +5,8 @@ import {vertical} from './world-rendering-gl.mjs';
 import {SpatialLRU,clearContourCache} from './genesis-contours.mjs';
 const C=(x,a,b)=>Math.max(a,Math.min(b,x));
 export class AtlasCampaignSurface{
- constructor(){this.cache=new SpatialLRU(48*1024*1024);this.canvas=document.createElement('canvas');this.pending=null;this.active=null;this.state=null;this.status='';this.epoch=0;}
- reset(s=null){this.epoch++;this.active?.renderer.dispose();this.active=null;this.pending=null;this.cache.clear();if(this.state?.map?.geography)clearContourCache(this.state.map.geography);this.state=s;this.status='';}
+ constructor(){this.cache=new SpatialLRU(48*1024*1024);this.canvas=document.createElement('canvas');this.pending=null;this.active=null;this.state=null;this.status='';this.epoch=0;this.notified=false;}
+ reset(s=null){this.epoch++;this.active?.renderer.dispose();this.active=null;this.pending=null;this.cache.clear();if(this.state?.map?.geography)clearContourCache(this.state.map.geography);this.state=s;this.status='';this.notified=false;}
  paint(atlas,s,cam,c,w,h,quality){
  if(this.state!==s)this.reset(s);
  const W=s.map.geography?(s.map.geography.width-1)/s.map.geography.detail:cam.w,H=cam.h,detail=cam.s<13?4:8,contourDetail=cam.s<13?4:8,chart=s.discovery?.chartRevision?.[s.playerFaction??0]??0,revision=[s.playerFaction??0,chart,+!!s.autonomous,+!!s.discovery?.fullMap,detail,contourDetail].join(':');
@@ -21,7 +21,7 @@ export class AtlasCampaignSurface{
  if(!cached)this.cache.put(key,terrain,terrain.stats.bytes);this.active?.renderer.dispose();const renderer=new BakedTerrainGL(this.canvas,terrain,{chunked:true,adaptive:true});this.active={key,revision,bounds,renderer};this.status='ready';
  })().catch(e=>{if(epoch===this.epoch){this.status='error';this.error=String(e.message||e);}}).finally(()=>{if(epoch===this.epoch)this.pending=null;});
  }
- atlas.reviewPending=!!this.pending;atlas.canvas.dataset.atlasSurface=this.status||'loading';if(this.status==='error')atlas.canvas.dataset.atlasError=this.error;
+ atlas.reviewPending=!!this.pending;atlas.canvas.dataset.atlasSurface=this.status||'loading';atlas.canvas.dataset.atlasCacheBytes=String(this.cache.bytes);atlas.canvas.dataset.atlasCacheHits=String(this.cache.hits);atlas.canvas.dataset.atlasCacheEvictions=String(this.cache.evictions);if(this.status==='error')atlas.canvas.dataset.atlasError=this.error;
  if(!usable(this.active))return false;
  const dpr=quality==='low'?1:Math.min(1.5,devicePixelRatio||1),pw=Math.max(1,Math.round(w*dpr)),ph=Math.max(1,Math.round(h*dpr));
  if(this.canvas.width!==pw||this.canvas.height!==ph){this.canvas.width=pw;this.canvas.height=ph;}
