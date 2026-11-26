@@ -180,6 +180,13 @@ for sign0 in (-1,1):
     end=handleCenter+la*sign0*.054
     mount=end+normal*.11
     o=rod("Shield grip bracket",end,mount,.012,leather,None);attach(o,LF);shieldParts.append(o)
+# Both ends of the enarme are visibly fastened to the wooden board.
+# Attach rivets at the true back-facing board surface.
+for sgn in (-1,1):
+    end=forearmCenter+arm.cross(-normal).normalized()*.095*sgn
+    back=end+normal*((center-end).dot(normal)+.022)
+    anchor=rod("Enarme riveted tab",end,back,.015,leather,None,8);attach(anchor,LF);shieldParts.append(anchor)
+    pin=rod("Enarme rivet",back-normal*.006,back+normal*.01,.009,steel,None,8);attach(pin,LF);shieldParts.append(pin)
 shieldParts.extend([strap,handle])
 # Reproduce grip orientation relative to the forearm. Hand centre and
 # longitudinal grip axis are calibrated from its actual digit roots.
@@ -194,26 +201,28 @@ def hold_sword(direction):
     c=world_pos(R,gripLocal);a=(world_of(R).to_3x3()@axisLocal).normalized();curl_hand(R,c,a,radius)
 # Evaluated triangle BVHs. Allow hand/grip and arm/strap contacts only,
 # never blade/body, shield board/body, or weapon/shield intersections.
-def geometry(o):
+def geometry(o,with_labels=False):
     ev=o.evaluated_get(bpy.context.evaluated_depsgraph_get());me=ev.to_mesh()
     try:
-        me.calc_loop_triangles();return [ev.matrix_world@v.co for v in me.vertices],[tuple(t.vertices) for t in me.loop_triangles]
+        me.calc_loop_triangles();v=[ev.matrix_world@v.co for v in me.vertices];t=[tuple(t.vertices) for t in me.loop_triangles]
+        if not with_labels:return v,t
+        names={g.index:g.name for g in o.vertex_groups};labels=[]
+        for tri in t:
+            weights={}
+            for i in tri:
+                for group in me.vertices[i].groups:
+                    name=names.get(group.group,"")
+                    if name.startswith("Workshop cut "):continue
+                    weights[name]=weights.get(name,0)+group.weight
+            labels.append(max(weights,key=weights.get) if weights else "")
+        return v,t,labels
     finally:ev.to_mesh_clear()
 def bvh(o):
     v,t=geometry(o);return BVHTree.FromPolygons(v,t,all_triangles=True),v,t
 def inspect_contacts():
     bodies=[]
     for o in core:
-        tree,vs,ts=bvh(o);names={g.index:g.name for g in o.vertex_groups}
-        groups=[]
-        for tri in ts:
-            weights={}
-            for i in tri:
-                if i>=len(o.data.vertices):continue
-                for g in o.data.vertices[i].groups:
-                    n=names.get(g.group,"");weights[n]=weights.get(n,0)+g.weight
-            groups.append(max(weights,key=weights.get) if weights else "")
-        bodies.append((tree,groups))
+        vs,ts,labels=geometry(o,True);bodies.append((BVHTree.FromPolygons(vs,ts,all_triangles=True),labels))
     for name,q in posed_hands.items():
         for o in q["objects"]:
             tree,_,tris=bvh(o);bodies.append((tree,[name]*len(tris)))
@@ -276,6 +285,21 @@ def attack(phase):
         errors.append(limb(upper,lower,end,ankles0[j]+Vector((0,-.17 if j==0 else .16,0)),(0,-1,0)));foot_orientation(j,0)
     errors.extend([hand_target(0,rh),hand_target(1,lh)]);hold_sword(d);lock_left()
     return errors,[]
+def feet_audit():
+    # Derive actual ground contact from the skinned foot regions, not just
+    # the ankle targets. This includes boots/toe geometry.
+    result=[]
+    for upper,lower,end in feet:
+        regions={b.name for b in desc(end)};points=[]
+        for o in core:
+            ev=o.evaluated_get(bpy.context.evaluated_depsgraph_get());me=ev.to_mesh();names={g.index:g.name for g in o.vertex_groups}
+            try:
+                for v in me.vertices:
+                    if sum(g.weight for g in v.groups if names.get(g.group) in regions)>.55:points.append(ev.matrix_world@v.co)
+            finally:ev.to_mesh_clear()
+        a=point(upper)-point(lower);b=point(end)-point(lower)
+        result.append({"kneeDegrees":math.degrees(a.angle(b)),"lowestSurfaceZ":min((v.z for v in points),default=None),"toeYRange":[min(v.y for v in points),max(v.y for v in points)] if points else None,"footVertices":len(points)})
+    return {"feet":result,"hipsZ":point(hips).z,"headZ":point(bone("Head")).z}
 def render(name,view,target=None,scale=3.4):
     t=Vector(target if target is not None else (0,0,1.02))
     offset={"front":(0,-5,1.1),"side":(5,0,1.1),"game":(0,-5,5*math.sqrt(3)),"grip":(1,-1,.35),"back":(1,1,.3)}[view]
@@ -292,7 +316,7 @@ for motion in motions:
     for i in range(count):
         reset_upright();phase=i/count;errors,stance=retarget_gait(phase) if motion=="retarget-march" else attack(phase) if motion=="strike" else gait(motion,phase)
         pts=mesh_points();sc.frame_set(1);bpy.context.view_layer.update();before=mesh_points()
-        row={"phase":phase,"joints":snap(),"stance":stance,"maxIKResidual":max(errors),"meshAfterFrameSet":mesh_delta(pts,before),"contacts":inspect_contacts(),"bladeTip":vec(world_pos(R,tipLocal))}
+        row={"phase":phase,"joints":snap(),"stance":stance,"maxIKResidual":max(errors),"footContact":feet_audit(),"meshAfterFrameSet":mesh_delta(pts,before),"contacts":inspect_contacts(),"bladeTip":vec(world_pos(R,tipLocal))}
         samples[motion].append(row);save()
         render(motion+"-%02d"%i,"side" if motion in ("march","retarget-march") else "game")
         row["meshAfterRender"]=mesh_delta(before,mesh_points());save()
@@ -302,6 +326,14 @@ for motion in motions:
             render("sword-grip","grip",world_pos(R,gripLocal),.38)
             render("shield-enarmes","back",world_pos(LF,handleLocal),.88)
         if row["meshAfterRender"]["max"]>.005 or row["meshAfterFrameSet"]["max"]>.005:raise ValueError("Pose lost")
+# Audit foot slip in the world frame during consecutive stance samples.
+for motion,rows in samples.items():
+    slip=[]
+    for left,right in zip(rows,rows[1:]):
+        for a,b in zip(left["stance"],right["stance"]):
+            if a.get("support") and b.get("support") and "rootTravelY" in a and "rootTravelY" in b:
+                slip.append(abs((b["actual"][1]+b["rootTravelY"])-(a["actual"][1]+a["rootTravelY"])))
+    audit.setdefault("footSlipMetres",{})[motion]=max(slip,default=None)
 audit["unexpectedContacts"]=sum(c.get("unexpected",0) for rs in samples.values() for r in rs for c in r["contacts"])
 audit["artisticApproval"]=False;save()
 if audit["unexpectedContacts"]:raise ValueError("Equipment intersections remain; see original frames and audit")
