@@ -132,6 +132,7 @@ jobs:
       BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/banners-living-motion
       BLENDER_VERSION: '5.2.1'
       BOW_MOTION_REV: '1'
+      BOW_REUSE_INFANTRY: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -185,7 +186,35 @@ jobs:
           test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
-      - name: Bake revised five-role motion candidate
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45720454928
+          artifact-ids: 15072113053
+          path: /tmp/bow-infantry-control
+      - name: Verify and retain the 864 original infantry renders
+        run: |
+          python3 - <<'PY'
+          import json,os,shutil,hashlib
+          from pathlib import Path
+          from PIL import Image
+          root=Path('/tmp/bow-infantry-control');out=Path(os.environ['BOW_ART_OUTPUT'])
+          checks={}
+          for kind in ('spear','sword','archer'):
+              matches=list(root.rglob(kind+'/frames.json'));assert len(matches)==1,kind
+              folder=matches[0].parent;meta=json.loads(matches[0].read_text())
+              expected={f'{s}-{h}-{f}' for s in range(2) for h in range(8) for f in range(1,62,4)}
+              expected|={f'{s}-{h}-1-{r}' for s in range(2) for h in range(8) for r in ('banner','officer')}
+              assert meta['motionRevision']==1 and set(meta['frames'])==expected and len(expected)==288,kind
+              for name in sorted(expected):
+                  file=folder/(name+'.png')
+                  with Image.open(file) as im:im.verify()
+                  checks[kind+'/'+file.name]=hashlib.sha256(file.read_bytes()).hexdigest()
+              shutil.copytree(folder,out/kind,dirs_exist_ok=True)
+          assert len(checks)==864
+          (out/'infantry-control-sha256.json').write_text(json.dumps(checks,indent=2))
+          PY
+      - name: Preflight actual horse rig, then bake changed cavalry only
         run: |
           python3 -m py_compile apps/banners-of-war/research/battlefield-identity/{troop-bake,prepare,pack,motion-sheet}.py
           python3 apps/banners-of-war/research/battlefield-identity/prepare.py
