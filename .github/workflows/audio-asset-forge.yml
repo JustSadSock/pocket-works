@@ -176,6 +176,8 @@ jobs:
           node tools/audio-forge/finalize-score.mjs .audio-score-states
           test "$(find .audio-score-states/states -name '*.wav' | wc -l)" -eq 4
           test -s .audio-score-states/state-journey.wav
+          test -s .audio-score-states/bridge-journey.wav
+          test "$(find .audio-score-states/bridges -name '*.wav' | wc -l)" -eq 4
 
       - name: Upload musical identity auditions
         uses: actions/upload-artifact@v4
@@ -184,6 +186,8 @@ jobs:
           path: |
             .audio-score-states/states/
             .audio-score-states/state-journey.wav
+            .audio-score-states/bridges/
+            .audio-score-states/bridge-journey.wav
             .audio-score-states/score-graph.json
             .audio-score-states/score-metrics.json
             .audio-score-states/manifest.json
