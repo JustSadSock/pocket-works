@@ -1,5 +1,6 @@
-import {spatialProfile} from './spatial-audio.js';
-import {createDynamicEmitter} from './continuous-audio.js';
+import {spatialProfile,createSpatialMixer} from './spatial-audio.js';
+import {createDynamicEmitter,createAdaptiveMusic} from './continuous-audio.js';
+import {createSoundFamilyPlayer} from './sound-family.js';
 const bounded=(value,fallback,min,max,label)=>{
  const n=value??fallback;
  if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)throw Error('Invalid '+label);
@@ -71,5 +72,36 @@ export function createVirtualAudioWorld({context,destination=context?.destinatio
   destroy(){if(disposed)return;disposed=true;for(const [id,v] of active)remove(id,v);logical=0;audible=0;selected=0;},
   get stats(){return getStats()},
   get activeIds(){return [...active].filter(([,v])=>v.retireAt===null).map(([id])=>id)}
+ };
+}
+
+// Reserve actual source-node slots by category. Reflections share their parent's slot.
+export function planVoiceBudget({total=24,events=8,music=4}={}){
+ for(const [key,value,min,max] of [['total',total,3,200],['events',events,1,128],['music',music,0,8]]){
+  if(!Number.isInteger(value)||value<min||value>max)throw Error('Invalid voice budget '+key);
+ }
+ const continuous=total-events-music;
+ if(continuous<1||continuous>64)throw Error('Invalid continuous voice allocation');
+ return Object.freeze({total,events,music,continuous});
+}
+// Optional integration facade. Enforces fixed quotas by construction, without
+// allowing any one category to starve a reserved music or critical event slot.
+export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,volume=.7}={}){
+ const quota=planVoiceBudget(budget);
+ if(!Array.isArray(stems)||stems.length>quota.music)throw Error('Music stems exceed voice reservation');
+ let mixer,world,events,music,closed=false;
+ try{
+  mixer=createSpatialMixer({context,destination,volume});
+  world=createVirtualAudioWorld({context,destination:mixer.bus('world'),maxVoices:quota.continuous,maxSources});
+  events=createSoundFamilyPlayer({context,destination:mixer.bus('events'),families,fetcher,random,maxVoices:quota.events,maxBuffers});
+  if(stems.length)music=createAdaptiveMusic({context,destination:mixer.bus('music'),stems,bpm,beatsPerBar});
+ }catch(e){music?.destroy();events?.destroy();world?.destroy();mixer?.destroy();throw e;}
+ return {
+  world,events,music,quota,mixer,
+  destroy(){if(closed)return;closed=true;music?.destroy();events.destroy();world.destroy();mixer.destroy();},
+  get stats(){
+   const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=music?.state.active?stems.length:0;
+   return {continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending};
+  }
  };
 }
