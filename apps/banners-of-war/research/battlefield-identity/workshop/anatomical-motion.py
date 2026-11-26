@@ -502,8 +502,9 @@ audit["staticEquipment"]={"pass":not staticBad,"pose":staticPose,"artisticApprov
 save()
 if os.environ.get("BOW_WORKSHOP_MOTION")=="static-gear" or staticBad:
     plan_review_frames([review_points()])
-    for view in REVIEW_VIEWS:review_render("key-static-equipment",view)
-    for view in ("angle45","side","top","back"):
+    if os.environ.get("BOW_WORKSHOP_MOTION")=="static-gear":exec(compile(Path(__file__).with_name("face-audit.py").read_text(),"face-audit.py","exec"))
+    for view in ("front","side","angle45","back"):review_render("key-static-equipment",view,preview=True)
+    for view in ("angle45","side","back"):
         review_render("grip-static",view,world_pos(R,gripLocal),.58)
         review_render("sleeve-seam",view,point(R),.44)
         review_render("shield-mounted",view,world_pos(LF,shieldCenterLocal),1.25)

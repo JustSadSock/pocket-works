@@ -5,10 +5,16 @@ os.environ["BOW_WORKSHOP_ROLE"]="archer"
 source=Path(__file__).with_name("anatomical-motion.py")
 exec(compile(source.read_text().split("# A single-handed sword",1)[0],str(source),"exec"))
 folder=out/"archer-anatomy";folder.mkdir(exist_ok=True)
-audit["study"]="Static archery fidelity IV";audit["samples"]={};audit["issues"]=[]
+audit["study"]="Reference driven longbow static";audit["reference"]="https://crystalpalacebowmen.org.uk/longbow/walevel2longbow.pdf";audit["samples"]={};audit["issues"]=[]
 def save():(folder/"archer-audit.json").write_text(json.dumps(audit,indent=2))
 exec(compile(Path(__file__).with_name("review-cameras.py").read_text(),"review-cameras.py","exec"))
 reset()
+# Authored open longbow stance: plant feet across the shooting line, slight
+# knee flexion, shoulders level; keep the coupled bow solver unchanged.
+shift_hips((0,0,-.035))
+for j,(upper,lower,end) in enumerate(feet):
+    dest=ankles[j]+Vector(((-1 if j==0 else 1)*.065*sign,(-1 if j==0 else 1)*.04,0))
+    limb(upper,lower,end,dest,(0,-1,0));foot_orientation(j,0)
 # The shooting axis lies along the shoulders, to the bow-side of the
 # character; the draw hand anchors near the jaw, not at the other shoulder.
 forward=Vector((-sign,0,0));up=Vector((0,0,1));side=Vector((0,-1,0))
@@ -200,8 +206,8 @@ hookGaps=[min(segment_distance(p,top,nock),segment_distance(p,nock,bot)) for p i
 row={"phase":"full-draw","hookStringGaps":hookGaps,"bowGripContact":grip_proximity(L,center,up,.020,(-.048,.048)),"joints":snap(),"jawAnchor":vec(jaw),"rightContact":right,"leftContact":left,"bowGrip":vec(center),"arrowRest":vec(rest),"stringNock":vec(nock),"arrowTip":vec(tip),"topTip":vec(top),"bottomTip":vec(bot),"drawMetres":draw,"lateralError":offaxis,"arrowAngleDegrees":math.degrees(arrowAxis.angle(forward)),"elbowLineError":elbowError,"elbowBehindNock":-backVector.dot(forward),"wristBendDegrees":wristBend,"stringLength":string_length(span,back,nock),"braceStringLength":stringTarget,"limbLengthError":arcError,"meshAfterFrameSet":mesh_delta(pts,mesh_points()),"contacts":collision(),"fingerHookSurfaceContacts":posed_hands.get(R.name,{}).get("hookSurfaceContacts"),"sourceHandFit":{k:q.get("fit") for k,q in posed_hands.items()}}
 audit["samples"]["anchor"]=[row];save()
 plan_review_frames([review_points()])
-for view in REVIEW_VIEWS:
-    review_render("key-anchor",view)
+for view in ("front","side","angle45","back"):
+    review_render("key-anchor",view,preview=True)
 review_render("bow-grip","angle45",center,.55)
 review_render("string-fingers","angle45",nock,.45)
 review_render("string-anchor","top",nock,.65)
