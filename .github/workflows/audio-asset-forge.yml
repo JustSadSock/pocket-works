@@ -143,6 +143,7 @@ jobs:
         with:
           name: sound-forge-continuous-${{ github.run_id }}
           path: .audio-runtime-audition/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
@@ -227,6 +228,7 @@ jobs:
         with:
           name: sound-forge-runtime-${{ matrix.browser }}-${{ github.run_id }}
           path: .audio-runtime-browser/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
