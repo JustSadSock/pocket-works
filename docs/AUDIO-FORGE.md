@@ -475,3 +475,26 @@ scene.destroy();
 Horizontal score and vertical stems are mutually exclusive within this facade for now; two music slots are required for horizontal playback. The browser integration verifies the bridge tone before the destination, its absence after the destination loops, and the scene quota during transition. The CI produces four original bridge phrases (peace→tension, tension→battle, battle→aftermath, aftermath→peace) and a separate bridge-journey listening proof, retaining the original crossfade-only control. Neither the authored bridges nor the resulting music have received artistic approval. The proof is offline, while browser checks use test tones; real score playback in an actual game is still a separate integration milestone.
 
 At f3d09d8 both browsers passed 30 dense updates at each of 512/1024/4096 sources with zero activation failures and 12 continuous voices maximum. Chromium p95: 0.9/0.6/3.3 ms; WebKit p95: 1/1/2 ms. These are host-side timings on CI runners, not audio-thread profiling.
+
+### Retained PCM budgets and musical stingers
+
+The family player has a default `maxDecodedBytes` of 64 MiB. It counts unique retained decoded PCM buffers (four bytes per frame per channel), including buffers used by currently active voices and reflection tails even if removed from the cache. Ready inactive cache entries may be evicted to admit new audio. Oversized or currently unaffordable buffers are rejected. Stats expose decodedBytes and maxDecodedBytes. This is a retained-PCM accounting limit, not a process-memory limit: browser decoder scratch space, in-flight network buffers, transient decoded results, garbage collection and native audio graph memory are not bounded by it.
+
+The horizontal director accepts `maxDecodedBytes` (default 128 MiB). It checks unique state/bridge PCM plus a conservative reservation for two copies of the largest possible bridge+destination composite before allocating audio nodes. The reservation is an upper bound for the director's accounted live buffers, not an observed process RSS. The scene exposes maxEventDecodedBytes, maxScoreDecodedBytes, eventDecodedBytes and scoreReservedBytes. Caller-owned world buffers and vertical stems are not yet covered by this memory policy.
+
+```js
+const scene = createBudgetedAudioScene({
+  context, families, score,
+  budget:{total:18,events:4,music:2},
+  maxEventDecodedBytes:32*1024*1024,
+  maxScoreDecodedBytes:96*1024*1024,
+  stingers:{
+    victory:{url:'audio/victory.wav',gain:0.8,priority:8,cooldown:3}
+  }
+});
+await scene.playStinger('victory');
+```
+
+Stingers use the existing one-shot quota/cache, with no random detuning or gain jitter, and a per-ID cooldown measured on the audio clock. Concurrent duplicate requests are rejected. They do not restart the score. They are immediate event reactions after decode (preload through the family player if required); no harmonic transposition, bar scheduling, reserved stinger-only slot or automatic music ducking yet. The original score package now renders three additional authored stingers: victory, defeat and discovery. Artistic audition is required.
+
+At fdc77e1 the actual browser bridge checks passed in Chromium and WebKit: during bridge ~-35.61 dB; after destination loop ~-117.6 dB. Both 4096-source stress sweeps had zero activation failures and a 12 continuous-source cap. P95 3.4/2 ms respectively. The unrelated Validate Pocket Works WebKit landscape job failed to fetch an obsolete ALSA package (HTTP 404); the same APT index refresh and bounded dependency retry used by the Audio Forge workflow has been added to validate.yml without weakening test requirements.
