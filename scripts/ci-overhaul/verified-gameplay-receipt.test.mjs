@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {decide,validateManifest,validatePhase,SOURCE,SOURCE_TREE,PLAN,WORKFLOW,REPLAY_WORKFLOW} from './verified-gameplay-receipt.mjs';
+import {summarizeGameplayComparison,decide,validateManifest,validatePhase,SOURCE,SOURCE_TREE,PLAN,WORKFLOW,REPLAY_WORKFLOW} from './verified-gameplay-receipt.mjs';
 import {createHash} from 'node:crypto';
 const h='a'.repeat(64),mount={schema:1,digest:h,files:20,directories:4,bytes:1000,productionAuthorization:false,reuse:false};
 const s={schema:1,repository:'JustSadSock/pocket-works',workflow:WORKFLOW,role:'source',source:SOURCE,sourceTree:SOURCE_TREE,auditCommit:'b'.repeat(40),auditTree:'c'.repeat(40),run:12,attempt:1,ref:'refs/heads/main',event:'push',sourceMount:mount,auditMount:mount,environment:{contract:'banners-offline-phase-v1',image:'be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb',arch:'x64',node:'v22.12.0',config:h,cpu:h,kernel:h,toolchain:h,uid:1001,gid:1001},productionAuthorization:false};
@@ -16,4 +16,26 @@ test('completed trusted upstream permits a distinct exact-commit replay only',()
  for(const bad of [{...u,conclusion:'failure'},{...u,status:'in_progress'},{...u,run_attempt:2},{...u,head_sha:'d'.repeat(40)},{...u,head_repository:{full_name:'fork/repo'}},{...u,path:REPLAY_WORKFLOW},{...u,event:'pull_request'}])assert.equal(decide(r,target,101,bad).decision,'execute');
  for(const bad of [{...target,run:s.run},{...target,upstreamAttempt:2},{...target,auditCommit:'d'.repeat(40)},{...target,environment:{...target.environment,cpu:'b'.repeat(64)}},{...target,auditMount:{...mount,digest:'b'.repeat(64)}}])assert.equal(decide(r,bad,101,u).decision,'execute');
  assert.equal(decide(r,target,101).decision,'execute');
+});
+
+test('receipt admission does not claim a freshly observed semantic match',()=>{
+ const d=decide(r,t,101),x=summarizeGameplayComparison(r,d,null);
+ assert.equal(x.semanticMatch,null);assert.equal(x.semanticComparison,'not-executed');
+ assert.equal(x.freshGameplayCases,0);assert.equal(x.reusedGameplayCases,234);
+ assert.equal(x.freshGameplayMeasurements,0);assert.equal(x.historicalGameplayMeasurements,430);
+ assert.equal(x.freshGameplaySemanticDigest,null);
+ assert.throws(()=>summarizeGameplayComparison(r,d,{cases:234,measurements:430,semanticDigest:h}));
+ assert.throws(()=>summarizeGameplayComparison(r,{...d,gameplaySemanticDigest:'b'.repeat(64)},null));
+});
+test('fresh comparison distinguishes matching, mismatching and missing evidence',()=>{
+ const d={decision:'execute',productionAuthorization:false},g={cases:234,measurements:430,semanticDigest:h};
+ const x=summarizeGameplayComparison(r,d,g);
+ assert.equal(x.semanticMatch,true);assert.equal(x.semanticComparison,'match');
+ assert.equal(x.freshGameplayCases,234);assert.equal(x.reusedGameplayCases,0);
+ assert.equal(x.freshGameplayMeasurements,430);assert.equal(x.freshGameplaySemanticDigest,h);
+ const y=summarizeGameplayComparison(r,d,{...g,semanticDigest:'b'.repeat(64)});
+ assert.equal(y.semanticMatch,false);assert.equal(y.semanticComparison,'mismatch');
+ for(const bad of [null,{...g,cases:233},{...g,measurements:429},{...g,semanticDigest:'bad'}])assert.throws(()=>summarizeGameplayComparison(r,d,bad));
+ assert.throws(()=>summarizeGameplayComparison(r,{decision:'unknown',productionAuthorization:false},g));
+ assert.throws(()=>summarizeGameplayComparison(r,{...d,productionAuthorization:true},g));
 });
