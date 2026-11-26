@@ -1,0 +1,66 @@
+name: Universal Character Forge Research
+on:
+  pull_request:
+    paths:
+      - 'tools/character-forge/**'
+      - 'docs/UNIVERSAL-CHARACTER-FORGE.md'
+      - '.github/workflows/universal-character-forge.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: character-forge-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/character-forge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify geometry, skinning, determinism, composition and budgets
+        run: node --test tools/character-forge/core.test.mjs
+      - name: Generate original models and benchmark 1, 10, 100 variants
+        run: node tools/character-forge/research.mjs "$CHARACTER_EVIDENCE"
+      - name: Convert original previews to PNG and video
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg fonts-dejavu-core
+          python3 tools/character-forge/evidence.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: character-forge-core
+          path: quality-artifacts/character-forge
+          retention-days: 14
+  browser:
+    needs: core
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: character-forge-core
+          path: quality-artifacts/character-forge
+      - name: Install isolated comparison tools without modifying lockfile
+        run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0 three@0.180.0
+      - name: Actual native GLB and Canvas group probes
+        run: node tools/character-forge/browser.mjs quality-artifacts/character-forge
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: character-forge-browser
+          path: |
+            quality-artifacts/character-forge/browser-report.json
+            quality-artifacts/character-forge/glb-*.png
+            quality-artifacts/character-forge/groups-*.png
+          retention-days: 14
