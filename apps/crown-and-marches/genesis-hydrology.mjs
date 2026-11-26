@@ -1,13 +1,14 @@
 // Geography v3.1: opt-in hydrology aggregation. v3.0 geometry is immutable.
 // Lake classification is an explicit static depth/area proxy, not seasonal climate.
+import {classifyLakes,lakeNetwork} from './genesis-hydrography.mjs';
 export const HYDRO_REVISION='genesis-3.1.0';
 const D=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]],C=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
-export function aggregateHydrology(m,W,H,{natural=false}={}){
+export function aggregateHydrology(m,W,H,{natural=false,hydrography=false}={}){
  const g=m.geography,r=g.detail,w=g.width,h=g.height,n=W*H,N=w*h,oldDown=m.down.slice(),oldHeight=m.height.slice(),oldRiver=m.river.slice(),oldLand=m.land.slice(),cell=i=>Math.min(H-1,Math.floor(Math.floor(i/w)/r))*W+Math.min(W-1,Math.floor((i%w)/r));
- const lakeWater=new Uint8Array(N),seen=new Uint8Array(N),coverage=new Uint32Array(n),lakes=[];
+ const physical=hydrography?classifyLakes(g,W,H):null,lakeWater=physical?.lakeWater??new Uint8Array(N),seen=hydrography?null:new Uint8Array(N),coverage=physical?.coverage??new Uint32Array(n),lakes=physical?.records??[];
  // Connected depressions, not each filled pixel independently. Shallow pools
  // are diagnostic only; persistent status cannot be inferred from one static DEM.
- for(let i=0;i<N;i++){if(seen[i]||!g.land[i]||g.lake[i]<=.012)continue;const q=[i];seen[i]=1;let deep=0,maxDepth=0;const cells=new Map();
+ if(!hydrography)for(let i=0;i<N;i++){if(seen[i]||!g.land[i]||g.lake[i]<=.012)continue;const q=[i];seen[i]=1;let deep=0,maxDepth=0;const cells=new Map();
  for(let k=0;k<q.length;k++){const j=q[k],x=j%w,y=Math.floor(j/w);maxDepth=Math.max(maxDepth,g.lake[j]);if(g.lake[j]>.025){deep++;const c=cell(j);cells.set(c,(cells.get(c)||0)+1);}for(const [dx,dy] of D.slice(0,4)){const X=x+dx,Y=y+dy,t=Y*w+X;if(X<0||Y<0||X>=w||Y>=h||seen[t]||!g.land[t]||g.lake[t]<=.012)continue;seen[t]=1;q.push(t);}}
  const area=q.length/(r*r),eligible=area>=2&&deep>=r*r&&maxDepth>.045,selected=eligible?[...cells].filter(([i,a])=>oldLand[i]&&a>=r*r*.6).map(([i])=>i):[];
  if(selected.length){for(const c of selected)coverage[c]=1;for(const j of q)if(g.lake[j]>.012&&coverage[cell(j)])lakeWater[j]=1;}
@@ -33,6 +34,12 @@ export function aggregateHydrology(m,W,H,{natural=false}={}){
  // The fallback uses the existing downhill route only for non-major cells.
  let fallback=0,unresolved=0;for(let pass=0;pass<W+H;pass++){let added=0;for(let i=0;i<n;i++)if(m.land[i]&&!settled[i]){const j=oldDown[i];if(j>=0&&settled[j]&&!channel[i]){settled[i]=1;down[i]=j;basin[i]=basin[j];order.push(i);fallback++;added++;}}if(!added)break;}
  for(let i=0;i<n;i++)if(m.land[i]&&!settled[i])unresolved++;
+ let repair=null,runoff=null;if(hydrography){g.lakeWater=lakeWater;g.lakeId=physical.lakeId;g.lakeLevels=physical.lakeLevels;g.lakeCoverage=physical.wetCount;g.lakeNetwork=lakeNetwork(g);g.lakeClassification={accepted:physical.accepted,rejected:physical.rejected};
+ // Prefer a physically observed major edge if it does not create a cycle.
+ const candidates=[];for(let i=0;i<n;i++)if(m.land[i]&&channel[i]&&down[i]>=0&&m.land[down[i]]&&edgeFlow[i]<58)candidates.push(i);candidates.sort((a,b)=>maxFlow[b]-maxFlow[a]||a-b);const changes=[];for(const i of candidates){const choices=[...edges[i]].filter(([,f])=>f>=58).sort((a,b)=>b[1]-a[1]||a[0]-b[0]);for(const [j,f] of choices){let p=j,steps=0;while(p>=0&&p!==i&&m.land[p]&&steps++<=n)p=down[p];if(p===i||steps>n)continue;changes.push({cell:i,from:down[i],to:j,discharge:f});down[i]=j;edgeFlow[i]=f;break;}}
+ // Recompute the topological order, coarse runoff and terminal basin IDs.
+ const indegree=new Int32Array(n),queue=new Int32Array(n),mass=new Float64Array(n);let head=0,tail=0,input=0,output=0;for(let i=0;i<n;i++)if(m.land[i]&&down[i]>=0)indegree[down[i]]++;for(let i=0;i<n;i++){if(m.land[i]){mass[i]=.4+m.moisture[i]*1.2;input+=mass[i];}if(!indegree[i])queue[tail++]=i;}
+ while(head<tail){const i=queue[head++],j=m.land[i]?down[i]:-1;if(j>=0){mass[j]+=mass[i];if(--indegree[j]===0)queue[tail++]=j;}else output+=mass[i];}if(tail!==n)throw Error('Hydrography coarse cycle');order.length=0;for(let k=tail-1;k>=0;k--){const i=queue[k],j=m.land[i]?down[i]:-1;basin[i]=j>=0?basin[j]:i;order.push(i);}runoff=Float32Array.from(mass);m.runoff=runoff;m.outletFlow=edgeFlow;repair={changes,input,output,error:Math.abs(input-output),visited:tail};}
  let maxLift=0,riverCount=0,matched=0,majorExitMismatch=0,up=0,changedLand=0;
  // Use the same fine channel discharge rather than summing overlapping
  // coarse catchments. Keep strictly descending coarse heights along chosen DAG.
@@ -40,7 +47,7 @@ export function aggregateHydrology(m,W,H,{natural=false}={}){
  m.down=down;m.basin=basin;m.flow=maxFlow;
  for(let i=0;i<n;i++){changedLand+=+(m.land[i]!==oldLand[i]);if(!m.land[i])continue;const x=i%W,y=Math.floor(i/W),j=down[i];m.river[i]=channel[i];m.coast[i]=+D.slice(0,4).some(([dx,dy])=>x+dx>=0&&x+dx<W&&y+dy>=0&&y+dy<H&&!m.land[(y+dy)*W+x+dx]);m.delta[i]=+(m.coast[i]&&maxFlow[i]>85);m.fert[i]=C(m.fert[i]+.14*(m.river[i]-oldRiver[i]),.05,1);if(channel[i]){riverCount++;matched++;if(j>=0&&m.land[j]&&edgeFlow[i]<58)majorExitMismatch++;}if(j>=0&&m.height[j]>=m.height[i])up++;}
  const landmass=new Int32Array(n),visited=new Uint8Array(n);for(let i=0;i<n;i++){if(!m.land[i]||visited[i])continue;const q=[i];visited[i]=1;for(let k=0;k<q.length;k++){const j=q[k],x=j%W,y=Math.floor(j/W);for(const [dx,dy] of D.slice(0,4)){const X=x+dx,Y=y+dy,t=Y*W+X;if(X<0||Y<0||X>=W||Y>=H||!m.land[t]||visited[t])continue;visited[t]=1;q.push(t);}}for(const j of q)landmass[j]=q.length;}m.landmass=landmass;
- if(natural){let aggregation=0,contradiction=0;const cases=[];for(let i=0;i<n;i++)if(channel[i]&&m.land[i]&&down[i]>=0&&m.land[down[i]]&&edgeFlow[i]<58){const major=[...edges[i]].filter(([j,f])=>f>=58);const type=major.length===0?'no-major-crossing':'major-route-disagrees';if(major.length===0)aggregation++;else contradiction++;cases.push({cell:i,chosen:down[i],discharge:edgeFlow[i],major,type});}g.exitAudit={aggregation,contradiction,cases};}g.lakeWater=lakeWater;g.hydrologyAudit={riverCount,matched,majorExitMismatch,fallback,unresolved,up,maxLift,changedLand,lakes};return m;
+ if(natural){let aggregation=0,contradiction=0;const cases=[];for(let i=0;i<n;i++)if(channel[i]&&m.land[i]&&down[i]>=0&&m.land[down[i]]&&edgeFlow[i]<58){const major=[...edges[i]].filter(([j,f])=>f>=58);const type=major.length===0?'no-major-crossing':'major-route-disagrees';if(major.length===0)aggregation++;else contradiction++;cases.push({cell:i,chosen:down[i],discharge:edgeFlow[i],major,type});}g.exitAudit={aggregation,contradiction,cases};}g.lakeWater=lakeWater;g.hydrologyAudit={riverCount,matched,majorExitMismatch,fallback,unresolved,up,maxLift,changedLand,lakes,...(hydrography?{repair}: {})};return m;
 }
 
 // Read-only diagnosis of an existing quotient graph. A different coarse

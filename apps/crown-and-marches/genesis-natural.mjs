@@ -68,4 +68,4 @@ function geographicField(seed,W,H,land,coast,exemplars,living=false){
  if(living){const low=C((sample(p.d.low,p.d.size,96+p.offsetX+u*4,96+p.offsetY+v*4)-base)/span)*p.amplitude;const rw=w*w; broad+=low*w;residual+=(z-low)*rw;residualWeight+=rw;}
  }const height=living&&residualWeight?Math.max(0,broad/weight+residual/residualWeight):weight?sum/weight:0;return {uplift:height*S(weight/.15),foot:0};}};
 }
-export function naturalGeology(seed,W,H,land,coast,config){return config.approach==='natural'?naturalRanges(seed,W,H,land,coast):geographicField(seed,W,H,land,coast,config.exemplars,config.revision===LIVING_REVISION);}
+export function naturalGeology(seed,W,H,land,coast,config){return config.approach==='natural'?naturalRanges(seed,W,H,land,coast):geographicField(seed,W,H,land,coast,config.exemplars,(config.revision===LIVING_REVISION||config.revision==='genesis-3.4.0'));}
