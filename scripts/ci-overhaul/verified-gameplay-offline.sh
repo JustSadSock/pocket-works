@@ -3,6 +3,7 @@
 set -euo pipefail
 prepare_gameplay() {
   role="$1"
+  [[ "${SHARD:-}" =~ ^[0-7]$ ]]
   out="$RUNNER_TEMP/gameplay-output-$role"
   src="$RUNNER_TEMP/gameplay-source"
   audit="$RUNNER_TEMP/gameplay-audit"
@@ -30,7 +31,7 @@ prepare_gameplay() {
   docker run "${opts[@]}" "$image" node /audit/scripts/ci-overhaul/verified-gameplay-receipt.mjs measure /audit > "$RUNNER_TEMP/gameplay-audit-inside.json"
   cmp "$RUNNER_TEMP/gameplay-source-before.json" "$RUNNER_TEMP/gameplay-source-inside.json"
   cmp "$RUNNER_TEMP/gameplay-audit-before.json" "$RUNNER_TEMP/gameplay-audit-inside.json"
-  jq -n --arg repository "$GITHUB_REPOSITORY" --arg workflow '.github/workflows/verified-gameplay-receipt.yml' --arg role "$role" --arg source "$source_sha" --arg sourceTree "$source_tree" --arg auditCommit "$(git rev-parse HEAD)" --arg auditTree "$(git rev-parse HEAD^{tree})" --arg ref "$GITHUB_REF" --arg event "$GITHUB_EVENT_NAME" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --argjson sourceMount "$(cat "$RUNNER_TEMP/gameplay-source-before.json")" --argjson auditMount "$(cat "$RUNNER_TEMP/gameplay-audit-before.json")" --arg image "${image##*@sha256:}" --arg config "${config#sha256:}" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{schema:1,repository:$repository,workflow:$workflow,role:$role,source:$source,sourceTree:$sourceTree,auditCommit:$auditCommit,auditTree:$auditTree,ref:$ref,event:$event,run:$run,attempt:$attempt,sourceMount:$sourceMount,auditMount:$auditMount,environment:{contract:"banners-offline-phase-v1",image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid},productionAuthorization:false}' > "$out/manifest.json"
+  jq -n --arg repository "$GITHUB_REPOSITORY" --arg workflow '.github/workflows/verified-gameplay-receipt.yml' --arg role "$role" --arg source "$source_sha" --arg sourceTree "$source_tree" --arg auditCommit "$(git rev-parse HEAD)" --arg auditTree "$(git rev-parse HEAD^{tree})" --arg ref "$GITHUB_REF" --arg event "$GITHUB_EVENT_NAME" --argjson shard "$SHARD" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --argjson sourceMount "$(cat "$RUNNER_TEMP/gameplay-source-before.json")" --argjson auditMount "$(cat "$RUNNER_TEMP/gameplay-audit-before.json")" --arg image "${image##*@sha256:}" --arg config "${config#sha256:}" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{schema:1,shard:$shard,repository:$repository,workflow:$workflow,role:$role,source:$source,sourceTree:$sourceTree,auditCommit:$auditCommit,auditTree:$auditTree,ref:$ref,event:$event,run:$run,attempt:$attempt,sourceMount:$sourceMount,auditMount:$auditMount,environment:{contract:"banners-offline-phase-v1",image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid},productionAuthorization:false}' > "$out/manifest.json"
   if [[ "$role" = replay ]]; then
     jq --arg workflow '.github/workflows/verified-gameplay-replay.yml' --argjson upstreamRun "$UPSTREAM_RUN" --argjson upstreamAttempt "$UPSTREAM_ATTEMPT" '.workflow=$workflow | .upstreamRun=$upstreamRun | .upstreamAttempt=$upstreamAttempt' "$out/manifest.json" > "$out/replay-manifest.json"
     mv "$out/replay-manifest.json" "$out/manifest.json"
@@ -41,7 +42,7 @@ run_gameplay_phase() {
   local phase="$1"
   [[ "$phase" = gameplay || "$phase" = performance ]]
   mkdir "$out/$phase"
-  docker run "${opts[@]}" --mount "type=bind,src=$out/$phase,dst=/out" "$image" node /audit/scripts/ci-overhaul/verified-gameplay-phase.mjs phase /work 0 "$phase" /out
+  docker run "${opts[@]}" --mount "type=bind,src=$out/$phase,dst=/out" "$image" node /audit/scripts/ci-overhaul/verified-gameplay-phase.mjs phase /work "$SHARD" "$phase" /out
 }
 verify_gameplay_mounts() {
   node "$tool" measure "$src" > "$RUNNER_TEMP/gameplay-source-after.json"

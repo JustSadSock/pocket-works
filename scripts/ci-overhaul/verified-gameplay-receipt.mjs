@@ -25,6 +25,11 @@ function stable(x){
 const hash=x=>digest(JSON.stringify(stable(x)));
 const eq=(a,b)=>canonical(a)===canonical(b);
 const int=n=>Number.isSafeInteger(n)&&n>0;
+const validShard=n=>Number.isInteger(n)&&n>=0&&n<8;
+const gameCount=n=>validShard(n)?(n<4?234:233):NaN;
+const performanceSizes=n=>({0:[150],4:[26],5:[40],6:[60],7:[100]})[n]??[];
+const expectedMeasurements=entries=>entries.reduce((n,e)=>n+(e.kind==='numerical-superiority'?0:2),0);
+const validMeasurements=(n,c)=>Number.isInteger(n)&&n>=0&&n<=2*c&&n%2===0;
 const read=(p,max=LIMIT)=>{const s=lstatSync(p);if(!s.isFile()||s.size>max)throw Error('Invalid evidence file');return readFileSync(p);};
 const json=p=>JSON.parse(read(p,4_000_000).toString('utf8'));
 const pathOK=p=>p&&p.length<=1024&&!/[\\\x00-\x1f\x7f\ufffd]/.test(p)&&p.split('/').every(s=>s&&s!=='.'&&s!=='..');
@@ -61,7 +66,7 @@ export function normalizeScope(repo,commit,root,kind){
 }
 function mountOK(m){return m?.schema===1&&HEX.test(m.digest)&&int(m.files)&&int(m.directories)&&int(m.bytes)&&m.bytes<=64*1024*1024&&m.productionAuthorization===false&&m.reuse===false;}
 export function validateManifest(m,role,mainOnly=true){
- if(!plain(m)||m.schema!==1||m.repository!==REPO||m.workflow!==WORKFLOW||m.role!==role||m.source!==SOURCE||m.sourceTree!==SOURCE_TREE||!SHA.test(m.auditCommit)||!SHA.test(m.auditTree)||!int(m.run)||!int(m.attempt)||m.productionAuthorization!==false||
+ if(!plain(m)||m.schema!==1||!validShard(m.shard)||m.repository!==REPO||m.workflow!==WORKFLOW||m.role!==role||m.source!==SOURCE||m.sourceTree!==SOURCE_TREE||!SHA.test(m.auditCommit)||!SHA.test(m.auditTree)||!int(m.run)||!int(m.attempt)||m.productionAuthorization!==false||
  (mainOnly?(m.ref!=='refs/heads/main'||!['push','workflow_dispatch'].includes(m.event)):!(m.ref==='refs/heads/main'&&['push','workflow_dispatch'].includes(m.event)||/^refs\/pull\/\d+\/merge$/.test(m.ref)&&m.event==='pull_request')))throw Error('Invalid pilot provenance');
  if(!mountOK(m.sourceMount)||!mountOK(m.auditMount))throw Error('Incomplete mounted proof');
  const e=m.environment;
@@ -74,32 +79,33 @@ export function validatePlan(p,m){
  return p.plan;
 }
 export function validatePhase(plan,phase,report,records,m){
- const entries=plan.shards[0][phase],n=phase==='gameplay'?234:1;
- if(!['gameplay','performance'].includes(phase)||entries.length!==n||!Array.isArray(records)||records.length!==n||
- report?.schema!==1||!eq(context(report),context(m))||report.shard!==0||report.phase!==phase||report.planDigest!==PLAN||report.version!=='chronicles-completion-v1'||report.expected!==n||report.completed!==n||report.productionAuthorization!==false||report.recordDigest!==hash(records))throw Error('Incomplete fresh phase');
+ if(!validShard(m.shard)||!['gameplay','performance'].includes(phase))throw Error('Invalid shard or phase');
+ const entries=plan.shards[m.shard][phase],n=phase==='gameplay'?gameCount(m.shard):performanceSizes(m.shard).length;
+ if(entries.length!==n||phase==='performance'&&!eq(entries.map(e=>e.value),performanceSizes(m.shard))||!Array.isArray(records)||records.length!==n||
+ report?.schema!==1||!eq(context(report),context(m))||report.shard!==m.shard||report.phase!==phase||report.planDigest!==PLAN||report.version!=='chronicles-completion-v1'||report.expected!==n||report.completed!==n||report.productionAuthorization!==false||report.recordDigest!==hash(records))throw Error('Incomplete fresh phase');
  let measurements=0;
  const semantic=records.map((r,i)=>{
   const e=entries[i];
   if(r.index!==e.index||r.id!==e.id||r.kind!==e.kind||r.version!==report.version||!plain(r.result)||((r.kind==='performance')!==(phase==='performance')))throw Error('Case identity/order mismatch');
   const result={...r.result},fields=r.kind==='numerical-superiority'?[]:['historical','performance'].includes(r.kind)?['plannerMs','physicsMs']:['planMs','physicsMs'];
   for(const field of fields){if(!Number.isFinite(result[field])||result[field]<0)throw Error('Missing fresh measurement');measurements++;delete result[field];}
-  if(phase==='performance'&&(e.value!==150||r.result.units!==150||!Number.isFinite(r.result.seconds)||r.result.seconds<=0||!int(r.result.snapshotChars)))throw Error('Wrong fresh performance scenario');
+  if(phase==='performance'&&(r.result.units!==e.value||!Number.isFinite(r.result.seconds)||r.result.seconds<=0||!int(r.result.snapshotChars)))throw Error('Wrong fresh performance scenario');
   return {...r,result};
  });
- if(measurements!==(phase==='gameplay'?430:2))throw Error('Missing measurement coverage');
- return {cases:n,semanticDigest:hash(semantic),measurements,performance:phase==='performance'?records[0].result:null};
+ if(measurements!==expectedMeasurements(entries))throw Error('Missing measurement coverage');
+ return {cases:n,semanticDigest:hash(semantic),measurements,performance:phase==='performance'?records.map(r=>r.result):null};
 }
 function phaseBundle(root,name,plan,m){
  const dir=join(root,name);
  if(!eq(readdirSync(dir).sort(),['phase.json','records.jsonl']))throw Error('Unexpected phase files');
  const rb=read(join(dir,'records.jsonl')),pb=read(join(dir,'phase.json'),2_000_000);
- const records=rb.toString('utf8').trim().split('\n').map(JSON.parse),report=JSON.parse(pb);
+ const raw=rb.toString('utf8').trim(),records=raw?raw.split('\n').map(JSON.parse):[],report=JSON.parse(pb);
  return {...validatePhase(plan,name,report,records,m),recordsDigest:digest(rb),phaseDigest:digest(pb)};
 }
 export function makeReceipt(root,now=Date.now(),mainOnly=true){
  const m=validateManifest(json(join(root,'manifest.json')),'source',mainOnly),p=validatePlan(json(join(root,'plan.json')),m),g=phaseBundle(root,'gameplay',p,m);
  if(!int(now))throw Error('Invalid issuance time');
- return {schema:1,kind:'banners-gameplay-shadow-v1',manifest:m,planDigest:PLAN,shard:0,gameplayCases:g.cases,gameplaySemanticDigest:g.semanticDigest,gameplayRecordsDigest:g.recordsDigest,gameplayPhaseDigest:g.phaseDigest,sourceMeasurements:g.measurements,issuedAt:now,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+ return {schema:2,kind:'banners-gameplay-shadow-v2',manifest:m,planDigest:PLAN,shard:m.shard,gameplayCases:g.cases,gameplaySemanticDigest:g.semanticDigest,gameplayRecordsDigest:g.recordsDigest,gameplayPhaseDigest:g.phaseDigest,sourceMeasurements:g.measurements,issuedAt:now,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 }
 // The upstream API result is independent of the downloaded receipt.
 // Only the exact completed main run that triggered this read-only replay is eligible.
@@ -119,8 +125,8 @@ export function decide(receipt,target,now=Date.now(),upstream=null){
  try{
   const s=validateManifest(receipt.manifest,'source'),cross=target?.role==='replay',t=cross?validateReplayTarget(target):validateManifest(target,'trial');
   if(cross)checkUpstream(upstream,s,t);else if(upstream!==null)throw Error('Unexpected upstream');
-  if(receipt.kind!=='banners-gameplay-shadow-v1'||receipt.schema!==1||receipt.planDigest!==PLAN||receipt.shard!==0||receipt.gameplayCases!==234||receipt.sourceMeasurements!==430||receipt.productionAuthorization!==false||receipt.allowResultReuse!==false||receipt.allowImpactSkipping!==false||![receipt.gameplaySemanticDigest,receipt.gameplayRecordsDigest,receipt.gameplayPhaseDigest].every(x=>HEX.test(x))||!int(receipt.issuedAt)||!int(now)||now<receipt.issuedAt||now-receipt.issuedAt>7*86400000)throw Error('Invalid or expired receipt');
-  for(const key of ['repository','ref','source','sourceTree','auditCommit','auditTree',...(cross?[]:['workflow','event','run','attempt'])])if(s[key]!==t[key])throw Error('Different source identity: '+key);
+  if(receipt.kind!=='banners-gameplay-shadow-v2'||receipt.schema!==2||receipt.planDigest!==PLAN||receipt.shard!==s.shard||receipt.gameplayCases!==gameCount(s.shard)||!validMeasurements(receipt.sourceMeasurements,receipt.gameplayCases)||receipt.productionAuthorization!==false||receipt.allowResultReuse!==false||receipt.allowImpactSkipping!==false||![receipt.gameplaySemanticDigest,receipt.gameplayRecordsDigest,receipt.gameplayPhaseDigest].every(x=>HEX.test(x))||!int(receipt.issuedAt)||!int(now)||now<receipt.issuedAt||now-receipt.issuedAt>7*86400000)throw Error('Invalid or expired receipt');
+  for(const key of ['repository','ref','source','sourceTree','auditCommit','auditTree','shard',...(cross?[]:['workflow','event','run','attempt'])])if(s[key]!==t[key])throw Error('Different source identity: '+key);
   for(const key of ['sourceMount','auditMount'])if(!eq(s[key],t[key]))throw Error('Different mounted input: '+key);
   const changed=Object.keys(s.environment).filter(k=>s.environment[k]!==t.environment[k]).sort();
   if(changed.length)return {...fresh('Execution environment differs'),changedFields:changed};
@@ -129,7 +135,7 @@ export function decide(receipt,target,now=Date.now(),upstream=null){
 }
 // Admission is evidence of identity, not an independently observed semantic match.
 export function summarizeGameplayComparison(receipt,admission,fresh){
- if(!receipt||receipt.gameplayCases!==234||receipt.sourceMeasurements!==430||!HEX.test(receipt.gameplaySemanticDigest)||admission?.productionAuthorization!==false)throw Error('Invalid comparison evidence');
+ if(!receipt||receipt.gameplayCases!==gameCount(receipt.shard)||!validMeasurements(receipt.sourceMeasurements,receipt.gameplayCases)||!HEX.test(receipt.gameplaySemanticDigest)||admission?.productionAuthorization!==false)throw Error('Invalid comparison evidence');
  const hit=admission.decision==='reuse-shadow';
  if(hit){
   if(fresh!==null||admission.gameplaySemanticDigest!==receipt.gameplaySemanticDigest||admission.gameplayRecordsDigest!==receipt.gameplayRecordsDigest)throw Error('Ambiguous reused gameplay evidence');
@@ -140,6 +146,27 @@ export function summarizeGameplayComparison(receipt,admission,fresh){
   historicalGameplayMeasurements:receipt.sourceMeasurements,freshGameplayMeasurements:hit?0:fresh.measurements,
   sourceGameplaySemanticDigest:receipt.gameplaySemanticDigest,freshGameplaySemanticDigest:hit?null:fresh.semanticDigest,
   semanticMatch,semanticComparison:hit?'not-executed':semanticMatch?'match':'mismatch'};
+}
+// Every shard report is produced by the independently authenticated runner.
+export function aggregateReplay(rows,expected){
+ if(!Array.isArray(rows)||rows.length!==8)throw Error('Missing replay shards');
+ const ordered=[...rows].sort((a,b)=>a.shard-b.shard);
+ const plans=[],perShard=[];let freshGameplayCases=0,reusedGameplayCases=0,freshGameplayMeasurements=0,historicalGameplayMeasurements=0,freshPerformanceCases=0,freshPerformanceMeasurements=0;
+ for(const [shard,r] of ordered.entries()){
+  if(r.schema!==3||r.shard!==shard||r.source!==SOURCE||r.auditCommit!==expected.auditCommit||r.auditTree!==expected.auditTree||r.planDigest!==PLAN||r.mode!==expected.mode||r.sourceRun!==expected.sourceRun||r.sourceAttempt!==expected.sourceAttempt||r.targetRun!==expected.targetRun||r.targetAttempt!==expected.targetAttempt||r.productionAuthorization!==false||r.allowResultReuse!==false||r.allowImpactSkipping!==false)throw Error('Wrong replay context: '+shard);
+  const p=r.planShard,hit=r.admission?.decision==='reuse-shadow',n=gameCount(shard);
+  if(!Array.isArray(p?.gameplay)||!Array.isArray(p?.performance)||p.gameplay.length!==n||!eq(p.performance.map(e=>e.value),performanceSizes(shard))||r.gameplayCases!==n||r.admission?.productionAuthorization!==false||!['execute','reuse-shadow'].includes(r.admission.decision))throw Error('Invalid shard coverage: '+shard);
+  const historical=expectedMeasurements(p.gameplay),fresh=hit?0:historical;
+  if(r.gameplayReused!==hit||r.gameplayExecuted!==!hit||r.freshGameplayCases!==(hit?0:n)||r.reusedGameplayCases!==(hit?n:0)||r.historicalGameplayMeasurements!==historical||r.freshGameplayMeasurements!==fresh||!HEX.test(r.sourceGameplaySemanticDigest)||r.semanticComparison!==(hit?'not-executed':'match')||r.semanticMatch!==(hit?null:true)||r.freshGameplaySemanticDigest!==(hit?null:r.sourceGameplaySemanticDigest)||hit&&r.admission.gameplaySemanticDigest!==r.sourceGameplaySemanticDigest)throw Error('Invalid comparison evidence: '+shard);
+  if(r.freshPerformanceCases!==p.performance.length||r.freshPerformanceMeasurements!==2*p.performance.length||!Array.isArray(r.freshPerformanceResults)||r.freshPerformanceResults.length!==p.performance.length||!r.freshPerformanceResults.every((x,i)=>plain(x)&&x.units===p.performance[i].value&&Number.isFinite(x.plannerMs)&&x.plannerMs>=0&&Number.isFinite(x.physicsMs)&&x.physicsMs>=0&&Number.isFinite(x.seconds)&&x.seconds>0&&int(x.snapshotChars)))throw Error('Missing fresh performance: '+shard);
+  plans.push(p);freshGameplayCases+=r.freshGameplayCases;reusedGameplayCases+=r.reusedGameplayCases;freshGameplayMeasurements+=fresh;historicalGameplayMeasurements+=historical;freshPerformanceCases+=r.freshPerformanceCases;freshPerformanceMeasurements+=r.freshPerformanceMeasurements;
+  perShard.push({shard,decision:r.admission.decision,reason:r.admission.reason??null,changedFields:r.admission.changedFields??[],freshGameplayCases:r.freshGameplayCases,reusedGameplayCases:r.reusedGameplayCases,semanticComparison:r.semanticComparison,freshPerformanceResults:r.freshPerformanceResults});
+ }
+ if(hash(plans)!==PLAN||freshGameplayCases+reusedGameplayCases!==1868||freshPerformanceCases!==5||freshPerformanceMeasurements!==10||historicalGameplayMeasurements!==3436)throw Error('Incomplete global audited plan');
+ return {schema:3,...expected,planDigest:PLAN,shards:8,gameplayCases:1868,freshGameplayCases,reusedGameplayCases,freshGameplayMeasurements,historicalGameplayMeasurements,freshPerformanceCases,freshPerformanceMeasurements,semanticComparison:reusedGameplayCases===1868?'not-executed':reusedGameplayCases===0?'match':'partial-match',perShard,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+}
+function validateReceiptShard(receipt,target,plan){
+ if(receipt.shard!==target.shard||receipt.gameplayCases!==plan.shards[target.shard].gameplay.length||receipt.sourceMeasurements!==expectedMeasurements(plan.shards[target.shard].gameplay))throw Error('Signed receipt does not cover target shard');
 }
 function verifiedReceipt(bundle,path){
  const r=json(path),expected=makeReceipt(bundle,r.issuedAt);
@@ -155,7 +182,7 @@ function replayUpstream(m,path){
  return u;
 }
 function actualContext(m){
- if(m.repository!==process.env.GITHUB_REPOSITORY||m.auditCommit!==process.env.GITHUB_SHA||m.auditTree!==git(process.cwd(),['rev-parse','HEAD^{tree}']).toString().trim()||m.run!==Number(process.env.GITHUB_RUN_ID)||m.attempt!==Number(process.env.GITHUB_RUN_ATTEMPT)||m.ref!==process.env.GITHUB_REF||m.event!==process.env.GITHUB_EVENT_NAME)throw Error('Different actual workflow context');
+ if(m.shard!==Number(process.env.SHARD)||!/^\d$/.test(process.env.SHARD??'')||m.repository!==process.env.GITHUB_REPOSITORY||m.auditCommit!==process.env.GITHUB_SHA||m.auditTree!==git(process.cwd(),['rev-parse','HEAD^{tree}']).toString().trim()||m.run!==Number(process.env.GITHUB_RUN_ID)||m.attempt!==Number(process.env.GITHUB_RUN_ATTEMPT)||m.ref!==process.env.GITHUB_REF||m.event!==process.env.GITHUB_EVENT_NAME)throw Error('Different actual workflow context');
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{
@@ -168,17 +195,27 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    console.log(JSON.stringify(r));
   }else if(mode==='admit'){
    // Caller must first authenticate the exact receipt with gh attestation verify.
-   const [bundle,path,targetDir,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(targetDir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);validatePlan(json(join(targetDir,'plan.json')),t);
+   const [bundle,path,targetDir,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(targetDir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);const p=validatePlan(json(join(targetDir,'plan.json')),t);validateReceiptShard(r,t,p);
    const u=replayUpstream(t,upstreamPath),d=decide(r,t,Date.now(),u);writeFileSync(out,JSON.stringify(d,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(d));
   }else if(mode==='finish'){
    const [bundle,path,dir,admissionPath,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(dir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);
-   const p=validatePlan(json(join(dir,'plan.json')),t),d=json(admissionPath),u=replayUpstream(t,upstreamPath),expected=decide(r,t,Date.now(),u);
+   const p=validatePlan(json(join(dir,'plan.json')),t),d=json(admissionPath),u=replayUpstream(t,upstreamPath),expected=decide(r,t,Date.now(),u);validateReceiptShard(r,t,p);
    if(!eq(d,expected))throw Error('Admission changed');
    const perf=phaseBundle(dir,'performance',p,t),hit=d.decision==='reuse-shadow';
    const g=hit?null:phaseBundle(dir,'gameplay',p,t);
    if(hit&&readdirSync(dir).includes('gameplay'))throw Error('Ambiguous gameplay execution');
-   const report={schema:2,mode:t.role==='replay'?'verified-gameplay-cross-run':'verified-gameplay-trial',sourceRun:r.manifest.run,sourceAttempt:r.manifest.attempt,targetRun:t.run,targetAttempt:t.attempt,admission:d,...summarizeGameplayComparison(r,d,g),freshPerformanceCases:perf.cases,freshPerformanceMeasurements:perf.measurements,freshPerformanceResult:perf.performance,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
-   writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));if(report.semanticMatch===false)process.exitCode=1;
+   const report={schema:3,shard:t.shard,source:SOURCE,auditCommit:t.auditCommit,auditTree:t.auditTree,planDigest:PLAN,planShard:p.shards[t.shard],mode:t.role==='replay'?'verified-gameplay-cross-run':'verified-gameplay-trial',sourceRun:r.manifest.run,sourceAttempt:r.manifest.attempt,targetRun:t.run,targetAttempt:t.attempt,admission:d,...summarizeGameplayComparison(r,d,g),freshPerformanceCases:perf.cases,freshPerformanceMeasurements:perf.measurements,freshPerformanceResults:perf.performance,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+   writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({...report,planShard:undefined},null,2));if(report.semanticMatch===false)process.exitCode=1;
+  }else if(mode==='aggregate'){
+   const [root,out]=a,run=Number(process.env.GITHUB_RUN_ID),attempt=Number(process.env.GITHUB_RUN_ATTEMPT),cross=process.env.GITHUB_EVENT_NAME==='workflow_run';
+   if(process.env.MATRIX_RESULT!=='success'||!int(run)||!int(attempt)||process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!==REPO||!SHA.test(process.env.GITHUB_SHA))throw Error('Incomplete replay matrix');
+   const e=cross?json(process.env.GITHUB_EVENT_PATH).workflow_run:null;
+   if(cross&&(!e||e.head_sha!==process.env.GITHUB_SHA||e.conclusion!=='success'||e.head_branch!=='main'||e.repository?.full_name!==REPO||e.head_repository?.full_name!==REPO||!int(e.id)||!int(e.run_attempt)))throw Error('Invalid aggregate trigger');
+   const prefix=cross?'gameplay-cross-run-':'verified-gameplay-trial-',names=Array.from({length:8},(_,i)=>prefix+attempt+'-'+i);
+   if(!eq(readdirSync(root).sort(),names))throw Error('Missing or unexpected matrix artifacts');
+   const rows=names.map(n=>{const dir=join(root,n);if(!lstatSync(dir).isDirectory()||!eq(readdirSync(dir),['trial.json']))throw Error('Invalid shard artifact');return json(join(dir,'trial.json'));});
+   const report=aggregateReplay(rows,{mode:cross?'verified-gameplay-cross-run':'verified-gameplay-trial',auditCommit:process.env.GITHUB_SHA,auditTree:git(process.cwd(),['rev-parse','HEAD^{tree}']).toString().trim(),sourceRun:cross?e.id:run,sourceAttempt:cross?e.run_attempt:attempt,targetRun:run,targetAttempt:attempt});
+   writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));
   }else throw Error('Unknown pilot mode');
  }catch(e){console.error(e.message);process.exitCode=1;}
 }
