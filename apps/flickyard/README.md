@@ -31,3 +31,8 @@ Run from the repository root:
     node --test apps/flickyard/tests/engine.test.mjs
 
 Universal QA runs the app-owned smoke suites from qa.plan.json. The game stores all records under pocket-works:flickyard and caches only its own files plus Pocket Works runtime dependencies.
+
+
+## QA mode
+
+Append `?qa=1` to the app URL to disable Pointer Lock and expose a read-only session snapshot plus a deterministic finish hook for browser automation. This does not alter the normal training flow.
