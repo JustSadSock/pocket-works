@@ -6,6 +6,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { expandManifest, renderPhysics, arrangeTracks } from './foundation.mjs';
 import { compileExpression } from './expression.mjs';
+import { createCatalog, mixHybrid } from './sample-library.mjs';
 
 const ROOT = process.cwd();
 const GENERATED_LIST = path.join(ROOT, '.audio-forge-generated.txt');
@@ -259,7 +260,7 @@ function synthesizeMusic(job, rawOutput, tempDir) {
 
 function processWithSox(rawInput, output, job) {
   const post = job.post || {};
-  const args = job.type === 'physics' || job.tracks ? ['-R', rawInput, output] : [rawInput, output];
+  const args = ['physics','hybrid'].includes(job.type) || job.tracks ? ['-R', rawInput, output] : [rawInput, output];
 
   if (post.sampleRate) args.push('rate', String(Math.max(8000, Number(post.sampleRate))));
   if (post.channels) args.push('channels', String(Math.max(1, Math.min(2, Number(post.channels)))));
@@ -285,7 +286,7 @@ function processWithSox(rawInput, output, job) {
 function validateJob(job) {
   if (!job || typeof job !== 'object') throw new Error('Audio job must be an object.');
   if (!job.name || typeof job.name !== 'string') throw new Error('Audio job requires a string name.');
-  if (!['sfx', 'ambient', 'music', 'physics'].includes(job.type)) throw new Error(`Unsupported audio job type for ${job.name}: ${job.type}`);
+  if (!['sfx', 'ambient', 'music', 'physics', 'hybrid'].includes(job.type)) throw new Error(`Unsupported audio job type for ${job.name}: ${job.type}`);
   if (!job.output || typeof job.output !== 'string') throw new Error(`Audio job ${job.name} requires output.`);
   if (!/\.(wav|ogg)$/i.test(job.output)) throw new Error(`Audio job ${job.name} output must be .wav or .ogg.`);
 }
@@ -293,9 +294,15 @@ function validateJob(job) {
 function generateManifest(manifestPath, baseDir, generated) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const jobs = expandManifest(manifest);
+  const catalog = jobs.some(job => job.type === 'hybrid') ? createCatalog(manifest.samples, path.dirname(manifestPath)) : null;
+  const resolvedSamples = new Map();
   const targets = new Set();
   for (const job of jobs) {
     validateJob(job);
+    if (job.type === 'hybrid') {
+      if (manifest.version !== 2 || typeof job.sampleId !== 'string' || typeof job.sampleMix !== 'number' || !Number.isFinite(job.sampleMix) || job.sampleMix < 0 || job.sampleMix > 1) throw new Error('Invalid hybrid recipe');
+      if (!resolvedSamples.has(job.sampleId)) resolvedSamples.set(job.sampleId,catalog.resolve(job.sampleId));
+    }
     const target = assertInside(baseDir, job.output, `Output for ${job.name}`);
     if (manifest.version === 2 && targets.has(target)) throw new Error('Duplicate resolved audio output: '+target);
     targets.add(target);
@@ -308,9 +315,20 @@ function generateManifest(manifestPath, baseDir, generated) {
     try {
       if (job.type === 'sfx') synthesizeSfx(job, rawOutput);
       else if (job.type === 'ambient') synthesizeAmbient(job, rawOutput);
-      else if (job.type === 'physics') {
+      else if (job.type === 'physics' || job.type === 'hybrid') {
         const audio = renderPhysics(job);
-        writePcm16Wav(rawOutput, audio.samples, audio.sampleRate, audio.channels);
+        let samples = audio.samples;
+        if (job.type === 'hybrid') {
+          const {file,entry} = resolvedSamples.get(job.sampleId);
+          const seconds = samples.length / (2 * audio.sampleRate);
+          const pcm = execFileSync('sox',['-R',file,'-t','raw','-e','floating-point','-b','32','-L','-c','2','-r','48000','-','trim','0',String(seconds)],{maxBuffer:8*1024*1024});
+          if (!pcm.length || pcm.length % 8) throw new Error('Invalid decoded sample');
+          const decoded = new Float32Array(pcm.length/4);
+          for(let i=0;i<decoded.length;i++) decoded[i]=pcm.readFloatLE(i*4);
+          samples=mixHybrid(samples,decoded,job.sampleMix);
+          console.log('Sample provenance: '+entry.id+' '+entry.license+' sha256:'+entry.sha256);
+        }
+        writePcm16Wav(rawOutput, samples, audio.sampleRate, audio.channels);
       } else synthesizeMusic(job, rawOutput, tempDir);
       processWithSox(rawOutput, output, job);
       if (!existsSync(output) || statSync(output).size < 128) throw new Error(`Generated audio is empty: ${output}`);
