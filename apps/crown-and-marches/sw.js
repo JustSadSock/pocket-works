@@ -32,6 +32,7 @@ const APP_SHELL = [
   './atlas-human-geography.mjs',
   './atlas-human-control.mjs',
   './atlas-human-content.mjs',
+  './atlas-urban-layout.mjs',
   './battle.mjs',
   './render.mjs',
   './geography-review.mjs',
