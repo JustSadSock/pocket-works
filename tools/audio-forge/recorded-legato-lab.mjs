@@ -89,7 +89,7 @@ for(const [instrument,articulation] of [['flute','non-vibrato'],['violin','arco-
  for(const mode of ['detached','connected']){
   bank.reset();const r=renderRecordedLegato({bank,instrument,notes:notes.map(n=>({...n,connected:mode==='connected'&&n.connected})),seconds});
   const id=instrument+'-'+mode;choices[id]=r.choices;
-  if(mode==='connected'&&r.choices.filter(c=>c.connected).length!==6)throw Error('Missing legato transitions');
+  if(mode==='connected'&&(r.choices.filter(c=>c.connected).length!==6||r.choices.some(c=>c.connected&&c.boundaryStep>.15)))throw Error('Missing or discontinuous legato transitions');
   pair.push({...r,metric:write(id+'.wav',r.samples)});
  }
  const target=Math.min(...pair.map(p=>p.metric.rms)),gap=Math.round(sr*.7),ab=new Float32Array(pair[0].samples.length*2+gap);
