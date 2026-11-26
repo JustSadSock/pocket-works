@@ -13,6 +13,7 @@ on:
       - "tools/audio-forge/**"
       - "shared/capabilities/sound-family.js"
       - "shared/capabilities/spatial-audio.js"
+      - "shared/capabilities/continuous-audio.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
   pull_request:
@@ -21,6 +22,7 @@ on:
       - "tools/audio-forge/**"
       - "shared/capabilities/sound-family.js"
       - "shared/capabilities/spatial-audio.js"
+      - "shared/capabilities/continuous-audio.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
 
@@ -183,6 +185,37 @@ jobs:
             .audio-forge-field/objects/
             .audio-forge-field/manifest.json
             .audio-forge-field/catalog.sqlite
+          if-no-files-found: error
+          retention-days: 7
+
+  audio-runtime-browser:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install isolated Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/audio-browser" --no-save --no-package-lock playwright@1.55.0
+          "$RUNNER_TEMP/audio-browser/node_modules/.bin/playwright" install --with-deps ${{ matrix.browser }}
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/audio-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - name: Run real Web Audio checks
+        run: node tools/audio-forge/browser-runtime.mjs ${{ matrix.browser }} .audio-runtime-browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-runtime-${{ matrix.browser }}-${{ github.run_id }}
+          path: .audio-runtime-browser/
           if-no-files-found: error
           retention-days: 7
 
