@@ -270,3 +270,41 @@ Music tracks can opt into a `performance` object. Existing scores do not change.
 ```
 
 Curve points use increasing beats and values 0–127; supported controllers are expression (CC11), breath (CC2), and modulation (CC1). Linear interpolation emits up to 32 subdivisions per beat. Pitch gestures use a fixed two-semitone MIDI bend range, bounded vibrato (0–80 cents) and attack bend (-100 to +100 cents); the bend resets after the note. Pitch gestures require non-overlapping monophonic notes on an isolated channel. For these tracks use zero timing jitter or author explicit gaps; overlap legato and pitch gestures cannot be combined. Controller automation is channel-wide. Breath response depends on the SoundFont and is not a physical breath simulator. Attack bend is a small expressive scoop, not full note-to-note portamento. Use the four medieval/orchestral control/expressive audition files to judge the actual render; successful MIDI generation alone does not establish musical quality.
+
+### Hybrid Engine and local Pocket Sound Library (initial contract)
+
+A v2 manifest may contain a `samples` catalog, with paths relative to the manifest directory. Hybrid jobs use an original physics model and a catalog sample. The current policy permits only original, CC0-1.0 and public-domain declarations, requires explicit redistribution permission, creator, provenance, tags and SHA-256. External records additionally require a source URL and rights evidence. These are metadata gates, not independent legal verification: an agent must verify the actual source and its license before committing a file. No restricted audio belongs in the public repository.
+
+```json
+{
+  "version": 2,
+  "samples": [
+    {
+      "id": "impact-source",
+      "path": "sources/impact.wav",
+      "title": "Original impact",
+      "creator": "Pocket Works",
+      "license": "original",
+      "provenance": "Author-owned recording",
+      "redistribution": true,
+      "sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "tags": ["impact", "metal"]
+    }
+  ],
+  "jobs": [],
+  "families": [
+    {
+      "id": "blade",
+      "model": "sword",
+      "sampleId": "impact-source",
+      "sampleMix": 0.25,
+      "variants": 8,
+      "outputDir": "assets/audio/generated"
+    }
+  ]
+}
+```
+
+A hybrid job can also be declared directly with type hybrid, model, sampleId and sampleMix. SoX decodes local WAV/OGG/FLAC to stereo 48 kHz float PCM; samples are trimmed or zero-padded to the procedural clip duration. The sample is RMS-matched to the synthesis before mixing (0 = all synthesis, 1 = all sample), with short boundary fades and peak protection. Ratios are coefficients, not perceived loudness percentages. Catalog paths are confined by realpath and sample hashes are checked before rendering. Search supports case-insensitive terms across title, creator, ID and tags. This is an in-memory manifest catalog, not yet a persistent global database, semantic index, or asset vault. All variants of a hybrid family currently reuse the same source sample.
+
+CI generates an original synthetic explosion fixture and renders 0/25/50/75/100% sample ratios; it uploads the source, manifest and resulting WAVs separately from musical probes. This tests the pipeline, not the naturalness of field recordings. No external recording has been acquired or independently cleared yet.
