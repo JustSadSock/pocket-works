@@ -1,0 +1,110 @@
+name: Gameplay Environment Portability Probe
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/gameplay-portability-probe.yml'
+      - 'scripts/ci-overhaul/gameplay-portability-probe*'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/gameplay-portability-probe.test.mjs
+  probe:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'infra/gameplay-environment-portability'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: 2521b436264b904b4c7e88ac9e00a59c0cbbc688
+          path: controller
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          path: controller/audit-source
+          persist-credentials: false
+      - name: Authenticate original signed shard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45825802669" > "$RUNNER_TEMP/upstream.json"
+          jq -e '.id==45825802669 and .run_attempt==1 and .head_sha=="2521b436264b904b4c7e88ac9e00a59c0cbbc688" and .status=="completed" and .conclusion=="success"' "$RUNNER_TEMP/upstream.json"
+          gh run download 45825802669 --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-input-1-$SHARD" --dir "$RUNNER_TEMP/bundle"
+          gh run download 45825802669 --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-receipt-1-$SHARD" --dir "$RUNNER_TEMP/signed"
+          gh attestation verify "$RUNNER_TEMP/signed/receipt.json" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-gameplay-receipt.yml@refs/heads/main" --source-ref refs/heads/main --source-digest 2521b436264b904b4c7e88ac9e00a59c0cbbc688 --deny-self-hosted-runners
+      - name: Execute every case with the original immutable controller
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd controller
+            test "$(git rev-parse HEAD)" = 2521b436264b904b4c7e88ac9e00a59c0cbbc688
+            # Pin controller metadata inside the experiment only; outer PR identity is retained in probe report.
+            export GITHUB_SHA=2521b436264b904b4c7e88ac9e00a59c0cbbc688
+            source scripts/ci-overhaul/verified-gameplay-offline.sh
+            prepare_gameplay source
+            run_gameplay_phase gameplay
+            run_gameplay_phase performance
+            verify_gameplay_mounts
+          )
+          node scripts/ci-overhaul/gameplay-portability-probe.mjs compare "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/signed/receipt.json" "$RUNNER_TEMP/gameplay-output-source" "$RUNNER_TEMP/upstream.json" "$RUNNER_TEMP/probe.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portability-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/probe.json
+          if-no-files-found: warn
+          retention-days: 7
+  aggregate:
+    needs: probe
+    if: always() && needs.probe.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: portability-${{ github.run_attempt }}-*
+          path: reports
+      - run: node scripts/ci-overhaul/gameplay-portability-probe.mjs aggregate reports aggregate.json
+        env:
+          MATRIX_RESULT: ${{ needs.probe.result }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portability-aggregate-${{ github.run_attempt }}
+          path: aggregate.json
+          if-no-files-found: error
+          retention-days: 7
