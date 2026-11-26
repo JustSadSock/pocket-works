@@ -3,7 +3,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/verified-gameplay-evidence-audit.yml'
-      - 'scripts/ci-overhaul/verified-gameplay-*'
+      - 'scripts/ci-overhaul/gameplay-evidence-audit*'
+      - 'scripts/ci-overhaul/verified-gameplay-receipt.mjs'
   workflow_dispatch:
     inputs:
       source_run:
@@ -27,7 +28,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/verified-gameplay-evidence-audit.test.mjs
+      - run: node --test scripts/ci-overhaul/gameplay-evidence-audit.test.mjs
   audit:
     needs: contract
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
@@ -57,7 +58,7 @@ jobs:
           mkdir -p "$root"/{primary,same,historical}
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > "$root/source.json"
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$HISTORICAL_RUN" > "$root/replay.json"
-          node --input-type=module -e 'import {readFileSync} from "node:fs"; import {validateRuns} from "./scripts/ci-overhaul/verified-gameplay-evidence-audit.mjs"; const [a,b]=process.argv.slice(1);validateRuns(JSON.parse(readFileSync(a)),JSON.parse(readFileSync(b)));' "$root/source.json" "$root/replay.json"
+          node --input-type=module -e 'import {readFileSync} from "node:fs"; import {validateRuns} from "./scripts/ci-overhaul/gameplay-evidence-audit.mjs"; const [a,b]=process.argv.slice(1);validateRuns(JSON.parse(readFileSync(a)),JSON.parse(readFileSync(b)));' "$root/source.json" "$root/replay.json"
           sha="$(jq -er '.head_sha' "$root/source.json")"
           a="$(jq -er '.run_attempt' "$root/source.json")"
           b="$(jq -er '.run_attempt' "$root/replay.json")"
@@ -75,7 +76,7 @@ jobs:
           mv "$root/same-aggregate/aggregate.json" "$root/same-aggregate.json"
           mv "$root/historical-aggregate/aggregate.json" "$root/historical-aggregate.json"
           unset GH_TOKEN
-          node scripts/ci-overhaul/verified-gameplay-evidence-audit.mjs "$root" "$RUNNER_TEMP/audit.json"
+          node scripts/ci-overhaul/gameplay-evidence-audit.mjs "$root" "$RUNNER_TEMP/audit.json"
           cat "$RUNNER_TEMP/audit.json" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
