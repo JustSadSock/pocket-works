@@ -37,6 +37,11 @@ try{
   if(errors.length)violations.push(...errors);
   await save('paired-result.json',{protocol,revision:process.env.BOW_BENCH_REVISION,sourceProvenance:JSON.parse(await readFile(out+'/source-provenance.json','utf8')),browser:browser.version(),node:process.version,cpu:os.cpus().map(c=>({model:c.model,speed:c.speed})),parallelism:os.availableParallelism(),memory:os.totalmem(),start,end:await cgroup(),env,after,physicalSHA256:digest(JSON.stringify(physical)),assets,warmup:warm?.results.map(x=>({motion:x.motion,mode:x.mode,fps:x.fps})),r,violations});
   console.log(JSON.stringify({protocol,zoom:zoom.map(x=>x.fps),violations}));
+  // Supplemental diagnostic only AFTER original acceptance measurement.
+  // A readback forces pending raster work plus copying pixels; it is not
+  // pure Canvas raster timing and must not replace the unchanged FPS gate.
+  const raster=await p.evaluate(async()=>{const q=window.sliceQA,c=document.getElementById('field'),ctx=c.getContext('2d'),base=q.benchCamera(),data=[];for(let i=0;i<8;i++){await new Promise(requestAnimationFrame);let t=performance.now();const pix=ctx.getImageData(0,0,c.width,c.height);data.push({readbackMs:performance.now()-t,bytes:pix.data.byteLength})}return {data,canvas:[c.width,c.height],dpr:devicePixelRatio,visibility:document.visibilityState}});
+  await save('canvas-readback-diagnostic.json',raster);
  }finally{await ctx.close()}
 }finally{if(browser)await browser.close();server.close()}
 `;
