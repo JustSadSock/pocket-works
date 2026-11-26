@@ -16,6 +16,8 @@ git -C "$root" diff --quiet HEAD || exit 75
 [[ -z "$(git -C "$root" ls-files --others --exclude-standard -- apps/banners-of-war shared scripts package.json package-lock.json)" ]] || exit 75
 issuer="$(jq -er '.auditCommit' "$evidence/authenticated/catalog.json")" || exit 75
 [[ "$issuer" =~ ^[a-f0-9]{40}$ && "$(git -C "$controller" rev-parse HEAD)" == "$issuer" ]] || exit 75
+export ACTUAL_QA_CONTROLLER="$issuer"
+export ACTUAL_QA_CONTROLLER_TREE="$(git -C "$controller" rev-parse HEAD^{tree})"
 # Work in an immutable clone so nested controller checkouts cannot be
 # accidentally included in app input mounts.
 temp="$(mktemp -d "$RUNNER_TEMP/production-delivery.XXXXXX")"
