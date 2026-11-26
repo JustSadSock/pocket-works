@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: character-forge-v7-${{ github.ref }}
+  group: character-forge-v8-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   core:
@@ -58,10 +58,7 @@ jobs:
       - name: Install isolated comparison tools without modifying lockfile
         run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0 three@0.180.0
       - name: Actual native GLB and Canvas group probes
-        run: |
-          git -c safe.directory="$PWD" fetch --no-tags --depth=1 origin f2007f2f396dc5329b31fe3cb11bde138c9f4aec
-          git -c safe.directory="$PWD" show FETCH_HEAD:tools/character-forge/sprite-browser.mjs > /tmp/character-benchmark-control.mjs
-          CHARACTER_BENCHMARK_CONTROL=/tmp/character-benchmark-control.mjs node tools/character-forge/sprite-browser.mjs quality-artifacts/character-forge
+        run: node tools/character-forge/sprite-browser.mjs quality-artifacts/character-forge
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -93,6 +90,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg
           python3 tools/character-forge/evidence-v6.py
+          python3 tools/character-forge/fabric-v8.py || echo 'CC0 scan unavailable; v8 report will record procedural fallback'
+          node tools/character-forge/research-v8.mjs
+          python3 tools/character-forge/evidence-v8.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -147,6 +147,7 @@ jobs:
           status=0
           python3 tools/character-forge/forge-bridge.py || status=1
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/makehuman-base.glb" CHARACTER_BRIDGE_LABEL=makehuman python3 tools/character-forge/forge-bridge.py || status=1
+          CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/v8-artisan.glb" CHARACTER_BRIDGE_LABEL=v8-artisan python3 tools/character-forge/forge-bridge.py || status=1
           exit "$status"
       - name: Compare one matched transparent frame through existing Art Forge bake
         if: always()
@@ -155,14 +156,18 @@ jobs:
           CHARACTER_SURFACE_BAKE=1 python3 tools/character-forge/sprite-bake.py
       - name: Optional Blender garment intersections and cloth control
         if: always()
-        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py'
+        run: |
+          /usr/bin/python3 -c 'import PIL; print(PIL.__version__)'
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle.py
       - name: Optional actual source animal template experiment
         if: always()
         run: |
           apt-get install -y --no-install-recommends librsvg2-bin ffmpeg
           python3 tools/character-forge/animal-source.py
-          node tools/character-forge/animal-source.mjs
+          CHARACTER_V8_FOCUS=1 node tools/character-forge/animal-source.mjs
           for f in "$CHARACTER_EVIDENCE"/source-*.svg; do rsvg-convert "$f" -o "${f%.svg}.png"; done
+          ffmpeg -hide_banner -loglevel error -y -framerate 12 -i "$CHARACTER_EVIDENCE/source-v8-elephant-motion/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/source-v8-elephant-walk.mp4"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -174,6 +179,7 @@ jobs:
             quality-artifacts/character-bridge/cloth-*
             quality-artifacts/character-bridge/garment-exact-overlap.json
             quality-artifacts/character-bridge/v7-*-overlap-map.png
+            quality-artifacts/character-bridge/v8-garment-overlap.json
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
