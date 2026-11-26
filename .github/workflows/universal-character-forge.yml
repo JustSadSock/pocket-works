@@ -32,6 +32,7 @@ jobs:
           node tools/character-forge/capture-v4.mjs
       - name: Convert original previews to PNG and video
         run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg fonts-dejavu-core
           python3 tools/character-forge/evidence-v4.py
@@ -138,6 +139,7 @@ jobs:
           path: quality-artifacts/character-bridge/morph
       - name: Install verified editor
         run: |
+          rm -f /etc/apt/sources.list.d/microsoft-prod.list
           apt-get update
           apt-get install -y --no-install-recommends python3-pil xz-utils libgl1 libx11-6 libxi6 libxrender1
           cd /tmp
