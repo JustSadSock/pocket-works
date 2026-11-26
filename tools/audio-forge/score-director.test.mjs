@@ -56,3 +56,15 @@ test('authored bridge plays once before destination loop and anchors new musical
  assert.equal(p.state.startTime,2.55);assert.equal(p.state.voices,1);
  p.request('after',{quantize:'immediate'});assert.equal(p.state.transitionAt,2.55);p.destroy();
 });
+
+test('score reservation deduplicates source PCM and budgets two bridge composites',()=>{
+ const {context,nodes,graph,buffers}=fixture();
+ const bridge={length:24000,sampleRate:48000,numberOfChannels:1,getChannelData(){}};
+ graph.bridges={'peace:battle':{file:'bridge.wav'}};
+ const options={context,graph,buffers,bridgeBuffers:{'peace:battle':bridge}};
+ const expected=(96000+144000+96000+24000+2*(144000+24000))*4;
+ assert.throws(()=>createScoreDirector({...options,maxDecodedBytes:expected-1}),/memory budget/);
+ assert.equal(nodes.length,0);
+ const p=createScoreDirector({...options,maxDecodedBytes:expected});
+ assert.equal(p.memory.reservedBytes,expected);p.destroy();
+});
