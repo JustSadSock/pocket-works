@@ -35,13 +35,13 @@ prepare_gameplay() {
     jq --arg workflow '.github/workflows/verified-gameplay-replay.yml' --argjson upstreamRun "$UPSTREAM_RUN" --argjson upstreamAttempt "$UPSTREAM_ATTEMPT" '.workflow=$workflow | .upstreamRun=$upstreamRun | .upstreamAttempt=$upstreamAttempt' "$out/manifest.json" > "$out/replay-manifest.json"
     mv "$out/replay-manifest.json" "$out/manifest.json"
   fi
-  docker run "${opts[@]}" --mount "type=bind,src=$out,dst=/out" "$image" node /audit/scripts/ci-overhaul/simulation-performance-contracts.mjs plan /work /out/plan.json
+  docker run "${opts[@]}" --mount "type=bind,src=$out,dst=/out" "$image" node /audit/scripts/ci-overhaul/verified-gameplay-phase.mjs plan /work /out/plan.json
 }
 run_gameplay_phase() {
   local phase="$1"
   [[ "$phase" = gameplay || "$phase" = performance ]]
   mkdir "$out/$phase"
-  docker run "${opts[@]}" --mount "type=bind,src=$out/$phase,dst=/out" "$image" node /audit/scripts/ci-overhaul/simulation-performance-contracts.mjs phase /work 0 "$phase" /out
+  docker run "${opts[@]}" --mount "type=bind,src=$out/$phase,dst=/out" "$image" node /audit/scripts/ci-overhaul/verified-gameplay-phase.mjs phase /work 0 "$phase" /out
 }
 verify_gameplay_mounts() {
   node "$tool" measure "$src" > "$RUNNER_TEMP/gameplay-source-after.json"
