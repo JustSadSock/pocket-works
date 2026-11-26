@@ -27,7 +27,7 @@ export function findSustainLoop(zone){
 function sample(a,p){const i=Math.floor(p),f=p-i;return a[i]*(1-f)+a[i+1]*f;}
 export function renderSustainedNote({zone,midi,seconds,pressure=.7,curve,loop}={}){
  const a=zone?.samples;
- if(!(a instanceof Float32Array)||!Number.isFinite(zone.measuredMidi)||!Number.isInteger(zone.expectedMidi)||!Number.isFinite(zone.rms)||zone.rms<=0||!Number.isFinite(zone.peak)||zone.peak<=0||!Number.isInteger(midi)||Math.abs(midi-zone.expectedMidi)>5||!Number.isFinite(seconds)||seconds<.08||seconds>30||!Number.isFinite(pressure)||pressure<.1||pressure>1)throw Error('Invalid sustained note');
+ if(!(a instanceof Float32Array)||!Number.isFinite(zone.measuredMidi)||!Number.isInteger(zone.expectedMidi)||zone.expectedMidi<36||zone.expectedMidi>96||Math.abs(zone.measuredMidi-zone.expectedMidi)>.75||!Number.isFinite(zone.rms)||zone.rms<=0||!Number.isFinite(zone.peak)||zone.peak<=0||!Number.isInteger(midi)||Math.abs(midi-zone.expectedMidi)>5||!Number.isFinite(seconds)||seconds<.08||seconds>30||!Number.isFinite(pressure)||pressure<.1||pressure>1)throw Error('Invalid sustained note');
  if(!loop||![loop.start,loop.end,loop.fade].every(Number.isInteger)||loop.start<0||loop.fade<2||loop.end>=a.length-1||loop.end-loop.start<=loop.fade*2||!Number.isFinite(loop.correlation)||loop.correlation<.78||!Number.isFinite(loop.rmsRatio)||loop.rmsRatio<.65)throw Error('Unqualified sustain loop');
  const points=curve??[{at:0,value:pressure},{at:1,value:pressure}];
  if(!Array.isArray(points)||points.length<2||points.length>64||points[0].at!==0||points.at(-1).at!==1||points.some((p,i)=>!Number.isFinite(p.at)||!Number.isFinite(p.value)||p.value<.1||p.value>1||i>0&&p.at<=points[i-1].at))throw Error('Invalid pressure curve');
