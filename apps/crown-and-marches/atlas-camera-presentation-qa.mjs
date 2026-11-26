@@ -31,7 +31,9 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
     const scene=await page.evaluate(o=>window.__atlasReview.scene('capital',o),{zoom:12,full:true,tilt:true,surfaceScale:true,identity:true,human:true,urban:true,culture:candidate,keepCache:false});
     await page.waitForFunction(p=>{const d=document.querySelector('#atlas')?.dataset;return d?.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&Number(d.atlasIntent)===p.intent;},scene,{timeout:90000});
     const initial=await page.evaluate(()=>window.__atlasReview.meta());
-    result.initial={scene,meta:initial};
+    const iv=initial.viewport,ix=(iv.width/2-(initial.camera.ox-iv.left))/initial.camera.s,iy=(iv.height/2-(initial.camera.oy-iv.top))/initial.camera.s;
+    const initialValid=initial.receipt.id===initial.request.id&&initial.receipt.intent===initial.request.intent&&initial.receipt.key===initial.request.key&&initial.receipt.revision===initial.request.revision&&Math.abs(initial.receipt.view.x-ix)<1e-7&&Math.abs(initial.receipt.view.y-iy)<1e-7&&Math.abs(initial.receipt.view.s-initial.camera.s)<1e-9;
+    result.initial={scene,meta:initial,expectedView:{x:ix,y:iy,s:initial.camera.s},valid:initialValid};if(!initialValid)result.errors.push('initial camera receipt mismatch');
     result.startImage=file(engine+'-'+candidate+'-camera-start.png');
     await page.screenshot({path:join(output,result.startImage)});
     const motion=await page.evaluate(async()=>{
@@ -45,7 +47,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
        const t=await new Promise(requestAnimationFrame);raf.push(t-prev);prev=t;
        const d=c.dataset;let req=null,rec=null;try{req=JSON.parse(d.atlasRequest||'null');rec=JSON.parse(d.atlasReceipt||'null');}catch{}
        const v=q.viewport,k=q.camera,ex=(v.width/2-(k.ox-v.left))/k.s,ey=(v.height/2-(k.oy-v.top))/k.s,reg=rec&&rec.region,vis=req&&req.visible;
-       const valid=d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&Number(d.atlasIntent)===q.intent&&Number(d.atlasFrame)>before&&req&&rec&&req.id===Number(d.atlasRequestId)&&req.intent===q.intent&&rec.id===req.id&&rec.intent===req.intent&&rec.key===req.key&&rec.revision===req.revision&&reg&&vis&&reg[0]<=vis[0]&&reg[1]<=vis[1]&&reg[2]>=vis[2]&&reg[3]>=vis[3]&&Math.abs(rec.view.x-ex)<1e-7&&Math.abs(rec.view.y-ey)<1e-7&&Math.abs(rec.view.s-k.s)<1e-9&&JSON.stringify(rec.view.viewport)===JSON.stringify(v);
+       const valid=d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&Number(d.atlasIntent)===q.intent&&Number(d.atlasFrame)>before&&req&&rec&&req.id===Number(d.atlasRequestId)&&req.intent===q.intent&&rec.id===req.id&&rec.intent===req.intent&&rec.key===req.key&&rec.revision===req.revision&&reg&&vis&&reg[0]<=vis[0]&&reg[1]<=vis[1]&&reg[2]>=vis[2]&&reg[3]>=vis[3]&&Math.abs(rec.view.x-ex)<1e-7&&Math.abs(rec.view.y-ey)<1e-7&&Math.abs(rec.view.s-k.s)<1e-9&&JSON.stringify(rec.view.viewport)===JSON.stringify(v)&&JSON.stringify(req.view.viewport)===JSON.stringify(v)&&Math.abs(req.view.x-ex)<1e-7&&Math.abs(req.view.y-ey)<1e-7&&Math.abs(req.view.s-k.s)<1e-9&&Math.abs(k.x-ex)<1e-7&&Math.abs(k.y-ey)<1e-7;
        if(valid){const m=r.meta();step={ok:true,label:a.label,latencyMs:performance.now()-began,raf,request:req,receipt:rec,camera:k,viewport:v,expectedView:{x:ex,y:ey,s:k.s},meta:{camera:m.camera,human:m.human,cache:m.cache,prepMs:m.prepMs,uploadMs:m.uploadMs,firstUsefulMs:m.firstUsefulMs}};break;}
       }
       if(!step)step={ok:false,label:a.label,raf,error:'camera presentation receipt timeout',dataset:{...c.dataset},pending:r.pending(),expected:q};
