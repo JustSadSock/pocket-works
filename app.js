@@ -444,7 +444,7 @@ function updateControlState(apps) {
   clearSearch.hidden = shelfState.query.length === 0;
   sortButton.dataset.sort = shelfState.sort;
   sortButton.textContent = SORT_LABELS[shelfState.sort];
-  count.textContent = String(apps.length);
+  count.textContent = String(deck?.getView() === 'home' ? registry.length : apps.length);
 
   resultSummary.textContent = shelfState.query ? `Найдено: ${apps.length}` : `Приложений: ${apps.length}`;
 }
