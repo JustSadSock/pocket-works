@@ -89,9 +89,22 @@ try{
         musicPlayer=createAdaptiveMusic({context:c,destination:mixer.bus('music'),stems:[{id:'calm',buffer:make(c,sr,220),base:1},{id:'battle',buffer:make(c,sr,440),threshold:.2,width:.6}]});
         check(await musicPlayer.start(),'Live music failed');
         const time=musicPlayer.state.startTime;
-        musicPlayer.setIntensity(1,{fadeSeconds:.05});
+        // Let the first audible beat settle, then schedule the next beat.
+        await new Promise(r=>setTimeout(r,160));
+        musicPlayer.setIntensity(1,{fadeSeconds:.05,quantize:'beat'});
+        const boundary=musicPlayer.state.transitionAt;
         check(musicPlayer.state.startTime===time&&musicPlayer.state.targets.battle===1,'Music restarted on intensity update');
-        await new Promise(r=>setTimeout(r,300));
+        check(boundary>=c.currentTime-.02&&Math.abs((boundary-time)/.5-Math.round((boundary-time)/.5))<1e-6,'Beat clock invalid');
+        // Read rendered output after the scheduled transition, not just requested state.
+        const until=boundary+.25;
+        const deadline=performance.now()+3000;
+        while(c.currentTime<until&&performance.now()<deadline)await new Promise(r=>setTimeout(r,25));
+        check(c.currentTime>=until,'Audio clock stalled before transition');
+        const spectrum=new Float32Array(analyser.frequencyBinCount);
+        analyser.getFloatFrequencyData(spectrum);
+        const bin=Math.round(440*analyser.fftSize/c.sampleRate);
+        const battleDb=Math.max(spectrum[bin-1],spectrum[bin],spectrum[bin+1]);
+        check(battleDb>-50,'Quantized battle stem missing from output');
         const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);
         check(rms(data)>.005,'Live music bus silent');
         const startTime=musicPlayer.state.startTime;
@@ -99,7 +112,7 @@ try{
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
         check(musicPlayer.state.startTime>startTime,'Restart clock invalid');
-        window.runtimeResult={liveRms:rms(data),restart:true};
+        window.runtimeResult={liveRms:rms(data),restart:true,quantizedBeat:boundary,battleDb};
       }catch(e){window.runtimeResult={error:String(e)}}finally{
         source?.destroy();musicPlayer?.destroy();mixer?.destroy();if(c)await c.close();window.runtimeDone=true;
       }
