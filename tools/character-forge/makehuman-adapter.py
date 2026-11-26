@@ -4,6 +4,10 @@ from pathlib import Path
 out=Path(os.environ["CHARACTER_EVIDENCE"]);out.mkdir(parents=True,exist_ok=True)
 base="https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/"
 sources={
+"female-young":("makehuman/data/targets/macrodetails/caucasian-female-young.target","9d1f0cbeedc9a6a51abe33f1ebb5fa7c5a7edbf1"),
+"male-young":("makehuman/data/targets/macrodetails/caucasian-male-young.target","c3b82f92c5ced85599199cd184b0faf3b3fc6881"),
+"female-old":("makehuman/data/targets/macrodetails/caucasian-female-old.target","2359bb525ddc620d43d309ba3dfea12b1fa88671"),
+"male-old":("makehuman/data/targets/macrodetails/caucasian-male-old.target","07b1f5526a3139dbd528efe07452d0a454106d0d"),
 "mesh":("makehuman/data/3dobjs/base.obj","d26635e9326e3cca30778fd7b9c00062b03cce09"),
 "rig":("makehuman/data/rigs/default.mhskel","b02cbecae00143856410d7561adf006d83bf9b3e"),
 "weights":("makehuman/data/rigs/default_weights.mhw","66185806afacf87749be8e5cf6dbf66496b2a6b0"),
@@ -18,7 +22,7 @@ def fetch(k):
     if hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()!=sha:raise ValueError("Source hash mismatch "+k)
     provenance[k]={"url":base+path,"sha256":hashlib.sha256(raw).hexdigest(),"gitBlob":sha,"license":"CC0-1.0"}
     return raw.decode()
-verts=[];faces=[];group="default";groups={};kept={}
+verts=[];faces=[];group="default";groups={};kept={};helpers={}
 for line in fetch("mesh").splitlines():
     f=line.split()
     if not f:continue
@@ -26,9 +30,10 @@ for line in fetch("mesh").splitlines():
     elif f[0]=="g":group=" ".join(f[1:])
     elif f[0]=="f":
         groups[group]=groups.get(group,0)+1
-        if any(g.startswith(("joint-","helper-")) for g in group.split()):continue
         q=[int(x.split("/")[0])-1 for x in f[1:]]
         if min(q)<0 or max(q)>=len(verts):raise ValueError("Invalid index")
+        if group.startswith("helper-"):helpers.setdefault(group,[]).append(q);continue
+        if group.startswith("joint-"):continue
         faces.append(q);kept[group]=kept.get(group,0)+1
 used=sorted({v for f in faces for v in f})
 if len(used)>=len(verts) or len(used)<8000:raise ValueError("Unexpected helper masking "+str(groups))
@@ -48,12 +53,13 @@ for name,entries in weights["weights"].items():
     for v,w in entries:
         if v in wmap and w>0:wmap[v].append((jointIds[name],w))
 if any(not w for w in wmap.values()):raise ValueError("Unweighted body vertices: "+str(sum(not w for w in wmap.values())))
-j4=[];w4=[];discard=0
+j4=[];w4=[];j8=[];w8=[];discard=0;discard8=0
 for v in used:
     allw=sorted(wmap[v],key=lambda p:-p[1]);sel=allw[:4];discard=max(discard,sum(w for _,w in allw[4:]));total=sum(w for _,w in sel)
+    s8=allw[:8];t8=sum(w for _,w in s8);discard8=max(discard8,sum(w for _,w in allw[8:]));j8.extend([j for j,w in s8]+[0]*(8-len(s8)));w8.extend([w/t8 for j,w in s8]+[0]*(8-len(s8)))
     j4.extend([j for j,w in sel]+[0]*(4-len(sel)));w4.extend([w/total for j,w in sel]+[0]*(4-len(sel)))
 targets={}
-for k in ("short","tall","heavy","light"):
+for k in ("short","tall","heavy","light","female-young","male-young","female-old","male-old"):
     target={}
     for line in fetch(k).splitlines():
         f=line.split()
@@ -75,7 +81,11 @@ def normal(v):
     l=math.sqrt(sum(x*x for x in v)) or 1
     return [x/l for x in v]
 samples=[]
-for name,morph in [("base",{}),("short-light",{"short":.45,"light":.5}),("tall-heavy",{"tall":.35,"heavy":.55})]:
+profiles=json.loads(Path(__file__).with_name("human-morphs.json").read_text())
+for name,params in profiles.items():
+    sex=params["female"];age=params["old"];morph={"female-young":sex*(1-age),"male-young":(1-sex)*(1-age),"female-old":sex*age,"male-old":(1-sex)*age}
+    for k in ("short","tall","heavy","light"):
+        if params.get(k,0):morph[k]=params[k]
     start=time.perf_counter();vs=[v[:] for v in verts]
     for k,amount in morph.items():
         for i,d in targets[k].items():vs[i]=[x+amount*y for x,y in zip(vs[i],d)]
@@ -88,13 +98,23 @@ for name,morph in [("base",{}),("short-light",{"short":.45,"light":.5}),("tall-h
     joints=[]
     for n in ordered:
         bone=rig["bones"][n];p=marker(bone["head"]);tail=marker(bone["tail"]);parent=jointIds[bone["parent"]] if bone["parent"] else -1
-        joints.append({"id":len(joints),"name":n,"parent":parent,"position":p,"local":p if parent<0 else minus(p,joints[parent]["position"]),"role":role(n),"axis":[1,0,0],"limitDegrees":35 if role(n) in ("spine","face","hand") else 85,"sourceTail":tail})
+        direction=normal(minus(tail,p));plane=rig["planes"].get(bone.get("rotation_plane"),[]);axis=[1,0,0]
+        if len(plane)==3:
+            pts=[marker(k) for k in plane];candidate=normal(cross(minus(pts[1],pts[0]),minus(pts[2],pts[0])))
+            if sum(x*x for x in candidate)>.9:axis=candidate
+        z=normal(cross(axis,direction));x=normal(cross(direction,z))
+        if sum(v*v for v in x)<.5:x=[1,0,0];z=normal(cross(x,direction))
+        joints.append({"id":len(joints),"name":n,"parent":parent,"position":p,"local":p if parent<0 else minus(p,joints[parent]["position"]),"role":role(n),"axis":[1,0,0],"limitDegrees":35 if role(n) in ("spine","face","hand") else 85,"sourceTail":tail,"sourceFrame":[x,direction,z],"sourcePlane":plane})
     positions=[standard(vs[v]) for v in used];normals=[[0,0,0] for v in used]
     for i in range(0,len(triangles),3):
         a,b,c=triangles[i:i+3];n=cross(minus(positions[b],positions[a]),minus(positions[c],positions[a]))
         for k in (a,b,c):normals[k]=[x+y for x,y in zip(normals[k],n)]
-    m={"spec":{"version":2,"recipe":"makehuman","family":"humanoid","style":"anatomical-realism","lod":"source","seed":17,"morphology":morph,"actions":["idle","walk"],"budget":{"maxBytes":32000000,"maxTriangles":150000,"maxJoints":512},"provenance":[{"author":"MakeHuman community","license":"CC0-1.0","origin":base}]},"joints":joints,"parts":[{"name":"MakeHuman source body","component":"body","color":[.57,.36,.25],"positions":[x for v in positions for x in v],"normals":[x for v in normals for x in normal(v)],"indices":triangles,"joints":j4,"weights":w4,"binding":0}],"contacts":[],"sockets":[],"components":[{"name":"human","family":"humanoid","root":0,"template":"makehuman-hm08-default"}],"approval":"unreviewed"}
+    m={"spec":{"version":2,"recipe":"makehuman","family":"humanoid","style":"anatomical-realism","lod":"source","seed":17,"morphology":morph,"actions":["idle","walk"],"budget":{"maxBytes":32000000,"maxTriangles":150000,"maxJoints":512},"provenance":[{"author":"MakeHuman community","license":"CC0-1.0","origin":base}]},"joints":joints,"parts":[{"name":"MakeHuman source body","component":"body","color":[.57,.36,.25],"positions":[x for v in positions for x in v],"normals":[x for v in normals for x in normal(v)],"indices":triangles,"joints":j4,"weights":w4,"joints8":j8,"weights8":w8,"binding":0}],"contacts":[],"sockets":[],"components":[{"name":"human","family":"humanoid","root":0,"template":"makehuman-hm08-default"}],"approval":"unreviewed"}
+    # Source helper surfaces are fitting guides, not final clothes. Retain
+    # their exact morph positions; clothing construction is a separate adapter.
+    m["fitting"]={"positions":[standard(v) for v in vs],"helpers":{k:v for k,v in helpers.items() if k in ("helper-tights","helper-skirt","helper-hair","helper-l-eye","helper-r-eye")},"sourceIndices":used}
+    m["spec"]["phenotype"]=params
     (out/("makehuman-"+name+".json")).write_text(json.dumps(m,separators=(",",":")))
-    samples.append({"variant":name,"vertices":len(used),"triangles":len(triangles)//3,"joints":len(joints),"digitBones":sum(j["role"]=="digit" for j in joints),"faceBones":sum(j["role"]=="face" for j in joints),"heightMetres":max(v[1] for v in positions),"maxDiscardedWeight":discard,"morphRigMs":(time.perf_counter()-start)*1000})
-(out/"makehuman-adapter.json").write_text(json.dumps({"sources":provenance,"groups":groups,"retainedGroups":kept,"removedVertices":len(verts)-len(used),"samples":samples,"limitations":"Original weights truncated to four and normalized; local rotation axes provisional, no original bone roll, facial correctives or clothing yet."},indent=2))
+    samples.append({"variant":name,"vertices":len(used),"triangles":len(triangles)//3,"joints":len(joints),"digitBones":sum(j["role"]=="digit" for j in joints),"faceBones":sum(j["role"]=="face" for j in joints),"heightMetres":max(v[1] for v in positions),"maxDiscardedWeight":discard,"maxDiscardedWeight8":discard8,"morphRigMs":(time.perf_counter()-start)*1000})
+(out/"makehuman-adapter.json").write_text(json.dumps({"sources":provenance,"groups":groups,"retainedGroups":kept,"removedVertices":len(verts)-len(used),"samples":samples,"limitations":"Original weights retained up to eight; source marker-derived orthogonal frame recorded, not full original Blender bone-roll reproduction. Four-weight compatibility also retained. Macro interpolation is a limited Caucasian adult reference subset, not full MPFB macro stack."},indent=2))
 print(json.dumps(samples))
