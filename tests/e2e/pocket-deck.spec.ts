@@ -208,12 +208,27 @@ test('saved layout and launcher navigation remain available offline',async({page
   });
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await page.locator('[data-deck-density="micro"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
+  await expect.poll(()=>page.evaluate(()=>{
+    try{return JSON.parse(localStorage.getItem('pocket-works:deck:v1')||'null')?.data?.density??null;}
+    catch{return null;}
+  }),{timeout:5000}).toBe('micro');
   await context.setOffline(true);
   await page.reload({waitUntil:'domcontentloaded'});
+  // domcontentloaded can precede the offline shell's module hydration. Wait for
+  // the restored deck state, not the static title already present in the HTML.
+  await expect(page.locator('html')).toHaveAttribute('data-deck-view','library',{timeout:15000});
+  await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro',{timeout:15000});
+  await expect(page.locator('body')).toHaveClass(/is-library-ready/,{timeout:15000});
+  const receipt=page.locator('[data-app-update-receipt]');
+  if(await receipt.isVisible().catch(()=>false)){
+    await receipt.locator('[data-update-receipt-close]').click();
+    await expect(receipt).toBeHidden();
+  }
   await expect(page.locator('#deck-view-title')).toHaveText('Каталог');
-  await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
-  await expect(page.locator('#app-list .app-entry').first()).toBeVisible();
+  await expect(page.locator('#app-list .app-entry').first()).toBeVisible({timeout:15000});
   await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-deck-view','home');
   await expect(page.locator('#deck-home')).toBeVisible();
   await context.setOffline(false);
 });
