@@ -91,7 +91,7 @@ export function riverRibbons(g,bounds,{vertical,threshold=25,allow=null}={}){
  for(let y=Math.max(0,Math.floor((y0-1)*r));y<=Math.min(h-1,Math.ceil((y1+1)*r));y++)for(let x=Math.max(0,Math.floor((x0-1)*r));x<=Math.min(w-1,Math.ceil((x1+1)*r));x++){
  const i=y*w+x;if(!valid(i))continue;const j=g.down[i];if(!allowed(j))continue;
  const a=node(i),b=node(j),inc=incoming(i),next=g.down[j],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(!len)continue;
- const prev=inc.length===1?node(inc[0]):null,post=valid(j)&&next>=0&&incoming(j).length===1?node(next):null;
+ const prev=inc.length===1?node(inc[0]):null,post=valid(j)&&allowed(next)&&incoming(j).length===1?node(next):null;
  const tx=prev?(b.x-prev.x)*.5:dx,ty=prev?(b.y-prev.y)*.5:dy,ux=post?(post.x-a.x)*.5:dx,uy=post?(post.y-a.y)*.5:dy;
  const bend=((Math.imul(i+1,2654435761)>>>0)/4294967295-.5)*.12/r;
  const points=[];for(let k=0;k<=4;k++){const t=k/4,t2=t*t,t3=t2*t,A=2*t3-3*t2+1,B=t3-2*t2+t,D=-2*t3+3*t2,E=t3-t2;
