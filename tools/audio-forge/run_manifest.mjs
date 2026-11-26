@@ -301,6 +301,7 @@ function generateManifest(manifestPath, baseDir, generated) {
     validateJob(job);
     if (job.type === 'hybrid') {
       if (manifest.version !== 2 || typeof job.sampleId !== 'string' || typeof job.sampleMix !== 'number' || !Number.isFinite(job.sampleMix) || job.sampleMix < 0 || job.sampleMix > 1) throw new Error('Invalid hybrid recipe');
+      if (job.sampleStart !== undefined && (typeof job.sampleStart !== 'number' || !Number.isFinite(job.sampleStart) || job.sampleStart < 0 || job.sampleStart > 3600)) throw new Error('Invalid sampleStart');
       if (!resolvedSamples.has(job.sampleId)) resolvedSamples.set(job.sampleId,catalog.resolve(job.sampleId));
     }
     const target = assertInside(baseDir, job.output, `Output for ${job.name}`);
@@ -322,7 +323,7 @@ function generateManifest(manifestPath, baseDir, generated) {
         if (job.type === 'hybrid') {
           const {file,entry} = resolvedSamples.get(job.sampleId);
           const seconds = samples.length / (2 * audio.sampleRate);
-          const pcm = execFileSync('sox',['-R',file,'-t','raw','-e','floating-point','-b','32','-L','-c','2','-r','48000','-','trim','0',String(seconds)],{maxBuffer:8*1024*1024});
+          const pcm = execFileSync('sox',['-R','-v','0.8',file,'-t','raw','-e','floating-point','-b','32','-L','-c','2','-r','48000','-','trim',String(job.sampleStart??0),String(seconds)],{maxBuffer:8*1024*1024});
           if (!pcm.length || pcm.length % 8) throw new Error('Invalid decoded sample');
           const decoded = new Float32Array(pcm.length/4);
           for(let i=0;i<decoded.length;i++) decoded[i]=pcm.readFloatLE(i*4);
