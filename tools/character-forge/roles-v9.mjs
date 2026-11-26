@@ -7,7 +7,7 @@ import {sewLining} from './garment.mjs';
 import {profiles} from './material-study.mjs';
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),mix=(a,b,t)=>add(mul(a,1-t),mul(b,t)),unit=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),tau=Math.PI*2;
 const J=(m,n)=>{const j=m.joints.find(x=>x.name===n);if(!j)throw Error('Missing joint '+n);return j};
-function addPart(m,name,color,kind,region=name){const p=part(name,color,kind==='metal'?'equipment':'clothing');p.layer=4;p.region=region;p.material={kind,roughness:profiles[kind].roughness,metallic:profiles[kind].metallic};m.parts.push(p);return p}
+function addPart(m,name,color,kind,region=name){const p=part(name,color,kind==='metal'?'equipment':'clothing');p.layer=4;p.region=region;p.material={kind,roughness:profiles[kind]?.roughness??(kind==='wood'?.82:.72),metallic:profiles[kind]?.metallic??0};m.parts.push(p);return p}
 function grid(p,rows,cols){for(let r=0;r<rows-1;r++)for(let c=0;c<cols-1;c++){let a=r*cols+c,b=a+1;p.indices.push(a,b,b+cols,a,b+cols,a+cols)}return p}
 function finish(p,thickness=.004){if(thickness)sewLining(p,thickness);return normals(p)}
 function tube(m,name,stations,color,kind='leather',sides=12,thickness=.004){
