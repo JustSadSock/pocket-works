@@ -307,6 +307,7 @@ function generateManifest(manifestPath, baseDir, generated) {
     if (manifest.version === 2 && targets.has(target)) throw new Error('Duplicate resolved audio output: '+target);
     targets.add(target);
   }
+  for (const {file} of resolvedSamples.values()) if (targets.has(file)) throw new Error('Generated output would overwrite a source sample');
   for (const job of jobs) {
     const output = assertInside(baseDir, job.output, `Output for ${job.name}`);
     mkdirSync(path.dirname(output), { recursive: true });
@@ -325,6 +326,12 @@ function generateManifest(manifestPath, baseDir, generated) {
           if (!pcm.length || pcm.length % 8) throw new Error('Invalid decoded sample');
           const decoded = new Float32Array(pcm.length/4);
           for(let i=0;i<decoded.length;i++) decoded[i]=pcm.readFloatLE(i*4);
+          // Remove discontinuities at the decoded sample boundaries, including a trim.
+          const frames=Math.min(decoded.length,samples.length)/2;
+          for(let i=0;i<frames;i++) {
+            const fade=Math.min(1,i/24,(frames-1-i)/240);
+            decoded[i*2]*=fade;decoded[i*2+1]*=fade;
+          }
           samples=mixHybrid(samples,decoded,job.sampleMix);
           console.log('Sample provenance: '+entry.id+' '+entry.license+' sha256:'+entry.sha256);
         }
