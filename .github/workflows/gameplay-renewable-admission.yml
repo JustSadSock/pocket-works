@@ -187,6 +187,20 @@ jobs:
             if [[ "$evidence" == off ]]; then input="$PWD/no-evidence"; fi
             node scripts/ci-overhaul/gameplay-renewable-admission.mjs audit "$PWD/reports/$name/raw" "$input" "$PWD/audited/$name" "$PWD/reports/$name"
           done < <(jq -c '.[]' <<< "$MATRIX")
+          # The control has no historical receipt, so corruption cannot be
+          # masked by an authentication failure or an expired catalog.
+          if jq -e 'any(.[]; .shard==0 and .evidence=="off")' <<< "$MATRIX" >/dev/null; then
+            export SHARD=0
+            cp -a "reports/renewable-admission-0-off-$GITHUB_RUN_ATTEMPT" tampered
+            printf '%s\n' '{"corrupt":true}' >> tampered/fresh-measurements.jsonl
+            mkdir rejected
+            if node scripts/ci-overhaul/gameplay-renewable-admission.mjs audit "$PWD/tampered/raw" "$PWD/no-evidence" "$PWD/rejected" "$PWD/tampered" > rejected.log 2>&1; then
+              echo 'Independent gate accepted corrupt output'; exit 1
+            fi
+            grep -F 'Projected evidence differs: fresh-measurements.jsonl' rejected.log
+            test ! -e rejected/gate-candidate.json
+            printf '%s\n' '{"corruptProjectionRejected":true}' > tamper-verdict.json
+          fi
       - name: Validate coverage and provenance
         env:
           MATRIX: ${{ needs.prepare.outputs.matrix }}
@@ -199,5 +213,6 @@ jobs:
           path: |
             aggregate.json
             audited/*/gate-candidate.json
+            tamper-verdict.json
           if-no-files-found: error
           retention-days: 7
