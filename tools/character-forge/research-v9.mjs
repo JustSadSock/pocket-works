@@ -29,13 +29,13 @@ function soles(model,phase,w){
  return rows;
 }
 const models={},restModels={},roleReport=[];
-for(const id of roleIds){const morphSource=roleMorphs[id].morph,m=produceRoleV9(source(morphSource),id),q=posed(m);models[id]=m;restModels[id]=q;
- const bin=glb(m,{detailMaps:selectedMaps}),doc=inspectGLB(bin);write('v9-'+id+'.glb',bin);json('v9-'+id+'.model.json',m);
+for(const id of roleIds){const morphSource=roleMorphs[id].morph,generationStart=performance.now(),m=produceRoleV9(source(morphSource),id),generationMs=performance.now()-generationStart,poseStart=performance.now(),q=posed(m),poseMs=performance.now()-poseStart;models[id]=m;restModels[id]=q;
+ const exportStart=performance.now(),bin=glb(m,{detailMaps:selectedMaps}),doc=inspectGLB(bin),exportMs=performance.now()-exportStart;write('v9-'+id+'.glb',bin);json('v9-'+id+'.model.json',m);
  const root=m.joints.find(j=>j.parent<0),rootTrack=doc.animations.find(a=>a.name==='walk')?.channels.some(c=>c.target.node===root.id&&c.target.path==='translation');
- roleReport.push({id,morphSource,parts:m.parts.map(p=>p.name),partCount:m.parts.length,triangleCount:m.statistics.triangleCount,vertices:m.statistics.vertices,joints:m.joints.length,style:m.spec.style,lod:m.spec.lod,rootMotionChannel:rootTrack,attachments:m.attachments??[],roleDiagnostics:m.roleDiagnostics,glbBytes:bin.length});
+ roleReport.push({id,morphSource,generationMs,poseMs,exportMs,parts:m.parts.map(p=>p.name),partCount:m.parts.length,triangleCount:m.statistics.triangleCount,vertices:m.statistics.vertices,joints:m.joints.length,style:m.spec.style,lod:m.spec.lod,rootMotionChannel:rootTrack,attachments:m.attachments??[],roleDiagnostics:m.roleDiagnostics,glbBytes:bin.length});
 }
 const bounds=Object.fromEntries(views.map(v=>[v,commonBounds(Object.values(restModels),v)]));
-for(const view of views)for(const id of roleIds)write('v9-'+id+'-'+view+'.png',raster(restModels[id],{view,bounds:bounds[view],size:768,mode:'C',maps:selectedMaps}).png);
+for(const view of views)for(const id of roleIds){const t=performance.now(),image=raster(restModels[id],{view,bounds:bounds[view],size:768,mode:'C',maps:selectedMaps});write('v9-'+id+'-'+view+'.png',image.png);const r=roleReport.find(x=>x.id===id);r.renderMs??={};r.renderMs[view]=performance.now()-t;}
 for(const id of roleIds){
  const m=restModels[id],groups={head:m.parts.filter((p,i)=>i===0||/head|helmet|bascinet|chaperon|mail aventail/i.test(p.name)),cloth:m.parts.filter(p=>['cloth','leather'].includes(p.material?.kind)),metal:m.parts.filter(p=>p.material?.kind==='metal')};
  for(const [label,parts] of Object.entries(groups)){if(!parts.length)continue;const q={...m,parts};write('v9-'+id+'-close-'+label+'.png',raster(q,{view:'three-quarter',size:640,mode:'C',maps:selectedMaps}).png)}
