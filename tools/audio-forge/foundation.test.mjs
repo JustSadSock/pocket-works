@@ -17,7 +17,7 @@ test('reject invalid families and source claims',()=>{
   assert.throws(()=>expandManifest({...manifest,families:[family,family]}));
   assert.throws(()=>expandManifest({...manifest,jobs:[{name:'dup',output:'generated/steel-01.wav'}]}));
 });
-for(const model of ['sword','shield','glass','explosion','rain','sword-v2','glass-v2','gear','chain']){
+for(const model of ['sword','shield','glass','explosion','rain','sword-v2','glass-v2','gear','chain','boot-earth','hoof-earth','armor-leather','shield-wood']){
   test(model+' is deterministic, finite and distinct by seed',()=>{
     const job={model,seed:12,strength:.65,duration:.5};
     const a=renderPhysics(job),b=renderPhysics(job),c=renderPhysics({...job,seed:13});
