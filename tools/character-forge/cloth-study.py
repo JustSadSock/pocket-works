@@ -20,6 +20,44 @@ for frame in json.loads((src/"garment-collision-input.json").read_text()):
             if hits:pairs.append({"a":p["name"],"b":q["name"],"trianglePairs":len(hits),"aTriangles":len({x[0] for x in hits}),"bTriangles":len({x[1] for x in hits})})
     rows.append({"phase":frame["phase"],"pairs":pairs})
 (out/"garment-exact-overlap.json").write_text(json.dumps({"frames":rows,"elapsedMs":(time.perf_counter()-t)*1000,"note":"Surface triangle overlaps include intended seam contacts and concealed layers. Not a watertight signed-volume or self-intersection test."},indent=2))
+# V5 keeps the raw triangle pairs while separating seam candidates from
+# body contacts and potentially visible interpenetration. A proximity
+# classification is not a visibility proof; review actual renders.
+v5path=src/"garment-v5-collision-input.json"
+if v5path.exists():
+    v5rows=[];start=time.perf_counter()
+    def point(p,i):
+        ids=p["indices"][3*i:3*i+3];return tuple(sum(p["positions"][3*j+k] for j in ids)/3 for k in range(3))
+    def classify(p,q,i,j):
+        a,b=p["name"],q["name"]
+        if min(p["layer"],q["layer"])==0:return "covered-anatomy-contact"
+        if a.startswith("boot ") and b.startswith("trousers "):return classify(q,p,j,i)
+        if a.startswith("trousers ") and b.startswith("boot ") and not b.startswith("boot welt") and a[-1]==b[-1]:
+            upper=max(q["positions"][1::3]);y=(point(p,i)[1]+point(q,j)[1])/2
+            if abs(y-upper)<.05:return "boot-cuff-seam-candidate"
+        if (a=="shirt" and b=="quilted") or (b=="shirt" and a=="quilted"):return "protective-layer-crossing"
+        if a.startswith(b+" ") or b.startswith(a+" "):
+            if any(x in a+" "+b for x in (" binding"," hem"," welt"," nasal")):return "binding-seam-candidate"
+        if {"waist belt","belt clasp"}=={a,b}:return "hardware-attachment-candidate"
+        if "waist belt" in (a,b):
+            belt=p if a=="waist belt" else q;other=q if a=="waist belt" else p
+            if other["name"] in ("tunic","shirt","quilted"):
+                return "belt-attachment-candidate"
+        return "unclassified-visible-risk"
+    for frame in json.loads(v5path.read_text()):
+        parts=frame["parts"];trees=[bvh(p) for p in parts];pairs=[]
+        for i,p in enumerate(parts):
+            for j in range(i+1,len(parts)):
+                q=parts[j];hits=trees[i].overlap(trees[j])
+                if not hits:continue
+                kinds={}
+                for x,y in hits:
+                    kind=classify(p,q,x,y);kinds[kind]=kinds.get(kind,0)+1
+                pairs.append({"a":p["name"],"b":q["name"],"trianglePairs":len(hits),"classification":kinds})
+        v5rows.append({"kit":frame["kit"],"label":frame["label"],"phase":frame["phase"],"pairs":pairs})
+    report_path=out/"garment-exact-overlap.json";report=json.loads(report_path.read_text())
+    report["v5"]={"frames":v5rows,"elapsedMs":(time.perf_counter()-start)*1000,"note":"Includes same-layer pairs; seam candidates are approximate classification, not a visual pass or self-intersection check."}
+    report_path.write_text(json.dumps(report,indent=2))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 data=json.loads((src/"cloth-control.json").read_text())
 def mesh(name,p):
