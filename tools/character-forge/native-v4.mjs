@@ -11,3 +11,26 @@ for(let recipe of ['citizen','horse','elephant','rider','dog','bird']){let m=bui
  if(recipe==='citizen'||recipe==='horse'){let p=spriteProduction(m,{size:128,frames:8});mkdirSync(join(out,'sprites-'+recipe),{recursive:true});for(let f of p.frames)write('sprites-'+recipe+'/'+f.direction+'-'+f.index+'.svg',f.svg);json('sprites-'+recipe+'/metadata.json',{...p.metadata,frames:p.frames.map(({svg,...f})=>f)});write('sprites-'+recipe+'/model.glb',glb(m))}
 }
 json('native-v4-report.json',{models:results,motions,limitations:['V4 shaped anatomical transitions, hooves, ears and curved chains; source mesh experiment separately','Five declarative profiles each; dog and bird smoke only','Root offset cyclical, not full locomotion; no solved horizontal locking']});console.log(JSON.stringify(results));
+
+// V5: keep native v4 evidence and explicitly compare the revised horse.
+const horse5=[],horseMotion=[];
+for(const name of ['base','courser','draft']){
+ const spec={...resolveProfile(reg,'horse',name),anatomy:'v5',motionRevision:'v4'},start=performance.now(),m=build(spec),buildMs=performance.now()-start;
+ const prefix='v5-horse-'+name;write(prefix+'.glb',glb(m));json(prefix+'.spec.json',spec);
+ for(const view of ['front','side','three-quarter']){
+   const prev=build({...spec,anatomy:'v4'}),a=preview(prev,{view,neutral:true}).bounds,b=preview(m,{view,neutral:true}).bounds;
+   const fixedBounds=[Math.min(a[0],b[0]),Math.max(a[1],b[1]),Math.min(a[2],b[2]),Math.max(a[3],b[3])];
+   write(prefix+'-'+view+'.svg',preview(m,{view,neutral:true,fixedBounds}).svg);
+   if(name==='base')write('v5-horse-control-'+view+'.svg',preview(prev,{view,neutral:true,fixedBounds}).svg);
+ }
+ horse5.push({name,...m.statistics,buildMs});
+ if(name==='base'){
+   const folder='v5-horse-motion';mkdirSync(join(out,folder),{recursive:true});
+   for(let i=0;i<16;i++){
+     const phase=i/16,w=pose(m,'walk',phase);
+     horseMotion.push({phase,contacts:m.contacts.map(c=>({name:m.joints[c.joint].name,point:rotate(w[c.joint].q,c.local).map((v,k)=>v+w[c.joint].p[k])}))});
+     for(const view of ['side','front'])write(folder+'/'+view+'-'+String(i).padStart(2,'0')+'.svg',preview(m,{view,action:'walk',phase,neutral:true}).svg);
+   }
+ }
+}
+json('native-v5-horse-report.json',{models:horse5,motion:horseMotion,limitations:['Revised thorax/neck loft and recessed proximal limb chains; not a unified watertight animal skin.','Preserves v4 motion and hoof geometry; visual and contact acceptance open.']});
