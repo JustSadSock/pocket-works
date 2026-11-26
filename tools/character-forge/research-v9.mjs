@@ -8,7 +8,7 @@ import {glb,inspectGLB} from './glb.mjs';
 import {raster,commonBounds,materialMaps,profiles,png} from './material-study.mjs';
 import {pose,deform,rootOffset} from './core.mjs';
 import {normals} from './hybrid-human.mjs';
-const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(out,n))),write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2)),source=n=>read('makehuman-'+n+'.json'),start=performance.now(),ids=read('identities-v4.json');
+const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(out,n))),write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2)),source=n=>read('makehuman-'+n+'.json'),start=performance.now(),ids=JSON.parse(readFileSync(new URL('./identities-v4.json',import.meta.url),'utf8'));
 const roleIds=['artisan','merchant','infantry','legionary'],views=['front','side','back','three-quarter'],sizes=[18,32,64,128];
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),unit=a=>mul(a,1/(Math.hypot(...a)||1)),dot=(a,b)=>a.reduce((s,v,k)=>s+v*b[k],0),angle=(a,b)=>Math.acos(Math.max(-1,Math.min(1,dot(unit(a),unit(b)))))*180/Math.PI;
 const maps=Object.fromEntries(Object.keys(profiles).map(k=>[k,materialMaps(k,256)]));
