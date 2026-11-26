@@ -1,6 +1,8 @@
 // Minimal standards-based GLB research adapter. No changes to Art Forge publishing.
 import {animation} from './core.mjs';
+import {styles} from './style.mjs';
 export function glb(model){
+ const style=styles[model.spec.style];
  const doc={asset:{version:'2.0',generator:'Pocket Works Character Forge research'},scene:0,scenes:[{nodes:[]}],nodes:[],meshes:[],materials:[],skins:[],animations:[],buffers:[{byteLength:0}],bufferViews:[],accessors:[],extras:{spec:model.spec,components:model.components,sockets:model.sockets,contacts:model.contacts,approval:model.approval}};
  let chunks=[],offset=0;
  function accessor(data,type,componentType=5126,target,minmax=false){
@@ -14,10 +16,10 @@ export function glb(model){
  const inv=model.joints.flatMap(j=>[1,0,0,0,0,1,0,0,0,0,1,0,-j.position[0],-j.position[1],-j.position[2],1]);
  doc.skins.push({joints:model.joints.map(j=>j.id),inverseBindMatrices:accessor(inv,'MAT4'),skeleton:model.joints.find(j=>j.parent<0).id});
  let prim=[],materials=new Map();
- for(let p of model.parts){let key=p.color.join(',');if(!materials.has(key)){materials.set(key,doc.materials.length);doc.materials.push({name:p.name,pbrMetallicRoughness:{baseColorFactor:[...p.color,1],metallicFactor:/blade|guard|helm|lamella|boss/.test(p.name)?.45:0,roughnessFactor:.72}})}
-  prim.push({attributes:{POSITION:accessor(p.positions,'VEC3',5126,34962,true),NORMAL:accessor(p.normals,'VEC3',5126,34962),JOINTS_0:accessor(p.joints,'VEC4',5123,34962),WEIGHTS_0:accessor(p.weights,'VEC4',5126,34962)},indices:accessor(p.indices,'SCALAR',5125,34963),material:materials.get(key),extras:{part:p.name}})}
+ for(let p of model.parts){let metal=/blade|guard|helm|lamella|boss|crest/.test(p.name),key=p.color.join(',')+':'+metal;if(!materials.has(key)){materials.set(key,doc.materials.length);doc.materials.push({name:p.name,pbrMetallicRoughness:{baseColorFactor:[...p.color,1],metallicFactor:metal?(style?.metallic??.45):0,roughnessFactor:style?.roughness??.72}})}
+  prim.push({attributes:{POSITION:accessor(p.positions,'VEC3',5126,34962,true),NORMAL:accessor(p.normals,'VEC3',5126,34962),JOINTS_0:accessor(p.joints,'VEC4',5123,34962),WEIGHTS_0:accessor(p.weights,'VEC4',5126,34962)},indices:accessor(p.indices,'SCALAR',5125,34963),material:materials.get(key),extras:{part:p.name,component:p.component??'body',binding:p.binding}})}
  doc.meshes.push({name:model.spec.recipe,primitives:prim});doc.scenes[0].nodes.push(doc.nodes.length);doc.nodes.push({name:'Character skin',mesh:0,skin:0});
- for(let action of model.spec.actions){const duration=action==='run'?.65:action==='walk'?1.12:2,steps=24,times=Array.from({length:steps+1},(_,i)=>i/steps*duration),input=accessor(times,'SCALAR',5126,undefined,true),frames=times.map((_,i)=>animation(model,action,i/steps)),samplers=[],channels=[];
+ for(let action of model.spec.actions){const duration=action==='run'?.65:action==='walk'?1.12:action==='fly'?.82:2,steps=24,times=Array.from({length:steps+1},(_,i)=>i/steps*duration),input=accessor(times,'SCALAR',5126,undefined,true),frames=times.map((_,i)=>animation(model,action,i/steps)),samplers=[],channels=[];
  for(let j of model.joints){let values=frames.flatMap(f=>f[j.id]);samplers.push({input,output:accessor(values,'VEC4'),interpolation:'LINEAR'});channels.push({sampler:samplers.length-1,target:{node:j.id,path:'rotation'}})}
  doc.animations.push({name:action,samplers,channels})}
  let pad=(4-offset%4)%4;if(pad){chunks.push(Buffer.alloc(pad));offset+=pad}doc.buffers[0].byteLength=offset;

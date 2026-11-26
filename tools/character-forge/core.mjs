@@ -1,4 +1,5 @@
 import {appearance,styles,lods,classifyPart} from "./style.mjs";
+import {unionUpperBody} from "./surface.mjs";
 import {animal,avian} from "./animals.mjs";
 import {motionFrame,blendFrames,semanticRetarget} from "./motion.mjs";
 // Character Core v0.2: metres, +Y up, +Z forward (glTF). No editor/runtime dependencies.
@@ -40,7 +41,7 @@ class Builder{
  loft(name,stations,color,sideCount=this.profile.sides){
   const p=this.part(name,color,stations[0].j),N=sideCount;let priorU=null;
   for(let i=0;i<stations.length;i++){let s=stations[i],a=stations[Math.max(0,i-1)].p,b=stations[Math.min(stations.length-1,i+1)].p,t=unit(sub(b,a)),u=unit(cross(Math.abs(t[1])>.9?[0,0,1]:[0,1,0],t)),v=cross(t,u);
-   if(this.spec.version===2&&this.spec.surface==='transported'&&priorU){let projected=sub(priorU,mul(t,dot(priorU,t)));if(Math.hypot(...projected)>.001)u=unit(projected);v=cross(t,u)}priorU=u;
+   if(this.spec.version===2&&this.spec.surface!=='legacy-rings'&&priorU){let projected=sub(priorU,mul(t,dot(priorU,t)));if(Math.hypot(...projected)>.001)u=unit(projected);v=cross(t,u)}priorU=u;
    for(let k=0;k<N;k++){let q=k*2*Math.PI/N,rad=add(mul(u,Math.cos(q)*s.r[0]),mul(v,Math.sin(q)*s.r[1]));this.vertex(p,add(s.p,rad),add(mul(u,Math.cos(q)/s.r[0]),mul(v,Math.sin(q)/s.r[1])),s.j,s.k??s.j,s.w??1)}
   }
   for(let i=0;i<stations.length-1;i++)for(let k=0;k<N;k++){let a=i*N+k,b=i*N+(k+1)%N,c=b+N,d=a+N;p.indices.push(a,b,c,a,c,d)}
@@ -111,12 +112,13 @@ function bird(b){if(b.spec.version===2)return avian(b);let h=b.spec.morphology.h
  for(let s of [-1,1]){let a=b.joint('wing-'+s,root,p(s*.17,.65,.04),'wing',[0,0,1],85),tip=b.joint('wing-tip-'+s,a,p(s*.54,.58,-.18),'wing.tip',[0,0,1],60);b.limb('wing'+s,[p(s*.17,.65,.04),p(s*.54,.58,-.18),p(s*.82,.51,-.31)],[.15*h,.12*h,.012*h],[a,tip,tip],'feather');let f=b.joint('foot-'+s,root,p(s*.12,.07,0),'foot',[1,0,0],40);b.bar('leg'+s,p(s*.12,.36,0),p(s*.12,.07,0),.026*h,'bronze',f);b.contacts.push({joint:f,role:'sole',local:[0,-.07*h,0],phase:s<0?0:.5})}
  b.components.push({name:'bird',family:'avian',root,template:'avian-v1'})}
 export function build(spec){let s=validate(spec),b=new Builder(s),t=performance.now();
- if(s.version===2&&!['transported','legacy-rings'].includes(s.surface))throw Error('Unsupported surface');
+ if(s.version===2&&!['transported','legacy-rings','implicit'].includes(s.surface))throw Error('Unsupported surface');
  if(s.family==='humanoid')human(b,'',[0,0,0],-1,s.morphology.height,recipes[s.recipe].outfit);
  else if(s.family==='bird')bird(b);else if(s.version===2)animal(b,s.family,human);else quadruped(b,s.family);
+ const surfaceStart=performance.now(),surfaceAudit=s.version===2&&s.surface==='implicit'&&s.family==='humanoid'?unionUpperBody(b):null,surfaceMs=performance.now()-surfaceStart;
  const triangleCount=b.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices=b.parts.reduce((n,p)=>n+p.positions.length/3,0);
  if(triangleCount>s.budget.maxTriangles||b.joints.length>s.budget.maxJoints)throw Error('Geometry budget exceeded');
- return {spec:s,joints:b.joints,parts:b.parts,contacts:b.contacts,sockets:b.sockets,components:b.components,modules:b.parts.map(p=>({part:p.name,kind:p.component,binding:p.binding})),statistics:{triangleCount,vertices,joints:b.joints.length,geometryAndRigMs:performance.now()-t},approval:'unreviewed'}
+ return {spec:s,joints:b.joints,parts:b.parts,contacts:b.contacts,sockets:b.sockets,components:b.components,modules:b.parts.map(p=>({part:p.name,kind:p.component,binding:p.binding})),statistics:{triangleCount,vertices,joints:b.joints.length,geometryAndRigMs:performance.now()-t,surfaceMs},surfaceAudit,approval:'unreviewed'}
 }
 export function quat(axis,angle){return [...mul(unit(axis),Math.sin(angle/2)),Math.cos(angle/2)]}
 export function qmul(a,b){let av=a.slice(0,3),bv=b.slice(0,3);return [...add(add(mul(bv,a[3]),mul(av,b[3])),cross(av,bv)),a[3]*b[3]-dot(av,bv)]}
