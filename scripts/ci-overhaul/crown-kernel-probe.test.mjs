@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {compareProbes,SOURCE,IMAGE} from './crown-kernel-probe.mjs';
+const h='a'.repeat(64),ctx={run:1,attempt:1,commit:'b'.repeat(40)};
+const fixture=()=>[1,2,3,4].map(replica=>({schema:1,source:SOURCE,...ctx,replica,productionAuthorization:false,environment:{image:IMAGE,arch:'x64',archive:h,config:h,toolchain:h,node:'v22.12.0',kernel:replica===1?'A':'B',cpu:'C',uid:1001,gid:1001},projection:{digest:h,fullDigest:h,identities:['a','b'],timing:[{ms:1},{ms:2}]}}));
+test('distinct kernels produce bounded observational evidence only',()=>{const r=compareProbes(fixture(),ctx);assert.equal(r.eligiblePairs,3);assert.equal(r.sameGameplay,true);assert.equal(r.allowResultReuse,false);});
+test('same kernel is inconclusive; incompatible source archive is not eligible',()=>{const a=fixture();a[0].environment.kernel='B';assert.equal(compareProbes(a,ctx).finding,'inconclusive');a[0].environment.kernel='A';a[0].environment.archive='c'.repeat(64);assert.equal(compareProbes(a,ctx).eligiblePairs,0);});
+test('semantic mismatch and incomplete or duplicate samples',()=>{const a=fixture();a[0].projection.digest='c'.repeat(64);assert.equal(compareProbes(a,ctx).finding,'semantic-mismatch');assert.throws(()=>compareProbes(a.slice(1),ctx));a[1].replica=1;assert.throws(()=>compareProbes(a,ctx));});
