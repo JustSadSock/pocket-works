@@ -19,15 +19,36 @@ export function createVariantBag(variants,random=Math.random){
     }
   };
 }
-export function createSoundFamilyPlayer({context,destination=context?.destination,families,random=Math.random,fetcher=globalThis.fetch,maxVoices=16,maxBuffers=64}={}){
+export function createSoundFamilyPlayer({context,destination=context?.destination,families,random=Math.random,fetcher=globalThis.fetch,maxVoices=16,maxBuffers=64,maxDecodedBytes=64*1024*1024}={}){
   if(!context||!destination||typeof fetcher!=='function') throw new Error('Audio context, output and fetch required');
   if(!Number.isInteger(maxVoices)||maxVoices<1||maxVoices>128||!Number.isInteger(maxBuffers)||maxBuffers<1||maxBuffers>256) throw new Error('Invalid audio budget');
+  if(!Number.isSafeInteger(maxDecodedBytes)||maxDecodedBytes<1)throw new Error('Invalid decoded memory budget');
   const definitions=new Map(),cache=new Map(),voices=new Set();
   let enabled=true,destroyed=false,generation=0,pending=0;
   for(const [id,definition] of Object.entries(families??{})){
     const urls=definition.variants;
     if(!Array.isArray(urls)||urls.some(x=>typeof x!=='string'||!x.trim())) throw new Error('Invalid variants for '+id);
     definitions.set(id,{bag:createVariantBag(urls,random),urls:[...urls],gain:clamp(finite(definition.gain,1),0,1),pitch:clamp(finite(definition.pitchCents,35),0,120),gainSpread:clamp(finite(definition.gainSpread,.1),0,.4)});
+  }
+  function bytes(buffer){
+    const n=buffer.length*buffer.numberOfChannels*4;
+    if(!Number.isSafeInteger(buffer.length)||buffer.length<1||!Number.isInteger(buffer.numberOfChannels)||buffer.numberOfChannels<1||!Number.isSafeInteger(n))throw new Error('Invalid decoded audio dimensions');
+    return n;
+  }
+  function retainedBytes(extra){
+    const buffers=new Set([...cache.values()].filter(e=>e.ready).map(e=>e.buffer));
+    for(const v of voices)buffers.add(v.buffer);
+    if(extra)buffers.add(extra);
+    return [...buffers].reduce((n,b)=>n+bytes(b),0);
+  }
+  function fit(buffer,protectedEntry){
+    if(bytes(buffer)>maxDecodedBytes)return false;
+    while(retainedBytes(buffer)>maxDecodedBytes){
+      const candidate=[...cache].find(([,e])=>e.ready&&e!==protectedEntry&&!([...voices].some(v=>v.buffer===e.buffer)));
+      if(!candidate)return false;
+      cache.delete(candidate[0]);
+    }
+    return true;
   }
   function load(url){
     if(cache.has(url)){const entry=cache.get(url);cache.delete(url);cache.set(url,entry);return entry.promise;}
@@ -43,7 +64,8 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
       return response.arrayBuffer();
     }).then(data=>context.decodeAudioData(data)).then(buffer=>{
       if(destroyed) throw new Error('Audio player destroyed');
-      entry.ready=true;return buffer;
+      if(!fit(buffer,entry))throw new Error('Decoded memory budget exceeded');
+      entry.buffer=buffer;entry.ready=true;return buffer;
     }).catch(error=>{if(cache.get(url)===entry) cache.delete(url);throw error;});
     cache.set(url,entry);return entry.promise;
   }
@@ -80,6 +102,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
           if(victim.priority>priority)return false;
           remove(victim,true);
         }
+        if(!fit(buffer))return false;
         source=context.createBufferSource();level=context.createGain();
         source.buffer=buffer;
         source.playbackRate.value=clamp(finite(rate,1)*2**(def.pitch*jitter()/1200),.5,2);
@@ -102,7 +125,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
           delay.delayTime.value=profile.delay;reflection.gain.value=profile.reflection;
           signal.connect(delay);delay.connect(reflection);reflection.connect(destination);tail=profile.delay;
         }
-        voice={source,nodes:[source,level,...(panner?[panner]:[]),...extra],priority};
+        voice={source,buffer,nodes:[source,level,...(panner?[panner]:[]),...extra],priority};
         voices.add(voice);
         source.onended=()=>{if(!voices.has(voice))return;if(tail)voice.tailTimer=setTimeout(()=>remove(voice),Math.ceil(tail*1000)+20);else remove(voice)};
         source.start();
@@ -115,7 +138,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
     },
     stopAll(){generation++;for(const voice of [...voices])remove(voice,true)},
     setEnabled(value){enabled=Boolean(value);if(!enabled)this.stopAll()},
-    get stats(){return {voices:voices.size,pending,buffers:cache.size,enabled:enabled&&!destroyed}},
+    get stats(){return {voices:voices.size,pending,buffers:cache.size,decodedBytes:retainedBytes(),maxDecodedBytes,enabled:enabled&&!destroyed}},
     destroy(){
       if(destroyed)return;
       destroyed=true;enabled=false;this.stopAll();
