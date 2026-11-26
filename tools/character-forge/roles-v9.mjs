@@ -195,6 +195,7 @@ function lowPolyTransform(m){
  for(const j of m.joints){j.position=transform(j.position);j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position)}
  m.spec.style='low-poly';
 }
+export const roleMorphs=roleProfiles;
 export function produceRoleV9(source,id,identityOverride=null,{style='historical-miniature'}={}){
  if(!roleProfiles[id])throw Error('Unknown role '+id);
  const m=produceRole(source,id,identityOverride,'historical-miniature'),start=performance.now();
