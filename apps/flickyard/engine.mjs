@@ -165,7 +165,7 @@ export function registerShot(session, x, y, width = session.width, height = sess
 
 export function updateSession(session, dt, width, height, holding = false, aim = { x: 0, y: 0 }) {
   if (!session || session.status !== 'running') return [];
-  const delta = clamp(Number(dt) || 0, 0, 60);
+  const delta = clamp(Number(dt) || 0, 0, 30000);
   const events = [];
   const previousStage = session.stage;
   session.elapsedMs = Math.min(session.durationMs, session.elapsedMs + delta);

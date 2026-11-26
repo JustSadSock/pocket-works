@@ -22,7 +22,7 @@ Sessions store local records, personal bests and recent results. Adaptive mode c
 - F: fullscreen.
 - The Settings panel controls pointer sensitivity, reticle size, adaptive difficulty, sound and impact effects.
 
-Pointer Lock is requested only after pressing Start. If the browser refuses it, the game falls back to the visible cursor. No external assets or network requests are required.
+Pointer Lock is requested after the first deliberate click inside the range. Escape releases the cursor and pauses the session; if the browser refuses pointer lock, the game continues with the visible cursor. No external assets or network requests are required.
 
 ## Development checks
 

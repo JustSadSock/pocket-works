@@ -7,7 +7,7 @@
   "description": "PC aim trainer с упражнениями на флик, трекинг, переключение целей и реакцию.",
   "version": "0.1.0",
   "releaseDate": "2026-11-26",
-  "releaseDateTime": "2026-11-26T23:50:00+02:00",
+  "releaseDateTime": "2026-11-26T23:44:00+02:00",
   "changelog": [
     "Первая версия: четыре отдельных упражнения, 90-секундный тренировочный круг, адаптивный размер целей, локальные рекорды и управление мышью с Pointer Lock."
   ],
@@ -19,15 +19,6 @@
   "orientation": "landscape",
   "cacheName": "flickyard-v0.1.0",
   "storageNamespace": "pocket-works:flickyard",
-  "tags": [
-    "game",
-    "aim-trainer",
-    "fps",
-    "desktop",
-    "mouse",
-    "canvas",
-    "training",
-    "offline"
-  ],
+  "tags": ["game", "aim-trainer", "fps", "desktop", "mouse", "canvas", "training", "offline"],
   "order": 86
 }

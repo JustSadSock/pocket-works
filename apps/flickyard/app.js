@@ -910,7 +910,8 @@ window.addEventListener('pointerup', (event) => { if (event.button === 0) holdin
 window.addEventListener('pointercancel', () => { holding = false; });
 document.addEventListener('pointerlockchange', () => {
   pointerLocked = document.pointerLockElement === canvas;
-  ui.pointerState.textContent = pointerLocked ? 'POINTER LOCKED' : 'CURSOR MODE';
+  ui.pauseButton.hidden = pointerLocked;
+  ui.pointerState.textContent = pointerLocked ? 'ESC / P — PAUSE' : 'CURSOR MODE';
   if (pointerLocked) {
     wasPointerLocked = true;
     return;
@@ -976,6 +977,12 @@ if (qaMode) {
           canvas: { left: rect.left, top: rect.top },
           pointerLocked
         };
+      },
+      finish() {
+        if (!session || !['running', 'paused'].includes(session.status)) return;
+        session.remainingMs = 0;
+        session.status = 'finished';
+        finishSession();
       }
     }
   });
@@ -986,3 +993,4 @@ resizeCanvas();
 updateModeInfo();
 renderProfile();
 syncFullscreenButton();
+window.addEventListener('beforeunload', () => sound.dispose(), { once: true });
