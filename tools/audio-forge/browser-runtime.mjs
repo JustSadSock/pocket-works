@@ -30,7 +30,6 @@ try{
     const {makeSeamlessLoop,createDynamicEmitter,createAdaptiveMusic}=await import('/continuous-audio.js');
     const {createSpatialMixer}=await import('/spatial-audio.js');
     const {createBudgetedAudioScene}=await import('/virtual-audio.js');
-    const {createScoreDirector}=await import('/score-director.js');
     function check(condition,message){if(!condition)throw Error(message)}
     const sr=48000;
     const make=(ctx,length,frequency,amp=.12)=>{
@@ -184,11 +183,13 @@ try{
         check(world.stats.failures===0,'Dense activation failed');
         scene.destroy();armyAnalyser.disconnect();
         check(scene.stats.allocated===0,'Scene cleanup failed');
-        const scoreBus=mixer.bus('horizontal'),scoreAnalyser=c.createAnalyser();
+        scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:2},
+          families:{impact:{variants:['impact']}},fetcher:async()=>new Response(wav),
+          score:{graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
+          buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)},bridgeBuffers:{'peace:battle':make(c,sr*.5,330)}}});
+        director=scene.music;
+        const scoreBus=scene.mixer.bus('music'),scoreAnalyser=c.createAnalyser();
         scoreAnalyser.fftSize=4096;scoreAnalyser.smoothingTimeConstant=0;scoreBus.connect(scoreAnalyser);
-        director=createScoreDirector({context:c,destination:scoreBus,
-          graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
-          buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)},bridgeBuffers:{'peace:battle':make(c,sr*.5,330)}});
         check(await director.start(),'Horizontal start failed');
         const peaceStart=director.state.startTime;
         const waitClock=async t=>{const deadline=performance.now()+3000;while(c.currentTime<t&&performance.now()<deadline)await new Promise(r=>setTimeout(r,20));check(c.currentTime>=t,'Horizontal audio clock stalled')};
@@ -201,7 +202,7 @@ try{
         check(peaceBefore>-50&&battleBefore<peaceBefore-15,'Peace spectrum invalid');
         check(director.request('battle',{quantize:'beat',fadeSeconds:.12}),'Horizontal request failed');
         const transition=director.state.transitionAt,end=director.state.transitionEnd;
-        check(director.state.voices===2&&Math.abs((transition-peaceStart)/.5-Math.round((transition-peaceStart)/.5))<1e-6,'Horizontal scheduling invalid');
+        check(scene.stats.music===2&&scene.stats.allocated<=18&&director.state.voices===2&&Math.abs((transition-peaceStart)/.5-Math.round((transition-peaceStart)/.5))<1e-6,'Horizontal scheduling invalid');
         const bridgeUntil=director.state.bridgeUntil;
         await waitClock(end+.15);director.update();
         const bridgeDuring=scoreBand(330);
@@ -211,7 +212,7 @@ try{
         check(director.state.current==='battle'&&director.state.voices===1&&battleAfter>-50&&peaceAfter<battleAfter-15,'Horizontal clip replacement invalid');
         await waitClock(bridgeUntil+2.2);const bridgeAfterLoop=scoreBand(330);check(scoreBand(440)>-50&&bridgeAfterLoop<scoreBand(440)-15,'Bridge repeated inside destination loop');
         const horizontal={bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
-        director.destroy();scoreAnalyser.disconnect();check(director.state.voices===0,'Horizontal cleanup failed');
+        scene.destroy();scoreAnalyser.disconnect();check(director.state.voices===0&&scene.stats.allocated===0,'Horizontal cleanup failed');
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
         check(musicPlayer.state.startTime>startTime,'Restart clock invalid');
