@@ -28,7 +28,36 @@ function ringSurface(ctx,name,color,rings,N,{thickness=.003,layer=1,region='',op
 // Outward normal orientation for ring surfaces verified against center. 
 // The source is a bent-arm rest pose; all sleeves use actual limb axes.
 function station(c,u,v,rx,rz,fold=0,frequency=6,ws=null,shift=null){return {c,u,v,weights:ws,shift,rad:a=>{let f=fold*Math.cos(frequency*a);return [rx+f,rz+f]}}}
-function tube(ctx,name,color,points,radii,N,opt){let rings=points.map((c,i)=>{let axis=unit(sub(points[Math.min(points.length-1,i+1)],points[Math.max(0,i-1)])),u=unit(cross(Math.abs(axis[1])>.92?[0,0,1]:[0,1,0],axis)),v=cross(axis,u);return station(c,u,v,radii[i][0],radii[i][1],opt.fold??0,5,opt.weights?.[i])});return ringSurface(ctx,name,color,rings,N,opt)}
+// Fit limb cross sections from the actual morph, not height alone. Skin
+// ownership excludes unrelated torso/opposite-limb vertices. A robust radial
+// envelope avoids a single outlier inflating a whole sleeve or trouser leg.
+export function measuredLimbRadii(ctx,c,axis,u,v,nominal,joints,clearance,fold=0){
+ const band=.040*ctx.H/1.75,owned=new Set(joints),samples=[];
+ for(let i=0;i<ctx.vs.length;i++){
+   const d=sub(ctx.vs[i],c);if(Math.abs(dot(d,axis))>band)continue;
+   if(weights(ctx.body,i).reduce((n,[j,w])=>n+(owned.has(j)?w:0),0)<.55)continue;
+   const x=dot(d,u),y=dot(d,v);
+   if(Math.hypot(x,y)>.24*ctx.H/1.75)continue;
+   const gap=clearance+Math.abs(fold);
+   samples.push(Math.hypot((Math.abs(x)+gap)/nominal[0],(Math.abs(y)+gap)/nominal[1]));
+ }
+ if(samples.length<5)return nominal.slice();
+ samples.sort((a,b)=>a-b);
+ const scale=Math.max(1,samples[Math.floor((samples.length-1)*.98)]);
+ return nominal.map(r=>r*scale)
+}
+function tube(ctx,name,color,points,radii,N,opt){
+ let previous=null;
+ let rings=points.map((c,i)=>{
+   let axis=unit(sub(points[Math.min(points.length-1,i+1)],points[Math.max(0,i-1)])),
+       u=previous?sub(previous,mul(axis,dot(previous,axis))):[0,0,0];
+   if(Math.hypot(...u)<1e-6)u=cross(Math.abs(axis[1])>.92?[0,0,1]:[0,1,0],axis);
+   u=unit(u);previous=u;let v=cross(axis,u);
+   const rr=opt.fitJoints?measuredLimbRadii(ctx,c,axis,u,v,radii[i],opt.fitJoints,opt.fitClearance,opt.fold??0):radii[i];
+   return station(c,u,v,rr[0],rr[1],opt.fold??0,5,opt.weights?.[i])
+ });
+ return ringSurface(ctx,name,color,rings,N,opt)
+}
 function torso(ctx,id,style,method,color){let {H,vs,J}=ctx,r=garmentRules[id],low=style==='low-poly',long=id==='tunic'||id==='quilted',N=low?10:24,neck=J('neck01').position[1],waist=J('spine03').position[1]-.04,hip=J('root').position[1],top=J('upperarm01.L').position[1]+.025,hem=long?hip-.24*H:hip-.085*H;
  let levels=[hem,hip-.04,waist,waist+.065,top,neck-.015].sort((a,b)=>a-b),rings=[];
  for(let i=0;i<levels.length;i++){let y=levels[i],pts=vs.filter(p=>Math.abs(p[1]-y)<.055&&Math.abs(p[0])<H*.125),bb=pts.length?bounds(pts):[[ -.12,.12],[0,0],[-.08,.08]],rx=Math.max(.10,(bb[0][1]-bb[0][0])/2)+r.clearance,rz=Math.max(.065,(bb[2][1]-bb[2][0])/2)+r.clearance,cz=(bb[2][0]+bb[2][1])/2;
@@ -41,13 +70,13 @@ function torso(ctx,id,style,method,color){let {H,vs,J}=ctx,r=garmentRules[id],lo
  // Hem and neckline bands follow the same measured panel edge, with
  // independent thickness and explicit semantic layer.
  for(let [label,ring,offset] of [['hem',rings[0],.010],['neck binding',rings.at(-1),-.014]]){let a={...ring,rad:t=>ring.rad(t).map(x=>x+.004)},z={...a,c:add(a.c,[0,offset,0])};parts.push(ringSurface(ctx,id+' '+label, id==='quilted'?materials.leather:materials.cream,[a,z].sort((a,b)=>a.c[1]-b.c[1]),N,{...r,thickness:.003}))}
- for(let s of ['L','R']){let sh=J('upperarm01.'+s),el=J('lowerarm01.'+s),wr=J('wrist.'+s),pts=[lerp(sh.position,el.position,-.12),lerp(sh.position,el.position,.18),el.position,lerp(el.position,wr.position,.62),lerp(el.position,wr.position,.97)],rr=[.068,.063,.048,.041,.035].map(x=>[x*H/1.75+r.clearance*.65,x*H/1.75+r.clearance*.65]);parts.push(tube(ctx,id+' sleeve '+s,color,pts,rr,N,{...r,fold:method==='hybrid'&&!low?.003:0,weights:[[[sh.id,.8],[J('spine01').id,.2]],[[sh.id,1]],[[sh.id,.45],[el.id,.55]],[[el.id,1]],[[el.id,.85],[wr.id,.15]]]}));
+ for(let s of ['L','R']){let sh=J('upperarm01.'+s),el=J('lowerarm01.'+s),wr=J('wrist.'+s),pts=[lerp(sh.position,el.position,-.12),lerp(sh.position,el.position,.18),el.position,lerp(el.position,wr.position,.62),lerp(el.position,wr.position,.97)],rr=[.068,.063,.048,.041,.035].map(x=>[x*H/1.75+r.clearance*.65,x*H/1.75+r.clearance*.65]);parts.push(tube(ctx,id+' sleeve '+s,color,pts,rr,N,{...r,fold:method==='hybrid'&&!low?.003:0,fitJoints:[sh.id,el.id],fitClearance:r.clearance,weights:[[[sh.id,.8],[J('spine01').id,.2]],[[sh.id,1]],[[sh.id,.45],[el.id,.55]],[[el.id,1]],[[el.id,.85],[wr.id,.15]]]}));
  // Cuff binding is separate, shaped seam edging.
- parts.push(tube(ctx,id+' cuff '+s,materials.cream,[lerp(el.position,wr.position,.91),lerp(el.position,wr.position,.98)],rr.slice(-2).map(v=>v.map(x=>x+.004)),N,{...r,thickness:.003,weights:[[[el.id,1]],[[el.id,1]]]}))}
+ parts.push(tube(ctx,id+' cuff '+s,materials.cream,[lerp(el.position,wr.position,.91),lerp(el.position,wr.position,.98)],rr.slice(-2).map(v=>v.map(x=>x+.004)),N,{...r,thickness:.003,fitJoints:[sh.id,el.id],fitClearance:r.clearance+.004,weights:[[[el.id,1]],[[el.id,1]]]}))}
  return parts
 }
 function trousers(ctx,style,method,color){let {J,H}=ctx,N=style==='low-poly'?10:18,r=garmentRules.trousers,parts=[];
- for(let s of ['L','R']){let hip=J('upperleg01.'+s),knee=J('lowerleg01.'+s),foot=J('foot.'+s),pts=[lerp(hip.position,knee.position,-.045),lerp(hip.position,knee.position,.22),knee.position,lerp(knee.position,foot.position,.55),lerp(knee.position,foot.position,.87)],rr=[.087,.087,.066,.056,.043].map(x=>[x*H/1.75+r.clearance,x*H/1.75+r.clearance*.8]);parts.push(tube(ctx,'trousers '+s,color,pts,rr,N,{...r,fold:method==='hybrid'&&style!=='low-poly'?.004:0,weights:[[[hip.id,.7],[J('root').id,.3]],[[hip.id,1]],[[hip.id,.4],[knee.id,.6]],[[knee.id,1]],[[knee.id,1]]]}))}
+ for(let s of ['L','R']){let hip=J('upperleg01.'+s),knee=J('lowerleg01.'+s),foot=J('foot.'+s),pts=[lerp(hip.position,knee.position,-.045),lerp(hip.position,knee.position,.22),knee.position,lerp(knee.position,foot.position,.55),lerp(knee.position,foot.position,.87)],rr=[.087,.087,.066,.056,.043].map(x=>[x*H/1.75+r.clearance,x*H/1.75+r.clearance*.8]);parts.push(tube(ctx,'trousers '+s,color,pts,rr,N,{...r,fold:method==='hybrid'&&style!=='low-poly'?.004:0,fitJoints:[hip.id,knee.id],fitClearance:r.clearance,weights:[[[hip.id,.7],[J('root').id,.3]],[[hip.id,1]],[[hip.id,.4],[knee.id,.6]],[[knee.id,1]],[[knee.id,1]]]}))}
  return parts
 }
 function boots(ctx,style){let {J,H,vs}=ctx,N=style==='low-poly'?8:16,r=garmentRules.boots,parts=[];
@@ -83,8 +112,14 @@ export function draftGarments(source,{style='historical-miniature',kit='tunic',m
 }
 // Bind one authored source template to stable anatomical indices, then
 // transfer its offsets across morphs. No independent clothing meshes per person.
-export function bindTemplate(source,parts){let ctx=context(source);return parts.map(p=>({...p,templateBinding:Array.from({length:p.positions.length/3},(_,i)=>{let v=p.positions.slice(i*3,i*3+3),j=ctx.near(v).index;return {j,offset:sub(v,ctx.vs[j])}})}))}
-export function fitTemplate(source,template){let ctx=context(source);return template.map(p=>{let q=part(p.name,p.color,p.component);Object.assign(q,{indices:p.indices.slice(),layer:p.layer,region:p.region,thickness:p.thickness,pattern:p.pattern});for(let b of p.templateBinding)push(q,add(ctx.vs[b.j],b.offset),weights(ctx.body,b.j));return normals(q)})}
+export function bindTemplate(source,parts){let ctx=context(source);return parts.map(p=>({...p,templateBinding:Array.from({length:p.positions.length/3},(_,i)=>{let v=p.positions.slice(i*3,i*3+3),j=ctx.near(v).index;return {j,offset:sub(v,ctx.vs[j]),skin:weights(p,i).map(([id,w])=>[source.joints[id].name,w])}})}))}
+export function fitTemplate(source,template){let ctx=context(source);return template.map(p=>{let q=part(p.name,p.color,p.component);Object.assign(q,{indices:p.indices.slice(),layer:p.layer,region:p.region,thickness:p.thickness,pattern:p.pattern});for(let b of p.templateBinding){
+   if(!ctx.vs[b.j]||!Array.isArray(b.skin))throw Error('Invalid garment template binding; regenerate template from source');
+   // Preserve the authored garment's semantic skinning, including rigid
+   // shoe/helmet/buckle attachments, independently of anatomical fitting.
+   const ws=b.skin.map(([name,w])=>[ctx.J(name).id,w]);
+   push(q,add(ctx.vs[b.j],b.offset),ws)
+ }return normals(q)})}
 export function dress(source,options={},template=null){let t=performance.now(),ctx=context(source),identity=options.identity??{},body=identityBody(ctx,identity),H=ctx.H,neck=ctx.J('neck01').position[1],wrists=['L','R'].map(s=>ctx.J('wrist.'+s).position);
  // Retain head/neck and complete exposed hands only. Feet are entirely
  // concealed by independent boot geometry. Preserve hidden source separately.
