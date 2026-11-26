@@ -30,6 +30,12 @@ jobs:
           node-version: '22'
       - run: node --test scripts/ci-overhaul/verified-gameplay-receipt.test.mjs
   execute:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      SHARD: ${{ matrix.shard }}
     needs: contract
     if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
@@ -56,11 +62,17 @@ jobs:
           node "$tool" check "$out"
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-gameplay-input-${{ github.run_attempt }}
+          name: verified-gameplay-input-${{ github.run_attempt }}-${{ matrix.shard }}
           path: ${{ runner.temp }}/gameplay-output-source/
           if-no-files-found: error
           retention-days: 7
   attest:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      SHARD: ${{ matrix.shard }}
     needs: execute
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
@@ -75,7 +87,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: verified-gameplay-input-${{ github.run_attempt }}
+          name: verified-gameplay-input-${{ github.run_attempt }}-${{ matrix.shard }}
           path: bundle
       - run: node scripts/ci-overhaul/verified-gameplay-receipt.mjs issue bundle receipt.json
       - uses: actions/attest-build-provenance@v3
@@ -83,11 +95,17 @@ jobs:
           subject-path: receipt.json
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-gameplay-receipt-${{ github.run_attempt }}
+          name: verified-gameplay-receipt-${{ github.run_attempt }}-${{ matrix.shard }}
           path: receipt.json
           if-no-files-found: error
           retention-days: 7
   trial:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      SHARD: ${{ matrix.shard }}
     needs: attest
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
@@ -110,11 +128,11 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: verified-gameplay-input-${{ github.run_attempt }}
+          name: verified-gameplay-input-${{ github.run_attempt }}-${{ matrix.shard }}
           path: bundle
       - uses: actions/download-artifact@v4
         with:
-          name: verified-gameplay-receipt-${{ github.run_attempt }}
+          name: verified-gameplay-receipt-${{ github.run_attempt }}-${{ matrix.shard }}
           path: signed
       - name: Independently authenticate gameplay and execute fresh performance
         env:
@@ -137,7 +155,36 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: verified-gameplay-trial-${{ github.run_attempt }}
+          name: verified-gameplay-trial-${{ github.run_attempt }}-${{ matrix.shard }}
           path: ${{ runner.temp }}/trial.json
           if-no-files-found: warn
+          retention-days: 7
+
+  aggregate:
+    needs: trial
+    if: ${{ always() && needs.trial.result == 'success' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: verified-gameplay-trial-${{ github.run_attempt }}-*
+          path: reports
+      - run: |
+          node scripts/ci-overhaul/verified-gameplay-receipt.mjs aggregate reports aggregate.json
+          cat aggregate.json >> "$GITHUB_STEP_SUMMARY"
+        env:
+          MATRIX_RESULT: ${{ needs.trial.result }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-gameplay-trial-aggregate-${{ github.run_attempt }}
+          path: aggregate.json
+          if-no-files-found: error
           retention-days: 7

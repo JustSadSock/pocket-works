@@ -2,8 +2,8 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {summarizeGameplayComparison,decide,validateManifest,validatePhase,SOURCE,SOURCE_TREE,PLAN,WORKFLOW,REPLAY_WORKFLOW} from './verified-gameplay-receipt.mjs';
 import {createHash} from 'node:crypto';
 const h='a'.repeat(64),mount={schema:1,digest:h,files:20,directories:4,bytes:1000,productionAuthorization:false,reuse:false};
-const s={schema:1,repository:'JustSadSock/pocket-works',workflow:WORKFLOW,role:'source',source:SOURCE,sourceTree:SOURCE_TREE,auditCommit:'b'.repeat(40),auditTree:'c'.repeat(40),run:12,attempt:1,ref:'refs/heads/main',event:'push',sourceMount:mount,auditMount:mount,environment:{contract:'banners-offline-phase-v1',image:'be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb',arch:'x64',node:'v22.12.0',config:h,cpu:h,kernel:h,toolchain:h,uid:1001,gid:1001},productionAuthorization:false};
-const r={schema:1,kind:'banners-gameplay-shadow-v1',manifest:s,planDigest:PLAN,shard:0,gameplayCases:234,gameplaySemanticDigest:h,gameplayRecordsDigest:h,gameplayPhaseDigest:h,sourceMeasurements:430,issuedAt:100,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+const s={schema:1,shard:0,repository:'JustSadSock/pocket-works',workflow:WORKFLOW,role:'source',source:SOURCE,sourceTree:SOURCE_TREE,auditCommit:'b'.repeat(40),auditTree:'c'.repeat(40),run:12,attempt:1,ref:'refs/heads/main',event:'push',sourceMount:mount,auditMount:mount,environment:{contract:'banners-offline-phase-v1',image:'be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb',arch:'x64',node:'v22.12.0',config:h,cpu:h,kernel:h,toolchain:h,uid:1001,gid:1001},productionAuthorization:false};
+const r={schema:2,kind:'banners-gameplay-shadow-v2',manifest:s,planDigest:PLAN,shard:0,gameplayCases:234,gameplaySemanticDigest:h,gameplayRecordsDigest:h,gameplayPhaseDigest:h,sourceMeasurements:430,issuedAt:100,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 const t={...s,role:'trial'};
 test('strict same-run admission only in non-authoritative trial',()=>{const d=decide(r,t,101);assert.equal(d.decision,'reuse-shadow');assert.equal(d.productionAuthorization,false);});
 test('any provenance, mount, environment or freshness mismatch executes',()=>{for(const x of [{...t,run:13},{...t,attempt:2},{...t,auditTree:'d'.repeat(40)},{...t,sourceMount:{...mount,digest:'b'.repeat(64)}},{...t,environment:{...t.environment,kernel:'b'.repeat(64)}},{...t,environment:{...t.environment,extra:'unknown'}}])assert.equal(decide(r,x,101).decision,'execute');assert.equal(decide(r,t,100+8*86400000).decision,'execute');assert.throws(()=>validateManifest({...s,ref:'refs/pull/1/merge',event:'pull_request'},'source'));assert.equal(decide({...r,gameplayCases:233},t,101).decision,'execute');});
@@ -38,4 +38,16 @@ test('fresh comparison distinguishes matching, mismatching and missing evidence'
  for(const bad of [null,{...g,cases:233},{...g,measurements:429},{...g,semanticDigest:'bad'}])assert.throws(()=>summarizeGameplayComparison(r,d,bad));
  assert.throws(()=>summarizeGameplayComparison(r,{decision:'unknown',productionAuthorization:false},g));
  assert.throws(()=>summarizeGameplayComparison(r,{...d,productionAuthorization:true},g));
+});
+
+test('shard identity cannot be substituted, and zero-performance shards are valid',()=>{
+ const m={...s,shard:1},receipt={...r,manifest:m,shard:1},target={...m,role:'trial'};
+ assert.equal(decide(receipt,target,101).decision,'reuse-shadow');
+ assert.equal(decide(receipt,t,101).decision,'execute');
+ assert.equal(decide({...receipt,shard:0},target,101).decision,'execute');
+ const p={shards:[{}, {performance:[]}]},records=[];
+ const report={schema:1,source:SOURCE,run:m.run,attempt:m.attempt,auditCommit:m.auditCommit,shard:1,phase:'performance',planDigest:PLAN,version:'chronicles-completion-v1',expected:0,completed:0,productionAuthorization:false,recordDigest:createHash('sha256').update('[]').digest('hex')};
+ assert.deepEqual(validatePhase(p,'performance',report,records,m).performance,[]);
+ assert.throws(()=>validatePhase(p,'performance',{...report,shard:0},records,m));
+ assert.throws(()=>validatePhase(p,'performance',report,[{}],m));
 });
