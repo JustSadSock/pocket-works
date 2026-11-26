@@ -91,7 +91,45 @@ export function sewLining(p,thickness){
  for(const {a,b,count:n} of edges.values())if(n===1)p.indices.push(b,a,a+count,b,a+count,b+count);
  p.outerVertexCount=count;p.thickness=thickness;return normals(p);
 }
-function productionTorso(ctx,id,style,method,color,armored){
+// V6: intersect actual mesh edges with a plane, interpolating semantic
+// ownership. Positive region whitelist, not an incomplete exclusion regex.
+const quantile=(values,q)=>{const a=values.slice().sort((a,b)=>a-b),i=(a.length-1)*q,l=Math.floor(i);return a[l]+(a[Math.min(l+1,a.length-1)]-a[l])*(i-l)};
+export function anatomicalSection(ctx,y,region){
+ const body=ctx.body,allowed=new Set(ctx.source.joints.filter(j=>(region==='skirt'?/^(root$|pelvis|spine|breast|neck|clavicle|shoulder|upperleg|lowerleg)/:/^(root$|pelvis|spine|breast|neck|clavicle|shoulder)/).test(j.name)).map(j=>j.id));
+ const ownership=ctx.vs.map((_,i)=>weights(body,i).reduce((n,[j,w])=>n+(allowed.has(j)?w:0),0));
+ const points=[],seen=new Set();let rejected=0;
+ for(let i=0;i<body.indices.length;i+=3)for(let k=0;k<3;k++){
+   const a=body.indices[i+k],b=body.indices[i+(k+1)%3],key=a<b?a+':'+b:b+':'+a;
+   if(seen.has(key))continue;seen.add(key);
+   const v=ctx.vs[a],w=ctx.vs[b],dy=w[1]-v[1];if(Math.abs(dy)<1e-9||(v[1]-y)*(w[1]-y)>0)continue;
+   const t=(y-v[1])/dy,own=ownership[a]*(1-t)+ownership[b]*t;
+   if(own<.60){rejected++;continue}points.push(lerp(v,w,t));
+ }
+ if(points.length<12)throw Error('Insufficient anatomical section samples '+region+' at '+y);
+ const ranges=[0,2].map(k=>[quantile(points.map(v=>v[k]),.01),quantile(points.map(v=>v[k]),.99)]);
+ const center=ranges.map(r=>(r[0]+r[1])/2),half=ranges.map(r=>Math.max(.025,(r[1]-r[0])/2));
+ const distances=points.map(v=>Math.hypot((v[0]-center[0])/half[0],(v[2]-center[1])/half[1]));
+ const scale=Math.max(1,quantile(distances,.98));
+ return {y,region,count:points.length,rejected,center,half,scale,maxScale:Math.max(...distances),radii:half.map(x=>x*scale)};
+}
+export function assertTailoredSections(sections,id,H){
+ const skirt=id==='tunic'||id==='quilted';
+ for(let i=0;i<sections.length;i++){
+   const q=sections[i];if(![q.y,...q.center,...q.radius,...q.half].every(Number.isFinite))throw Error('Nonfinite '+id+' section');
+   if(i&&q.y<=sections[i-1].y)throw Error('Unordered '+id+' stations');
+   if(q.radius.some(r=>r<=0))throw Error('Degenerate '+id+' section');
+   // Type-specific allowance relative to the local measured anatomy. Neck
+   // opening is a design boundary, while skirts enclose both trouser legs.
+   const allowance=(q.region==='skirt'&&skirt?.12:id==='quilted'?.085:.052)*H/1.75;
+   if(q.region!=='neck'&&q.radius.some((r,k)=>r>q.radii[k]+allowance+(q.region==='skirt'&&skirt?.065:0)))throw Error('Oversized '+id+' '+q.region+' '+JSON.stringify(q));
+   if(i&&i<sections.length-1){
+     const prev=sections[i-1],dy=q.y-prev.y;
+     if(q.radius.some((r,k)=>Math.abs(r-prev.radius[k])>dy*1.8+allowance))throw Error('Abrupt '+id+' section transition');
+   }
+ }
+ return true;
+}
+function productionTorso(ctx,id,style,method,color,armored,revision=5){
  const {H,J,vs}=ctx,r=garmentRules[id],low=style==='low-poly',armor=id==='quilted',under=id==='shirt'&&armored,
        N=low?12:32,neck=J('neck01').position,hip=J('root').position[1],waist=J('spine03').position[1]-.04,
        shoulder=J('upperarm01.L').position[1],gap=under?.014:armor?.064:.030,
@@ -102,11 +140,22 @@ function productionTorso(ctx,id,style,method,color,armored){
  const p=part(id,color);Object.assign(p,{layer:r.layer,region:r.region,pattern:{method,revision:5,panels:['continuous bodice','stitched sleeves','shaped skirt'],armholes:2}});
  const armIds=new Set(ctx.source.joints.filter(j=>/arm|wrist|finger|thumb|clavicle/i.test(j.name)).map(j=>j.id));
  const trunk=vs.filter((v,i)=>weights(ctx.body,i).reduce((a,[j,w])=>a+(armIds.has(j)?w:0),0)<.35);
- const stations=[];
+ const stations=[],sections=[];
  for(let i=0;i<levels.length;i++){
    const y=levels[i],pts=trunk.filter(v=>Math.abs(v[1]-y)<.058*H/1.75),bb=pts.length?bounds(pts):[[-.12,.12],[0,0],[-.085,.085]];
    let rx=Math.max(.092,(bb[0][1]-bb[0][0])/2),rz=Math.max(.065,(bb[2][1]-bb[2][0])/2),cz=(bb[2][0]+bb[2][1])/2;
-   if(i===5){rx=.057*H;rz=.039*H;cz=neck[2]}
+   let cx=0,section=null;
+   if(revision===6){
+     section=anatomicalSection(ctx,y,i<=1?'skirt':i===5?'neck':'bodice');
+     [cx,cz]=section.center;[rx,rz]=section.radii;
+     if(i===5){rx=Math.min(rx,.059*H);rz=Math.min(rz,.041*H);cx=0;cz=neck[2]}
+     else if(i<=1&&!under){
+       // Ease is limited and anatomy-derived, with extra front/back room
+       // for the two legs; no height-only giant radial skirt.
+       rx+=i===0?.012*H:0;rz=Math.max(rz,.062*H);
+     }
+     if(i===4)rx=Math.max(rx,Math.abs(J('upperarm01.L').position[0])*.94);
+   }else if(i===5){rx=.057*H;rz=.039*H;cz=neck[2]}
    else {
      let scale=1;for(const v of pts)scale=Math.max(scale,Math.hypot(v[0]/rx,(v[2]-cz)/rz));rx*=scale;rz*=scale;
      if(i<=1&&!under){ // skirt must enclose dressed thighs, not merely bare skin
@@ -119,12 +168,21 @@ function productionTorso(ctx,id,style,method,color,armored){
    if(low&&i===4)rx*=1.075;
    const fold=method==='hybrid'&&!low&&!under?(armor?.0035:.009)*(i===0?1.35:i===2?.18:.7):0;
    const freq=armor?16:6,ws=i<=1?[[J('root').id,1]]:i===2?[[J('root').id,.2],[J('spine03').id,.8]]:i===3?[[J('spine03').id,.45],[J('spine01').id,.55]]:[[J('spine01').id,1]];
-   const ring=station([0,y,cz],[1,0,0],[0,0,-1],rx,rz,fold,freq,ws);stations.push(ring);
+   const ring=station([cx,y,cz],[1,0,0],[0,0,-1],rx,rz,fold,freq,ws);
+   if(revision===6){
+     // Tailored front/back panels, side gore and irregular gravity folds.
+     // Their amplitude vanishes at the waist and neck seam.
+     const amplitude=i===0?.010:i===1?.005:i===2?.0008:i===3?.0035:0;
+     ring.rad=a=>{const wave=method==='hybrid'&&!low&&!under?amplitude*(.65*Math.cos(5*a+.45)+.35*Math.sin(9*a-.2)):0;return [rx+wave,rz+wave*.65]};
+     sections.push({...section,radius:[rx,rz],center:[cx,cz],foldAmplitude:amplitude});
+   }
+   stations.push(ring);
    for(let k=0;k<N;k++){
      const a=k*2*Math.PI/N,f=ring.rad(a),wave=i===0&&!low&&!under?.009*Math.cos(3*a):0;
-     push(p,[f[0]*Math.cos(a),y+wave,cz-f[1]*Math.sin(a)],ws);
+     push(p,[cx+f[0]*Math.cos(a),y+wave,cz-f[1]*Math.sin(a)],ws);
    }
  }
+ if(revision===6){assertTailoredSections(sections,id,H);Object.assign(p.pattern,{revision:6,sections,ringCount:N,waistIndex:2});}
  const half=low?2:4,mod=k=>(k+N)%N,skip=new Set();
  for(const center of [0,N/2])for(let k=-half;k<half;k++)skip.add(mod(center+k));
  for(let i=0;i<levels.length-1;i++)for(let k=0;k<N;k++){
@@ -170,14 +228,14 @@ function productionTorso(ctx,id,style,method,color,armored){
 }
 
 function trousers(ctx,style,method,color,revision=4){let {J,H}=ctx,N=style==='low-poly'?10:18,r=garmentRules.trousers,parts=[];
- for(let s of ['L','R']){let hip=J('upperleg01.'+s),knee=J('lowerleg01.'+s),foot=J('foot.'+s),pts=[lerp(hip.position,knee.position,-.045),lerp(hip.position,knee.position,.22),knee.position,lerp(knee.position,foot.position,.55),lerp(knee.position,foot.position,revision===5?.62:.87)],rr=[.087,.087,.066,.056,.043].map(x=>[x*H/1.75+r.clearance,x*H/1.75+r.clearance*.8]);parts.push(tube(ctx,'trousers '+s,color,pts,rr,N,{...r,fold:method==='hybrid'&&style!=='low-poly'?.004:0,fitJoints:[hip.id,knee.id],fitClearance:r.clearance,weights:[[[hip.id,.7],[J('root').id,.3]],[[hip.id,1]],[[hip.id,.4],[knee.id,.6]],[[knee.id,1]],[[knee.id,1]]]}))}
+ for(let s of ['L','R']){let hip=J('upperleg01.'+s),knee=J('lowerleg01.'+s),foot=J('foot.'+s),pts=[lerp(hip.position,knee.position,-.045),lerp(hip.position,knee.position,.22),knee.position,lerp(knee.position,foot.position,.55),lerp(knee.position,foot.position,revision>=5?.62:.87)],rr=[.087,.087,.066,.056,.043].map(x=>[x*H/1.75+r.clearance,x*H/1.75+r.clearance*.8]);parts.push(tube(ctx,'trousers '+s,color,pts,rr,N,{...r,fold:method==='hybrid'&&style!=='low-poly'?.004:0,fitJoints:[hip.id,knee.id],fitClearance:r.clearance,weights:[[[hip.id,.7],[J('root').id,.3]],[[hip.id,1]],[[hip.id,.4],[knee.id,.6]],[[knee.id,1]],[[knee.id,1]]]}))}
  return parts
 }
 function boots(ctx,style,revision=4){let {J,H,vs}=ctx,N=style==='low-poly'?8:16,r=garmentRules.boots,parts=[];
  for(let s of ['L','R']){let f=J('foot.'+s),k=J('lowerleg01.'+s),sign=s==='L'?1:-1,pts=vs.filter(v=>v[1]<H*.06&&v[0]*sign>0),bb=bounds(pts),cx=(bb[0][0]+bb[0][1])/2,cz=(bb[2][0]+bb[2][1])/2,rx=(bb[0][1]-bb[0][0])/2+.013,rz=(bb[2][1]-bb[2][0])/2+.014;
  // Actual independent closed shoe volume; flattened sole and broad toe box,
  // deliberately no digit anatomy or individual toe weights.
- let rings=[station([cx,.008,cz],[1,0,0],[0,0,-1],rx*.95,rz,0,1,[[f.id,1]]),station([cx,.032,cz],[1,0,0],[0,0,-1],rx,rz,0,1,[[f.id,1]]),station([cx,.075,cz-.012],[1,0,0],[0,0,-1],rx*.91,rz*.90,0,1,[[f.id,1]]),station(f.position.map((v,i)=>i===1?v+.05:v),[1,0,0],[0,0,-1],rx*.8,rz*.42,0,1,[[f.id,.7],[k.id,.3]]),station(lerp(f.position,k.position,.42),[1,0,0],[0,0,-1],revision===5?Math.max(rx*.95,.073*H/1.75):rx*.95,revision===5?Math.max(rz*.48,.073*H/1.75):rz*.48,0,1,[[k.id,1]])];
+ let rings=[station([cx,.008,cz],[1,0,0],[0,0,-1],rx*.95,rz,0,1,[[f.id,1]]),station([cx,.032,cz],[1,0,0],[0,0,-1],rx,rz,0,1,[[f.id,1]]),station([cx,.075,cz-.012],[1,0,0],[0,0,-1],rx*.91,rz*.90,0,1,[[f.id,1]]),station(f.position.map((v,i)=>i===1?v+.05:v),[1,0,0],[0,0,-1],rx*.8,rz*.42,0,1,[[f.id,.7],[k.id,.3]]),station(lerp(f.position,k.position,.42),[1,0,0],[0,0,-1],revision>=5?Math.max(rx*.95,.073*H/1.75):rx*.95,revision>=5?Math.max(rz*.48,.073*H/1.75):rz*.48,0,1,[[k.id,1]])];
  let shoe=ringSurface(ctx,'boot '+s,materials.leather,rings,N,{...r});let center=push(shoe,[cx,.008,cz],[[f.id,1]]);for(let i=0;i<N;i++)shoe.indices.push(center,(i+1)%N,i);parts.push(normals(shoe));parts.push(ringSurface(ctx,'boot welt '+s,materials.charcoal,rings.slice(0,2).map(q=>({...q,rad:a=>q.rad(a).map(x=>x+.003)})),N,{...r,thickness:.004}))}
  return parts
 }
@@ -186,12 +244,44 @@ function cape(ctx,style,color){let {H,J}=ctx,p=part('cloak',color),n=style==='lo
  let S=(rows+1)*(n+1);for(let side=0;side<2;side++)for(let j=0;j<rows;j++)for(let k=0;k<n;k++){let a=side*S+j*(n+1)+k,b=a+1,c=a+n+1,d=c+1;p.indices.push(...(side?[a,c,b,b,c,d]:[a,b,c,b,d,c]))}
  for(let j=0;j<=rows;j++)for(let k of [0,n])if(j<rows){let a=j*(n+1)+k,b=a+n+1;p.indices.push(a,b,a+S,b,b+S,a+S)}for(let j of [0,rows])for(let k=0;k<n;k++){let a=j*(n+1)+k;p.indices.push(a,a+S,a+1,a+1,a+S,a+1+S)}return normals(p)
 }
-function waist(ctx,parts,bag){let {J,H}=ctx,y=J('spine03').position[1]-.04,outer=parts.filter(p=>/^(shirt|tunic|quilted)$/.test(p.name)).at(-1),pts=[];for(let i=0;i<outer.positions.length;i+=3)if(Math.abs(outer.positions[i+1]-y)<.08)pts.push(outer.positions.slice(i,i+3));let bb=bounds(pts),rx=Math.max(Math.abs(bb[0][0]),bb[0][1])+.009,cz=(bb[2][0]+bb[2][1])/2,rz=(bb[2][1]-bb[2][0])/2+.008,root=J('spine03').id,rr=[y-.022,y+.022].map(Y=>station([0,Y,cz],[1,0,0],[0,0,-1],rx,rz,0,1,[[root,1]])),belt=ringSurface(ctx,'waist belt',materials.leather,rr,24,{...garmentRules.belt,rigid:root}),p=part('belt clasp',materials.brass,'equipment');p.layer=4;p.region='waist';for(let v of [[-.025,y-.022,cz+rz+.005],[.025,y-.022,cz+rz+.005],[.025,y+.022,cz+rz+.005],[-.025,y+.022,cz+rz+.005]])push(p,v,[[root,1]]);p.indices=[0,1,2,0,2,3];let out=[belt,normals(p)];
+// Follow the authored outer ring at the waist, not unrelated sleeve vertices
+// in a height band. The belt inherits the same semantic skinning.
+function tailoredWaist(ctx,outer,bag){
+ const {sections,ringCount:N,waistIndex:i}=outer.pattern,y=sections[i].y,center=sections[i].center,root=ctx.J('spine03').id;
+ const p=part('waist belt',materials.leather,'equipment');Object.assign(p,{layer:4,region:'waist',attachment:{garment:outer.name,station:i,y}});
+ const mixWeights=(a,b,t)=>[...weights(outer,a).map(([j,w])=>[j,w*(1-t)]),...weights(outer,b).map(([j,w])=>[j,w*t])];
+ for(const offset of [-.019,.019]){
+   const neighbor=offset<0?i-1:i+1,t=Math.abs(offset/(sections[neighbor].y-y));
+   for(let k=0;k<N;k++){
+     const a=i*N+k,b=neighbor*N+k,v=lerp(outer.positions.slice(3*a,3*a+3),outer.positions.slice(3*b,3*b+3),t);
+     const d=unit([v[0]-center[0],0,v[2]-center[1]]);push(p,add(v,mul(d,.010)),mixWeights(a,b,t));
+   }
+ }
+ for(let k=0;k<N;k++){const l=(k+1)%N;p.indices.push(k,l,l+N,k,l+N,k+N)}
+ sewLining(p,.004);
+ const width=Math.max(...p.positions.filter((_,k)=>k%3===0))-Math.min(...p.positions.filter((_,k)=>k%3===0));
+ if(width>2*(sections[i].radius[0]+.055))throw Error('Belt exceeds tailored waist');
+ const front=i*N+Math.round(N*.75),anchor=outer.positions.slice(front*3,front*3+3),ws=weights(outer,front),clasp=part('belt clasp',materials.brass,'equipment');clasp.layer=4;clasp.region='waist';
+ for(const [x,dy] of [[-.022,-.016],[.022,-.016],[.022,.016],[-.022,.016]])push(clasp,[anchor[0]+x,y+dy,anchor[2]+.016],ws);
+ clasp.indices=[0,1,2,0,2,3];const out=[p,normals(clasp)];
+ if(bag){
+   const k=0,a=i*N+k,v=outer.positions.slice(3*a,3*a+3),bind=weights(outer,a),x=v[0]+.042,z=v[2]+.016;
+   const pouch=ringSurface(ctx,'belt pouch',materials.leather,[station([x,y-.145,z],[1,0,0],[0,0,-1],.043,.028,0,1,bind),station([x,y-.073,z],[1,0,0],[0,0,-1],.054,.036,0,1,bind),station([x,y-.028,z],[1,0,0],[0,0,-1],.038,.027,0,1,bind)],14,{...garmentRules.bag});
+   pouch.attachment={garment:outer.name,station:i,anchor:v};
+   const loop=part('pouch belt loop',materials.leather,'equipment');loop.layer=4;loop.region='waist';
+   for(const [xx,yy] of [[v[0]+.006,y+.014],[v[0]+.023,y+.014],[x+.013,y-.041],[x-.010,y-.041]])push(loop,[xx,yy,z],bind);
+   loop.indices=[0,1,2,0,2,3];out.push(pouch,sewLining(loop,.003));
+ }
+ return out;
+}
+function waist(ctx,parts,bag,revision=4){
+ if(revision===6){const outer=parts.filter(p=>/^(shirt|tunic|quilted)$/.test(p.name)).at(-1);return tailoredWaist(ctx,outer,bag)}
+let {J,H}=ctx,y=J('spine03').position[1]-.04,outer=parts.filter(p=>/^(shirt|tunic|quilted)$/.test(p.name)).at(-1),pts=[];for(let i=0;i<outer.positions.length;i+=3)if(Math.abs(outer.positions[i+1]-y)<.08)pts.push(outer.positions.slice(i,i+3));let bb=bounds(pts),rx=Math.max(Math.abs(bb[0][0]),bb[0][1])+.009,cz=(bb[2][0]+bb[2][1])/2,rz=(bb[2][1]-bb[2][0])/2+.008,root=J('spine03').id,rr=[y-.022,y+.022].map(Y=>station([0,Y,cz],[1,0,0],[0,0,-1],rx,rz,0,1,[[root,1]])),belt=ringSurface(ctx,'waist belt',materials.leather,rr,24,{...garmentRules.belt,rigid:root}),p=part('belt clasp',materials.brass,'equipment');p.layer=4;p.region='waist';for(let v of [[-.025,y-.022,cz+rz+.005],[.025,y-.022,cz+rz+.005],[.025,y+.022,cz+rz+.005],[-.025,y+.022,cz+rz+.005]])push(p,v,[[root,1]]);p.indices=[0,1,2,0,2,3];let out=[belt,normals(p)];
  if(bag){let x=rx+.048,z=cz+.02,hip=J('root').id;out.push(ringSurface(ctx,'belt pouch',materials.leather,[station([x,y-.16,z],[1,0,0],[0,0,-1],.062,.035),station([x,y-.08,z],[1,0,0],[0,0,-1],.077,.048),station([x,y-.022,z],[1,0,0],[0,0,-1],.06,.035)],14,{...garmentRules.bag,rigid:hip}))}
  return out
 }
 function headwear(ctx,style,identity,helmet,revision=4){let {body,H,J}=ctx,eye=J('eye.L').position,head=J('head'),hair=identity.hair??'short',base=compact(body,face=>face.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]>H-(hair==='cropped'?.045:.075)||(v[1]>eye[1]-(hair==='long'?.10:.045)&&v[2]<head.position[2]-.015)}));base.name=helmet?'iron skullcap':'scalp '+hair;base.color=helmet?materials.iron:identity.hairColor??[.12,.075,.035];base.component='equipment';base.layer=4;base.region='head';
- if(revision===5){
+ if(revision>=5){
  // Directional sculpted locks are derived from the same anatomical scalp.
  // No separate smooth cap: silhouette and ridges respond to hair style.
  const color=base.color.slice();
@@ -213,15 +303,15 @@ function headwear(ctx,style,identity,helmet,revision=4){let {body,H,J}=ctx,eye=J
 }else for(let i=0;i<base.positions.length;i++)base.positions[i]+=base.normals[i]*(helmet?.014:hair==='long'?.014:.007);
  if(helmet){ // rim follows source head; separate nasal plate, not painted skin
  let p=part('helmet nasal',materials.iron,'equipment'),z=eye[2]+.022,y=eye[1];p.layer=4;p.region='head';for(let v of [[-.016,y-.045,z],[.016,y-.045,z],[.020,y+.068,z-.014],[-.020,y+.068,z-.014]])push(p,v,[[head.id,1]]);p.indices=[0,1,2,0,2,3];return [normals(base),normals(p)]}
- let out=[normals(base)];if(identity.beard){let p=compact(body,f=>f.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]<eye[1]-.035&&v[1]>head.position[1]-.065&&v[2]>head.position[2]+.028&&Math.abs(v[0])<.075}));p.name='beard';p.color=base.color;p.layer=4;p.region='face';for(let i=0;i<p.positions.length;i+=3){const x=p.positions[i],y=p.positions[i+1],offset=revision===5?.004+.010*(.5+.5*Math.cos(x*145+y*25))**2:.008;for(let k=0;k<3;k++)p.positions[i+k]+=p.normals[i+k]*offset}out.push(normals(p))}return out
+ let out=[normals(base)];if(identity.beard){let p=compact(body,f=>f.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]<eye[1]-.035&&v[1]>head.position[1]-.065&&v[2]>head.position[2]+.028&&Math.abs(v[0])<.075}));p.name='beard';p.color=base.color;p.layer=4;p.region='face';for(let i=0;i<p.positions.length;i+=3){const x=p.positions[i],y=p.positions[i+1],offset=revision>=5?.004+.010*(.5+.5*Math.cos(x*145+y*25))**2:.008;for(let k=0;k<3;k++)p.positions[i+k]+=p.normals[i+k]*offset}out.push(normals(p))}return out
 }
 function identityBody(ctx,id){let {body,H,J}=ctx,eye=J('eye.L').position,head=J('head').position;let p=structuredClone(body);for(let i=0;i<p.positions.length;i+=3){let [x,y,z]=p.positions.slice(i,i+3);if(y>head[1]-.04&&z>head[2]+.015){let w=clamp((y-head[1]+.04)/.12,0,1);p.positions[i]=x*(1+(id.faceWidth??0)*w);p.positions[i+2]=z+(id.nose??0)*Math.exp(-((x/.025)**2)-((y-eye[1]+.022)/.035)**2)}}
  p.color=id.skin??body.color;return normals(p)}
 export function draftGarments(source,{style='historical-miniature',kit='tunic',method='hybrid',identity={},surfaceRevision=4}={}){
  if(!kits[kit]||!['pattern','template','hybrid'].includes(method))throw Error('Unknown garment specification');let ctx=context(source),colors=identity.colors??{},parts=[],ids=kits[kit];
  for(let id of ids){let color=materials[colors[id]??(id==='quilted'?'charcoal':id==='cloak'?'madder':id==='trousers'?'charcoal':id==='shirt'?'linen':'wool')];if(!color)throw Error('Unknown garment material');
- if(['shirt','tunic','quilted'].includes(id))parts.push(...(surfaceRevision===5?productionTorso(ctx,id,style,method,color,ids.includes('quilted')):torso(ctx,id,style,method,color)));else if(id==='trousers')parts.push(...trousers(ctx,style,method,color,surfaceRevision));else if(id==='boots')parts.push(...boots(ctx,style,surfaceRevision));else if(id==='cloak')parts.push(cape(ctx,style,color))}
- if(ids.includes('belt'))parts.push(...waist(ctx,parts,ids.includes('bag')));parts.push(...headwear(ctx,style,identity,ids.includes('helmet'),surfaceRevision));return parts
+ if(['shirt','tunic','quilted'].includes(id))parts.push(...(surfaceRevision>=5?productionTorso(ctx,id,style,method,color,ids.includes('quilted'),surfaceRevision):torso(ctx,id,style,method,color)));else if(id==='trousers')parts.push(...trousers(ctx,style,method,color,surfaceRevision));else if(id==='boots')parts.push(...boots(ctx,style,surfaceRevision));else if(id==='cloak')parts.push(cape(ctx,style,color))}
+ if(ids.includes('belt'))parts.push(...waist(ctx,parts,ids.includes('bag'),surfaceRevision));parts.push(...headwear(ctx,style,identity,ids.includes('helmet'),surfaceRevision));return parts
 }
 // Bind one authored source template to stable anatomical indices, then
 // transfer its offsets across morphs. No independent clothing meshes per person.
