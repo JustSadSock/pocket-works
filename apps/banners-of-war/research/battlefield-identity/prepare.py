@@ -17,7 +17,19 @@ shutil.copyfile(work/"public/index.json",out/"horse-forge-index.json")
 source=next(Path("/tmp/bow-source").rglob("spearman.blend"))
 # Isolated processes per role; never mutate the original editable source.
 from concurrent.futures import ThreadPoolExecutor
-def bake(kind):
+def bake(kind,preflight=False):
     env=dict(os.environ,BOW_TROOP=kind,BOW_HORSE=str(work/"public/horse.glb"))
+    if preflight:env["BOW_RIG_PREFLIGHT"]="1"
     subprocess.run([os.environ["BLENDER"],"--background","--disable-autoexec",str(source),"--threads","2","--python-exit-code","1","--python",str(Path(__file__).with_name("troop-bake.py"))],env=env,check=True,timeout=2400)
-with ThreadPoolExecutor(max_workers=2) as pool:list(pool.map(bake,(["spear"] if os.environ.get("BOW_MOTION_REV")=="1" else [])+["sword","archer","knight","lightHorse"]))
+extended=os.environ.get("BOW_MOTION_REV")=="1"
+if extended:
+    # Validate the actual rig in a clean Blender process before rasterizing.
+    bake("knight",preflight=True)
+reuse=extended and os.environ.get("BOW_REUSE_INFANTRY")=="1"
+if reuse:
+    for kind in ("spear","sword","archer"):
+        folder=out/kind;data=json.loads((folder/"frames.json").read_text())
+        if data["motionRevision"]!=1 or len(data["frames"])!=288 or not all((folder/(name+".png")).is_file() for name in data["frames"]):
+            raise ValueError("Incomplete infantry control: "+kind)
+kinds=["knight","lightHorse"] if reuse else (["spear"] if extended else [])+["sword","archer","knight","lightHorse"]
+with ThreadPoolExecutor(max_workers=2) as pool:list(pool.map(bake,kinds))
