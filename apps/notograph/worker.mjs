@@ -1,0 +1,1 @@
+import {analyze} from './core.mjs';self.onmessage=({data})=>{try{self.postMessage({tracks:analyze(data.samples,data.mode,p=>self.postMessage({progress:p}))})}catch(e){self.postMessage({error:e.message})}};
