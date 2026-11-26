@@ -3,7 +3,7 @@
 // cloth input. Nothing here publishes to a game or approves an art candidate.
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';
-import {produceRoleV9} from './roles-v9.mjs';
+import {produceRoleV9,roleMorphs} from './roles-v9.mjs';
 import {glb,inspectGLB} from './glb.mjs';
 import {raster,commonBounds,materialMaps,profiles,png} from './material-study.mjs';
 import {pose,deform,rootOffset} from './core.mjs';
@@ -29,10 +29,10 @@ function soles(model,phase,w){
  return rows;
 }
 const models={},restModels={},roleReport=[];
-for(const id of roleIds){const m=produceRoleV9(source('base'),id),q=posed(m);models[id]=m;restModels[id]=q;
+for(const id of roleIds){const morphSource=roleMorphs[id].morph,m=produceRoleV9(source(morphSource),id),q=posed(m);models[id]=m;restModels[id]=q;
  const bin=glb(m,{detailMaps:selectedMaps}),doc=inspectGLB(bin);write('v9-'+id+'.glb',bin);json('v9-'+id+'.model.json',m);
  const root=m.joints.find(j=>j.parent<0),rootTrack=doc.animations.find(a=>a.name==='walk')?.channels.some(c=>c.target.node===root.id&&c.target.path==='translation');
- roleReport.push({id,parts:m.parts.map(p=>p.name),partCount:m.parts.length,triangleCount:m.statistics.triangleCount,vertices:m.statistics.vertices,joints:m.joints.length,style:m.spec.style,lod:m.spec.lod,rootMotionChannel:rootTrack,attachments:m.attachments??[],roleDiagnostics:m.roleDiagnostics,glbBytes:bin.length});
+ roleReport.push({id,morphSource,parts:m.parts.map(p=>p.name),partCount:m.parts.length,triangleCount:m.statistics.triangleCount,vertices:m.statistics.vertices,joints:m.joints.length,style:m.spec.style,lod:m.spec.lod,rootMotionChannel:rootTrack,attachments:m.attachments??[],roleDiagnostics:m.roleDiagnostics,glbBytes:bin.length});
 }
 const bounds=Object.fromEntries(views.map(v=>[v,commonBounds(Object.values(restModels),v)]));
 for(const view of views)for(const id of roleIds)write('v9-'+id+'-'+view+'.png',raster(restModels[id],{view,bounds:bounds[view],size:768,mode:'C',maps:selectedMaps}).png);
