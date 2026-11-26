@@ -284,9 +284,9 @@ function exportAtlasCampaign(){if(state?.sandboxKind!=='atlas')return;const url=
 
 if(['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).get('atlas-review')==='1'){
  window.__atlasReview={
-  async scene(name,{tilt=false,full=false,surfaceScale=true,identity=true,human=true,urban=true,keepCache=false,zoom=null}={}){
+  async scene(name,{tilt=false,full=false,surfaceScale=true,identity=true,human=true,urban=true,culture='urban',keepCache=false,zoom=null}={}){
    if(state?.sandboxKind!=='atlas'||!state.discovery)throw Error('No experimental campaign');
-   state.discovery.fullMap=full;const surface=atlas.atlasSurface;const intent=surface?.invalidate();if(!keepCache)surface?.reset(state);cam.atlasTilt=tilt;cam.surfaceScale=surfaceScale;cam.atlasIdentity=identity;cam.atlasHuman=human;cam.atlasUrban=urban;cam.projection=null;mode=name==='continent'?'political':'geography';selection=null;tab=null;
+   state.discovery.fullMap=full;const surface=atlas.atlasSurface;const intent=surface?.invalidate();if(!keepCache)surface?.reset(state);cam.atlasTilt=tilt;cam.surfaceScale=surfaceScale;cam.atlasIdentity=identity;cam.atlasHuman=human;cam.atlasUrban=urban;cam.atlasCulture=culture;cam.projection=null;mode=name==='continent'?'political':'geography';selection=null;tab=null;
    const m=state.map,known=i=>full||charted(state,player(),i);let i=state.cities.find(c=>c.capital&&c.f===player())?.i??state.cities[0].i;
    if(name==='continent'){cam.x=W/2;cam.y=H/2;cam.zoom=1;}
    else if(name==='capital'){home();cam.zoom=12;}
