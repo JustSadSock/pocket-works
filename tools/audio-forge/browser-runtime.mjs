@@ -125,7 +125,7 @@ try{
         view.setUint32(24,48000,true);view.setUint32(28,96000,true);view.setUint16(32,2,true);view.setUint16(34,16,true);
         str(36,'data');view.setUint32(40,wav.length-44,true);
         for(let i=0;i<2400;i++)view.setInt16(44+i*2,Math.round(4000*Math.sin(i*.1)*Math.sin(Math.PI*i/2400)),true);
-        scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:2},maxSources:1024,
+        scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:2},maxSources:4096,
           families:{impact:{variants:['impact'],pitchCents:0,gainSpread:0}},fetcher:async()=>new Response(wav),
           stems:[{id:'calm',buffer:make(c,sr,220),base:1},{id:'battle',buffer:make(c,sr,440),threshold:.2,width:.6}]});
         world=scene.world;events=scene.events;
@@ -161,6 +161,26 @@ try{
         check(armyRms>.0001&&world.stats.peak===12&&world.stats.failures===0,'Virtual army output or budget invalid');
         const worldReport={first:firstStats,retiring,final:world.stats,firstIds:first,secondIds:second,initialMs,retireMs,activateMs,armyRms,combatDecoded:true,acceptedEvents:burst.filter(Boolean).length,withEvent,combined:scene.stats,musicContinued:scene.music.state.startTime===sceneClock};
         check(worldReport.musicContinued,'Scene restarted score');
+        const sweep=[];
+        for(const count of [512,1024,4096]){
+          // Deliberately dense sound field: every unit is in hearing range.
+          const dense=Array.from({length:count},(_,i)=>({
+            id:'dense-'+i,buffer:march,position:{x:3+(i%64)*.5,y:Math.floor(i/64)*.5},
+            priority:i%23===0?3:1,volume:.8,referenceDistance:8,maxDistance:100
+          }));
+          const elapsed=[];
+          for(let tick=0;tick<30;tick++){
+            const before=performance.now();
+            check(await world.reconcile({listener:{x:5+tick*.2,y:5},sources:dense}),'Dense update failed');
+            elapsed.push(performance.now()-before);
+            check(scene.stats.allocated<=18&&world.stats.active<=12,'Dense update exceeded budget');
+            await new Promise(r=>setTimeout(r,5));
+          }
+          elapsed.sort((a,b)=>a-b);
+          sweep.push({count,updates:elapsed.length,p50Ms:elapsed[14],p95Ms:elapsed[28],maxMs:elapsed.at(-1),active:world.stats.active,peak:world.stats.peak,failures:world.stats.failures});
+        }
+        worldReport.sweep=sweep;
+        check(world.stats.failures===0,'Dense activation failed');
         scene.destroy();armyAnalyser.disconnect();
         check(scene.stats.allocated===0,'Scene cleanup failed');
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
