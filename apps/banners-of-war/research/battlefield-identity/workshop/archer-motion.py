@@ -14,6 +14,7 @@ reset()
 leftLocal=local(L,lc);leftAxis=world_of(L).inverted().to_3x3()@la
 (rframe,rfingers)=hand_frame(R)
 def right_hook():
+    if R.name in posed_hands:return hand_frame(R)[0][0]
     f=finger_chains(R)
     return sum((point(f[k][1]) for k in ("index","middle","ring")),Vector((0,0,0)))/3
 def wrist_to(b,axis,target):
@@ -57,6 +58,9 @@ def collision(gear):
                     n=groups.get(v.group,"");w[n]=w.get(n,0)+v.weight
             labels.append(max(w,key=w.get) if w else "")
         bodies.append((BVHTree.FromPolygons(vs,ts,all_triangles=True),labels))
+    for name,q in posed_hands.items():
+        for o in q["objects"]:
+            vs,ts=geom(o);bodies.append((BVHTree.FromPolygons(vs,ts,all_triangles=True),[name]*len(ts)))
     result=[];left={b.name for b in desc(L)};right={b.name for b in desc(R)}
     for o in gear:
         vs,ts=geom(o);tree=BVHTree.FromPolygons(vs,ts,all_triangles=True)
@@ -89,9 +93,12 @@ for i in range(16):
     # Flex is derived from measured draw distance, not independently keyed.
     if .17<=phase<.65:flex=max(0,min(1,((center-hook).dot(forward)-.14)/.42))
     if .17<=phase<.65:
-        for k in ("index","middle","ring"):
-            bend_digit(finger_chains(R)[k],nock,a,.004,.7)
+        if R.name in posed_hands:curl_hand(R,nock,a,.004)
+        else:
+            for k in ("index","middle","ring"):
+                bend_digit(finger_chains(R)[k],nock,a,.004,.7)
         hook=right_hook();nock=hook
+    if R.name in posed_hands and not .17<=phase<.65:curl_hand(R,hook,a,.018)
     gear,top,bot=make_bow(center,a,forward,flex,nock,.13<=phase<.65,nock+forward*.72)
     bpy.context.view_layer.update();pts=mesh_points();sc.frame_set(1);bpy.context.view_layer.update()
     row={"phase":phase,"drawMetres":(center-nock).dot(forward),"flex":flex,"gripCenter":vec(center),"stringNock":vec(nock),"rightHook":vec(hook),"stringLength":(top-nock).length+(bot-nock).length,"maxIKResidual":max(errors),"meshAfterFrameSet":mesh_delta(pts,mesh_points()),"contacts":collision(gear)}
