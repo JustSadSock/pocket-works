@@ -1,0 +1,143 @@
+name: Verified Gameplay Receipt Shadow
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verified-gameplay-receipt.yml'
+      - 'scripts/ci-overhaul/verified-gameplay-*'
+      - '.github/workflows/verified-gameplay-replay.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verified-gameplay-receipt.yml'
+      - 'scripts/ci-overhaul/verified-gameplay-*'
+      - '.github/workflows/verified-gameplay-replay.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verified-gameplay-receipt-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/verified-gameplay-receipt.test.mjs
+  execute:
+    needs: contract
+    if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          path: audit-source
+          persist-credentials: false
+      - name: Execute and validate fresh gameplay only
+        shell: bash
+        run: |
+          source scripts/ci-overhaul/verified-gameplay-offline.sh
+          prepare_gameplay source
+          run_gameplay_phase gameplay
+          verify_gameplay_mounts
+          node "$tool" check "$out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-gameplay-input-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gameplay-output-source/
+          if-no-files-found: error
+          retention-days: 7
+  attest:
+    needs: execute
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-gameplay-input-${{ github.run_attempt }}
+          path: bundle
+      - run: node scripts/ci-overhaul/verified-gameplay-receipt.mjs issue bundle receipt.json
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: receipt.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-gameplay-receipt-${{ github.run_attempt }}
+          path: receipt.json
+          if-no-files-found: error
+          retention-days: 7
+  trial:
+    needs: attest
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          path: audit-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-gameplay-input-${{ github.run_attempt }}
+          path: bundle
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-gameplay-receipt-${{ github.run_attempt }}
+          path: signed
+      - name: Independently authenticate gameplay and execute fresh performance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh attestation verify signed/receipt.json --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-gameplay-receipt.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
+          unset GH_TOKEN
+          source scripts/ci-overhaul/verified-gameplay-offline.sh
+          prepare_gameplay trial
+          node "$tool" admit bundle signed/receipt.json "$out" "$RUNNER_TEMP/admission.json"
+          run_gameplay_phase performance
+          if ! jq -e '.decision == "reuse-shadow" and .productionAuthorization == false' "$RUNNER_TEMP/admission.json" >/dev/null; then
+            run_gameplay_phase gameplay
+          fi
+          verify_gameplay_mounts
+          node "$tool" finish bundle signed/receipt.json "$out" "$RUNNER_TEMP/admission.json" "$RUNNER_TEMP/trial.json"
+          cat "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verified-gameplay-trial-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/trial.json
+          if-no-files-found: warn
+          retention-days: 7
