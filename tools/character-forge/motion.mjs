@@ -9,7 +9,26 @@ export const gaitProfiles={
  elephant:{duty:.76,offset:[.25,.75,0,.5],stride:.28,swing:.18,knee:.23,distal:.10},
  dog:{duty:.62,offset:[.25,.75,0,.5],stride:.40,swing:.37,knee:.58,distal:.24}
 };
+// MakeHuman's bent-arm rest frame is not a neutral presentation pose.
+// This opt-in research pose uses the original skeleton and semantic joints.
+function miniatureFrame(model,action,phase,quat){
+ const walk=action==='walk',t=phase*TAU,mul=(a,b)=>[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
+ return model.joints.map(j=>{
+   const name=j.name,left=name.endsWith('.L'),sign=left?1:-1,cycle=t+(left?0:Math.PI),swing=Math.sin(cycle),lift=Math.max(0,Math.sin(cycle));
+   let x=0,y=0,z=0;
+   if(/^upperarm01\./.test(name)){z=-sign*.34;x=walk?-.18*swing:0}
+   if(/^lowerarm01\./.test(name)){x=.38+(walk?.08*lift:0)}
+   if(/^upperleg01\./.test(name)){z=-sign*.09;x=walk?.29*Math.cos(cycle):0}
+   if(/^lowerleg01\./.test(name)){x=walk?.47*lift:0}
+   if(/^foot\./.test(name)){x=walk?-.20*Math.cos(cycle)-.21*lift:0;z=sign*.09}
+   if(name==='root'){y=walk?.035*Math.sin(t):0;z=walk?.025*Math.sin(t):0}
+   if(name==='spine03'){x=.025;y=walk?-.055*Math.sin(t):0}
+   if(name==='head')y=walk?.025*Math.sin(t):.03;
+   return mul(quat([0,0,1],z),mul(quat([0,1,0],y),quat([1,0,0],x)));
+ });
+}
 export function motionFrame(model,action,phase,quat){
+ if(model.spec.miniaturePose==='v8')return miniatureFrame(model,action,phase,quat);
  const fam=model.spec.family,g=gaitProfiles[fam]??gaitProfiles.humanoid,move=['walk','run'].includes(action),speed=action==='run'?1.45:1;
  return model.joints.map(j=>{
  let a=0,name=j.name,attached=/^(rider|crew)\//.test(name),left=/L(?:-|$)|\.L$/.test(name),leg=/^fore|^hind/.test(name),id=leg?(name.startsWith('fore')?(left?0:1):(left?2:3)):(left?0:1);
