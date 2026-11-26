@@ -158,7 +158,7 @@
     {
       "id": "geography-review",
       "kind": "browser-node",
-      "entry": "genesis-atlas-integration-qa.mjs",
+      "entry": "genesis-atlas-fidelity-gate.mjs",
       "tier": "smoke"
     },
     {

@@ -9,14 +9,14 @@ const mix=(a,b,t)=>a.map((v,k)=>v*(1-t)+b[k]*t);
 const grainAt=(x,y)=>{let n=Math.imul(x+41,374761393)^Math.imul(y+73,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;};
 const fade=(x,a,b)=>clamp((x-a)/(b-a),0,1);
 // Join the actual frontier edges at their shared vertices; round only the drawn corner.
-function frontier(s,owner,visible,project=null){
+function frontier(s,owner,visible,project=null,omitFogEdge=false){
  const nodes=new Map(),edges=[],id=(x,y)=>y*(W+1)+x;
  const add=(x,y,u,v)=>{const a=id(x,y),b=id(u,v),k=edges.length;edges.push([a,b]);for(const z of [a,b]){if(!nodes.has(z))nodes.set(z,[]);nodes.get(z).push(k)}};
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=idx(x,y);if(!visible(i)||!s.map.land[i])continue;const f=owner(i);if(f<0)continue;
- if(x===0||!visible(i-1)||owner(i-1)!==f)add(x,y,x,y+1);
- if(y===0||!visible(i-W)||owner(i-W)!==f)add(x,y,x+1,y);
- if(x===W-1||!visible(i+1)||owner(i+1)<0)add(x+1,y,x+1,y+1);
- if(y===H-1||!visible(i+W)||owner(i+W)<0)add(x,y+1,x+1,y+1);}
+ if(x===0||(!omitFogEdge||visible(i-1))&&(!visible(i-1)||owner(i-1)!==f))add(x,y,x,y+1);
+ if(y===0||(!omitFogEdge||visible(i-W))&&(!visible(i-W)||owner(i-W)!==f))add(x,y,x+1,y);
+ if(x===W-1||(!omitFogEdge||visible(i+1))&&(!visible(i+1)||owner(i+1)<0))add(x+1,y,x+1,y+1);
+ if(y===H-1||(!omitFogEdge||visible(i+W))&&(!visible(i+W)||owner(i+W)<0))add(x,y+1,x+1,y+1);}
  const path=new Path2D(),seen=new Set(),point=n=>{const x=n%(W+1),y=Math.floor(n/(W+1));return project?project(x,y):[x,y];};
  for(let k=0;k<edges.length;k++){if(seen.has(k))continue;let [start,end]=edges[k];if(nodes.get(end).length!==2&&nodes.get(start).length===2)[start,end]=[end,start];const chain=[start,end];seen.add(k);
  while(nodes.get(end).length===2){const next=nodes.get(end).find(n=>!seen.has(n));if(next===undefined)break;seen.add(next);const edge=edges[next];end=edge[0]===end?edge[1]:edge[0];chain.push(end);}
@@ -207,7 +207,7 @@ data[j]=c[0];data[j+1]=c[1];data[j+2]=c[2];data[j+3]=255}ctx.putImageData(im,0,0
  for(let py=0;py<rh;py++)for(let px=0;px<rw;px++){const x=px/3-.333,y=py/3-.333,x0=clamp(Math.floor(x),0,W-1),y0=clamp(Math.floor(y),0,H-1),x1=Math.min(W-1,x0+1),y1=Math.min(H-1,y0+1),u=clamp(x-x0,0,1),v=clamp(y-y0,0,1),ids=[idx(x0,y0),idx(x1,y0),idx(x0,y1),idx(x1,y1)],weights=[(1-u)*(1-v),u*(1-v),(1-u)*v,u*v];let lf=0,known=0;for(let k=0;k<4;k++){if(visible(ids[k])){lf+=weights[k]*land[ids[k]];known+=weights[k];}}lf=known?lf/known:0;let noise=(Math.imul(px+19,374761393)^Math.imul(py+23,668265263))>>>0,grain=((noise>>>12)%11-5)*.68,surface=lf+(grain*.012)>=.5?1:0,sum=0,r=0,g=0,b=0;for(let k=0;k<4;k++){if(!visible(ids[k])||land[ids[k]]!==surface)continue;let weight=weights[k],i=ids[k]*4;sum+=weight;r+=data[i]*weight;g+=data[i+1]*weight;b+=data[i+2]*weight;}let j=(py*rw+px)*4;if(sum<.001){r=222;g=207;b=170;sum=1;}const mask=clamp((known-.28)/.6,0,1);out[j]=(r/sum)*mask+222*(1-mask)+grain;out[j+1]=(g/sum)*mask+207*(1-mask)+grain;out[j+2]=(b/sum)*mask+170*(1-mask)+grain;out[j+3]=255;}rc.putImageData(hi,0,0);}this.metrics.texture=performance.now()-start;
  }
  map(s,cam,mode,selection,quality,goods=9){if(['relief','engraved','living','urban'].includes(this.artCandidate)&&['geography','political'].includes(mode)){drawGeographyReview(this,s,cam,mode,selection,quality,this.artCandidate);return;}this.reviewPending=null;const started=performance.now(),pf=s.playerFaction??0,fog=s.discovery&&!s.discovery.fullMap&&!s.autonomous,visibleCell=i=>!fog||charted(s,pf,i),fresh=i=>!fog||freshIntel(s,pf,i),owner=i=>fog?observedOwner(s,pf,i):s.owner[i];this.resize(quality);let c=this.ctx,w=this.width,h=this.height;this.fit(cam,false);cam.layout(w,h);this.texture(s,mode,goods);c.fillStyle=fog?'#decfaa':'#20353a';c.fillRect(0,0,w,h);const atlasExperimental=s.sandboxKind==='atlas'&&['political','geography'].includes(mode),atlasPainted=atlasExperimental?(this.atlasSurface??=new AtlasCampaignSurface()).paint(this,s,cam,c,w,h,quality):false;if(!atlasExperimental){cam.projection=null;if(this.atlasSurface?.state)this.atlasSurface.reset();}const raw=c;c.save();c.translate(cam.ox,cam.oy);c.scale(cam.s,cam.s);c.imageSmoothingEnabled=mode!=='grid';if(!atlasPainted)c.drawImage(mode==='grid'||this.fast?this.land:this.relief,0,0,W,H);let scale=cam.s;if(this.artCandidate&&!this.fast&&['political','geography'].includes(mode))regionSurface(this,s,cam,mode,visibleCell);
-if(cam.projection||this.frontierProjected||this.frontierKey!==this.cache||this.frontierState!==s){this.frontierKey=this.cache;this.frontierState=s;this.frontierProjected=!!cam.projection;this.frontierPath=frontier(s,owner,visibleCell,cam.projection?.project);this.realmLabels=realmNames(s,owner,visibleCell);}
+if(cam.projection||this.frontierProjected||this.frontierKey!==this.cache||this.frontierState!==s){this.frontierKey=this.cache;this.frontierState=s;this.frontierProjected=!!cam.projection;this.frontierPath=frontier(s,owner,visibleCell,cam.projection?.project,atlasExperimental&&fog);this.realmLabels=realmNames(s,owner,visibleCell);}
 if(mode!=='geography'&&mode!=='grid'){c.lineJoin='round';c.lineCap='round';if(this.artCandidate){c.lineWidth=.85/scale;c.strokeStyle='#665438aa';c.stroke(this.frontierPath);}else{c.lineWidth=2.4/scale;c.strokeStyle='#443929a0';c.stroke(this.frontierPath);c.lineWidth=1.05/scale;c.strokeStyle='#eed8a9';c.stroke(this.frontierPath);}}
 
 if(cam.projection)c=projectedContext(raw,cam.projection.project);

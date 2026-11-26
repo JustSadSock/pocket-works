@@ -8,13 +8,13 @@ import assert from 'node:assert/strict';
 import {loadLibrary} from './geographic-dem-library.mjs';
 import {packExemplars} from './genesis-natural.mjs';
 import {generate,activateWorld} from './world.mjs';
-import {auditMajorExits,auditExitRepair,auditPhysicalEdges} from './genesis-hydrology.mjs';
+import {auditMajorExits,auditExitRepair,auditPhysicalEdges,auditQuotientComponents} from './genesis-hydrology.mjs';
 const output=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/atlas-integration';mkdirSync(output,{recursive:true});const records=[],save=()=>writeFileSync(join(output,'atlas-integration.json'),JSON.stringify(records,null,2));
 const url='http://127.0.0.1:4207/apps/crown-and-marches/',server=spawn(process.execPath,['scripts/serve-site.mjs'],{env:{...process.env,PORT:'4207',POCKET_WORKS_SITE_ROOT:process.env.PW_QA_SITE_ROOT||process.cwd()},stdio:'ignore'});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 try{
  const exemplars=packExemplars(await loadLibrary(join(tmpdir(),'crown-dem-library'))),payload=join(output,'frozen-exemplars.json');writeFileSync(payload,JSON.stringify(exemplars));
- activateWorld({worldSize:'standard'});const m=generate('living-atlas-standard-continent',3,'continent',{revision:'genesis-3.4.0',detail:4,approach:'field',exemplars});records.push({continent:{exits:auditMajorExits(m,192,128),repair:auditExitRepair(m,192,128),physical:auditPhysicalEdges(m,192,128)}});save();
+ activateWorld({worldSize:'standard'});const m=generate('living-atlas-standard-continent',3,'continent',{revision:'genesis-3.4.0',detail:4,approach:'field',exemplars});records.push({continent:{exits:auditMajorExits(m,192,128),repair:auditExitRepair(m,192,128),components:auditQuotientComponents(m,192,128),physical:auditPhysicalEdges(m,192,128)}});save();
  let ready=false;for(let i=0;i<50;i++){try{if((await fetch(url)).ok){ready=true;break;}}catch{}await sleep(200);}assert.ok(ready,'site unavailable');
  let failed=0;
  for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){

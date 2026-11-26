@@ -84,3 +84,25 @@ export function auditExitRepair(m,W,H){
  }
  const candidate=auditMajorExits({...m,down},W,H);return {original:original.total,remaining:candidate.total,results,remainingCases:candidate.cases,changed:results.filter(r=>r.proposed!==null).length};
 }
+
+// Research only: resolve quotient cycles using an actual fine outlet path,
+// not a made-up adjacency. Existing map, saved routing and fields unchanged.
+export function auditQuotientComponents(m,W,H){
+ const g=m.geography,r=g.detail,w=g.width,n=W*H,cell=i=>Math.min(H-1,Math.floor(Math.floor(i/w)/r))*W+Math.min(W-1,Math.floor(i%w/r)),original=auditMajorExits(m,W,H),results=[];
+ for(const issue of original.cases){for(const alternative of issue.alternatives){
+  const component=[issue.cell],seen=new Set(component);let j=alternative.cell;while(j>=0&&m.land[j]&&!seen.has(j)){component.push(j);seen.add(j);j=m.down[j];}if(j!==issue.cell)continue;
+  let best=-1,discharge=-1;for(let i=0;i<g.land.length;i++){const k=g.down[i];if(k<0||!g.land[i]||g.lakeWater?.[i]||cell(i)!==issue.cell||cell(k)!==alternative.cell)continue;const f=g.flow[i]/(r*r);if(f>discharge){best=i;discharge=f;}}
+  if(best<0){results.push({cell:issue.cell,component,status:'no-fine-crossing'});continue;}
+  const path=[],crossings=[];let current=best,last=-1;const fineSeen=new Set();
+  while(current>=0&&!fineSeen.has(current)){fineSeen.add(current);const k=cell(current);if(k!==last){if(last>=0)crossings.push({from:last,to:k,fromNode:previous,toNode:current,flow:g.flow[previous]/(r*r),bedRise:g.bed[current]-g.bed[previous]});path.push(k);last=k;}if(!g.land[current]||g.lakeWater?.[current])break;var previous=current;current=g.down[current];}
+  // Test direct exit from the component along the strongest fine catchment.
+  // A loop-erased suffix may require changing more than one downstream cell.
+  const loop=[];for(const k of path){const at=loop.indexOf(k);if(at>=0)loop.splice(at+1);else loop.push(k);}
+  const down=m.down.slice(),changes=[];for(let k=0;k<loop.length-1;k++){const i=loop[k],to=loop[k+1];if(!m.land[i])break;if(down[i]!==to){changes.push({cell:i,from:down[i],to,evidence:crossings.filter(c=>c.from===i&&c.to===to).sort((a,b)=>b.flow-a.flow)[0]});down[i]=to;}if(!seen.has(i)&&!seen.has(to)&&k>0){ // only change the component and necessary immediate escape
+   let p=to,steps=0;while(p>=0&&m.land[p]&&!seen.has(p)&&steps++<=n)p=down[p];if(p<0||!m.land[p])break;
+  }}
+  const indegree=new Int32Array(n),queue=new Int32Array(n);let head=0,tail=0;for(let i=0;i<n;i++)if(m.land[i]&&down[i]>=0)indegree[down[i]]++;for(let i=0;i<n;i++)if(!indegree[i])queue[tail++]=i;while(head<tail){const i=queue[head++],k=m.land[i]?down[i]:-1;if(k>=0&&--indegree[k]===0)queue[tail++]=k;}
+  const after=auditMajorExits({...m,down},W,H),candidate=tail===n&&after.total<original.total&&changes.every(c=>c.evidence);
+  results.push({cell:issue.cell,component,discharge,fromNode:best,finePath:path,crossings,loopErased:loop,changes,visited:tail,acyclic:tail===n,remaining:after.total,remainingCases:after.cases,candidate,status:candidate?'physical-component-exit-candidate':'unresolved'});
+ }}return {original:original.total,results};
+}
