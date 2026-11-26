@@ -87,7 +87,7 @@ oldBlocked=[sum(s["oldClearance"]<=0 for s in row["samples"]) for row in patch["
 from mathutils.bvhtree import BVHTree
 tree=BVHTree.FromPolygons([Vector(v) for v in water_vertices],water_faces,all_triangles=True)
 missing=[];centerClear=[]
-for row in patch["water"]:
+for row in patch["water"][1:-1]:
     loc,normal,index,d=tree.ray_cast(Vector((row["x"],row["y"],row["z"]+100)),Vector((0,0,-1)),200)
     if loc is None:missing.append(row["y"])
     else:centerClear.append(loc.z-row["z"])
