@@ -32,7 +32,7 @@ export function createCatalog(entries=[],root){
     }
   };
 }
-export function mixHybrid(procedural,sample,mix){
+export function mixHybrid(procedural,sample,mix,{compensateRms=false}={}){
   if(!(procedural instanceof Float32Array)||!(sample instanceof Float32Array)||!procedural.length||procedural.length%2||sample.length%2||!sample.length||typeof mix!=='number'||!Number.isFinite(mix)||mix<0||mix>1)throw new Error('Invalid hybrid inputs');
   const n=procedural.length,out=new Float32Array(n);
   let ep=0,es=0;
@@ -46,13 +46,14 @@ export function mixHybrid(procedural,sample,mix){
   // Match sample RMS to the original synthesis before applying the recipe ratio.
   // At pure sample, a silent procedural layer is also supported.
   const sampleGain=ep>0?ratio:1;
-  let peak=0;
+  let peak=0,energy=0;
   for(let i=0;i<n;i++){
     out[i]=procedural[i]*(1-mix)+(sample[i]??0)*sampleGain*mix;
-    peak=Math.max(peak,Math.abs(out[i]));
+    peak=Math.max(peak,Math.abs(out[i]));energy+=out[i]*out[i];
   }
   if(!Number.isFinite(peak)||peak<1e-8)throw new Error('Silent or invalid hybrid output');
-  const gain=Math.min(1,.88/peak);
+  const compensation=compensateRms&&ep>0?Math.min(2,Math.sqrt(ep/energy)):1;
+  const gain=Math.min(compensation,.88/peak);
   for(let i=0;i<n;i++)out[i]*=gain;
   return out;
 }
