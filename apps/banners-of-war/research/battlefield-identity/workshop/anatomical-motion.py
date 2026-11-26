@@ -4,8 +4,8 @@ from pathlib import Path
 from mathutils.bvhtree import BVHTree
 # Retain the proven action-detachment and actual child-axis solver.
 src=Path(__file__).with_name("sword-motion.py")
-exec(compile(src.read_text().split("# Distinct load, acceleration",1)[0],str(src),"exec"))
-folder=out/"anatomy";folder.mkdir(exist_ok=True)
+exec(compile(src.read_text().split("# Distinct load, acceleration",1)[0].replace('os.environ["BOW_TROOP"]="sword"','os.environ["BOW_TROOP"]=os.environ.get("BOW_WORKSHOP_ROLE","sword")'),str(src),"exec"))
+folder=out/("retarget" if os.environ.get("BOW_WORKSHOP_MOCAP") else "anatomy");folder.mkdir(exist_ok=True)
 audit["study"]="Anatomical Motion II";audit["samples"]={};audit["issues"]=[]
 def save():(folder/"anatomy-audit.json").write_text(json.dumps(audit,indent=2))
 def norm(n):return re.sub("[^a-z0-9]","",n.lower())
@@ -133,7 +133,7 @@ leftRel=world_of(LF).inverted()@world_of(L);handleLocal=local(LF,handleCenter);h
 def lock_left():
     m=rig.matrix_world.inverted()@world_of(LF)@leftRel;m.translation=L.matrix.translation;L.matrix=m;bpy.context.view_layer.update()
     c=world_pos(LF,handleLocal);a=(world_of(LF).to_3x3()@handleAxis).normalized();curl_hand(L,c,a,.014)
-    return (world_pos(L,local(L,lc)) - lc).length if False else (point(L)-(world_of(LF)@leftRel).translation).length
+    return (point(L)-(world_of(LF)@leftRel).translation).length
 def hold_sword(direction):
     a=(world_of(R).to_3x3()@axisLocal).normalized()
     rotate_axis(R,a,Vector((direction[0]*sign,direction[1],direction[2])))
@@ -225,14 +225,19 @@ def render(name,view,target=None,scale=3.4):
     cam.location=t+Vector(offset);look(cam,t);cam.data.ortho_scale=scale
     sc.render.filepath=str(folder/(name+".png"));bpy.ops.render.render(write_still=True)
 samples={}
-for motion in ("march","strike","fast","cautious","combat-walk"):
-    count=12 if motion in ("march","strike") else 8;samples[motion]=[];audit["samples"]=samples
+mocap=os.environ.get("BOW_WORKSHOP_MOCAP")
+if mocap:
+    exec(compile(Path(__file__).with_name("retarget-walk.py").read_text(),"retarget-walk.py","exec"))
+    motions=("retarget-march",)
+else:motions=("march","strike","fast","cautious","combat-walk")
+for motion in motions:
+    count=12 if motion in ("march","strike","retarget-march") else 8;samples[motion]=[];audit["samples"]=samples
     for i in range(count):
-        reset_upright();phase=i/count;errors,stance=attack(phase) if motion=="strike" else gait(motion,phase)
+        reset_upright();phase=i/count;errors,stance=retarget_gait(phase) if motion=="retarget-march" else attack(phase) if motion=="strike" else gait(motion,phase)
         pts=mesh_points();sc.frame_set(1);bpy.context.view_layer.update();before=mesh_points()
         row={"phase":phase,"joints":snap(),"stance":stance,"maxIKResidual":max(errors),"meshAfterFrameSet":mesh_delta(pts,before),"contacts":inspect_contacts(),"bladeTip":vec(world_pos(R,tipLocal))}
         samples[motion].append(row);save()
-        render(motion+"-%02d"%i,"side" if motion=="march" else "game")
+        render(motion+"-%02d"%i,"side" if motion in ("march","retarget-march") else "game")
         row["meshAfterRender"]=mesh_delta(before,mesh_points());save()
         if i in (0,4) and motion in ("march","strike"):
             for view in ("front","side","game"):render(motion+"-%02d-"%i+view,view)
