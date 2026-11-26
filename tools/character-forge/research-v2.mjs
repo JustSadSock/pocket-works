@@ -1,0 +1,31 @@
+import {mkdirSync,writeFileSync} from 'node:fs';import {join} from 'node:path';import {createHash} from 'node:crypto';import {build,animation,pose,poseFrom,deform,correctFootHeight,rotate} from './core.mjs';import {styles,lods} from './style.mjs';import {contactIntent} from './motion.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';
+const out=process.argv[2]??'quality-artifacts/character-forge';mkdirSync(out,{recursive:true});
+const spec=(recipe,style='historical-miniature',lod='medium',extra={})=>({version:2,recipe,style,lod,seed:17,actions:['idle','walk','run','fly','turn','interact'],...extra});
+const write=(name,data)=>writeFileSync(join(out,name),data),json=(name,v)=>write(name,JSON.stringify(v,null,2)),union=(a,b)=>a?[Math.min(a[0],b[0]),Math.max(a[1],b[1]),Math.min(a[2],b[2]),Math.max(a[3],b[3])]:b;
+let models=[],surface=[],motions=[],bench=[];
+for(let recipe of ['citizen','swordsman','horse','elephant','rider','dog','bird','legionary']){
+ const focus=['citizen','swordsman','horse','elephant'].includes(recipe);
+ for(let style of focus?Object.keys(styles):['historical-miniature'])for(let lod of focus?Object.keys(lods):['medium']){
+  let name=recipe+'-'+style+'-'+lod,dir=join(out,name);mkdirSync(dir,{recursive:true});let t=performance.now(),m=build(spec(recipe,style,lod)),gen=performance.now()-t;t=performance.now();let bin=glb(m),exp=performance.now()-t;t=performance.now();let pic=preview(m,{neutral:true});let render=performance.now()-t;write(name+'/preview.svg',pic.svg);write(name+'/character.glb',bin);write(name+'/source.json',JSON.stringify(m));if(lod==='medium')for(let view of ['front','side','game'])write(name+'/'+view+'.svg',preview(m,{view,neutral:true}).svg);
+  models.push({name,...m.statistics,genMs:gen,exportMs:exp,previewMs:render,bytes:bin.length,sha256:createHash('sha256').update(bin).digest('hex')});
+ }
+}
+for(let recipe of ['citizen','swordsman','rider','elephant']){
+ let old=build({version:1,recipe,profile:'miniature',actions:['idle','walk']}),m=build(spec(recipe)),variants=[['v01',old],['v02',m]];
+ if(['citizen','swordsman'].includes(recipe)){variants.push(['legacy-rings',build(spec(recipe,'historical-miniature','medium',{surface:'legacy-rings'}))],['implicit',build(spec(recipe,'historical-miniature','medium',{surface:'implicit'}))])}
+ for(let view of ['front','side','three-quarter']){let bounds=null;for(let [,v] of variants)bounds=union(bounds,preview(v,{view,neutral:true}).bounds);for(let [tag,v] of variants)write(recipe+'-compare-'+tag+'-'+view+'.svg',preview(v,{view,neutral:true,fixedBounds:bounds}).svg)}
+ for(let [tag,v] of variants)surface.push({recipe,tag,...v.statistics,audit:v.surfaceAudit??null});
+}
+for(let i=0;i<3;i++){let m=build(spec('citizen','historical-miniature','medium',{morphology:[{height:1.57,build:.76,head:.92},{height:1.94,build:1.36,limb:1.10},{height:1.71,build:1.05,age:.85}][i]}));write('variant-'+i+'.svg',preview(m,{neutral:true}).svg);write('variant-'+i+'.glb',glb(m))}
+for(let recipe of ['citizen','horse','elephant','rider','bird']){
+ let m=build(spec(recipe)),action=recipe==='bird'?'fly':'walk',dir=join(out,recipe+'-motion');mkdirSync(dir,{recursive:true});let bounds=null;for(let i=0;i<16;i++)bounds=union(bounds,preview(m,{action,phase:i/16,view:'side'}).bounds);let corrected=build(spec(recipe,'historical-miniature','medium',{contactCorrection:true}));
+ for(let i=0;i<16;i++){let phase=i/16,raw=animation(m,action,phase),w=poseFrom(m,raw),fix=action==='walk'?correctFootHeight(m,raw,phase):{rotations:raw,diagnostics:[]},cw=poseFrom(m,fix.rotations);
+ const contacts=contactIntent(m,phase).map(c=>{let j=m.joints[c.joint],p=m.parts.find(p=>p.binding===j.id&&/shoe|sole|hoof/.test(p.name));let surfaceMin=p?Math.min(...deform(m,p,w).map(v=>v[1])):null,correctedMin=p?Math.min(...deform(m,p,cw).map(v=>v[1])):null;let v=rotate(cw[j.id].q,c.local).map((x,k)=>x+cw[j.id].p[k]);return {joint:j.name,stance:c.stance,point:v,surfaceMin,correctedMin}});
+ motions.push({recipe,action,phase,contacts,correction:fix.diagnostics});write(recipe+'-motion/frame-'+String(i).padStart(2,'0')+'.svg',preview(corrected,{action,phase,view:'side',fixedBounds:bounds}).svg)}
+}
+for(let n of [1,10,100])for(let lod of Object.keys(lods)){let t=performance.now(),cpu=process.cpuUsage(),rss=process.memoryUsage().rss,bytes=0,geo=0,exp=0;for(let i=0;i<n;i++){let t=performance.now(),m=build(spec('citizen','historical-miniature',lod,{seed:i,morphology:{height:1.5+(i%41)*.012,build:.76+(i%29)*.021}}));geo+=performance.now()-t;t=performance.now();bytes+=glb(m).length;exp+=performance.now()-t;rss=Math.max(rss,process.memoryUsage().rss)}let used=process.cpuUsage(cpu);bench.push({n,lod,wallMs:performance.now()-t,geometryRigMs:geo,exportAnimationMs:exp,totalBytes:bytes,cpuMs:(used.user+used.system)/1000,peakSampledRSSBytes:rss})}
+// Raster benchmark sources are the exact same eight poses as the GLB control.
+const group=build(spec('citizen','historical-miniature','low')),dir=join(out,'group');mkdirSync(dir,{recursive:true});let bounds=null;for(let i=0;i<8;i++)bounds=union(bounds,preview(group,{action:'walk',phase:i/8,view:'game'}).bounds);
+for(let i=0;i<8;i++){let phase=i/8;write('group/pose-'+i+'.svg',preview(group,{action:'walk',phase,view:'game',width:128,height:128,fixedBounds:bounds,transparent:true}).svg);let w=pose(group,'walk',phase),positions=[],colors=[],indices=[];for(let p of group.parts){let off=positions.length/3,v=deform(group,p,w);positions.push(...v.flat());colors.push(...v.flatMap(()=>p.color));indices.push(...p.indices.map(j=>j+off))}json('group/mesh-'+i+'.json',{positions,colors,indices})}
+write('group/character.glb',glb(group));json('group/config.json',{bounds,frames:8,count:240,view:'game',width:2048,height:1280});
+json('report-v2.json',{models,surface,motions,benchmarks:bench,baselineV01Ms:{low:226.87,medium:310.47,high:628.24},limitations:['All native candidates unreviewed; SDF patch upper garment only','Style changes geometry and lighting; realism is design target not proof','Foot solver targets sole landmark, not horizontal lock; measured surface min separate','CI timing not game FPS']});console.log(JSON.stringify({benchmarks:bench,surface:surface.map(x=>({recipe:x.recipe,tag:x.tag,triangles:x.triangleCount,ms:x.geometryAndRigMs,surfaceMs:x.surfaceMs,audit:x.audit}))}));
