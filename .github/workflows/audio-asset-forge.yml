@@ -17,6 +17,7 @@ on:
       - "shared/capabilities/virtual-audio.js"
       - "shared/capabilities/score-director.js"
       - "shared/capabilities/music-ducking.js"
+      - "shared/capabilities/score-pack.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
   pull_request:
@@ -29,6 +30,7 @@ on:
       - "shared/capabilities/virtual-audio.js"
       - "shared/capabilities/score-director.js"
       - "shared/capabilities/music-ducking.js"
+      - "shared/capabilities/score-pack.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
 
@@ -102,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -240,6 +242,7 @@ jobs:
           retention-days: 7
 
   audio-runtime-browser:
+    needs: platform-smoke
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
@@ -270,6 +273,13 @@ jobs:
           echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/audio-browser/node_modules/playwright" >> "$GITHUB_ENV"
       - name: Run real Web Audio checks
         run: node tools/audio-forge/browser-runtime.mjs ${{ matrix.browser }} .audio-runtime-browser
+      - name: Download same-run authored score
+        uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-score-states-${{ github.run_id }}
+          path: .audio-authored-score
+      - name: Verify authored score in real Web Audio
+        run: node tools/audio-forge/browser-authored-score.mjs ${{ matrix.browser }} .audio-authored-score .audio-runtime-browser
       - uses: actions/upload-artifact@v4
         with:
           name: sound-forge-runtime-${{ matrix.browser }}-${{ github.run_id }}
