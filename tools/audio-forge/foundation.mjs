@@ -14,7 +14,7 @@ function bounded(value, fallback, min, max, label) {
   if (typeof n !== 'number' || !Number.isFinite(n) || n < min || n > max) throw new Error('Invalid '+label);
   return n;
 }
-const models = new Set(['sword', 'shield', 'glass', 'explosion', 'rain']);
+const models = new Set(['sword', 'shield', 'glass', 'explosion', 'rain', 'sword-v2', 'glass-v2', 'gear', 'chain']);
 export function expandManifest(manifest) {
   if (!manifest || ![1,2].includes(manifest.version) || !Array.isArray(manifest.jobs)) throw new Error('Invalid audio manifest');
   if (manifest.version === 1) return manifest.jobs;
@@ -40,7 +40,7 @@ export function expandManifest(manifest) {
     const random = rng(seed);
     for (let i=0;i<count;i++) {
       const name = f.id+'-'+String(i+1).padStart(2,'0');
-      jobs.push({name,type:hybrid?'hybrid':'physics',...(hybrid?{sampleId:f.sampleId,sampleMix:f.sampleMix}:{}),model:f.model,seed:Math.floor(random()*4294967296),strength:Math.max(.1,Math.min(1,strength+(random()*2-1)*spread)),duration:f.duration,output:output+'/'+name+'.'+format,post:{...f.post}});
+      jobs.push({name,type:hybrid?'hybrid':'physics',...(hybrid?{sampleId:f.sampleId,sampleMix:f.sampleMix,compensateRms:f.compensateRms===true}:{}),model:f.model,seed:Math.floor(random()*4294967296),strength:Math.max(.1,Math.min(1,strength+(random()*2-1)*spread)),duration:f.duration,output:output+'/'+name+'.'+format,post:{...f.post}});
     }
   }
   if (jobs.length > 512) throw new Error('Manifest exceeds 512 jobs');
@@ -58,7 +58,7 @@ export function expandManifest(manifest) {
 export function renderPhysics(job) {
   if (!models.has(job.model)) throw new Error('Unknown physics model');
   const sr = 48000;
-  const dur = bounded(job.duration, ({sword:.65,shield:.5,glass:1.3,explosion:2.4,rain:6})[job.model],.08,20,'duration');
+  const dur = bounded(job.duration, ({sword:.65,shield:.5,glass:1.3,explosion:2.4,rain:6,'sword-v2':.75,'glass-v2':1.5,gear:1.6,chain:1.4})[job.model],.08,20,'duration');
   const strength = bounded(job.strength,.65,.1,1,'strength');
   const r = rng(bounded(job.seed,42,0,0xffffffff,'seed'));
   const frames = Math.round(dur*sr), out = new Float32Array(frames*2);
@@ -86,7 +86,35 @@ export function renderPhysics(job) {
     }
   }
   const shift=(.87+r()*.26)*(.85+.2*strength);
-  if(job.model==='sword'||job.model==='shield'){
+  if(job.model==='sword-v2'){
+    // Hard steel contact, brief slipping contact and inharmonic blade modes.
+    burst(.001,.012,1.3,2600,18500,0,6);
+    burst(.004,.06,.38,1100,9800,0,5);
+    for(let i=0;i<12;i++){
+      const f=(850+i*630+r()*550)*shift;
+      ring(.001+r()*.005,f,.07+r()*.22,(.11+r()*.12)/(1+i*.08),r()*.5-.25,6, -.012);
+    }
+    for(let i=0;i<12;i++)burst(.018+i*.005+r()*.005,.008+r()*.019,.14,3300,16000,r()*.5-.25,5);
+    burst(.002,.045,.14,180,950,0,7);
+  } else if(job.model==='glass-v2'){
+    // Brittle fracture attack and smaller bright, individually damped shards.
+    burst(.001,.016,1.2,2200,18000,0,5);
+    for(let i=0;i<90;i++){
+      const at=.004+Math.pow(r(),2.7)*dur*.8,pan=r()*1.8-.9,amp=(.08+r()*.26)*Math.exp(-3.6*at/dur);
+      burst(at,.008+r()*.024,amp,2500,18000,pan,5);
+      for(let k=0;k<2;k++)ring(at,3400+r()*10500,.025+r()*.11,amp*(k===0?.8:.25),pan,6);
+    }
+  } else if(job.model==='gear'||job.model==='chain'){
+    const gear=job.model==='gear';
+    let at=.01;
+    while(at<dur-.025){
+      const pan=(r()-.5)*.6;
+      burst(at,.025+r()*.045,.3+r()*.4,gear?220:750,gear?6800:13500,pan,5);
+      for(let i=0;i<3;i++)ring(at,gear?350+r()*2600:1500+r()*6800,.035+r()*.07,.055+r()*.055,pan,7);
+      if(gear)burst(at,.07,.12,80,1900,pan,3);
+      at+=gear?.07+r()*.035:.035+r()*.12;
+    }
+  } else if(job.model==='sword'||job.model==='shield'){
     const sword=job.model==='sword';
     burst(.002,.026,.95,900,15500,0,6);
     burst(.008,.13,.48,1800,12500,.15,5);
