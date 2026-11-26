@@ -59,8 +59,8 @@ jobs:
         run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0 three@0.180.0
       - name: Actual native GLB and Canvas group probes
         run: |
-          git fetch --no-tags --depth=1 origin f2007f2f396dc5329b31fe3cb11bde138c9f4aec
-          git show FETCH_HEAD:tools/character-forge/sprite-browser.mjs > /tmp/character-benchmark-control.mjs
+          git -c safe.directory="$PWD" fetch --no-tags --depth=1 origin f2007f2f396dc5329b31fe3cb11bde138c9f4aec
+          git -c safe.directory="$PWD" show FETCH_HEAD:tools/character-forge/sprite-browser.mjs > /tmp/character-benchmark-control.mjs
           CHARACTER_BENCHMARK_CONTROL=/tmp/character-benchmark-control.mjs node tools/character-forge/sprite-browser.mjs quality-artifacts/character-forge
       - uses: actions/upload-artifact@v4
         if: always()
