@@ -20,7 +20,8 @@
         "atlas-projection.test.mjs",
         "atlas-scale.test.mjs",
         "atlas-surface-requests.test.mjs",
-        "atlas-human-layout.test.mjs"
+        "atlas-human-layout.test.mjs",
+        "atlas-urban.test.mjs"
       ],
       "tier": "smoke"
     },
