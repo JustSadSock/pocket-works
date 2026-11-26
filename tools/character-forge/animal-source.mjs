@@ -1,4 +1,4 @@
-import {readFileSync,writeFileSync} from 'node:fs';import {join} from 'node:path';import {build} from './core.mjs';import {part,push,normals} from './hybrid-human.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {resolveProfile} from './morphology.mjs';
+import {readFileSync,writeFileSync} from 'node:fs';import {join} from 'node:path';import {build,pose,deform} from './core.mjs';import {part,push,normals} from './hybrid-human.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {resolveProfile} from './morphology.mjs';
 const out=process.env.CHARACTER_EVIDENCE,reg=JSON.parse(readFileSync(new URL('animal-morphs.json',import.meta.url))),provenance=JSON.parse(readFileSync(join(out,'animal-source-provenance.json'))),report=[];
 const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),norm=a=>Math.hypot(...a);
 const bounds=parts=>parts.reduce((b,p)=>{for(let i=0;i<p.positions.length;i++) {let k=i%3;b[k][0]=Math.min(b[k][0],p.positions[i]);b[k][1]=Math.max(b[k][1],p.positions[i])}return b},[[Infinity,-Infinity],[Infinity,-Infinity],[Infinity,-Infinity]]);
@@ -13,6 +13,29 @@ for(let family of ['horse','elephant']){
     push(p,q,bind(q,m))}p.indices=src.indices.slice();return normals(p)});
   m.spec.provenance=[provenance[family]];m.spec.sourceAdapter='experimental nearest-segment skinning of decimated CC0 mesh';m.spec.budget.maxBytes=32000000;m.statistics={triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),joints:m.joints.length};
   let key='source-'+family+'-'+name;writeFileSync(join(out,key+'.glb'),glb(m));writeFileSync(join(out,key+'.spec.json'),JSON.stringify(m.spec,null,2));for(let view of ['front','side','three-quarter'])writeFileSync(join(out,key+'-'+view+'.svg'),preview(m,{view,neutral:true,rotations:m.joints.map(()=>[0,0,0,1])}).svg);
+  if(family==='elephant'){
+    // Keep B's original source topology; C is a bounded, procedural
+    // proportion study of the same fitted anatomical base, not another asset.
+    const native=build(spec),candidate=structuredClone(m),H=bb[1][1]-bb[1][0],mid=(bb[2][0]+bb[2][1])/2;
+    const warp=v=>{const y=(v[1]-bb[1][0])/H,z=(v[2]-mid)/(bb[2][1]-bb[2][0]),head=clamp((z-.12)*4,0,1)*clamp((y-.36)*3,0,1),mass=clamp((y-.25)*2,0,1)*(1-head);return [v[0]*(1+.10*mass+.17*head),bb[1][0]+(v[1]-bb[1][0])*(.93+.07*head),mid+(v[2]-mid)*(1+.08*head)]};
+    for(const j of candidate.joints)j.position=warp(j.position);
+    for(const j of candidate.joints)if(j.parent>=0)j.local=sub(j.position,candidate.joints[j.parent].position);
+    candidate.spec.style='low-poly';candidate.spec.sourceAdapter='V5 bounded stylized proportions on source topology; unapproved';
+    candidate.parts=m.parts.map(src=>{let p=part(src.name,src.color,'body');for(let i=0;i<src.positions.length;i+=3){let q=warp(src.positions.slice(i,i+3));push(p,q,bind(q,candidate))}p.indices=src.indices.slice();return normals(p)});
+    const set=[['native',native],['source',m],['stylized',candidate]],rest=x=>x.joints.map(()=>[0,0,0,1]),diag=[];
+    for(const [label,x] of set){
+      const stem='source-v5-elephant-'+name+'-'+label;
+      if(label==='stylized')writeFileSync(join(out,stem+'.glb'),glb(x));
+      for(const view of ['front','side','three-quarter'])if(name==='base')writeFileSync(join(out,stem+'-'+view+'.svg'),preview(x,{view,neutral:true,rotations:rest(x)}).svg);
+      for(const phase of [0,.25,.5,.75]){
+        const w=pose(x,'walk',phase),ratios=[];
+        for(const p of x.parts){const v=deform(x,p,w);for(let i=0;i<p.indices.length;i+=3)for(let k=0;k<3;k++){const a=p.indices[i+k],b=p.indices[i+(k+1)%3],d=norm(sub(p.positions.slice(3*a,3*a+3),p.positions.slice(3*b,3*b+3)));if(d>1e-5)ratios.push(norm(sub(v[a],v[b]))/d)}}
+        ratios.sort((a,b)=>a-b);diag.push({label,phase,edgeSamples:ratios.length,stretchP95:ratios[Math.floor((ratios.length-1)*.95)],max:ratios.at(-1),collapsed:ratios.filter(r=>r<.5).length});
+        if(name==='base')writeFileSync(join(out,stem+'-walk-'+phase+'.svg'),preview(x,{view:'side',action:'walk',phase,neutral:true}).svg);
+      }
+    }
+    writeFileSync(join(out,'source-v5-elephant-'+name+'-diagnostics.json'),JSON.stringify({name,provenance:provenance[family],diagnostics:diag,note:'Comparative edge strain; not proof of correct anatomical binding. Source variants remain isolated.'},null,2));
+  }
   report.push({family,name,...m.statistics,fitMs:performance.now()-t,sourceTriangles:source.originalTriangles,sourceSimplified:source.simplifiedTriangles,bounds:bb,orientation:{axis:source.forwardAxis,sign:source.forwardSign,scores:source.orientationScores}})
  }
 }
