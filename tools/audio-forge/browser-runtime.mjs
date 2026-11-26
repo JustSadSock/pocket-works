@@ -101,6 +101,7 @@ try{
         const deadline=performance.now()+3000;
         while(c.currentTime<until&&performance.now()<deadline)await new Promise(r=>setTimeout(r,25));
         check(c.currentTime>=until,'Audio clock stalled before transition');
+        analyser.smoothingTimeConstant=0;
         const spectrum=new Float32Array(analyser.frequencyBinCount);
         analyser.getFloatFrequencyData(spectrum);
         const bin=Math.round(440*analyser.fftSize/c.sampleRate);
@@ -138,7 +139,8 @@ try{
         check(first.length===12&&first.every(id=>Number(id.slice(5))<256),'Initial selection wrong');
         const firstStats=world.stats;
 
-        check(await events.play('impact',{priority:2}),'Real combat event decode/play failed');
+        const burst=await Promise.all(Array.from({length:8},()=>events.play('impact',{priority:2})));
+        check(burst.filter(Boolean).length===4,'Combat burst exceeded reservation or decode failed');
         const withEvent=scene.stats;check(withEvent.allocated<=18&&withEvent.music===2,'Combined budget invalid');
         scene.music.setIntensity(1,{quantize:'beat',fadeSeconds:.05});
         t0=performance.now();
@@ -157,7 +159,7 @@ try{
         const armyData=new Float32Array(armyAnalyser.fftSize);armyAnalyser.getFloatTimeDomainData(armyData);
         const armyRms=rms(armyData);
         check(armyRms>.0001&&world.stats.peak===12&&world.stats.failures===0,'Virtual army output or budget invalid');
-        const worldReport={first:firstStats,retiring,final:world.stats,firstIds:first,secondIds:second,initialMs,retireMs,activateMs,armyRms,combatDecoded:true,withEvent,combined:scene.stats,musicContinued:scene.music.state.startTime===sceneClock};
+        const worldReport={first:firstStats,retiring,final:world.stats,firstIds:first,secondIds:second,initialMs,retireMs,activateMs,armyRms,combatDecoded:true,acceptedEvents:burst.filter(Boolean).length,withEvent,combined:scene.stats,musicContinued:scene.music.state.startTime===sceneClock};
         check(worldReport.musicContinued,'Scene restarted score');
         scene.destroy();armyAnalyser.disconnect();
         check(scene.stats.allocated===0,'Scene cleanup failed');
