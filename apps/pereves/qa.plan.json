@@ -30,6 +30,13 @@
         }
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "production",
+      "kind": "browser-node",
+      "entry": "qa/production-verify.mjs",
+      "tier": "smoke",
+      "install": true
     }
   ]
 }
