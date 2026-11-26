@@ -40,7 +40,7 @@ function hash(x,y){let n=Math.imul(x+397,374761393)^Math.imul(y-581,668265263);n
 function noise(x,y){const i=Math.floor(x),j=Math.floor(y),u=S(x-i),v=S(y-j);return L(L(hash(i,j),hash(i+1,j),u),L(hash(i,j+1),hash(i+1,j+1),u),v);}
 export function atlasMaterial(p,water){
  let base=watersMaterial(p,water);if(water.kind)return base;
- const {x,y,H,wet,fert,forest,slope,nx,ny,curvature,river}=p,high=S((H-.35)/.24),rock=S((slope-.14)/.44),talus=S((slope-.04)/.27)*(1-rock)*high,stand=S((forest-.18)/.55)*(1-high),patch=S((noise(x*.58,y*.58)-.22)/.6),strata=.5+.5*Math.sin(H*132+noise(x*.38,y*.38)*3+(-ny*x+nx*y)*.7);
+ const {x,y,H,wet,fert,forest,slope,nx,ny,curvature,river,continuous}=p,high=S((H-.35)/.24),rock=S((slope-.14)/.44),talus=S((slope-.04)/.27)*(1-rock)*high,stand=S((forest-.18)/.55)*(1-high),patch=S((noise(x*.58,y*.58)-.22)/.6),strata=continuous?S((noise(x*3.2+H*12,y*3.2-H*9)-.15)/.7):.5+.5*Math.sin(H*132+noise(x*.38,y*.38)*3+(-ny*x+nx*y)*.7);
  base=mix(base,mix([86,83,78],[179,169,153],strata),rock*.46);
  base=mix(base,mix([133,119,99],[181,164,136],patch),talus*.38);
  base=mix(base,mix([49,78,56],[92,119,75],patch),stand*.38);const canopy=noise(x*3.1+19,y*3.1-6),edge=S((forest-.25+(patch-.5)*.22)/.4);base=mix(base,mix([45,70,49],[101,124,77],canopy),edge*(1-high)*(1-rock)*.22);
