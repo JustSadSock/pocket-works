@@ -72,7 +72,7 @@ add(stems.brass,trumpet,0,.28,.30);
 const vn=phrase(trumpetPitches,'bowed'),cn=phrase(chords.map(c=>[c[0],c[1],c[0]]),'bowed');
 add(stems.strings,renderBowedPhrase({instrument:'violin',notes:vn,seconds,seed:112}).samples,0,-.48,.30);
 add(stems.strings,renderBowedPhrase({instrument:'cello',notes:cn,seconds,seed:113}).samples,0,.35,.22);
-const fn=hornNotes.map((n,i)=>({midi:n.midi+12,start:n.start,duration:n.duration,pressure:n.pressure*.65,connected:i%3!==0}));
+const fn=hornNotes.map((n,i)=>({midi:n.midi+12<=84?n.midi+12:n.midi,start:n.start,duration:n.duration,pressure:n.pressure*.65,connected:i%3!==0}));
 add(stems.woodwind,renderWindPhrase({instrument:'flute',notes:fn,seconds,seed:83}).samples,0,.48,.22);
 const harpNotes=chords.flatMap((c,i)=>Array.from({length:8},(_,j)=>({midi:c[j%3]+(j%4===3?12:0),beat:i*4+j*.5,duration:.43,velocity:j===0?.75:.42})));
 stems.plucked.set(renderPluckedScore({tempo,bars,meter,seed:19,tracks:[{instrument:'harp',notes:harpNotes,gain:.56,pan:.35}]}).samples);
