@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: character-forge-v8-${{ github.ref }}
+  group: character-forge-v9-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   core:
@@ -68,8 +68,9 @@ jobs:
             quality-artifacts/character-forge/sprite-5000-*.png
           retention-days: 14
   morph-source:
+    needs: core
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/character-morph
     steps:
@@ -77,6 +78,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: character-forge-core
+          path: quality-artifacts/character-morph/control
+      - name: Preserve measured CMU 35_01 source trajectory
+        run: cp quality-artifacts/character-morph/control/capture-v4-report.json "$CHARACTER_EVIDENCE/capture-v4-report.json"
       - name: Import MakeHuman source skin, morphs and original weights
         run: |
           python3 tools/character-forge/makehuman-adapter.py
@@ -84,26 +91,32 @@ jobs:
           CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v4.test.mjs
           node tools/character-forge/recovery-v6.mjs
           CHARACTER_V7_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v7.test.mjs
+          CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v9.test.mjs
           node tools/character-forge/research-v7.mjs
       - name: Render matched static surface candidates and actual-size comparisons
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg
           python3 tools/character-forge/evidence-v6.py
-          python3 tools/character-forge/fabric-v8.py || echo 'CC0 scan unavailable; v8 report will record procedural fallback'
+          python3 tools/character-forge/fabric-v8.py
           node tools/character-forge/research-v8.mjs
           python3 tools/character-forge/evidence-v8.py
+          curl -fL --retry 3 --connect-timeout 20 --max-time 240 -o "$CHARACTER_EVIDENCE/v9-cc0-motions.zip" https://huggingface.co/datasets/Kinemiq/free-game-animations/resolve/main/KinemIQ_Free_Animations_CC0_GLB.zip
+          echo '64ca5ab4a92c9da079c5e88ca509391b0a58a24ccf2a1307b16e2f0fc6b23ffc  '"$CHARACTER_EVIDENCE/v9-cc0-motions.zip" | sha256sum --check --strict
+          node tools/character-forge/research-v9.mjs
+          CHARACTER_EVIDENCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v9-evidence.test.mjs
+          python3 tools/character-forge/evidence-v9.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: character-forge-morph
+          name: character-forge-morph-v9
           path: quality-artifacts/character-morph
           retention-days: 14
   art-forge-bridge:
     needs: [core, morph-source]
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         shell: bash
@@ -121,7 +134,7 @@ jobs:
           path: quality-artifacts/character-bridge
       - uses: actions/download-artifact@v4
         with:
-          name: character-forge-morph
+          name: character-forge-morph-v9
           path: quality-artifacts/character-bridge/morph
       - name: Install verified editor
         run: |
@@ -148,26 +161,34 @@ jobs:
           python3 tools/character-forge/forge-bridge.py || status=1
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/makehuman-base.glb" CHARACTER_BRIDGE_LABEL=makehuman python3 tools/character-forge/forge-bridge.py || status=1
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/v8-artisan.glb" CHARACTER_BRIDGE_LABEL=v8-artisan python3 tools/character-forge/forge-bridge.py || status=1
+          for role in artisan merchant infantry legionary; do
+            CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/v9-$role.glb" CHARACTER_BRIDGE_LABEL=v9-$role python3 tools/character-forge/forge-bridge.py || status=1
+          done
           exit "$status"
       - name: Compare one matched transparent frame through existing Art Forge bake
         if: always()
         run: |
           python3 tools/character-forge/sprite-bake.py
           CHARACTER_SURFACE_BAKE=1 python3 tools/character-forge/sprite-bake.py
-      - name: Optional Blender garment intersections and cloth control
-        if: always()
+      - name: Required Blender collision, full-garment cloth and CC0 motion research
         run: |
           /usr/bin/python3 -c 'import PIL; print(PIL.__version__)'
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle.py
-      - name: Optional actual source animal template experiment
-        if: always()
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study-v9.py
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle-v9.py
+          node tools/character-forge/evidence-cloth-v9.mjs
+          python3 tools/character-forge/evidence-cloth-v9.py
+          node --test tools/character-forge/cloth-cache-v9.test.mjs
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cc0-motion-v9.py
+      - name: Required actual source elephant anatomy, foot contact and secondary motion
         run: |
           apt-get install -y --no-install-recommends librsvg2-bin ffmpeg
           python3 tools/character-forge/animal-source.py
-          CHARACTER_V8_FOCUS=1 node tools/character-forge/animal-source.mjs
+          CHARACTER_V9_FOCUS=1 node tools/character-forge/animal-source.mjs
+          CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/source-v9-elephant-active.glb" CHARACTER_BRIDGE_LABEL=v9-elephant python3 tools/character-forge/forge-bridge.py
           for f in "$CHARACTER_EVIDENCE"/source-*.svg; do rsvg-convert "$f" -o "${f%.svg}.png"; done
-          ffmpeg -hide_banner -loglevel error -y -framerate 12 -i "$CHARACTER_EVIDENCE/source-v8-elephant-motion/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/source-v8-elephant-walk.mp4"
+          ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/source-v9-elephant-motion/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/source-v9-elephant-walk.mp4"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -180,6 +201,7 @@ jobs:
             quality-artifacts/character-bridge/garment-exact-overlap.json
             quality-artifacts/character-bridge/v7-*-overlap-map.png
             quality-artifacts/character-bridge/v8-garment-overlap.json
+            quality-artifacts/character-bridge/v9-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
@@ -198,7 +220,7 @@ jobs:
         run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0
       - uses: actions/download-artifact@v4
         with:
-          name: character-forge-morph
+          name: character-forge-morph-v9
           path: quality-artifacts/studio-source
       - name: Exercise actual studio controls, garment layers and export
         run: CHARACTER_SOURCE_DIR="$PWD/quality-artifacts/studio-source" node tools/character-forge/studio-test.mjs quality-artifacts/character-studio
