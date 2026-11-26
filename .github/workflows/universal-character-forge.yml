@@ -171,6 +171,7 @@ jobs:
             quality-artifacts/character-bridge/*-source-morphs.png
           retention-days: 14
   studio:
+    needs: morph-source
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 15
@@ -181,8 +182,12 @@ jobs:
           node-version: 22
       - name: Install local browser test
         run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0
-      - name: Exercise actual studio controls and export
-        run: node tools/character-forge/studio-test.mjs quality-artifacts/character-studio
+      - uses: actions/download-artifact@v4
+        with:
+          name: character-forge-morph
+          path: quality-artifacts/studio-source
+      - name: Exercise actual studio controls, garment layers and export
+        run: CHARACTER_SOURCE_DIR="$PWD/quality-artifacts/studio-source" node tools/character-forge/studio-test.mjs quality-artifacts/character-studio
       - uses: actions/upload-artifact@v4
         if: always()
         with:
