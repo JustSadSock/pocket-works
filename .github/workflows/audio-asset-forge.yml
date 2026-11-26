@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -296,6 +296,24 @@ jobs:
         with:
           name: sound-forge-orchestra-lab-${{ github.run_id }}
           path: .audio-orchestra-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render matched expressive ensemble and room auditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/orchestra-lab.mjs .audio-orchestra-expressive --expressive-ensemble
+          node tools/audio-forge/ensemble-room-lab.mjs .audio-ensemble-room .audio-orchestra-lab .audio-orchestra-expressive
+          test "$(find .audio-ensemble-room -maxdepth 1 -name '*.wav' | wc -l)" -eq 9
+          test "$(find .audio-orchestra-expressive/stems -name '*.wav' | wc -l)" -eq 5
+
+      - name: Upload matched ensemble acoustics auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-ensemble-room-${{ github.run_id }}
+          path: .audio-ensemble-room/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
