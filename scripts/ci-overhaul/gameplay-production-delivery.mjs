@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import {isDeepStrictEqual as eq} from 'node:util';
-import {describePlan} from './delivery-gate.mjs';
+import {describePlan,verifyLegacy} from './delivery-gate.mjs';
 import {verdict} from './canary-evidence.mjs';
 import {taskDigest,canonical,digest} from './verified-results.mjs';
 import {loadSuites,resolveTasks} from '../universal-qa/plan.mjs';
@@ -46,6 +46,23 @@ export function verifyMixed(raw,ctx,readTask,auditTask){
  if(digest(canonical(passed.sort()))!==p.planDigest)fail('Original task digest mismatch');
  return {schema:1,route:'legacy-mixed-v1',tree:ctx.tree,source:ctx.source,run:ctx.run,attempt:ctx.attempt,planDigest:p.planDigest,expected:p.count,passed:p.count,success:true,verifiedTasks:verified,freshTasks:p.count-verified,reusedGameplayCases:reused,productionAuthorization:verified>0,allowImpactSkipping:false,rows};
 }
+export function verifyGateSummary(raw,summary,ctx){
+ const p=describePlan(raw);
+ if(summary?.route!=='legacy-mixed-v1')return verifyLegacy(raw,summary,ctx.tree);
+ if(summary.schema!==1||summary.success!==true||summary.source!==ctx.source||summary.tree!==ctx.tree||summary.run!==ctx.run||summary.attempt!==ctx.attempt||summary.planDigest!==p.planDigest||summary.expected!==p.count||summary.passed!==p.count||summary.allowImpactSkipping!==false||!Array.isArray(summary.rows)||summary.rows.length!==p.count)fail('Mandatory summary identity or coverage mismatch');
+ const tasks=new Map(p.tasks.map(t=>[t.key,t])),seen=new Set();let verified=0,reused=0;
+ for(const r of summary.rows){
+  const t=tasks.get(r.key);if(!t||seen.has(r.key))fail('Unexpected task in mandatory summary');seen.add(r.key);
+  if(r.mode==='fresh'){if(r.reusedGameplayCases!==0)fail('Fresh task claims reuse');}
+  else if(r.mode==='verified-gameplay'){
+   const n=t.seed<4?234:233;
+   if(!ctx.enabled||!eligibleTask(t)||!['exact-commit','exact-tree-merge'].includes(r.identity)||r.reusedGameplayCases!==n||t.seed===(ctx.run+ctx.attempt)%8)fail('Unapproved mandatory summary hit');
+   verified++;reused+=n;
+  }else fail('Unknown mandatory summary mode');
+ }
+ if(summary.verifiedTasks!==verified||summary.freshTasks!==p.count-verified||summary.reusedGameplayCases!==reused||summary.productionAuthorization!==(verified>0))fail('Mandatory summary totals differ');
+ return {success:true,expected:p.count,planDigest:p.planDigest,verifiedTasks:verified,reusedGameplayCases:reused};
+}
 function checkTask(root,t){
  if(!eligibleTask(t))return false;
  try{
@@ -84,6 +101,13 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    writeFileSync(join(arg,'summary.json'),JSON.stringify(result,null,2)+'\n',{flag:'wx'});
    const md='## Pocket Works Universal QA — mandatory mixed delivery\n\n'+result.passed+'/'+result.expected+' tasks passed; '+result.verifiedTasks+' verified tasks; '+result.reusedGameplayCases+' reused gameplay cases.\n';
    writeFileSync(join(arg,'SUMMARY.md'),md,{flag:'wx'});if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,md);console.log(JSON.stringify(result,null,2));
+  }else if(mode==='gate-report'){
+   if(ctx.source!==process.env.GITHUB_SHA)fail('Wrong final gate checkout');
+   const raw=rawFromEnv(process.env),p=describePlan(raw);
+   if(p.planDigest!==process.env.QA_PLAN_DIGEST)fail('Final gate plan digest differs');
+   const bytes=readFileSync(arg);
+   if(digest(bytes)!==process.env.QA_REPORT_DIGEST)fail('Mandatory report changed after independent summary');
+   console.log(JSON.stringify(verifyGateSummary(raw,JSON.parse(bytes),ctx)));
   }else fail('Unknown delivery operation');
  }catch(e){console.error(e.message);process.exitCode=1;}
 }

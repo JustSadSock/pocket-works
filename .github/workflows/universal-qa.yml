@@ -241,6 +241,8 @@ jobs:
   summary:
     if: always() && needs.plan.result == 'success' && needs.plan.outputs.route == 'legacy' && needs.plan.outputs.expected != '[]'
     needs: [plan, cpu, browser, receipt_discovery]
+    outputs:
+      report_digest: ${{ steps.report.outputs.digest }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -285,6 +287,9 @@ jobs:
             node scripts/universal-qa/aggregate.mjs
             QA_TREE=$(git rev-parse HEAD^{tree}) node scripts/ci-overhaul/delivery-gate.mjs legacy qa-collected/summary.json
           fi
+      - name: Bind independent report to final delivery gate
+        id: report
+        run: echo "digest=$(sha256sum qa-collected/summary.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - name: Upload consolidated report
         if: always()
         uses: actions/upload-artifact@v4
@@ -320,6 +325,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/download-artifact@v4
+        if: needs.plan.outputs.route == 'legacy' && needs.summary.result == 'success'
+        with:
+          name: qa-summary-${{ github.run_id }}
+          path: mandatory-report
+      - name: Recheck bound original-plan delivery report
+        if: needs.plan.outputs.route == 'legacy' && needs.summary.result == 'success'
+        env:
+          QA_CPU_MATRIX: ${{ needs.plan.outputs.cpu_matrix }}
+          QA_BROWSER_MATRIX: ${{ needs.plan.outputs.browser_matrix }}
+          QA_EXPECTED: ${{ needs.plan.outputs.expected }}
+          QA_PLAN_DIGEST: ${{ needs.plan.outputs.plan_digest }}
+          QA_REPORT_DIGEST: ${{ needs.summary.outputs.report_digest }}
+          QA_PR_NUMBER: ${{ github.event.pull_request.number }}
+          QA_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          QA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: node scripts/ci-overhaul/gameplay-production-delivery.mjs gate-report "$PWD" "$PWD/mandatory-report/summary.json"
       - name: Require complete selected route
         env:
           QA_PLAN_RESULT: ${{ needs.plan.result }}

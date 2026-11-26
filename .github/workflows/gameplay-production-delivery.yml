@@ -222,6 +222,11 @@ jobs:
           if node scripts/ci-overhaul/gameplay-production-delivery.mjs mixed "$PWD/candidate" "$PWD/tampered" "$PWD/discovered" > rejected.log 2>&1; then echo 'Missing task accepted'; exit 1; fi
           grep -F 'Missing or ambiguous task evidence' rejected.log
           test ! -e tampered/summary.json
+          export QA_PLAN_DIGEST="$(node --input-type=module -e 'import {describePlan} from "./scripts/ci-overhaul/delivery-gate.mjs";const e=process.env;console.log(describePlan("cpu_matrix="+e.QA_CPU_MATRIX+"\\nbrowser_matrix="+e.QA_BROWSER_MATRIX+"\\nexpected="+e.QA_EXPECTED).planDigest)')"
+          export QA_REPORT_DIGEST="$(sha256sum qa-collected/summary.json | cut -d' ' -f1)"
+          node scripts/ci-overhaul/gameplay-production-delivery.mjs gate-report "$PWD/candidate" "$PWD/qa-collected/summary.json"
+          if QA_REPORT_DIGEST="$(printf '0%.0s' {1..64})" node scripts/ci-overhaul/gameplay-production-delivery.mjs gate-report "$PWD/candidate" "$PWD/qa-collected/summary.json" > rejected-gate.log 2>&1; then echo 'Changed report accepted'; exit 1; fi
+          grep -F 'Mandatory report changed' rejected-gate.log
           # Check the unchanged stable delivery verdict consumes the mandatory summary.
           QA_PLAN_RESULT=success QA_ROUTE=legacy QA_COUNT=8 QA_HAS_CPU=true QA_HAS_BROWSER=false QA_CPU_RESULT=success QA_BROWSER_RESULT=skipped QA_SUMMARY_RESULT=success QA_CANDIDATE_RESULT=skipped node scripts/ci-overhaul/delivery-gate.mjs gate
           cat qa-collected/summary.json >> "$GITHUB_STEP_SUMMARY"
@@ -233,5 +238,6 @@ jobs:
             qa-collected/summary.json
             qa-collected/SUMMARY.md
             rejected.log
+            rejected-gate.log
           if-no-files-found: warn
           retention-days: 7
