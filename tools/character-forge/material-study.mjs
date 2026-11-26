@@ -5,11 +5,11 @@ const dot=(a,b)=>a.reduce((n,x,i)=>n+x*b[i],0),sub=(a,b)=>a.map((x,i)=>x-b[i]),c
 const crcTable=Array.from({length:256},(_,n)=>{for(let k=0;k<8;k++)n=n&1?0xedb88320^(n>>>1):n>>>1;return n>>>0});
 function chunk(name,data){let t=Buffer.from(name),crc=0xffffffff;for(const b of Buffer.concat([t,data]))crc=crcTable[(crc^b)&255]^(crc>>>8);let h=Buffer.alloc(8),c=Buffer.alloc(4);h.writeUInt32BE(data.length);t.copy(h,4);c.writeUInt32BE((crc^0xffffffff)>>>0);return Buffer.concat([h,data,c])}
 export function png(w,h,rgba){const head=Buffer.alloc(13);head.writeUInt32BE(w);head.writeUInt32BE(h,4);head[8]=8;head[9]=6;let scan=Buffer.alloc(h*(w*4+1));for(let y=0;y<h;y++)Buffer.from(rgba.buffer,rgba.byteOffset+y*w*4,w*4).copy(scan,y*(w*4+1)+1);return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',head),chunk('IDAT',deflateSync(scan)),chunk('IEND',Buffer.alloc(0))])}
-export const profiles={cloth:{roughness:.91,metallic:0,tint:[.84,.81,.69],detail:.12},leather:{roughness:.66,metallic:0,tint:[.85,.72,.55],detail:.15},metal:{roughness:.39,metallic:.72,tint:[1,.92,.74],detail:.06},hair:{roughness:.73,metallic:0,tint:[.87,.79,.66],detail:.17},skin:{roughness:.68,metallic:0,tint:[1,.93,.86],detail:.045}};
+export const profiles={cloth:{roughness:.91,metallic:0,tint:[.95,.93,.87],detail:.10},leather:{roughness:.66,metallic:0,tint:[.85,.72,.55],detail:.15},metal:{roughness:.39,metallic:.72,tint:[1,.92,.74],detail:.06},hair:{roughness:.73,metallic:0,tint:[.87,.79,.66],detail:.17},skin:{roughness:.68,metallic:0,tint:[1,.93,.86],detail:.045}};
 export function materialKind(name){return /scalp|beard|hair/.test(name)?'hair':/clasp|helmet|nasal|iron/.test(name)?'metal':/boot|belt|pouch/.test(name)?'leather':/body|eye|iris/.test(name)?'skin':'cloth'}
 const tau=2*Math.PI,hash=(x,y)=>{const v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v)};
 function field(kind,u,v){let a=tau*u,b=tau*v,g=hash(Math.floor(u*64),Math.floor(v*64))-.5;
- if(kind==='cloth')return .46+.17*Math.sin(12*a)*Math.cos(12*b)+.14*Math.cos(24*a)+.10*Math.cos(24*b)+.04*g;
+ if(kind==='cloth')return .50+.09*Math.sin(2*a+.5*Math.sin(3*b))+.07*Math.cos(3*b+.4*Math.cos(a))+.035*Math.sin(24*a)*Math.cos(24*b)+.024*Math.cos(24*a)+.019*Math.cos(24*b)+.025*g;
  if(kind==='leather')return .5+.13*Math.sin(7*a+2*Math.sin(5*b))+.09*Math.cos(11*b+Math.sin(8*a))+.06*g;
  if(kind==='hair')return .48+.24*Math.sin(15*a+1.3*Math.sin(b))+.09*Math.cos(30*a+2*Math.sin(b));
  if(kind==='metal')return .5+.14*Math.sin(17*a+.6*Math.sin(b))+.03*g;
@@ -43,6 +43,7 @@ export function raster(model,{view='three-quarter',size=768,bounds=commonBounds(
        const z=w0*a[2]+w1*b[2]+w2*c[2],i=y*size+x;if(z<=depth[i])continue;depth[i]=z;owners[i]=pi;faces[i]=t/3;
        let n=unit(ns[0].map((v,k)=>w0*v+w1*ns[1][k]+w2*ns[2][k])),v=pts[0].map((v,k)=>w0*v+w1*pts[1][k]+w2*pts[2][k]);if(dot(n,face)<0)n=face;
        let base=p.vertexColors?ids.reduce((a,j,k)=>a.map((v,d)=>v+p.vertexColors[3*j+d]*[w0,w1,w2][k]),[0,0,0]):p.color.slice(),rough=mode==='A'?.72:mat.roughness,metal=mode==='A'?0:mat.metallic;
+       if(p.vertexTint)base=base.map((v,k)=>v*ids.reduce((sum,j,l)=>sum+p.vertexTint[3*j+k]*[w0,w1,w2][l],0));
        if(mode==='C'&&map){const uv=[v[0]*5+v[2]*2.7,v[1]*5],j=lookup(map.color,map.size,...uv),tangent=unit(cross(Math.abs(n[1])>.95?[1,0,0]:[0,1,0],n)),bitangent=cross(n,tangent);base=base.map((c,k)=>c*(map.color[j+k]/255)**2);rough=map.roughness[j+1]/255;metal=map.roughness[j+2]/255;n=unit(n.map((x,k)=>x+(map.normal[j]/127.5-1)*tangent[k]+(map.normal[j+1]/127.5-1)*bitangent[k]))}
        if(mode==='B')base=base.map((x,k)=>x*(.94+.06*mat.tint[k]));
        const diffuse=.30+.63*Math.max(0,dot(n,light))+.17*Math.max(0,dot(n,fill)),spec=(.035+.28*metal)*(1-.45*rough)*Math.max(0,dot(n,half))**(7+64*(1-rough));
