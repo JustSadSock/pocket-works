@@ -32,6 +32,7 @@ jobs:
       issuer: ${{ steps.discover.outputs.issuer }}
       cpu: ${{ steps.plan.outputs.cpu }}
       expected: ${{ steps.plan.outputs.expected }}
+      plan_digest: ${{ steps.plan.outputs.plan_digest }}
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
@@ -72,10 +73,13 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import {resolveTasks,partition} from './scripts/universal-qa/plan.mjs';
+          import {describePlan} from './scripts/ci-overhaul/delivery-gate.mjs';
           import {appendFileSync} from 'node:fs';
           const tasks=resolveTasks(process.cwd()+'/candidate',{apps:['banners-of-war'],suite:'completion-lab',profile:'deep'});
           if(tasks.length!==8||tasks.some((t,i)=>t.seed!==i))throw Error('Changed original plan');
-          appendFileSync(process.env.GITHUB_OUTPUT,'cpu='+JSON.stringify(partition(tasks).cpu)+'\nexpected='+JSON.stringify(tasks.map(t=>t.key))+'\nmatrix='+JSON.stringify(tasks.map(task=>({task,control:false})).concat({task:tasks[0],control:true}))+'\n');
+          const matrices=partition(tasks),expected=tasks.map(t=>t.key),nl=String.fromCharCode(10);
+          const raw=['cpu_matrix='+JSON.stringify(matrices.cpu),'browser_matrix='+JSON.stringify(matrices.browser),'expected='+JSON.stringify(expected)].join(nl)+nl;
+          appendFileSync(process.env.GITHUB_OUTPUT,['cpu='+JSON.stringify(matrices.cpu),'expected='+JSON.stringify(expected),'plan_digest='+describePlan(raw).planDigest,'matrix='+JSON.stringify(tasks.map(task=>({task,control:false})).concat({task:tasks[0],control:true}))].join(nl)+nl);
           NODE
       - uses: actions/upload-artifact@v4
         with:
@@ -180,6 +184,7 @@ jobs:
       QA_CPU_MATRIX: ${{ needs.prepare.outputs.cpu }}
       QA_BROWSER_MATRIX: '{"include":[]}'
       QA_EXPECTED: ${{ needs.prepare.outputs.expected }}
+      QA_PLAN_DIGEST: ${{ needs.prepare.outputs.plan_digest }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -216,13 +221,16 @@ jobs:
           jq -e '.success==true and .key=="banners-of-war-completion-lab-0"' fallback-control/result.json
           node scripts/ci-overhaul/gameplay-production-delivery.mjs mixed "$PWD/candidate" "$PWD/qa-collected" "$PWD/discovered"
           jq -e '.success==true and .expected==8 and .passed==8 and (.verifiedTasks+.freshTasks)==8 and .allowImpactSkipping==false' qa-collected/summary.json
+          discovery_compatibility="$(jq -r .compatibility discovered/discovery.json)"
+          verified="$(jq -r .verifiedTasks qa-collected/summary.json)"
+          if [[ "$discovery_compatibility" == pinned-runtime-gameplay-v1 && "$verified" -lt 1 ]]; then echo 'Pinned-runtime catalog produced no real verified reuse'; exit 1; fi
+          if [[ "$verified" -gt 0 ]] && [[ "$(jq -r .reusedGameplayCases qa-collected/summary.json)" -lt 233 ]]; then echo 'Incomplete gameplay reuse'; exit 1; fi
           mkdir tampered
           cp -a qa-collected/qa-* tampered/
           rm -rf tampered/qa-banners-of-war-completion-lab-0
           if node scripts/ci-overhaul/gameplay-production-delivery.mjs mixed "$PWD/candidate" "$PWD/tampered" "$PWD/discovered" > rejected.log 2>&1; then echo 'Missing task accepted'; exit 1; fi
           grep -F 'Missing or ambiguous task evidence' rejected.log
           test ! -e tampered/summary.json
-          export QA_PLAN_DIGEST="$(node --input-type=module -e 'import {describePlan} from "./scripts/ci-overhaul/delivery-gate.mjs";const e=process.env;console.log(describePlan("cpu_matrix="+e.QA_CPU_MATRIX+"\\nbrowser_matrix="+e.QA_BROWSER_MATRIX+"\\nexpected="+e.QA_EXPECTED).planDigest)')"
           export QA_REPORT_DIGEST="$(sha256sum qa-collected/summary.json | cut -d' ' -f1)"
           node scripts/ci-overhaul/gameplay-production-delivery.mjs gate-report "$PWD/candidate" "$PWD/qa-collected/summary.json"
           if QA_REPORT_DIGEST="$(printf '0%.0s' {1..64})" node scripts/ci-overhaul/gameplay-production-delivery.mjs gate-report "$PWD/candidate" "$PWD/qa-collected/summary.json" > rejected-gate.log 2>&1; then echo 'Changed report accepted'; exit 1; fi

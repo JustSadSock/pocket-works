@@ -17,7 +17,12 @@ test('complete renewable catalog never authorizes production or inherits portabi
  const c=buildCatalog(rows(),ctx,2000);assert.equal(c.gameplayCases,1868);assert.equal(c.freshPerformanceCases,5);assert.equal(c.productionAuthorization,false);
  const target={...ctx,shard:0,planDigest:PLAN,sourceMount:mount,auditMount:mount,environment};
  assert.equal(catalogCandidate(c,target,2001).decision,'candidate-only');
- for(const t of [{...target,source:'f'.repeat(40)},{...target,environment:{...environment,kernel:'f'.repeat(64)}},{...target,sourceMount:{...mount,digest:'f'.repeat(64)}}])assert.equal(catalogCandidate(c,t,2001).decision,'execute');
+ for(const t of [{...target,source:'f'.repeat(40)},{...target,environment:{...environment,image:'f'.repeat(64)}},{...target,environment:{...environment,toolchain:'f'.repeat(64)}},{...target,environment:{...environment,uid:1002}},{...target,sourceMount:{...mount,digest:'f'.repeat(64)}}])assert.equal(catalogCandidate(c,t,2001).decision,'execute');
+ for(const env of [{...environment,kernel:'f'.repeat(64)},{...environment,cpu:'f'.repeat(64)}])assert.equal(catalogCandidate(c,{...target,environment:env},2001).decision,'candidate-only');
+ const legacy={...c,compatibility:'exact-environment-only'};
+ assert.equal(catalogCandidate(legacy,{...target,environment:{...environment,kernel:'f'.repeat(64)}},2001).decision,'execute');
+ const varied=rows();varied[1].manifest.environment={...environment,kernel:'f'.repeat(64),cpu:'a'.repeat(64)};assert.equal(buildCatalog(varied,ctx,2000).compatibility,'pinned-runtime-gameplay-v1');
+ const drift=rows();drift[1].manifest.environment={...environment,image:'f'.repeat(64)};assert.throws(()=>buildCatalog(drift,ctx,2000));
  assert.equal(catalogCandidate(c,target,c.expiresAt+1).decision,'execute');
  for(const mutate of [r=>r.pop(),r=>{r[1].manifest.shard=0},r=>{r[1].manifest.source='f'.repeat(40)},r=>{r[4].freshPerformanceCases=0},r=>{r[1].productionAuthorization=true}]){const r=rows();mutate(r);assert.throws(()=>buildCatalog(r,ctx,2000));}
 });
