@@ -16,10 +16,11 @@ export function eligibleRuns(runs,now=Date.now()){
  .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)||b.id-a.id).slice(0,8);
 }
 export function verifyDiscoveredCatalog(c,receipts,run,source,sourceTree,auditTree,now=Date.now()){
- if(eligibleRuns([run],now).length!==1||!SHA.test(source)||!SHA.test(sourceTree)||!SHA.test(auditTree)||c?.source!==source||c.sourceTree!==sourceTree||c.sourcePR!==APP_PR||!['main',APP_BRANCH].includes(c.sourceRef)||c.auditCommit!==run.head_sha||c.auditTree!==auditTree||c.run!==run.id||c.attempt!==run.run_attempt||c.ref!=='refs/heads/main'||c.event!==run.event||c.planDigest!==PLAN||!positive(c.issuedAt)||!positive(c.expiresAt)||now<c.issuedAt||now>=c.expiresAt)fail('Wrong, stale or untrusted catalog identity');
+ if(eligibleRuns([run],now).length!==1||!SHA.test(source)||!SHA.test(sourceTree)||!SHA.test(auditTree)||c?.source!==source||c.sourceTree!==sourceTree||c.sourcePR!==APP_PR||!['main',APP_BRANCH,'refs/pull/'+APP_PR+'/merge'].includes(c.sourceRef)||c.auditCommit!==run.head_sha||c.auditTree!==auditTree||c.run!==run.id||c.attempt!==run.run_attempt||c.ref!=='refs/heads/main'||c.event!==run.event||c.planDigest!==PLAN||!positive(c.issuedAt)||!positive(c.expiresAt)||now<c.issuedAt||now>=c.expiresAt)fail('Wrong, stale or untrusted catalog identity');
  const ctx=Object.fromEntries(['source','sourceTree','sourceRef','sourcePR','auditCommit','auditTree','run','attempt','ref','event'].map(k=>[k,c[k]]));
- if(!eq(c,buildCatalog(receipts,ctx,c.issuedAt,true)))fail('Catalog and eight receipts differ');
- return {schema:1,status:'authenticated-candidate',source,sourceTree,issuer:run.head_sha,issuerTree:auditTree,sourceRun:run.id,sourceAttempt:run.run_attempt,expiresAt:c.expiresAt,planDigest:PLAN,authenticatedSubjects:9,shards:8,compatibility:'exact-environment-only',...flags};
+ const rebuilt=buildCatalog(receipts,ctx,c.issuedAt,true),legacy={...rebuilt,compatibility:'exact-environment-only'};
+ if(!eq(c,rebuilt)&&!eq(c,legacy))fail('Catalog and eight receipts differ');
+ return {schema:1,status:'authenticated-candidate',source,sourceTree,issuer:run.head_sha,issuerTree:auditTree,sourceRun:run.id,sourceAttempt:run.run_attempt,expiresAt:c.expiresAt,planDigest:PLAN,authenticatedSubjects:9,shards:8,compatibility:c.compatibility,...flags};
 }
 const gh=(args,timeout=30000)=>execFileSync('gh',args,{encoding:'utf8',timeout,maxBuffer:8*1024*1024,stdio:['ignore','pipe','pipe']});
 const api=path=>JSON.parse(gh(['api',path]));
@@ -38,8 +39,9 @@ export function discoveryTarget(env,checkout){
  let expected;try{expected=JSON.parse(env.QA_EXPECTED??'[]');}catch{return null;}
  if(!Array.isArray(expected)||!expected.some(x=>typeof x==='string'&&/^banners-of-war-completion-lab-[0-7]$/.test(x)))return null;
  if(env.GITHUB_EVENT_NAME==='pull_request'){
-  if(env.QA_PR_NUMBER!==String(APP_PR)||env.QA_HEAD_REPO!==REPO||env.QA_HEAD_REF!==APP_BRANCH||!SHA.test(env.QA_HEAD_SHA))return null;
-  return env.QA_HEAD_SHA;
+  if(env.GITHUB_REF!=='refs/pull/'+APP_PR+'/merge'||env.QA_PR_NUMBER!==String(APP_PR)||env.QA_HEAD_REPO!==REPO||env.QA_HEAD_REF!==APP_BRANCH||!SHA.test(env.QA_HEAD_SHA))return null;
+  if(env.QA_SOURCE_SHA!==undefined){if(env.PW_QA_INTEGRATION_SOURCE!=='1'||!SHA.test(env.QA_SOURCE_SHA))return null;return env.QA_SOURCE_SHA;}
+  return SHA.test(env.QA_MERGE_SHA)?env.QA_MERGE_SHA:null;
  }
  if(env.GITHUB_REF==='refs/heads/main'&&['workflow_dispatch','issues','push'].includes(env.GITHUB_EVENT_NAME))return checkout;
  return null;

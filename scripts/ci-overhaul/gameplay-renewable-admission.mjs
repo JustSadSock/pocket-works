@@ -97,7 +97,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    const actual=assembleRenewable(root,e.bundle,e.receipt,e.catalog,target,plan,ctx,expected.admission,out);
    if(!eq(actual,expected))fail('Independent report reconstruction differs');
    for(const name of ['verified-gameplay.jsonl','fresh-measurements.jsonl','historical-measurements.jsonl'])if(!read(join(out,name)).equals(read(join(decisionPath,name))))fail('Projected evidence differs: '+name);
-   const verdict={schema:1,run:ctx.run,attempt:ctx.attempt,shard:ctx.shard,source:ctx.checkout,sourceTree:target.sourceTree,controller:ctx.controller,independentlyVerified:true,reusedGameplayCases:actual.reusedGameplayCases,freshGameplayCases:actual.freshGameplayCases,freshPerformanceCases:actual.freshPerformanceCases,identity:actual.admission.identity??null,...flags};
+   const verdict={schema:1,run:ctx.run,attempt:ctx.attempt,shard:ctx.shard,source:ctx.checkout,sourceTree:target.sourceTree,controller:ctx.controller,controllerTree:target.auditTree,independentlyVerified:true,reusedGameplayCases:actual.reusedGameplayCases,freshGameplayCases:actual.freshGameplayCases,freshPerformanceCases:actual.freshPerformanceCases,freshPerformanceMeasurements:actual.freshPerformanceMeasurements,identity:actual.admission.identity??null,...flags};
    writeFileSync(join(out,'gate-candidate.json'),JSON.stringify(verdict,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(verdict));
   }else fail('Unknown admission command');
  }catch(e){console.error(e.message);process.exitCode=1;}
