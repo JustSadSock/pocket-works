@@ -12,3 +12,15 @@ test('historical gameplay timing is separated and historical performance is reje
  assert.throws(()=>projectVerifiedRows([{...rows[0],kind:'performance'}],'historical'));
  assert.throws(()=>projectVerifiedRows([{...rows[0],result:{score:1}}],'fresh'));
 });
+
+import {summarizeVerifiedSplit} from './verified-split-aggregate.mjs';
+import {PLAN} from '../ci-overhaul/verified-gameplay-receipt.mjs';
+test('integrated matrix refuses missing canary, mixed measurements and production acceptance',()=>{
+ const run=10,attempt=1,fallback={route:'fallback',shard:0,success:true,freshMeasurements:432};
+ const rows=()=>Array.from({length:8},(_,i)=>{
+  const game=i<4?234:233,perf=[0,4,5,6,7].includes(i)?1:0,metrics=[4,5].includes(i)?428:430,hit=i===2;
+  return {shard:i,route:i%2?'sharded':'direct',success:true,productionGateRejected:true,mode:'verified-split-shadow',planDigest:PLAN,gameplayCases:game,performanceCases:perf,completed:game+perf,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false,freshGameplayCases:hit?0:game,reusedGameplayCases:hit?game:0,freshMeasurements:(hit?0:metrics)+perf*2,historicalMeasurements:hit?metrics:0,semanticComparison:hit?'not-executed':'match',admission:{decision:hit?'reuse-shadow':'execute',eligibility:hit?'observed-directed-pair':null}};
+ });
+ const v=summarizeVerifiedSplit(rows(),fallback,run,attempt);assert.equal(v.reusedGameplayCases,234);assert.equal(v.freshPerformanceCases,5);assert.equal(v.mandatoryFreshCanary,3);
+ for(const mutate of [r=>r.pop(),r=>{r[2].freshMeasurements=430},r=>{r[1].productionGateRejected=false},r=>{r[3]={...r[2],shard:3,route:'sharded'}}]){const r=rows();mutate(r);assert.throws(()=>summarizeVerifiedSplit(r,fallback,run,attempt));}
+});

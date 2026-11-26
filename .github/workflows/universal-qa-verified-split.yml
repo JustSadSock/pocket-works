@@ -136,3 +136,29 @@ jobs:
           path: candidate/qa-artifacts/
           if-no-files-found: warn
           retention-days: 7
+
+  aggregate:
+    needs: shadow
+    if: always() && needs.shadow.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: universal-verified-*-${{ github.run_attempt }}
+          path: reports
+      - run: node scripts/universal-qa/verified-split-aggregate.mjs reports aggregate.json
+        env:
+          MATRIX_RESULT: ${{ needs.shadow.result }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-verified-aggregate-${{ github.run_attempt }}
+          path: aggregate.json
+          if-no-files-found: error
+          retention-days: 7
