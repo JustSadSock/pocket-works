@@ -178,3 +178,41 @@ Use Audio Forge when an actual asset is useful; do not render every possible run
 - no paid API keys are used;
 - app PRs should change only their own `apps/<slug>/**` files;
 - changes to the shared Audio Forge workflow/tools are platform work.
+
+## Universal Sound Forge 0.1 — Foundation & Expressivity
+
+Manifest v1 remains supported. Manifest v2 adds original procedural sound families and optional multi-instrument music tracks; it uses the same runner and output ledger. No external recordings, neural models or paid services are required. This is an incremental platform foundation, not a completed universal runtime.
+
+```json
+{
+  "version": 2,
+  "jobs": [],
+  "families": [
+    {
+      "id": "blade-impact",
+      "model": "sword",
+      "seed": 42,
+      "variants": 12,
+      "strength": 0.7,
+      "spread": 0.18,
+      "source": "original",
+      "format": "ogg",
+      "outputDir": "assets/audio/generated"
+    }
+  ]
+}
+```
+
+Supported models: sword, shield, glass, explosion, rain. Families produce 2–32 numbered stereo 48 kHz variants. The seed controls each variant's independent synthesis; strength changes peak level and metal resonance, spread changes strength between variants. Avoid per-variant peak normalization if preserving relative dynamics is important. Rain is a finite ambience clip, not yet a seamless loop. The explosion is rendered dry; use explicit post reverb or future runtime acoustics. All foundation models are authored synthesis, not verified recordings. External sample references are intentionally unsupported. Existing SoundFont rendering remains subject to its own instrument license.
+
+Music jobs may specify tracks instead of flat notes. Each melodic track has its own channel (automatically assigned unless explicit), program, notes, volume, pan, expression, modulation, humanizeBeats, humanizeVelocity and legato. Legato is a bounded overlap between adjacent different pitches in a monophonic track; repeated pitches do not overlap. It is not a true continuous pitch transition or a guarantee that every SoundFont implements legato naturally. Modulation is a static MIDI controller setting. The renderer does not yet implement dynamic expression curves, portamento, breath modelling or stems. The existing flat score format is unchanged.
+
+Run the foundation gate:
+```sh
+node --test tools/audio-forge/foundation.test.mjs
+node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
+```
+
+CI keeps the original three-asset smoke test and additionally generates eleven foundation audition WAVs in an Actions artifact. Unit tests check deterministic expansion and PCM, distinct variants, finite levels, manifest rejection, and expressive MIDI arrangement. Audition quality is a separate human gate. Do not deploy these smoke files as application assets.
+
+Next steps: shuffle-bag selection in shared runtime, verified sample provenance and hybrid layer support, additional crowd/mechanism models, instrument-specific articulation and parameterized adaptive stems. Existing games remain unchanged until audition and integration gates pass.
