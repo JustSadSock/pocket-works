@@ -12,6 +12,7 @@ on:
       - ".github/workflows/audio-asset-forge.yml"
       - "tools/audio-forge/**"
       - "shared/capabilities/sound-family.js"
+      - "shared/capabilities/spatial-audio.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
   pull_request:
@@ -19,6 +20,7 @@ on:
       - ".github/workflows/audio-asset-forge.yml"
       - "tools/audio-forge/**"
       - "shared/capabilities/sound-family.js"
+      - "shared/capabilities/spatial-audio.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
 
@@ -92,7 +94,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -172,7 +174,7 @@ jobs:
             soxi "$file"
             count=$((count + 1))
           done < .audio-forge-generated.txt
-          test "$count" -eq 7
+          test "$count" -eq 10
       - uses: actions/upload-artifact@v4
         with:
           name: sound-forge-field-recordings-${{ github.run_id }}
