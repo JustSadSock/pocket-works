@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -257,6 +257,25 @@ jobs:
         with:
           name: sound-forge-wind-lab-${{ github.run_id }}
           path: .audio-wind-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render bowed instrument laboratory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/bowed-lab.mjs .audio-bowed-lab
+          test "$(find .audio-bowed-lab/notes -name '*.wav' | wc -l)" -eq 12
+          test -s .audio-bowed-lab/violin-AB.wav
+          test -s .audio-bowed-lab/cello-AB.wav
+          test -s .audio-bowed-lab/winter-banner.wav
+
+      - name: Upload bowed instrument auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-bowed-lab-${{ github.run_id }}
+          path: .audio-bowed-lab/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
