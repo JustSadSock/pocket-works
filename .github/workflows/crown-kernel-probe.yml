@@ -1,0 +1,83 @@
+name: Crown Kernel Diversity Probe
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/crown-kernel-probe.yml'
+      - 'scripts/ci-overhaul/crown-kernel-probe*'
+permissions:
+  contents: read
+concurrency:
+  group: crown-kernel-probe-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  probe:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test scripts/ci-overhaul/crown-kernel-probe.test.mjs scripts/ci-overhaul/simulation-repeatability.test.mjs
+      - uses: actions/checkout@v4
+        with:
+          ref: f253a6e1d81d9f831e8b95b6e508d854a395e5fe
+          path: audit-source
+          persist-credentials: false
+      - name: Execute targeted Crown scenarios on independent runner
+        env:
+          REPLICA: ${{ matrix.replica }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C audit-source rev-parse HEAD)" = f253a6e1d81d9f831e8b95b6e508d854a395e5fe
+          src="$RUNNER_TEMP/crown-probe-source"
+          out="$RUNNER_TEMP/crown-probe-output"
+          mkdir -p "$src" "$out"
+          git -C audit-source archive HEAD apps/crown-and-marches shared scripts package.json package-lock.json > "$RUNNER_TEMP/probe.tar"
+          archive="$(sha256sum "$RUNNER_TEMP/probe.tar" | cut -d' ' -f1)"
+          tar -xf "$RUNNER_TEMP/probe.tar" -C "$src"
+          image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
+          docker pull "$image"
+          opts=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp)
+          config="$(docker image inspect --format '{{.Id}}' "$image")"
+          runtime="$(docker run "${opts[@]}" "$image" node -p 'process.version')"
+          arch="$(docker run "${opts[@]}" "$image" node -p 'process.arch')"
+          toolchain="$(docker run "${opts[@]}" "$image" sha256sum /usr/local/bin/node | cut -d' ' -f1)"
+          kernel="$(uname -srvm)"
+          cpu="$(awk -F: '/^model name/{sub(/^[ \t]+/,"",$2); print $2; exit}' /proc/cpuinfo)"
+          jq -n --arg image "$image" --arg config "${config#sha256:}" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg archive "$archive" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,archive:$archive,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid}' > "$out/environment.json"
+          docker run "${opts[@]}" -e PW_QA_OUTPUT_DIR=/out --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$out,dst=/out" -w /work "$image" node apps/crown-and-marches/balance-targeted.mjs 0
+          node scripts/ci-overhaul/crown-kernel-probe.mjs sample "$REPLICA" "$out/environment.json" "$out/balance-targeted-0.json" "$out/sample.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crown-kernel-probe-${{ github.run_attempt }}-${{ matrix.replica }}
+          path: ${{ runner.temp }}/crown-probe-output/sample.json
+          if-no-files-found: error
+          retention-days: 7
+  compare:
+    needs: probe
+    if: always() && needs.probe.result != 'skipped'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: crown-kernel-probe-${{ github.run_attempt }}-*
+          path: samples
+      - env:
+          MATRIX_RESULT: ${{ needs.probe.result }}
+        run: node scripts/ci-overhaul/crown-kernel-probe.mjs compare samples comparison.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crown-kernel-probe-report
+          path: comparison.json
+          if-no-files-found: warn
