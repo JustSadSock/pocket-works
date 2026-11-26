@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdirSync,mkdtempSync,rmSync,readdirSync,lsta
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {isDeepStrictEqual as eq} from 'node:util';
-import {buildCatalog,REPO,RENEWAL_WORKFLOW,APP_PR,APP_BRANCH} from './gameplay-renewal.mjs';
+import {buildCatalog,issueRenewal,REPO,RENEWAL_WORKFLOW,APP_PR,APP_BRANCH} from './gameplay-renewal.mjs';
 import {PLAN} from './verified-gameplay-receipt.mjs';
 const SHA=/^[a-f0-9]{40}$/,MAX_AGE=7*86400000,positive=n=>Number.isSafeInteger(n)&&n>0;
 const flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
@@ -25,6 +25,14 @@ const gh=(args,timeout=30000)=>execFileSync('gh',args,{encoding:'utf8',timeout,m
 const api=path=>JSON.parse(gh(['api',path]));
 const json=p=>{const st=lstatSync(p);if(!st.isFile()||st.size>4_000_000)fail('Invalid catalog subject');return JSON.parse(readFileSync(p,'utf8'));};
 const tree=sha=>{const c=api('repos/'+REPO+'/git/commits/'+sha);if(c.sha!==sha||!SHA.test(c.tree?.sha))fail('Commit/tree API mismatch');return c.tree.sha;};
+export function verifyBundles(root,receipts,run){
+ const names=Array.from({length:8},(_,i)=>'renewal-bundle-'+run.run_attempt+'-'+i);
+ if(!eq(readdirSync(root).sort(),names))fail('Incomplete original bundle set');
+ for(const [i,n] of names.entries()){
+  const r=receipts[i];
+  if(!eq(r,issueRenewal(join(root,n),r.manifest,r.issuedAt,true)))fail('Signed receipt differs from original records: '+i);
+ }
+}
 export function discoveryTarget(env,checkout){
  if(!SHA.test(checkout)||env.GITHUB_REPOSITORY!==REPO)return null;
  let expected;try{expected=JSON.parse(env.QA_EXPECTED??'[]');}catch{return null;}
@@ -36,7 +44,7 @@ export function discoveryTarget(env,checkout){
  if(env.GITHUB_REF==='refs/heads/main'&&['workflow_dispatch','issues','push'].includes(env.GITHUB_EVENT_NAME))return checkout;
  return null;
 }
-export function discover(source,checkout,out,{now=Date.now(),list=()=>api('repos/'+REPO+'/actions/workflows/gameplay-receipt-renewal.yml/runs?branch=main&status=success&per_page=20').workflow_runs,getTree=tree,getRun=id=>api('repos/'+REPO+'/actions/runs/'+id),download=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--name','renewal-signed-catalog-'+r.run_attempt,'--dir',dir]),authenticate=(r,path)=>gh(['attestation','verify',path,'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',r.head_sha,'--deny-self-hosted-runners']),}={}){
+export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list=()=>api('repos/'+REPO+'/actions/workflows/gameplay-receipt-renewal.yml/runs?branch=main&status=success&per_page=20').workflow_runs,getTree=tree,getRun=id=>api('repos/'+REPO+'/actions/runs/'+id),download=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--name','renewal-signed-catalog-'+r.run_attempt,'--dir',dir]),authenticate=(r,path)=>gh(['attestation','verify',path,'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',r.head_sha,'--deny-self-hosted-runners']),downloadBundles=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--pattern','renewal-bundle-'+r.run_attempt+'-*','--dir',dir],60000),checkBundles=verifyBundles}={}){
  const miss=(reason,attempted=0)=>({schema:1,status:'fresh-fallback',source:source??null,checkout,reason,attempted,...flags});
  if(!source)return miss('No eligible Banners task');
  if(!SHA.test(source)||!SHA.test(checkout))return miss('Invalid source identity');
@@ -58,9 +66,12 @@ export function discover(source,checkout,out,{now=Date.now(),list=()=>api('repos
     for(const name of subjects){json(join(tmp,name));authenticate(run,join(tmp,name));}
     const receipts=subjects.slice(1).map(n=>json(join(tmp,n)));
     const r=verifyDiscoveredCatalog(c,receipts,run,source,sourceTree,getTree(run.head_sha),now);
-    if(getRun(run.id).run_attempt!==run.run_attempt)fail('Run changed after authentication');
+    const bundleRoot=join(tmp,'bundles');mkdirSync(bundleRoot);
+    downloadBundles(run,bundleRoot);checkBundles(bundleRoot,receipts,run);
+    const finalRun=getRun(run.id);
+    if(eligibleRuns([finalRun],clock()).length!==1||finalRun.run_attempt!==run.run_attempt||finalRun.head_sha!==run.head_sha||clock()>=r.expiresAt)fail('Run or freshness changed after authentication');
     renameSync(tmp,join(out,'authenticated'));
-    return {...r,checkout,checkoutMatchesSource:checkout===source,attempted:checked};
+    return {...r,verifiedBundles:8,checkout,checkoutMatchesSource:checkout===source,attempted:checked};
    }catch(e){console.log('Renewal candidate '+listing.id+' declined: '+String(e.message).slice(0,300));}
    finally{rmSync(tmp,{recursive:true,force:true});}
   }

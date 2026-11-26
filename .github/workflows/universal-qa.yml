@@ -63,7 +63,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test planning and reporting infrastructure
-        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/universal-qa/fresh-split.test.mjs
+        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/universal-qa/fresh-split.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs
       - name: Prepare application QA matrix
         id: plan
         env:
@@ -78,6 +78,41 @@ jobs:
           QA_EXPECTED: ${{ steps.plan.outputs.expected }}
           PW_QA_ROUTE: ${{ vars.PW_QA_ROUTE }}
         run: node scripts/ci-overhaul/delivery-gate.mjs plan
+
+  receipt_discovery:
+    name: Discover signed Banners receipts (non-authorizing)
+    needs: plan
+    if: contains(needs.plan.outputs.expected, 'banners-of-war-completion-lab-') && (github.event_name != 'pull_request' || (github.event.pull_request.number == 1355 && github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Discover and authenticate candidate evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QA_EXPECTED: ${{ needs.plan.outputs.expected }}
+          QA_PR_NUMBER: ${{ github.event.pull_request.number }}
+          QA_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          QA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          QA_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/receipt-discovery"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: receipt-discovery-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipt-discovery/
+          if-no-files-found: warn
+          retention-days: 7
 
   cpu:
     needs: plan
