@@ -37,10 +37,11 @@ export function expandManifest(manifest) {
     const spread = bounded(f.spread, .18, 0, .4, 'spread');
     const hybrid = f.sampleId !== undefined || f.sampleMix !== undefined;
     if (hybrid && (typeof f.sampleId !== 'string' || typeof f.sampleMix !== 'number' || !Number.isFinite(f.sampleMix) || f.sampleMix < 0 || f.sampleMix > 1)) throw new Error('Invalid family hybrid recipe');
+    if (f.sampleStart !== undefined && (!hybrid || typeof f.sampleStart !== 'number' || !Number.isFinite(f.sampleStart) || f.sampleStart < 0 || f.sampleStart > 3600)) throw new Error('Invalid family sampleStart');
     const random = rng(seed);
     for (let i=0;i<count;i++) {
       const name = f.id+'-'+String(i+1).padStart(2,'0');
-      jobs.push({name,type:hybrid?'hybrid':'physics',...(hybrid?{sampleId:f.sampleId,sampleMix:f.sampleMix,compensateRms:f.compensateRms===true}:{}),model:f.model,seed:Math.floor(random()*4294967296),strength:Math.max(.1,Math.min(1,strength+(random()*2-1)*spread)),duration:f.duration,output:output+'/'+name+'.'+format,post:{...f.post}});
+      jobs.push({name,type:hybrid?'hybrid':'physics',...(hybrid?{sampleId:f.sampleId,sampleMix:f.sampleMix,compensateRms:f.compensateRms===true,sampleStart:f.sampleStart}:{}),model:f.model,seed:Math.floor(random()*4294967296),strength:Math.max(.1,Math.min(1,strength+(random()*2-1)*spread)),duration:f.duration,output:output+'/'+name+'.'+format,post:{...f.post}});
     }
   }
   if (jobs.length > 512) throw new Error('Manifest exceeds 512 jobs');
