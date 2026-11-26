@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs tools/audio-forge/recorded-dynamics.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs tools/audio-forge/recorded-dynamics.test.mjs tools/audio-forge/recorded-performance.test.mjs tools/audio-forge/recorded-transients.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -382,6 +382,7 @@ jobs:
           retention-days: 7
 
       - name: Import expanded recorded bank and render connected phrases
+        id: recorded_legato
         shell: bash
         run: |
           set -euo pipefail
@@ -410,6 +411,37 @@ jobs:
         with:
           name: sound-forge-recorded-dynamics-${{ github.run_id }}
           path: .audio-recorded-dynamics/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve recorded dynamics pitch rejection evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-dynamics-rejection-${{ github.run_id }}
+          path: |
+            .audio-recorded-dynamics/pitch-rejection.json
+            .audio-recorded-dynamics/sources/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Import and render unified recorded performance
+        id: recorded_performance
+        if: ${{ !cancelled() && steps.recorded_legato.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-performance-lab.mjs .audio-recorded-performance .audio-recorded-legato
+          test "$(find .audio-recorded-performance/sources -name '*.wav' | wc -l)" -eq 8
+          test "$(find .audio-recorded-performance -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
+          test -s .audio-recorded-performance/violin-articulation-suite.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.recorded_performance.outcome == 'success' }}
+        with:
+          name: sound-forge-recorded-performance-${{ github.run_id }}
+          path: .audio-recorded-performance/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
