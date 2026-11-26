@@ -7,7 +7,7 @@ export const animalTemplates=Object.freeze({
 export function animal(b,type,human){
  const t=animalTemplates[type],m=b.spec.morphology,h=m.height,w=m.build*b.profile.width,c=type,p=(v)=>[v[0]*h*w,v[1]*h,v[2]*h],J=(n,pa,v,r,a=[1,0,0],l=80)=>b.joint(n,pa,p(v),r,a,l);
  const root=J('body',-1,[0,.76,-.16],'pelvis'),ch=J('chest',root,[0,.80,.25],'spine',[1,0,0],22),neck=J('neck',ch,t.neck[1],'neck',[1,0,0],55),head=J('head',neck,t.head[0],'head',[1,0,0],45);
- b.loft('barrel',t.body.map((v,i)=>({p:p(v.slice(0,3)),r:[v[4]*h,v[3]*h*w],j:i<2?root:ch,k:root,w:i===2?.65:1})),c);
+ b.loft('barrel',t.body.map((v,i)=>({p:p(v.slice(0,3)),r:[v[3]*h*w,v[4]*h],j:i<2?root:ch,k:root,w:i===2?.65:1})),c);
  b.limb('neck',t.neck.map(p),t.neckR.map(r=>r*h),[ch,neck,neck,head],c);
  b.loft('head',t.head.map((v,i)=>({p:p(v),r:t.headR[i].map(r=>r*h*m.head),j:head})),c);
  for(let s of [-1,1]){
@@ -30,4 +30,17 @@ export function animal(b,type,human){
  let seat=J('saddle',root,t.seat,'mount',[1,0,0],10);b.socket('seat',seat,p(t.seat),'riderSeat');b.egg('saddle blanket',p([0,t.seat[1]-.06,t.seat[2]]),[.26*h,.045*h,.28*h],type==='horse'?'leather':'red',seat);
  if(type==='horse')human(b,'rider/',p(t.seat),seat,1.72,'mail',true);
  else {b.loft('howdah floor',[{p:p([0,t.seat[1]-.04,0]),r:[.24*h,.24*h],j:seat},{p:p([0,t.seat[1],0]),r:[.24*h,.24*h],j:seat}],'wood');for(let s of [-1,1])for(let z of [-.23,.23])b.bar('howdah rail '+s+z,p([s*.23,t.seat[1],z]),p([s*.23,t.seat[1]+.20,z]),.022*h,'wood',seat);human(b,'crew/',p([0,t.seat[1],-.09]),seat,1.58,'roman',false)}
+}
+
+export function avian(b){
+ const h=b.spec.morphology.height,p=v=>v.map(x=>x*h),J=(n,pa,v,r,ax=[1,0,0],l=80)=>b.joint(n,pa,p(v),r,ax,l);
+ const root=J('body',-1,[0,.51,0],'pelvis'),ch=J('sternum',root,[0,.58,.17],'spine'),neck=J('neck',ch,[0,.79,.30],'neck'),head=J('head',neck,[0,.93,.38],'head',[0,1,0],80);
+ b.loft('body',[[-.40,.49,.04,.07],[-.24,.55,.20,.22],[0,.57,.26,.28],[.25,.65,.19,.23],[.36,.72,.07,.10]].map((v,i)=>({p:p([0,v[1],v[0]]),r:[v[2]*h,v[3]*h],j:i<2?root:ch})),'feather');
+ b.limb('neck',[[0,.69,.23],[0,.81,.32],[0,.92,.37]].map(p),[.12,.075,.08].map(x=>x*h),[ch,neck,head],'feather');b.egg('head',p([0,.96,.40]),[.115*h,.115*h,.14*h],'feather',head);b.bar('beak',p([0,.94,.51]),p([0,.90,.68]),.05*h,'bronze',head,.004*h);
+ for(let s of [-1,1]){const tag=s<0?'L':'R',a=J('wing-'+tag,ch,[s*.19,.66,.12],'wing',[0,0,1],85),e=J('wing-elbow-'+tag,a,[s*.49,.63,-.03],'wing.elbow',[0,1,0],95),w=J('wing-wrist-'+tag,e,[s*.78,.60,.01],'wing.tip',[0,0,1],70);
+ b.limb('wing core '+tag,[[s*.17,.66,.13],[s*.49,.63,-.03],[s*.78,.60,.01],[s*1.04,.57,-.20]].map(p),[.125,.105,.067,.012].map(x=>x*h),[a,e,w,w],'feather');
+ for(let i=0;i<5;i++){let x=.34+i*.155,base=p([s*x,.62,-.035]),end=p([s*(x+.15),.55,-.48+i*.025]);b.loft('flight feather '+tag+i,[{p:base,r:[.038*h,.016*h],j:i<2?e:w},{p:end,r:[.006*h,.004*h],j:i<2?e:w}],'feather',6)}
+ let hip=J('leg-'+tag,root,[s*.13,.50,-.04],'leg.upper'),k=J('knee-'+tag,hip,[s*.13,.32,.07],'leg.lower'),f=J('foot-'+tag,k,[s*.13,.055,.03],'foot');b.limb('leg '+tag,[[s*.13,.50,-.04],[s*.13,.32,.07],[s*.13,.055,.03]].map(p),[.06,.027,.018].map(x=>x*h),[hip,k,f],'bronze');for(let i=-1;i<=1;i++)b.bar('toe '+tag+i,p([s*.13,.045,.03]),p([s*.13+i*.038,.025,.15]),.014*h,'bronze',f,.006*h);b.contacts.push({joint:f,role:'sole',local:[0,-.055*h,.04*h],phase:s<0?0:.5});b.egg('eye '+tag,p([s*.102,.985,.45]),[.015*h,.017*h,.015*h],'dark',head)}
+ const tail=J('tail',root,[0,.51,-.32],'tail');for(let i=-2;i<=2;i++)b.loft('tail feather '+i,[{p:p([i*.022,.52,-.31]),r:[.04*h,.017*h],j:tail},{p:p([i*.082,.48,-.67]),r:[.015*h,.007*h],j:tail}],'feather',6);
+ b.components.push({name:'bird',family:'avian',root,template:'avian-v2'})
 }

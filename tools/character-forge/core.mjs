@@ -1,5 +1,6 @@
 import {appearance,styles,lods,classifyPart} from "./style.mjs";
-import {animal} from "./animals.mjs";
+import {animal,avian} from "./animals.mjs";
+import {motionFrame,blendFrames,semanticRetarget} from "./motion.mjs";
 // Character Core v0.2: metres, +Y up, +Z forward (glTF). No editor/runtime dependencies.
 export const profiles=Object.freeze({simplified:{sides:8,rings:5,head:1.08,width:1.02,faceted:true},miniature:{sides:12,rings:8,head:1.16,width:1.10,faceted:false},realistic:{sides:24,rings:14,head:1,width:1,faceted:false}});
 export const recipes=Object.freeze({
@@ -26,7 +27,7 @@ export function validate(spec){
  if(spec.format!==undefined&&spec.format!=='glb')throw Error('Unsupported target format');
  const budget={maxTriangles:spec.budget?.maxTriangles??100000,maxJoints:spec.budget?.maxJoints??128,maxBytes:spec.budget?.maxBytes??16000000};
  for(const [k,v] of Object.entries(budget))if(!Number.isSafeInteger(v)||v<1||v>100000000)throw Error('Invalid budget '+k);
- return {version:spec.version,recipe:spec.recipe,family:r.family,profile:spec.version===1?spec.profile:undefined,...(spec.version===2?{style:spec.style,lod:spec.lod,surface:spec.surface??'transported',composite:spec.composite??spec.recipe==='rider',modules:spec.modules??[]}:{}),seed:spec.seed??17,morphology:morph,actions,budget,format:'glb',provenance:[{author:'Pocket Works',license:'original',origin:'Character Forge research geometry'}]};
+ return {version:spec.version,recipe:spec.recipe,family:r.family,profile:spec.version===1?spec.profile:undefined,...(spec.version===2?{style:spec.style,lod:spec.lod,surface:spec.surface??'transported',composite:spec.composite??['rider','elephant'].includes(spec.recipe),modules:spec.modules??[]}:{}),seed:spec.seed??17,morphology:morph,actions,budget,format:'glb',provenance:[{author:'Pocket Works',license:'original',origin:'Character Forge research geometry'}]};
 }
 function rng(seed){let x=seed>>>0;return ()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296}}
 class Builder{
@@ -106,7 +107,7 @@ function quadruped(b,type){
   else human(b,'rider/',p(0,1.05,-.03),saddle,1.72,'mail',true);
  }
 }
-function bird(b){let h=b.spec.morphology.height,p=(x,y,z)=>[x*h,y*h,z*h],root=b.joint('body',-1,p(0,.55,0),'pelvis'),head=b.joint('head',root,p(0,.87,.32),'head',[0,1,0],75);b.egg('body',p(0,.55,0),[.24*h,.30*h,.35*h],'feather',root);b.egg('head',p(0,.87,.32),[.15*h,.16*h,.16*h],'feather',head);b.bar('beak',p(0,.86,.43),p(0,.83,.68),.078*h,'bronze',head,.005*h);
+function bird(b){if(b.spec.version===2)return avian(b);let h=b.spec.morphology.height,p=(x,y,z)=>[x*h,y*h,z*h],root=b.joint('body',-1,p(0,.55,0),'pelvis'),head=b.joint('head',root,p(0,.87,.32),'head',[0,1,0],75);b.egg('body',p(0,.55,0),[.24*h,.30*h,.35*h],'feather',root);b.egg('head',p(0,.87,.32),[.15*h,.16*h,.16*h],'feather',head);b.bar('beak',p(0,.86,.43),p(0,.83,.68),.078*h,'bronze',head,.005*h);
  for(let s of [-1,1]){let a=b.joint('wing-'+s,root,p(s*.17,.65,.04),'wing',[0,0,1],85),tip=b.joint('wing-tip-'+s,a,p(s*.54,.58,-.18),'wing.tip',[0,0,1],60);b.limb('wing'+s,[p(s*.17,.65,.04),p(s*.54,.58,-.18),p(s*.82,.51,-.31)],[.15*h,.12*h,.012*h],[a,tip,tip],'feather');let f=b.joint('foot-'+s,root,p(s*.12,.07,0),'foot',[1,0,0],40);b.bar('leg'+s,p(s*.12,.36,0),p(s*.12,.07,0),.026*h,'bronze',f);b.contacts.push({joint:f,role:'sole',local:[0,-.07*h,0],phase:s<0?0:.5})}
  b.components.push({name:'bird',family:'avian',root,template:'avian-v1'})}
 export function build(spec){let s=validate(spec),b=new Builder(s),t=performance.now();
@@ -120,7 +121,7 @@ export function build(spec){let s=validate(spec),b=new Builder(s),t=performance.
 export function quat(axis,angle){return [...mul(unit(axis),Math.sin(angle/2)),Math.cos(angle/2)]}
 export function qmul(a,b){let av=a.slice(0,3),bv=b.slice(0,3);return [...add(add(mul(bv,a[3]),mul(av,b[3])),cross(av,bv)),a[3]*b[3]-dot(av,bv)]}
 export function rotate(q,v){let u=q.slice(0,3),t=mul(cross(u,v),2);return add(v,add(mul(t,q[3]),cross(u,t)))}
-export function animation(model,action,phase){if(!model.spec.actions.includes(action))throw Error('Action not declared');let t=phase*Math.PI*2,move=action==='walk'||action==='run',amp=action==='run'?.60:.33;
+export function animation(model,action,phase){if(!model.spec.actions.includes(action))throw Error('Action not declared');if(model.spec.version===2)return motionFrame(model,action,phase,quat);let t=phase*Math.PI*2,move=action==='walk'||action==='run',amp=action==='run'?.60:.33;
  return model.joints.map(j=>{let angle=0,s=/L|left|-1/.test(j.name)?1:-1;if(/hind/.test(j.name))s=-s;
  const attached=j.name.startsWith('rider/')||j.name.startsWith('crew/');if(move&&!attached){if(j.role==='leg.upper')angle=s*amp*Math.sin(t);if(j.role==='leg.lower')angle=Math.max(0,s*Math.cos(t))*.42;if(j.role==='foot')angle=-s*.12*Math.sin(t);if(j.role==='arm.upper')angle=-s*amp*.65*Math.sin(t)}
  if(j.role==='spine')angle=.035*Math.sin(t);if(j.role==='tail'||j.role==='trunk')angle=.12*Math.sin(t+j.id*.3);if(j.role==='wing'||j.role==='wing.tip')angle=move?.4*Math.sin(t):.04*Math.sin(t);if(action==='turn'&&j.parent===-1)return quat([0,1,0],.7*Math.sin(t));if(action==='guard'&&j.role==='arm.upper')angle=-.25;if(action==='interact'&&j.role==='arm.lower')angle=.35*Math.sin(t);
