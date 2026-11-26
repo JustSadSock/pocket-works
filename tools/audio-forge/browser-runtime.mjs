@@ -16,6 +16,9 @@ const server=createServer(async(req,res)=>{
   try{
     const name=req.url.slice(1);
     if(name===''){res.setHeader('Content-Type','text/html');res.end('<!doctype html><meta charset="utf-8"><button id="start">Start audio</button>');return;}
+    if(name==='tools/audio-forge/adapters/banners-of-war.js'){res.setHeader('Content-Type','text/javascript');res.end(await readFile(path.resolve(name)));return;}
+    if(name==='banners-game-contract.js'&&process.env.BANNERS_AUDIO_CONTRACT){res.setHeader('Content-Type','text/javascript');res.end(await readFile(process.env.BANNERS_AUDIO_CONTRACT));return;}
+    if(name.startsWith('shared/capabilities/')&&files.has(name.split('/').at(-1))){res.setHeader('Content-Type','text/javascript');res.end(await readFile(path.resolve(name)));return;}
     if(!files.has(name)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type','text/javascript');res.end(await readFile(path.resolve('shared/capabilities',name)));
   }catch{res.writeHead(500).end()}
@@ -26,7 +29,7 @@ try{
   browser=await launcher.launch({headless:true});
   const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await page.goto('http://127.0.0.1:'+server.address().port);
-  const result=await page.evaluate(async()=>{
+  const result=await page.evaluate(async(hasGameContract)=>{
     const {makeSeamlessLoop,createDynamicEmitter,createAdaptiveMusic}=await import('/continuous-audio.js');
     const {createSpatialMixer}=await import('/spatial-audio.js');
     const {createBudgetedAudioScene}=await import('/virtual-audio.js');
@@ -236,16 +239,40 @@ try{
         check(!await scene.playStinger('victory'),'Incompatible state accepted stinger');
         const horizontal={unified:{quietDetail:Number.isFinite(quietDetail)?quietDetail:null,loudDetail,battleDetail,battleDetailMuted:Number.isFinite(battleDetailMuted)?battleDetailMuted:null,requiredVoices:director.state.requiredVoices},stingerAccepted,memory,ducked,duckRecoveryDb:peaceBefore-ducked,bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
         scene.destroy();scoreAnalyser.disconnect();check(director.state.voices===0&&scene.stats.allocated===0,'Horizontal cleanup failed');
+        let banners=null;
+        if(hasGameContract){
+          const {createBannersAudioAdapter}=await import('/tools/audio-forge/adapters/banners-of-war.js');
+          const {soundEvents,audible}=await import('/banners-game-contract.js');
+          const F={W:1000,H:1000,alive:u=>u.n>0,visible:(_s,_side,u)=>u.visible,spec:()=>({horse:0}),sample:()=>({canopy:.5}),riverX:()=>20};
+          const cam={x:0,y:0,k:1},unit={id:1,x:0,y:0,n:90,side:0,v:1,contact:0,motionDistance:0};
+          const hidden={...unit,id:2,side:1,visible:false,contact:30};
+          const snap=(time,u)=>({time,fog:true,terrain:{},units:[u,hidden]});
+          const adapter=createBannersAudioAdapter({context:c,F,soundEvents,audible,assets:{approved:true,families:{step:{variants:['fixture'],pitchCents:0,gainSpread:0}},ambient:{wind:march}},budget:{total:8,events:4,music:0},fetcher:async()=>new Response(wav)});
+          try{
+            check(await adapter.unlock(),'Banners unlock failed');
+            await adapter.update(snap(0,unit),cam,{playing:true});
+            await adapter.update(snap(.7,{...unit,motionDistance:1}),cam,{playing:true});
+            await waitClock(c.currentTime+.2);
+            const live=adapter.status();
+            check(live.counts.step===1&&live.scene.logical===1&&live.scene.allocated<=8,'Banners actual extractor or audio budget failed');
+            await adapter.update(snap(.7,unit),cam,{active:false,playing:false});
+            await waitClock(c.currentTime+.08);
+            await adapter.update(snap(.7,unit),cam,{active:false,playing:false});
+            check(adapter.status().scene.allocated===0,'Banners inactive cleanup failed');
+            banners={counts:live.counts,logical:live.scene.logical,allocated:live.scene.allocated,hiddenIgnored:true};
+          }finally{adapter.destroy();}
+          check(adapter.status().scene.allocated===0,'Banners destroy leaked voices');
+        }
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
         check(musicPlayer.state.startTime>startTime,'Restart clock invalid');
-        window.runtimeResult={liveRms:rms(data),restart:true,quantizedBeat:boundary,battleDb,world:worldReport,horizontal};
+        window.runtimeResult={liveRms:rms(data),restart:true,quantizedBeat:boundary,battleDb,world:worldReport,horizontal,banners};
       }catch(e){window.runtimeResult={error:String(e)}}finally{
         director?.destroy();scene?.destroy();source?.destroy();musicPlayer?.destroy();mixer?.destroy();if(c)await c.close();window.runtimeDone=true;
       }
     },{once:true});
     return {loopFrames:loop.length,seam,loopSeam,calm,combat};
-  });
+  },Boolean(process.env.BANNERS_AUDIO_CONTRACT));
   await page.click('#start');await page.waitForFunction(()=>window.runtimeDone===true,{},{timeout:15000});
   const live=await page.evaluate(()=>window.runtimeResult);
   assert.ok(!live.error,live.error);assert.deepEqual(errors,[]);
