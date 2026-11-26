@@ -64,3 +64,56 @@ jobs:
             quality-artifacts/character-forge/glb-*.png
             quality-artifacts/character-forge/groups-*.png
           retention-days: 14
+  morph-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/character-morph
+    steps:
+      - uses: actions/checkout@v4
+      - name: Measure pinned MakeHuman source and height morphs
+        run: python3 tools/character-forge/morph-source.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: character-forge-morph
+          path: quality-artifacts/character-morph
+          retention-days: 14
+  art-forge-bridge:
+    needs: core
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/character-bridge
+      BLENDER_VERSION: '5.2.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: character-forge-core
+          path: quality-artifacts/character-bridge
+      - name: Install verified editor
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil xz-utils libgl1 libx11-6 libxi6 libxrender1
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          curl -fsSL --retry 2 -o "$archive" "https://download.blender.org/release/Blender5.2/$archive"
+          curl -fsSL --retry 2 -o blender.sha256 "https://download.blender.org/release/Blender5.2/blender-${BLENDER_VERSION}.sha256"
+          grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Re-import original composite creature through Universal Art Forge v2
+        run: python3 tools/character-forge/forge-bridge.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: character-forge-roundtrip
+          path: |
+            quality-artifacts/character-bridge/roundtrip-*
+            quality-artifacts/character-bridge/forge-*.log
+          retention-days: 14
