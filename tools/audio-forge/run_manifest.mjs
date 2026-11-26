@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { expandManifest, renderPhysics, arrangeTracks } from './foundation.mjs';
 
 const ROOT = process.cwd();
 const GENERATED_LIST = path.join(ROOT, '.audio-forge-generated.txt');
@@ -182,11 +183,17 @@ function buildMidi(job, midiPath) {
   const channel = Math.max(0, Math.min(15, Number(job.channel || 0)));
   const program = Math.max(0, Math.min(127, Number(job.program || 0)));
   const events = [];
+  const tracks = job.tracks === undefined ? null : arrangeTracks(job);
 
   events.push({ tick: 0, priority: 0, bytes: [0xff, 0x51, 0x03, (microseconds >> 16) & 0xff, (microseconds >> 8) & 0xff, microseconds & 0xff] });
-  events.push({ tick: 0, priority: 1, bytes: [0xc0 | channel, program] });
+  if (tracks) {
+    for (const track of tracks) {
+      events.push({ tick: 0, priority: 0, bytes: [0xc0 | track.channel, track.program] });
+      for (const [cc,value] of track.controls) events.push({ tick: 0, priority: 0, bytes: [0xb0 | track.channel, cc, value] });
+    }
+  } else events.push({ tick: 0, priority: 1, bytes: [0xc0 | channel, program] });
 
-  const notes = Array.isArray(job.notes) ? job.notes : [];
+  const notes = tracks ? tracks.flatMap(track => track.notes) : Array.isArray(job.notes) ? job.notes : [];
   if (notes.length === 0) throw new Error(`Music job ${job.name || job.output} has no notes.`);
 
   for (const item of notes) {
@@ -250,7 +257,7 @@ function synthesizeMusic(job, rawOutput, tempDir) {
 
 function processWithSox(rawInput, output, job) {
   const post = job.post || {};
-  const args = [rawInput, output];
+  const args = job.type === 'physics' || job.tracks ? ['-R', rawInput, output] : [rawInput, output];
 
   if (post.sampleRate) args.push('rate', String(Math.max(8000, Number(post.sampleRate))));
   if (post.channels) args.push('channels', String(Math.max(1, Math.min(2, Number(post.channels)))));
@@ -276,19 +283,22 @@ function processWithSox(rawInput, output, job) {
 function validateJob(job) {
   if (!job || typeof job !== 'object') throw new Error('Audio job must be an object.');
   if (!job.name || typeof job.name !== 'string') throw new Error('Audio job requires a string name.');
-  if (!['sfx', 'ambient', 'music'].includes(job.type)) throw new Error(`Unsupported audio job type for ${job.name}: ${job.type}`);
+  if (!['sfx', 'ambient', 'music', 'physics'].includes(job.type)) throw new Error(`Unsupported audio job type for ${job.name}: ${job.type}`);
   if (!job.output || typeof job.output !== 'string') throw new Error(`Audio job ${job.name} requires output.`);
   if (!/\.(wav|ogg)$/i.test(job.output)) throw new Error(`Audio job ${job.name} output must be .wav or .ogg.`);
 }
 
 function generateManifest(manifestPath, baseDir, generated) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (manifest.version !== 1 || !Array.isArray(manifest.jobs)) {
-    throw new Error(`${manifestPath} must be an Audio Forge manifest v1 with jobs[].`);
-  }
-
-  for (const job of manifest.jobs) {
+  const jobs = expandManifest(manifest);
+  const targets = new Set();
+  for (const job of jobs) {
     validateJob(job);
+    const target = assertInside(baseDir, job.output, `Output for ${job.name}`);
+    if (manifest.version === 2 && targets.has(target)) throw new Error('Duplicate resolved audio output: '+target);
+    targets.add(target);
+  }
+  for (const job of jobs) {
     const output = assertInside(baseDir, job.output, `Output for ${job.name}`);
     mkdirSync(path.dirname(output), { recursive: true });
     const tempDir = mkdtempSync(path.join(tmpdir(), 'pocket-audio-forge-'));
@@ -296,7 +306,10 @@ function generateManifest(manifestPath, baseDir, generated) {
     try {
       if (job.type === 'sfx') synthesizeSfx(job, rawOutput);
       else if (job.type === 'ambient') synthesizeAmbient(job, rawOutput);
-      else synthesizeMusic(job, rawOutput, tempDir);
+      else if (job.type === 'physics') {
+        const audio = renderPhysics(job);
+        writePcm16Wav(rawOutput, audio.samples, audio.sampleRate, audio.channels);
+      } else synthesizeMusic(job, rawOutput, tempDir);
       processWithSox(rawOutput, output, job);
       if (!existsSync(output) || statSync(output).size < 128) throw new Error(`Generated audio is empty: ${output}`);
       generated.add(path.relative(ROOT, output).replaceAll(path.sep, '/'));
