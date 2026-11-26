@@ -187,8 +187,8 @@ try{
         const scoreBus=mixer.bus('horizontal'),scoreAnalyser=c.createAnalyser();
         scoreAnalyser.fftSize=4096;scoreAnalyser.smoothingTimeConstant=0;scoreBus.connect(scoreAnalyser);
         director=createScoreDirector({context:c,destination:scoreBus,
-          graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']}},
-          buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)}});
+          graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
+          buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)},bridgeBuffers:{'peace:battle':make(c,sr*.5,330)}});
         check(await director.start(),'Horizontal start failed');
         const peaceStart=director.state.startTime;
         const waitClock=async t=>{const deadline=performance.now()+3000;while(c.currentTime<t&&performance.now()<deadline)await new Promise(r=>setTimeout(r,20));check(c.currentTime>=t,'Horizontal audio clock stalled')};
@@ -202,10 +202,15 @@ try{
         check(director.request('battle',{quantize:'beat',fadeSeconds:.12}),'Horizontal request failed');
         const transition=director.state.transitionAt,end=director.state.transitionEnd;
         check(director.state.voices===2&&Math.abs((transition-peaceStart)/.5-Math.round((transition-peaceStart)/.5))<1e-6,'Horizontal scheduling invalid');
-        await waitClock(end+.2);director.update();
+        const bridgeUntil=director.state.bridgeUntil;
+        await waitClock(end+.15);director.update();
+        const bridgeDuring=scoreBand(330);
+        check(bridgeDuring>-50&&scoreBand(440)<bridgeDuring-15,'Authored bridge not audible before destination');
+        await waitClock(bridgeUntil+.2);director.update();
         const peaceAfter=scoreBand(220),battleAfter=scoreBand(440);
         check(director.state.current==='battle'&&director.state.voices===1&&battleAfter>-50&&peaceAfter<battleAfter-15,'Horizontal clip replacement invalid');
-        const horizontal={peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
+        await waitClock(bridgeUntil+2.2);const bridgeAfterLoop=scoreBand(330);check(scoreBand(440)>-50&&bridgeAfterLoop<scoreBand(440)-15,'Bridge repeated inside destination loop');
+        const horizontal={bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
         director.destroy();scoreAnalyser.disconnect();check(director.state.voices===0,'Horizontal cleanup failed');
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
