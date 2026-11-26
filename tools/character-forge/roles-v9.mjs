@@ -148,9 +148,19 @@ function artisanKit(m){
  tube(m,'awl handle',[{p:[x-.06,y-.04,z-.025],r:.009,ws:[[hip.id,1]]},{p:[x-.06,y+.035,z-.025],r:.009,ws:[[hip.id,1]]}],[.28,.16,.07],'wood',8,.002);
  return {tools:['wooden mallet','iron mallet head','awl']};
 }
+function gambesonChannels(m,tunic){
+ const tracks=[1,3,6,9,12,15];
+ for(let i=0;i<tracks.length;i++){const k=tracks[i],rows=[[2,.12],[2,.42],[2,.74],[3,.08],[3,.36]],stations=rows.map(([r,t])=>{const a=panelAt(tunic,r,t,k),c=mix(tunic.pattern.sections[r].center,tunic.pattern.sections[r+1].center,t);return {p:add(a.v,mul(radial(a.v,c),.012)),r:.008,ws:a.ws}});tube(m,'gambeson tailored quilting channel '+i,stations,[.28,.23,.18],'cloth',8,.002)}
+}
+function tassets(m){
+ for(const side of ['L','R']){const j=J(m,'upperleg01.'+side),root=J(m,'root'),sign=side==='L'?1:-1,c=[j.position[0],j.position[1]+.015,j.position[2]+.075],ws=[[j.id,.78],[root.id,.22]];
+  ellipsoid(m,'steel articulated tasset '+side,c,[.083,.115,.027],ws,[.31,.34,.35],'metal',7,14);
+  for(const y of [-.075,.075])rivet(m,'tasset brass rivet '+side+' '+y,[c[0],c[1]+y,c[2]+.026],ws,.005,[.55,.36,.14]);
+ }
+}
 function infantryKit(m){
  const tunic=m.parts.find(p=>p.name==='tunic');tunic.color=[.23,.20,.16];tunic.material={kind:'cloth',roughness:.86,metallic:.02};
- const mail=mailCurtain(m,tunic);
+ const mail=mailCurtain(m,tunic);gambesonChannels(m,tunic);
  // Coat-of-plates: separate curved steel plates under a textile outer
  // silhouette, with actual edge relief and rivet hardware.
  const plates=[];
@@ -165,7 +175,7 @@ function infantryKit(m){
   tube(m,'steel vambrace '+side,[{p:mix(elbow.position,wrist.position,.15),r:.052,ws:[[elbow.id,.85],[wrist.id,.15]]},{p:mix(elbow.position,wrist.position,.50),r:.046,ws:[[elbow.id,.5],[wrist.id,.5]]},{p:mix(elbow.position,wrist.position,.90),r:.039,ws:[[elbow.id,.15],[wrist.id,.85]]}],[.31,.35,.37],'metal',14,.004);
   for(let t of [.24,.78])tube(m,'leather vambrace tie '+side+' '+t,[{p:mix(elbow.position,wrist.position,t),r:.049,ws:[[elbow.id,1-t],[wrist.id,t]]},{p:add(mix(elbow.position,wrist.position,t),[.002,.003,.002]),r:.049,ws:[[elbow.id,1-t],[wrist.id,t]]}],[.16,.085,.045],'leather',12,.002);
  }
- bascinet(m);pteruges(m,false);shield(m,false);
+ bascinet(m);tassets(m);shield(m,false);
  return {mailRings:mail.rings,brigandinePlates:plates.length,armourPeriod:'late 14th century, coat-of-plates with mail and bascinet'};
 }
 function legionaryKit(m){
