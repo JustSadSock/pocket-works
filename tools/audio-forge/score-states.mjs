@@ -48,7 +48,27 @@ score('aftermath',68,4,4,[
  track(48,chords([['D3','A3','F4'],['Bb2','F3','D4'],['A2','E3','C#4'],['D3','A3','F#4']],4,3.7,53),76,82),
  track(46,[note('D4',0,1.5,46),note('A3',4,1.5,48),note('E4',8,1.5,48),note('F#4',12,1.5,52),note('D5',14,1.65,46)],83,80)
 ],'Slow aftermath, cello lament, Picardy resolution');
-const jobs=states.map(s=>({name:'score-'+s.id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks:s.tracks,output:'generated/'+s.id+'.wav',post:{normalizeDb:-3}}));
+// Edge-specific musical bridges, each a complete short phrase.
+const bridges=[
+ {id:'peace-tension',edge:'peace:tension',tempo:96,beatsPerBar:4,bars:1,tracks:[
+  track(73,[note('A5',0,.65,70),note('G5',.75,.65,66),note('F#5',1.5,.42,59),note('F5',2,.8,65),note('E5',3,.65,57)]),
+  track(42,[note('D3',0,1.8,52),note('Eb3',2,1.8,73)],58),track(45,[note('A2',2,.3,68),note('D3',3,.32,78)],78)]},
+ {id:'tension-battle',edge:'tension:battle',tempo:120,beatsPerBar:4,bars:1,tracks:[
+  track(42,[note('D3',0,.4,78),note('F3',.5,.4,84),note('G3',1,.4,89),note('A3',1.5,.4,94),note('C#4',2,.85,100),note('A3',3,.7,102)]),
+  track(60,[note('D4',2,.4,94),note('F4',2.5,.4,101),note('A4',3,.85,108)],52),
+  track(47,[0,1,2,2.5,3,3.5].map((t,i)=>note('D2',t,.2,72+i*7)),64)]},
+ {id:'battle-aftermath',edge:'battle:aftermath',tempo:96,beatsPerBar:4,bars:1,tracks:[
+  track(60,[note('A4',0,.45,102),note('F4',.5,.45,94),note('D4',1,.85,80)]),
+  track(47,[note('D2',0,.45,100),note('D2',1,.6,72)]),
+  track(42,[note('D3',1.5,1.2,68),note('A3',3,.85,58)],48),
+  track(48,[note('D3',2,1.8,55),note('F3',2,1.8,55),note('A3',2,1.8,55)],78)]},
+ {id:'aftermath-peace',edge:'aftermath:peace',tempo:72,beatsPerBar:3,bars:1,tracks:[
+  track(42,[note('D3',0,1.4,55),note('A3',1.5,1.35,53)],47),
+  track(46,[note('D4',0,.7,54),note('A4',.75,.65,60),note('F#4',1.5,.65,64),note('E4',2.25,.6,60)],80),
+  track(73,[note('F#5',1.5,.65,60),note('E5',2.25,.6,64)],52)]}
+].map(s=>({...s,duration:60/s.tempo*s.beatsPerBar*s.bars}));
+const jobs=[...states,...bridges].map(s=>({name:'score-'+s.id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks:s.tracks,output:'generated/'+s.id+'.wav',post:{normalizeDb:-3}}));
 const graph={version:1,initial:'peace',states:Object.fromEntries(states.map(({tracks,...s})=>[s.id,{...s,file:'states/'+s.id+'.wav'}])),edges:{peace:['tension','battle'],tension:['peace','battle'],battle:['aftermath'],aftermath:['peace','tension','battle']}};
+graph.bridges=Object.fromEntries(bridges.map(({tracks,edge,...s})=>[edge,{...s,file:'bridges/'+s.id+'.wav'}]));
 writeFileSync(path.join(root,'manifest.json'),JSON.stringify({version:2,jobs},null,2)+'\n');
 writeFileSync(path.join(root,'score-graph.json'),JSON.stringify(graph,null,2)+'\n');
