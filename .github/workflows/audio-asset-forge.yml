@@ -96,7 +96,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -132,6 +132,17 @@ jobs:
             .audio-forge-hybrid/generated/
             .audio-forge-hybrid/manifest.json
             .audio-forge-hybrid/fixture.wav
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render continuous audio audition
+        run: node tools/audio-forge/runtime-audition.mjs .audio-runtime-audition
+
+      - name: Upload continuous audio audition
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-continuous-${{ github.run_id }}
+          path: .audio-runtime-audition/
           if-no-files-found: error
           retention-days: 7
 
