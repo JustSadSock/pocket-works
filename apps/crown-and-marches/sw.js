@@ -28,6 +28,8 @@ const APP_SHELL = [
   './atlas-projection.mjs',
   './atlas-surface-requests.mjs',
   './atlas-material-fields.mjs',
+  './atlas-human-layout.mjs',
+  './atlas-human-geography.mjs',
   './battle.mjs',
   './render.mjs',
   './geography-review.mjs',
