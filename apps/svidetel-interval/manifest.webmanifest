@@ -1,0 +1,25 @@
+{
+  "id": "/apps/svidetel-interval/",
+  "name": "СВИДЕТЕЛЬ",
+  "short_name": "Свидетель",
+  "description": "Восстанови последовательность событий по косвенным уликам. Шесть архивных дел с единственным логическим решением.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#f4e8d0",
+  "theme_color": "#f4e8d0",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

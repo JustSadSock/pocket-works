@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "svidetel-interval",
+  "name": "СВИДЕТЕЛЬ",
+  "shortName": "Свидетель",
+  "description": "Восстанови последовательность событий по косвенным уликам. Шесть архивных дел с единственным логическим решением.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-26",
+  "releaseDateTime": "2026-11-26T11:40:00+02:00",
+  "changelog": [
+    "Шесть дел с логическими ограничениями, единственным решением и проверкой непротиворечивости.",
+    "Перестановка архивных записей, подсказки, отмена, локальное сохранение и офлайн PWA."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#ad442b",
+  "backgroundColor": "#f4e8d0",
+  "themeColor": "#f4e8d0",
+  "orientation": "any",
+  "cacheName": "svidetel-interval-v1.0.0",
+  "storageNamespace": "pocket-works:svidetel-interval",
+  "tags": [
+    "puzzle",
+    "logic",
+    "wildcard",
+    "offline"
+  ],
+  "order": 467
+}
