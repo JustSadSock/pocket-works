@@ -17,3 +17,14 @@ export function culturalParcels(i,env,dev,resource,{adjacent=()=>false}={}){
 // Curve a dry run while preserving endpoints and keeping the route in the
 // original corridor. Reject the entire deformation if any sample is unsafe.
 export function culturalRoad(points,env,seed){if(points.length<3)return points;const a=points[0],b=points.at(-1),len=D(a,b);if(len<.15)return points;const dx=(b[0]-a[0])/len,dy=(b[1]-a[1])/len,offset=(noise(seed,17)-.5)*.18,curve=points.map((p,i)=>{if(i===0||i===points.length-1)return p;const t=i/(points.length-1),q=Math.sin(Math.PI*t)*offset;return [p[0]-dy*q,p[1]+dx*q];});return curve.every((p,i)=>env.permitted(...p)&&env.dry(...p,.008)&&env.grade(...p)<.26&&(i===0||sampleLine(curve[i-1],p,(x,y)=>env.permitted(x,y)&&env.dry(x,y,.008),.035)))?curve:points;}
+
+// An already cultivated cell is treated as one landscape with strips
+// inside it. Shared margins extend only toward other authorized farms.
+// Subdivide the underlay for safe clipping, never fill across unknown water.
+export function organicGround(i,env,{adjacent=()=>false}={}){
+ const x=i%env.width,y=Math.floor(i/env.width),patches=[],paths=[],ok=(X,Y)=>Math.floor(X)===x&&Math.floor(Y)===y&&env.eligible(X,Y)&&env.dry(X,Y,.024)&&!env.occupied(X,Y)&&env.grade(X,Y)<.19;
+ const n=4;for(let j=0;j<n;j++)for(let k=0;k<n;k++){const x0=x+k/n+(k===0&&!adjacent(x-1,y)?.06:.002),x1=x+(k+1)/n-(k===n-1&&!adjacent(x+1,y)?.06:.002),y0=y+j/n+(j===0&&!adjacent(x,y-1)?.06:.002),y1=y+(j+1)/n-(j===n-1&&!adjacent(x,y+1)?.06:.002),p=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];if(!p.every((a,k)=>sampleLine(a,p[(k+1)%4],ok,.045))||!ok((x0+x1)/2,(y0+y1)/2))continue;patches.push(p);}
+ // paths follow the grain of already cultivated plots, not new game roads.
+ for(const [dx,dy] of [[1,0],[0,1],[-1,0],[0,-1]])if(adjacent(x+dx,y+dy)){const a=[x+.5,y+.5],b=[x+.5+dx*.49,y+.5+dy*.49];if(sampleLine(a,b,ok,.035))paths.push([a,b]);}
+ return {patches,paths};
+}
