@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {makeSeamlessLoop,createDynamicEmitter,createAdaptiveMusic,stemGainAtIntensity} from '../../shared/capabilities/continuous-audio.js';
+import {makeSeamlessLoop,createDynamicEmitter,createAdaptiveMusic,stemGainAtIntensity,nextMusicBoundary} from '../../shared/capabilities/continuous-audio.js';
 function fixture(){
  const nodes=[];
  const param=()=>({value:1,events:[],cancelScheduledValues(t){this.events.push(['cancel',t])},setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t])},linearRampToValueAtTime(v,t){this.value=v;this.events.push(['ramp',v,t])}});
@@ -63,4 +63,26 @@ test('pending unlock cannot start a destroyed emitter or music player',async()=>
   const pending=p.start();p.destroy();release();assert.equal(await pending,false);
   assert.equal(nodes.filter(n=>n.kind==='source').length,0);
  }
+});
+
+test('beat and bar scheduling uses the transport clock',()=>{
+ const grid={startTime:1.05,bpm:120,beatsPerBar:4};
+ assert.equal(nextMusicBoundary({...grid,now:1.2,quantize:'bar'}),3.05);
+ assert.equal(nextMusicBoundary({...grid,now:1.2,quantize:'beat'}),1.55);
+ assert.equal(nextMusicBoundary({...grid,now:1,quantize:'bar'}),1.05);
+ assert.throws(()=>nextMusicBoundary({...grid,now:1,quantize:'phrase'}));
+});
+test('quantized change holds current gain and replaces an interrupted transition',async()=>{
+ const {context,nodes}=fixture(),buffer=context.createBuffer(1,8000,8000);
+ const p=createAdaptiveMusic({context,stems:[{id:'battle',buffer,threshold:0,width:1}],bpm:120});
+ await p.start();const voice=nodes.filter(n=>n.kind==='gain').at(-1).gain;
+ context.currentTime=1.2;p.setIntensity(1,{quantize:'bar',fadeSeconds:1});
+ assert.equal(p.state.transitionAt,3.05);
+ assert.ok(voice.events.some(e=>e[0]==='set'&&e[1]===0&&e[2]===3.05));
+ assert.ok(voice.events.some(e=>e[0]==='ramp'&&e[1]===1&&e[2]===4.05));
+ context.currentTime=3.55;p.setIntensity(0,{fadeSeconds:.5});
+ const latest=voice.events.slice(-3);
+ assert.equal(latest[0][0],'cancel');assert.ok(Math.abs(latest[1][1]-.5)<1e-9);
+ assert.equal(latest[2][1],0);assert.equal(p.state.startTime,1.05);
+ p.destroy();assert.equal(p.state.transitionAt,null);
 });
