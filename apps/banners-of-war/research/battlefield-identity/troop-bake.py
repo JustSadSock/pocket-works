@@ -152,16 +152,16 @@ if kind=="archer":
         if o.name.startswith(("Curved shield","Shield rawhide","Shield boss","Kettle hat","Rolled rim")):o.hide_render=True
     for o in weapon:o.hide_render=True
     # Hand-held full-length yew bow, string and quiver. Draw the string to the real right hand.
-    def bow_geometry(draw,tilt=0):
+    def bow_geometry(draw,tilt=0,flex=0):
         p=point(L);q=point(R);p.y-=.045
         rot=Matrix.Rotation(tilt,3,'X');v=[];f=[];N=20;M=8
         for i in range(N+1):
-            t=i/N;zz=(t-.5)*1.65;yy=.25*(abs(t-.5)*2)**1.8
+            t=i/N;zz=(t-.5)*(1.65-.14*flex);yy=(.25+.13*flex)*(abs(t-.5)*2)**1.8
             for j in range(M):v.append(tuple(p+rot@Vector((.020*cos(j*2*pi/M),yy+.024*sin(j*2*pi/M),zz))))
         for i in range(N):
             for j in range(M):f.append((i*M+j,i*M+(j+1)%M,(i+1)*M+(j+1)%M,(i+1)*M+j))
         bow=mesh("English longbow",v,f,wood,None)
-        top=p+rot@Vector((0,.25,.825));bot=p+rot@Vector((0,.25,-.825));mid=q if draw else p+rot@Vector((0,.25,0))
+        top=p+rot@Vector((0,.25+.13*flex,.825-.07*flex));bot=p+rot@Vector((0,.25+.13*flex,-.825+.07*flex));mid=q if draw else p+rot@Vector((0,.25,0))
         st1=rod("Upper bowstring",top,mid,.004,linen,None,6);st2=rod("Lower bowstring",mid,bot,.004,linen,None,6)
         result=[bow,st1,st2]
         if draw and (p-q).length>.05:result.append(rod("Nocked arrow",q,p+(p-q).normalized()*.27,.006,wood,None,8))
@@ -439,8 +439,124 @@ def apply_pose(frame,diagnostic_phase=None):
         if frame==21:
             aim(LU,(-.10,-.72,-.43));aim(LF,(.30,-.78,.30))
     bpy.context.view_layer.update()
+# Original 864 infantry renders remain byte-identical. These independently
+# authored preview cycles are not included in the production atlas.
+def infantry_preview():
+    global temporary
+    folder=out/"artistic-preview";folder.mkdir(exist_ok=True)
+    sc.render.resolution_x=sc.render.resolution_y=384;sc.cycles.samples=5
+    target=Vector((0,0,1.0));cam.location=target+Vector((0,-5,2.9));look(cam,target)
+    cam.data.ortho_scale=4.2;livery(0)
+    apply_pose(1);base={o.name:o.location.copy() for o in human_roots}
+    feet=[(RH,RK,bone("RightFoot","footr")),(LH,LK,bone("LeftFoot","footl"))]
+    sign=1 if point(R).x>point(L).x else -1
+    ground_targets=[point(foot).copy() for _,_,foot in feet]
+    ground_targets[0].y+=.11;ground_targets[1].y-=.11
+    foot_dirs=[(rig.matrix_world@foot.tail-point(foot)).normalized() for _,_,foot in feet]
+    # Two-bone analytic reach, with a preferred knee/elbow plane. The support
+    # ankle remains at the measured source foot plane through weight transfer.
+    def solve(upper,lower,end,target,bend):
+        a=point(upper);b=point(lower);c=point(end)
+        l1=(b-a).length;l2=(c-b).length;d=Vector(target)-a
+        if min(l1,l2,d.length)<.01:raise ValueError("Invalid human joint chain")
+        v=d.normalized();r=max(abs(l1-l2)+.002,min(d.length,l1+l2-.002))
+        p=Vector(bend)-v*Vector(bend).dot(v)
+        if p.length<.001:p=v.cross(Vector((0,0,1)))
+        if p.length<.001:p=v.cross(Vector((0,1,0)))
+        u=(l1*l1-l2*l2+r*r)/(2*r);mid=a+v*u+p.normalized()*math.sqrt(max(0,l1*l1-u*u))
+        aim(upper,mid-a);aim(lower,(a+v*r)-point(lower))
+        return (point(end)-(a+v*r)).length
+    def weapon_aim(direction):
+        visible=[o for o in weapon if o.name.startswith(("Forged spear","Forged sword blade")) and not o.hide_render]
+        if not visible:raise ValueError("Missing visible attack weapon")
+        points=vertices(visible);tip=sum(points,Vector((0,0,0)))/len(points)
+        desired=rig.matrix_world.inverted().to_3x3()@Vector(direction)
+        actual=rig.matrix_world.inverted().to_3x3()@(tip-point(R))
+        rot=actual.normalized().rotation_difference(desired.normalized()).to_matrix().to_4x4()
+        m=R.matrix.copy();p=m.translation.copy();m=rot@m;m.translation=p;R.matrix=m;bpy.context.view_layer.update()
+    # Keyed artistic beats are distinct across roles. Values are authored hand
+    # positions relative to the actual torso, not arbitrary sprite offsets.
+    # right hand x, forward y, height z; shield/bow hand; torso lean; shift.
+    keys={
+      "spear":[
+        (0.0,(.31,-.18,.10),(-.30,-.36,.17),(.02,-.04,1),(0,0,0),(.12,-.65,.76)),
+        (.23,(.32,.03,.13),(-.27,-.48,.22),(.12,.04,1),(.025,.055,-.04),(.02,-.98,.18)),
+        (.48,(.23,-.65,.19),(-.31,-.38,.20),(-.05,-.28,1),(-.025,-.15,-.08),(.015,-1,.035)),
+        (.61,(.26,-.56,.13),(-.30,-.41,.16),(-.03,-.20,1),(-.018,-.10,-.06),(.04,-1,.10)),
+        (1.0,(.31,-.18,.10),(-.30,-.36,.17),(.02,-.04,1),(0,0,0),(.12,-.65,.76))],
+      "sword":[
+        (0.0,(.32,-.24,.10),(-.28,-.38,.20),(.02,-.04,1),(0,0,0),(.35,-.62,.70)),
+        (.25,(.44,.08,.40),(-.28,-.49,.25),(.24,.02,1),(.04,.025,-.04),(.40,.20,.89)),
+        (.49,(.06,-.58,.20),(-.30,-.34,.15),(-.24,-.20,1),(-.05,-.12,-.055),(-.78,-.58,-.24)),
+        (.67,(-.12,-.37,-.08),(-.25,-.43,.18),(-.17,-.08,1),(-.03,-.055,-.025),(-.65,-.45,-.55)),
+        (1.0,(.32,-.24,.10),(-.28,-.38,.20),(.02,-.04,1),(0,0,0),(.35,-.62,.70))],
+      "archer":[
+        (0.0,(.24,-.20,-.11),(-.25,-.31,-.15),(0,0,1),(0,0,0),0),
+        (.21,(.04,-.43,.08),(-.22,-.51,.12),(.02,-.06,1),(0,-.025,-.025),.12),
+        (.42,(.22,-.07,.30),(-.17,-.67,.30),(.12,.02,1),(.015,0,-.03),.85),
+        (.58,(.25,-.04,.31),(-.17,-.68,.30),(.13,.015,1),(.015,0,-.03),1),
+        (.66,(.40,.17,.32),(-.17,-.68,.30),(.13,.015,1),(.015,0,-.03),0),
+        (.79,(.31,.06,.16),(-.20,-.52,.19),(.06,0,1),(0,0,-.01),0),
+        (1.0,(.24,-.20,-.11),(-.25,-.31,-.15),(0,0,1),(0,0,0),0)]}
+    def interpolated(p,beats):
+        j=next((i for i in range(len(beats)-1) if p<=beats[i+1][0]),len(beats)-2)
+        a,b=beats[j],beats[j+1];t=max(0,min(1,(p-a[0])/(b[0]-a[0])));t=t*t*(3-2*t)
+        return [tuple(x+(y-x)*t for x,y in zip(v,w)) if isinstance(v,tuple) else v+(w-v)*t for v,w in zip(a[1:],b[1:])]
+    def clear_gear():
+        global temporary
+        for o in temporary:bpy.data.objects.remove(o,do_unlink=True)
+        temporary=[]
+    def reset():
+        for o in human_roots:o.location=base[o.name].copy()
+        apply_pose(1)
+    # Native authored walk key poses, interpolated in local joint space,
+    # not shifted copies of the same sprite. Closed seam 17 -> 5.
+    walks=[]
+    for frame in (5,9,13,17):
+        apply_pose(frame);walks.append({b.name:b.matrix_basis.copy() for b in rig.pose.bones})
+    errors=[];poses_meta=[]
+    for motion,count in (("march",12),("combat",16),("defence",12)):
+        for n in range(count):
+            phase=n/count;reset()
+            if motion=="march":
+                j=int(phase*4);f=phase*4-j
+                for b in rig.pose.bones:b.matrix_basis=walks[j][b.name].lerp(walks[(j+1)%4][b.name],f)
+                bpy.context.view_layer.update()
+                if kind=="archer":
+                    clear_gear();temporary=bow_geometry(False,-.65)
+                    for o in temporary:o.parent=pivot
+            else:
+                if motion=="combat":rh,lh,lean,shift,action=interpolated(phase,keys[kind])
+                else:
+                    brace=math.sin(pi*phase)**2
+                    rh,lh,lean,shift,action=interpolated(.0,keys[kind])
+                    rh=(rh[0],rh[1]-.14*brace,rh[2]+.08*brace)
+                    lh=(lh[0],lh[1]-.15*brace,lh[2]+.16*brace)
+                    lean=(.02,-.14*brace,1);shift=(0,-.035*brace,-.095*brace)
+                    if kind!="archer":action=(.05,-.95,.30) if kind=="spear" else (.25,-.55,.85)
+                for o in human_roots:o.location=base[o.name]+Vector((shift[0]*sign,shift[1],shift[2]))
+                bpy.context.view_layer.update();aim(torso,(lean[0]*sign,lean[1],lean[2]))
+                for j,(upper,lower,foot) in enumerate(feet):
+                    errors.append(solve(upper,lower,foot,ground_targets[j],(0,-1,0)));aim(foot,foot_dirs[j])
+                chest=point(torso)
+                hand=lambda v:chest+Vector((v[0]*sign,v[1],v[2]))
+                errors.append(solve(RU,RF,R,hand(rh),(sign,.18,-.25)))
+                errors.append(solve(LU,LF,L,hand(lh),(-sign,.05,-.30)))
+                if kind=="archer":
+                    clear_gear();draw=motion=="combat" and .13<=phase<.625
+                    temporary=bow_geometry(draw,-.6*(1-min(1,action+.15)),min(1,max(0,action)))
+                    for o in temporary:o.parent=pivot
+                else:weapon_aim((action[0]*sign,action[1],action[2]))
+            bpy.context.view_layer.update()
+            poses_meta.append({"motion":motion,"phase":phase,"rightHand":list(point(R)),"leftHand":list(point(L)),"feet":[list(point(v[2])) for v in feet]})
+            pivot.rotation_euler.z=-pi/3;bpy.context.view_layer.update()
+            sc.render.filepath=str(folder/(motion+"-%02d.png"%n));bpy.ops.render.render(write_still=True)
+    (folder/"choreography.json").write_text(json.dumps({"role":kind,"samples":poses_meta,"maxJointResidual":max(errors,default=0),"controlFramesUnmodified":True},indent=2))
 # Short, independently retained visual diagnostic before expensive production.
-if os.environ.get("BOW_RIG_PREFLIGHT"):
+if os.environ.get("BOW_INFANTRY_PREVIEW"):
+    if horse_rig:raise ValueError("Infantry preview must not use mounted rig")
+    infantry_preview()
+elif os.environ.get("BOW_RIG_PREFLIGHT"):
     if not horse_rig or not extended:raise ValueError("Preflight requires mounted extended rig")
     folder=out/"gait-diagnostic";folder.mkdir(exist_ok=True)
     sc.render.resolution_x=sc.render.resolution_y=320;sc.cycles.samples=5
