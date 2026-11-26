@@ -67,7 +67,7 @@ function shield(m,roman){
  tube(m,roman?'scutum hand grip':'heater shield hand grip',[{p:[gripX,gripY-.085,gripZ],r:.015,ws:[[wrist.id,1]]},{p:[gripX,gripY+.085,gripZ],r:.015,ws:[[wrist.id,1]]}],[.16,.075,.035],'leather',10,.002);
  for(const t of [.28,.72]){const c=mix(fore.position,wrist.position,t),u=unit(sub(wrist.position,fore.position));tube(m,'shield forearm retaining strap '+t,[{p:add(c,mul(u,-.012)),r:.050,ws:[[fore.id,1-t],[wrist.id,t]]},{p:add(c,mul(u,.012)),r:.050,ws:[[fore.id,1-t],[wrist.id,t]]}],[.15,.08,.035],'leather',12,.002)}
  ellipsoid(m,roman?'scutum umbo':'heater shield boss',[center[0],center[1],center[2]+(roman?.105:.045)+.012],[roman?.055:.034,roman?.055:.034,.022],ws,[.48,.43,.31],'metal',6,12);
- m.attachments??=[];m.attachments.push({name:roman?'scutum grip':'heater shield grip',joint:'wrist.L',local:sub([gripX,gripY,gripZ],wrist.position),contactError:0});
+ m.attachments??=[];m.attachments.push({name:roman?'scutum grip':'heater shield grip',joint:'wrist.L',local:sub([gripX,gripY,gripZ],wrist.position),contactError:Math.hypot(...sub([gripX,gripY,gripZ],wrist.position))});
 }
 function bascinet(m){
  const h=J(m,'head'),head=m.parts[0],pts=[];
