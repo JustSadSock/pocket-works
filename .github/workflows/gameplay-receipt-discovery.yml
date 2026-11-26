@@ -1,0 +1,71 @@
+name: Gameplay Receipt Discovery Integration
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/gameplay-receipt-discovery.yml'
+      - 'scripts/ci-overhaul/gameplay-receipt-discovery*'
+      - '.github/workflows/universal-qa.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs scripts/ci-overhaul/gameplay-renewal.test.mjs
+  live:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/gameplay-receipt-discovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wait for the first trusted renewal run (test dependency only)
+        timeout-minutes: 16
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..60}; do
+            info="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/45871318907")"
+            if jq -e '.status=="completed"' <<< "$info" >/dev/null; then
+              jq -e '.conclusion=="success" and .head_branch=="main" and .head_sha=="cc982a82a49687674315a17c6b4f0b1337bcd758"' <<< "$info"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'Trusted renewal dependency did not complete'; exit 1
+      - name: Discover without passing a source run ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QA_EXPECTED: '["banners-of-war-completion-lab-0"]'
+          QA_PR_NUMBER: '1355'
+          QA_HEAD_REPO: JustSadSock/pocket-works
+          QA_HEAD_REF: app/banners-of-war
+          QA_HEAD_SHA: 5cf0a72622621ac0dc0d5e1a88cbd9a0369e2616
+        run: |
+          node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/discovery"
+          jq -e '.status=="authenticated-candidate" and .authenticatedSubjects==9 and .verifiedBundles==8 and .source=="5cf0a72622621ac0dc0d5e1a88cbd9a0369e2616" and .productionAuthorization==false and .allowResultReuse==false and .checkoutMatchesSource==false' "$RUNNER_TEMP/discovery/discovery.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: receipt-discovery-live-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/discovery/
+          if-no-files-found: warn
+          retention-days: 7
