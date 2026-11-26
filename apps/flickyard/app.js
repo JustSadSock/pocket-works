@@ -613,7 +613,7 @@ function startSession(force = false) {
   });
   aim = { x: width / 2, y: height / 2 };
   holding = false;
-  wasPointerLocked = false;
+  wasPointerLocked = pointerLocked;
   particles = [];
   impactRings = [];
   ui.homeOverlay.hidden = true;
@@ -622,7 +622,7 @@ function startSession(force = false) {
   ui.resultsOverlay.hidden = true;
   setMenuState();
   sound.unlock();
-  requestPointerLock();
+  ui.pointerState.textContent = 'CLICK TO CAPTURE';
   updateHud();
   render();
   startLoop();
@@ -899,6 +899,7 @@ canvas.addEventListener('pointerdown', (event) => {
     aim.x = event.clientX - rect.left;
     aim.y = event.clientY - rect.top;
   }
+  if (!pointerLocked && !qaMode && typeof canvas.requestPointerLock === 'function') requestPointerLock();
   if (activeMode(session) === 'track') {
     holding = true;
     sound.select();
