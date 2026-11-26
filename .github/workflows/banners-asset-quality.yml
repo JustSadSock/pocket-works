@@ -11,7 +11,31 @@ concurrency:
   group: banners-asset-quality-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  scope:
+    runs-on: ubuntu-24.04
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+      - id: scope
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Reuse immutable reference evidence for workshop-only commits.
+            // Dispatch and any ambiguous comparison retain full checks.
+            let full=true;
+            if(context.eventName==='pull_request' && context.payload.action==='synchronize' && context.payload.before && context.payload.after){
+              try{
+                const r=await github.rest.repos.compareCommits({owner:context.repo.owner,repo:context.repo.repo,base:context.payload.before,head:context.payload.after});
+                const files=r.data.files||[];
+                if(files.length>0&&files.length<300){
+                  full=files.some(f=>f.filename==='.github/workflows/banners-asset-quality.yml'||f.filename.startsWith('tools/art-forge/')||(f.filename.startsWith('apps/banners-of-war/')&&!f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/')));
+                }
+              }catch(e){core.warning('Comparison unavailable: '+e.message)}
+            }
+            core.setOutput('full',String(full));
   source-to-reference:
+    needs: scope
+    if: needs.scope.outputs.full == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 35
