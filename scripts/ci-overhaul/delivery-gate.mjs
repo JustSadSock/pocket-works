@@ -15,9 +15,11 @@ export function describePlan(raw){
   hasBrowser:tasks.some(t=>['visual','playwright','browser-node'].includes(t.kind))};
 }
 
-export function selectDeliveryRoute({policy,request,eventName,sameRepo,count}){
+export function selectDeliveryRoute({policy,request,eventName,sameRepo,count,prNumber,headRef}){
  if(!Number.isSafeInteger(count)||count<0)throw Error('Invalid task count');
  if(count===0)return 'no-app-suites';
+ // Banners PR #1355 is pinned to the mandatory verified legacy gate until a separately qualified sharded gate exists.
+ if(eventName==='pull_request'&&prNumber===1355&&sameRepo===true&&headRef==='app/banners-of-war')return 'legacy';
  return policy?.schema===1&&policy.enabled===true&&policy.allowResultReuse===false&&
    policy.allowImpactSkipping===false&&request==='sharded'&&eventName==='pull_request'&&sameRepo===true
    ?'sharded':'legacy';
@@ -61,7 +63,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    const event=JSON.parse(readFileSync(e.GITHUB_EVENT_PATH,'utf8'));
    const policy=JSON.parse(readFileSync('scripts/ci-overhaul/delivery-policy.json','utf8'));
    const route=selectDeliveryRoute({policy,request:e.PW_QA_ROUTE,eventName:e.GITHUB_EVENT_NAME,
-    sameRepo:event.pull_request?.head?.repo?.full_name===e.GITHUB_REPOSITORY,count:p.count});
+    sameRepo:event.pull_request?.head?.repo?.full_name===e.GITHUB_REPOSITORY,prNumber:event.pull_request?.number,headRef:event.pull_request?.head?.ref,count:p.count});
    appendFileSync(e.GITHUB_OUTPUT,'route='+route+'\ncount='+p.count+'\nplan_digest='+p.planDigest+'\n');
    console.log(JSON.stringify({route,count:p.count,planDigest:p.planDigest}));
   }else if(mode==='legacy'){

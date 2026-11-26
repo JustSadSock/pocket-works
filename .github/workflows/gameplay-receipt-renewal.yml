@@ -60,6 +60,7 @@ jobs:
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/pulls/1355" > "$RUNNER_TEMP/app-pr.json"
           if [[ "$GITHUB_EVENT_NAME" == push || "$GITHUB_EVENT_NAME" == schedule ]]; then jq -e --arg main "$RENEWAL_MAIN_SHA" '.base.sha==$main' "$RUNNER_TEMP/app-pr.json" >/dev/null; fi
+          # Select the authenticated current PR merge ref; never renew from a stale branch-head snapshot.
           node scripts/ci-overhaul/gameplay-renewal.mjs select "$RUNNER_TEMP/app-pr.json" "$RUNNER_TEMP/selection.json"
           source="$(jq -er '.source' "$RUNNER_TEMP/selection.json")"
           if [[ "$(jq -er '.sourceRef' "$RUNNER_TEMP/selection.json")" == refs/pull/1355/merge ]]; then
