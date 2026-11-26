@@ -35,3 +35,24 @@ test('reject mismatched grids and invalid edges before allocating nodes',()=>{
  assert.throws(()=>createScoreDirector({context,buffers,graph:{...graph,edges:{...graph.edges,peace:['missing']}}}),/edges/);
  assert.equal(nodes.length,0);
 });
+
+test('authored bridge plays once before destination loop and anchors new musical grid',async()=>{
+ const {context,nodes,graph,buffers}=fixture();
+ context.createBuffer=(numberOfChannels,length,sampleRate)=>{
+  const data=Array.from({length:numberOfChannels},()=>new Float32Array(length));
+  return {numberOfChannels,length,sampleRate,getChannelData:c=>data[c]};
+ };
+ buffers.battle=context.createBuffer(1,144000,48000);
+ buffers.battle.getChannelData(0).fill(.2);
+ const bridge=context.createBuffer(1,24000,48000);bridge.getChannelData(0).fill(.1);
+ graph.bridges={'peace:battle':{file:'bridge.wav'}};
+ const p=createScoreDirector({context,graph,buffers,bridgeBuffers:{'peace:battle':bridge}});
+ await p.start();context.currentTime=.2;p.request('battle',{fadeSeconds:.12});
+ const next=nodes.filter(n=>n.kind==='source')[1];
+ assert.equal(next.loopStart,.5);assert.equal(next.loopEnd,3.5);
+ assert.equal(next.buffer.length,168000);assert.ok(Math.abs(next.buffer.getChannelData(0)[0]-.1)<1e-6);
+ assert.ok(Math.abs(next.buffer.getChannelData(0)[24000]-.2)<1e-6);
+ assert.equal(p.state.bridgeUntil,2.55);context.currentTime=2.18;p.update();
+ assert.equal(p.state.startTime,2.55);assert.equal(p.state.voices,1);
+ p.request('after',{quantize:'immediate'});assert.equal(p.state.transitionAt,2.55);p.destroy();
+});
