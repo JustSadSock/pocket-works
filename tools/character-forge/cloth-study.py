@@ -11,6 +11,42 @@ def bvh(p):
     return BVHTree.FromPolygons(v,f,all_triangles=True)
 # Recovery mode: static candidate only, without resurrecting previous
 # wardrobe production or optional cloth simulation.
+v7=src/"v7-collision-input.json"
+if v7.exists():
+    from PIL import Image
+    from array import array
+    import sys
+    result=[]
+    for entry in json.loads(v7.read_text()):
+        label=entry["label"];parts=entry["parts"];trees=[bvh(p) for p in parts];pairs=[];risks={};seams={}
+        for i,p in enumerate(parts):
+            for j in range(i+1,len(parts)):
+                q=parts[j];hits=trees[i].overlap(trees[j])
+                if not hits:continue
+                a,b=p["name"],q["name"];names={a,b}
+                expected=any("binding" in n or "welt" in n or "loop" in n or "clasp" in n for n in names)
+                if "waist belt" in names and "tunic" in names:expected=False
+                category="attachment-review" if expected else "visible-layer-risk"
+                target=seams if expected else risks
+                for k,l in hits:
+                    target.setdefault(a,set()).add(k);target.setdefault(b,set()).add(l)
+                pairs.append({"a":a,"b":b,"trianglePairs":len(hits),"category":category})
+        names=json.loads((src/("v7-"+label+"-parts.json")).read_text())
+        for view in ("front","side","back","three-quarter"):
+            stem="v7-"+label+"-"+view;im=Image.open(src/(stem+".png")).convert("RGBA");owners=array("I")
+            owners.frombytes((src/(stem+".ownership.bin")).read_bytes())
+            if sys.byteorder!="little":owners.byteswap()
+            pixels=list(im.getdata());count={"risk":0,"attachment":0}
+            for k,v in enumerate(owners):
+                if v==0xffffffff:continue
+                name=names[v>>24];tri=v&0xffffff
+                if tri in risks.get(name,()):
+                    pixels[k]=(220,53,46,255);count["risk"]+=1
+                elif tri in seams.get(name,()):
+                    pixels[k]=(226,174,45,255);count["attachment"]+=1
+            im.putdata(pixels);im.save(out/(stem+"-overlap-map.png"));result.append({"candidate":label,"view":view,"visibleTrianglesPixels":count,"pairs":pairs})
+    (out/"garment-exact-overlap.json").write_text(json.dumps({"v7":result,"note":"Actual BVH surface intersections projected to visible triangle pixels. Colored entire intersecting triangles, not precise intersection curves. Yellow attachments require review; red not automatically a confirmed defect. Same-layer pairs included. No self-intersection test."},indent=2))
+    raise SystemExit(0)
 recovery=src/"v6-static-collision-input.json"
 if recovery.exists():
     rows=[]
