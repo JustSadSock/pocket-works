@@ -1,7 +1,7 @@
 // Experimental campaign uses the existing 2D UI and a top-down Baked Terrain
 // background; hit-testing, settlements and infrastructure stay in world coordinates.
 import {prepareGeographicCandidate,BakedTerrainGL} from './world-rendering-baked.mjs';
-import {atlasProjection,meshHeight} from './atlas-projection.mjs';
+import {atlasProjection,meshHeight,pickProjectedMesh} from './atlas-projection.mjs';
 import {vertical} from './world-rendering-gl.mjs';
 import {SpatialLRU,clearContourCache} from './genesis-contours.mjs';
 const C=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -26,6 +26,6 @@ export class AtlasCampaignSurface{
  if(!usable(this.active)){cam.projection=null;return false;}
  const dpr=quality==='low'?1:Math.min(1.5,devicePixelRatio||1),pw=Math.max(1,Math.round(w*dpr)),ph=Math.max(1,Math.round(h*dpr));
  if(this.canvas.width!==pw||this.canvas.height!==ph){this.canvas.width=pw;this.canvas.height=ph;}
- const tilt=cam.atlasTilt?.28:0;this.active.renderer.draw({...view,s:view.s*dpr},{tilt,motion:!!atlas.fast});const lod=this.active.renderer.lastDraw.lod;cam.projection=tilt?atlasProjection({centerY:view.y,tilt,height:(x,y)=>meshHeight(this.active.terrain,lod,x,y)}):null;c.drawImage(this.canvas,0,0,w,h);atlas.canvas.dataset.atlasView=tilt?'relief':'atlas';atlas.canvas.dataset.atlasDetail=String(detail);atlas.canvas.dataset.atlasLod=String(lod);atlas.canvas.dataset.atlasRefined=String(this.active.terrain.stats.refined??0);return true;
+ const tilt=cam.atlasTilt?.28:0;this.active.renderer.draw({...view,s:view.s*dpr},{tilt,motion:!!atlas.fast});const lod=this.active.renderer.lastDraw.lod;cam.projection=tilt?atlasProjection({centerY:view.y,tilt,height:(x,y)=>meshHeight(this.active.terrain,lod,x,y)}):null;if(cam.projection){const terrain=this.active.terrain;cam.projection.unproject=(x,y)=>pickProjectedMesh(terrain,lod,{centerY:view.y,tilt},x,y);}this.lastView={...view,tilt,lod,pixelRatio:dpr};c.drawImage(this.canvas,0,0,w,h);atlas.canvas.dataset.atlasView=tilt?'relief':'atlas';atlas.canvas.dataset.atlasDetail=String(detail);atlas.canvas.dataset.atlasLod=String(lod);atlas.canvas.dataset.atlasRefined=String(this.active.terrain.stats.refined??0);atlas.canvas.dataset.atlasFrame=String((Number(atlas.canvas.dataset.atlasFrame)||0)+1);return true;
  }
 }

@@ -16,7 +16,8 @@
         "genesis-waters.test.mjs",
         "genesis-contours.test.mjs",
         "genesis-hydrography.test.mjs",
-        "genesis-atlas-visual.test.mjs"
+        "genesis-atlas-visual.test.mjs",
+        "atlas-projection.test.mjs"
       ],
       "tier": "smoke"
     },

@@ -122,7 +122,7 @@ export function connectedLakePairs(g){
 // previous known-cell source. No full-world contour cache or global audit.
 export async function chartedContourSource(s,source,known,{contourDetail=8,vertical,yieldRow=async()=>{},polish=false}={}){
  const m=s.map,g=m.geography,r=g.detail,W=(g.width-1)/r,H=(g.height-1)/r,[x0,y0]=source.bounds,n=source.cols*source.rows,field=contourField(m,{polish});
- const allow=(X,Y)=>{for(let y=Math.max(0,Math.floor(Y-1));y<=Math.min(H-1,Math.floor(Y+1));y++)for(let x=Math.max(0,Math.floor(X-1));x<=Math.min(W-1,Math.floor(X+1));x++)if(!known[y*W+x])return false;return true;};
+ const allow=(X,Y)=>{for(let y=Math.max(0,Math.floor(Y-(polish?.55:1)));y<=Math.min(H-1,Math.floor(Y+(polish?.55:1)));y++)for(let x=Math.max(0,Math.floor(X-(polish?.55:1)));x<=Math.min(W-1,Math.floor(X+(polish?.55:1)));x++)if(!known[y*W+x])return false;return true;};
  const water={kind:new Uint8Array(n),depth:new Float32Array(n),shore:new Float32Array(n)},ink=polish?new Float32Array(n):null;let refined=0;
  for(let y=0;y<source.rows;y++){for(let x=0;x<source.cols;x++){const i=y*source.cols+x,o=i*9,X=x0+x/source.detail,Y=y0+y/source.detail;
  if(ink)ink[i]=chartInk(known,W,H,X,Y);if(!allow(X,Y)){if(source.vertices[o+8]<=1.5){water.kind[i]=+(source.vertices[o+7]<.5);water.depth[i]=Math.max(0,.12-source.vertices[o+3]);water.shore[i]=Math.abs(source.vertices[o+7]-.5)*.1;if(polish)source.vertices[o+8]=1;}continue;}
