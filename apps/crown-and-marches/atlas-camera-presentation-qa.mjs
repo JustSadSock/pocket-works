@@ -98,7 +98,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
  }catch(e){report.push({engine,passed:false,error:String(e.stack||e)});save();}
  finally{await browser?.close();}
 }
-const failures=report.filter(r=>r.candidate&&!r.passed);
+const failures=report.filter(r=>r.passed===false);
 report.push({phase:'aggregate',passed:failures.length===0,engines:['chromium','webkit'],candidates,failures:failures.map(r=>({engine:r.engine,candidate:r.candidate,errors:r.errors}))});
 save();
 assert.equal(failures.length,0,'Camera Presentation QA failed: '+JSON.stringify(failures.map(r=>({engine:r.engine,candidate:r.candidate,errors:r.errors,motion:r.motion}))));
