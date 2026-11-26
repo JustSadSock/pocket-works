@@ -1,9 +1,27 @@
-import {readFileSync,writeFileSync} from 'node:fs';import {join} from 'node:path';import {build,pose,deform} from './core.mjs';import {part,push,normals} from './hybrid-human.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {resolveProfile} from './morphology.mjs';
+import {readFileSync,writeFileSync} from 'node:fs';import {join} from 'node:path';import {build,pose,deform} from './core.mjs';import {part,push,normals,weights} from './hybrid-human.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {resolveProfile} from './morphology.mjs';
 import {repairElephant} from './elephant-strain-v7.mjs';
 import {segmentElephant} from './elephant-segment-v8.mjs';
 const out=process.env.CHARACTER_EVIDENCE,reg=JSON.parse(readFileSync(new URL('animal-morphs.json',import.meta.url))),provenance=JSON.parse(readFileSync(join(out,'animal-source-provenance.json'))),report=[];
 const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),norm=a=>Math.hypot(...a);
 const bounds=parts=>parts.reduce((b,p)=>{for(let i=0;i<p.positions.length;i++) {let k=i%3;b[k][0]=Math.min(b[k][0],p.positions[i]);b[k][1]=Math.max(b[k][1],p.positions[i])}return b},[[Infinity,-Infinity],[Infinity,-Infinity],[Infinity,-Infinity]]);
+function attachSurfaceContacts(m){
+ const H=m.spec.morphology.height,rows=[];
+ for(const c of m.contacts){const j=m.joints[c.joint],candidates=[];
+  for(const p of m.parts)for(let i=0;i<p.positions.length/3;i++){
+   const w=weights(p,i).reduce((a,[id,x])=>a+(id===c.joint?x:0),0);if(w<.10)continue;
+   const v=p.positions.slice(i*3,i*3+3);if(norm(sub(v,j.position))<H*.17)candidates.push({v,w,part:p.name,index:i});
+  }
+  if(!candidates.length)throw Error('No source surface vertices bound to '+j.name);
+  const low=Math.min(...candidates.map(x=>x.v[1])),sole=candidates.filter(x=>x.v[1]<=low+H*.012);
+  if(sole.length<3)throw Error('Insufficient actual sole samples for '+j.name);
+  const center=sole.reduce((a,x)=>a.map((v,k)=>v+x.v[k]/sole.length),[0,0,0]);
+  rows.push({c,j,center,low,sole});
+ }
+ const ground=Math.min(...rows.map(x=>x.low));
+ for(const x of rows){x.c.local=sub(x.center,x.j.position);x.c.groundY=ground;x.c.surfaceContact=true;x.c.surfaceVertexCount=x.sole.length;x.c.sourceParts=[...new Set(x.sole.map(v=>v.part))]}
+ m.spec.groundY=ground;m.spec.gaitDuty=.76;m.spec.gaitStride=H*.105;m.spec.swingHeight=.045;
+ return {ground,feet:rows.map(x=>({joint:x.j.name,vertices:x.sole.length,groundY:x.low,contactLocal:x.c.local,parts:x.c.sourceParts}))};
+}
 function bind(v,m){let hits=[];for(let j of m.joints){if(j.parent<0)continue;let a=m.joints[j.parent].position,b=j.position,d=sub(b,a),t=clamp(dot(sub(v,a),d)/Math.max(1e-9,dot(d,d)),0,1),dist=norm(sub(v,add(a,mul(d,t))));hits.push({j:j.id,parent:j.parent,t,dist})}hits.sort((a,b)=>a.dist-b.dist);let ws=[];for(let h of hits.slice(0,3)){let w=1/Math.max(.025,h.dist)**3;ws.push([h.j,w*h.t],[h.parent,w*(1-h.t)])}return ws}
 // V6: retain the source surface exactly. Smooth semantic chain weights
 // on source adjacency, rather than blending arbitrary nearest bones from
@@ -45,7 +63,7 @@ function elephantRebind(model){
  candidate.spec.sourceAdapter='V6 same surface, side-specific chain binding and local adjacency smoothing; unapproved';
  return candidate;
 }
-for(let family of process.env.CHARACTER_V8_FOCUS==='1'?['elephant']:['horse','elephant']){
+for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','elephant']){
  let source=JSON.parse(readFileSync(join(out,'animal-source-'+family+'.json'))),baseBounds=bounds(source.parts),base=build({...resolveProfile(reg,family,'base'),anatomy:'v4'}),targetBounds=bounds(base.parts);
  for(let name of ['base',family==='horse'?'draft':'massive',family==='horse'?'courser':'light']){
   let spec={...resolveProfile(reg,family,name),anatomy:'v4'},m=build(spec),bb=bounds(m.parts),t=performance.now();m.parts=source.parts.map(src=>{let p=part(src.name,src.color,'body');for(let i=0;i<src.positions.length;i+=3){let v=src.positions.slice(i,i+3),u=v.map((x,k)=>(x-baseBounds[k][0])/Math.max(1e-7,baseBounds[k][1]-baseBounds[k][0])),q=u.map((x,k)=>bb[k][0]+x*(bb[k][1]-bb[k][0])); // nonuniform anatomical template warp, continuous source topology
@@ -53,14 +71,14 @@ for(let family of process.env.CHARACTER_V8_FOCUS==='1'?['elephant']:['horse','el
     q[0]*=1+(chest-1)*Math.max(0,1-Math.abs(front-.5)*3)*Math.max(0,1-Math.abs(height-.62)*3);
     q[1]+=((neck-1)*.12*spec.morphology.height)*Math.max(0,(front-.6)/.4)*Math.max(0,(height-.55)/.45);
     push(p,q,bind(q,m))}p.indices=src.indices.slice();return normals(p)});
-  m.spec.provenance=[provenance[family]];m.spec.sourceAdapter='experimental nearest-segment skinning of decimated CC0 mesh';m.spec.budget.maxBytes=32000000;m.statistics={triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),joints:m.joints.length};
+  m.spec.provenance=[provenance[family]];m.spec.sourceAdapter='experimental nearest-segment skinning of decimated CC0 mesh';m.spec.budget.maxBytes=32000000;if(family==='elephant'){m.spec.motionRevision='v9';m.spec.contactCorrection='path-v9';m.spec.style='low-poly';m.surfaceContacts=attachSurfaceContacts(m)}m.statistics={triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),joints:m.joints.length};
   let key='source-'+family+'-'+name;writeFileSync(join(out,key+'.glb'),glb(m));writeFileSync(join(out,key+'.spec.json'),JSON.stringify(m.spec,null,2));for(let view of ['front','side','three-quarter'])writeFileSync(join(out,key+'-'+view+'.svg'),preview(m,{view,neutral:true,rotations:m.joints.map(()=>[0,0,0,1])}).svg);
-  if(family==='elephant'&&process.env.CHARACTER_V8_FOCUS==='1'){
+  if(family==='elephant'&&process.env.CHARACTER_V9_FOCUS==='1'){
     const r=segmentElephant(m,{name,out,write:(file,data)=>writeFileSync(join(out,file),data)});
-    writeFileSync(join(out,'source-v8-elephant-'+name+'-segmentation.json'),JSON.stringify(r.report,null,2));
-    writeFileSync(join(out,'source-v8-elephant-'+name+'-segmented.glb'),glb(r.model));
-    if(name==='base')writeFileSync(join(out,'source-v8-elephant-active.glb'),glb(r.active));
-    console.log(JSON.stringify({name,before:r.report.before,after:r.report.after,forbidden:r.report.forbidden,accepted:r.report.approvedTechnical}));
+    writeFileSync(join(out,'source-v9-elephant-'+name+'-segmentation.json'),JSON.stringify(r.report,null,2));
+    writeFileSync(join(out,'source-v9-elephant-'+name+'-segmented.glb'),glb(r.model));
+    if(name==='base')writeFileSync(join(out,'source-v9-elephant-active.glb'),glb(r.active));
+    console.log(JSON.stringify({name,surfaceContacts:m.surfaceContacts,before:r.report.before,after:r.report.after,forbidden:r.report.forbidden,accepted:r.report.approvedTechnical,selectedConfig:r.report.selectedConfig}));
   }else if(family==='elephant'){
     // Keep B's original source topology; C is a bounded, procedural
     // proportion study of the same fitted anatomical base, not another asset.
