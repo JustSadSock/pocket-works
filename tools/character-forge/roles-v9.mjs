@@ -9,7 +9,7 @@ const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=
 const J=(m,n)=>{const j=m.joints.find(x=>x.name===n);if(!j)throw Error('Missing joint '+n);return j};
 function addPart(m,name,color,kind,region=name){const p=part(name,color,kind==='metal'?'equipment':'clothing');p.layer=4;p.region=region;p.material={kind,roughness:profiles[kind]?.roughness??(kind==='wood'?.82:.72),metallic:profiles[kind]?.metallic??0};m.parts.push(p);return p}
 function grid(p,rows,cols){for(let r=0;r<rows-1;r++)for(let c=0;c<cols-1;c++){let a=r*cols+c,b=a+1;p.indices.push(a,b,b+cols,a,b+cols,a+cols)}return p}
-function finish(p,thickness=.004){if(thickness)sewLining(p,thickness);return normals(p)}
+function finish(p,thickness=.004){if(thickness)sewLining(p,thickness);p.thickness=thickness;return normals(p)}
 function tube(m,name,stations,color,kind='leather',sides=12,thickness=.004){
  const p=addPart(m,name,color,kind),centers=stations.map(s=>s.p);
  for(let r=0;r<stations.length;r++){
@@ -115,7 +115,7 @@ function pteruges(m,roman){
  for(let i=0;i<7;i++){const k=front[Math.floor(i*(front.length-1)/6)],a=panelAt(tunic,2,.05,k),b=panelAt(tunic,2,.22,k),c=panelAt(tunic,1,.0,k),ws=a.ws;
   const p=addPart(m,(roman?'roman leather pteryx ':'infantry belt tongue ')+i,[.24,.12,.055],'leather','belt');
   const width=.028;for(const v of [a.v.map((x,j)=>x+(j===0?-width:0)),a.v.map((x,j)=>x+(j===0?width:0)),c.v.map((x,j)=>x+(j===0?width:0)),c.v.map((x,j)=>x+(j===0?-width:0))])push(p,v,ws);
-  p.indices=[0,1,2,0,2,3];normals(p);
+  p.indices=[0,1,2,0,2,3];finish(p,.003);
   rivet(m,'pteryx stud '+i,mix(a.v,c.v,.18),ws,.004,[.55,.39,.17]);
  }
 }
@@ -140,7 +140,7 @@ function merchantKit(m){
 }
 function artisanKit(m){
  const tunic=m.parts.find(p=>p.name==='tunic'),hip=J(m,'spine03'),root=J(m,'root');
- for(const side of ['L','R']){const elbow=J(m,'lowerarm01.'+side),wrist=J(m,'wrist.'+side),p=addPart(m,'rolled linen sleeve cuff '+side,[.62,.52,.36],'cloth','sleeve');tube(m,'rolled cuff seam '+side,[{p:mix(elbow.position,wrist.position,.72),r:.047,ws:[[elbow.id,.4],[wrist.id,.6]]},{p:mix(elbow.position,wrist.position,.84),r:.049,ws:[[elbow.id,.2],[wrist.id,.8]]},{p:wrist.position,r:.045,ws:[[wrist.id,1]]}],[.62,.52,.36],'cloth',12,.003)}
+ for(const side of ['L','R']){const elbow=J(m,'lowerarm01.'+side),wrist=J(m,'wrist.'+side);tube(m,'rolled linen sleeve cuff '+side,[{p:mix(elbow.position,wrist.position,.72),r:.047,ws:[[elbow.id,.4],[wrist.id,.6]]},{p:mix(elbow.position,wrist.position,.84),r:.049,ws:[[elbow.id,.2],[wrist.id,.8]]},{p:wrist.position,r:.045,ws:[[wrist.id,1]]}],[.62,.52,.36],'cloth',12,.003)}
  const apron=m.parts.find(p=>p.name==='leather work apron');if(apron){for(const side of [-1,1])tube(m,'apron shoulder strap '+side,[{p:[side*.075,hip.position[1]+.27,.07],r:.013,ws:[[J(m,'spine01').id,.6],[hip.id,.4]]},{p:[side*.12,hip.position[1]+.12,.12],r:.013,ws:[[hip.id,1]]}],[.18,.10,.055],'leather',8,.002)}
  const x=hip.position[0]+.12,y=hip.position[1]-.02,z=hip.position[2]+.11;
  tube(m,'wooden mallet handle',[{p:[x,y-.12,z],r:.012,ws:[[hip.id,1]]},{p:[x,y+.025,z],r:.012,ws:[[hip.id,1]]}],[.32,.19,.10],'wood',8,.002);
