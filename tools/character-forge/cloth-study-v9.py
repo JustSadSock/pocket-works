@@ -27,6 +27,8 @@ def inside(t,p):
     return votes>=2
 def depth_samples(ta,va,fa,tb,vb,fb,pairs):
     maximum=0.0;samples=0;inside_count=0
+    if len(pairs)>24:
+        pairs=[pairs[round(k*(len(pairs)-1)/23)] for k in range(24)]
     for ia,ib in pairs:
         triA=[va[i] for i in fa[ia]];triB=[vb[i] for i in fb[ib]]
         ca,cb=centroid(triA),centroid(triB)
@@ -60,10 +62,11 @@ for frame in data["frames"]:
             # Actual triangle intersection, not AABB-only contact.
             hits=ta.overlap(tb)
             if not hits:continue
-            visViews=[]
+            visViews=[];visibleHits=[]
             for view,sets in viewSets.items():
-                if any(x in sets[i] for x,y in hits) and any(y in sets[j] for x,y in hits):visViews.append(view)
-            depth,samples,insideCount=depth_samples(ta,va,fa,tb,vb,fb,hits)
+                matched=[(x,y) for x,y in hits if x in sets[i] and y in sets[j]]
+                if matched:visViews.append(view);visibleHits.extend(matched)
+            depth,samples,insideCount=depth_samples(ta,va,fa,tb,vb,fb,visibleHits if visibleHits else hits)
             cls=classify(a,b,visViews,depth)
             row={"a":a["name"],"b":b["name"],"aLayer":a["layer"],"bLayer":b["layer"],"aRegion":a["region"],"bRegion":b["region"],"trianglePairs":len(hits),"visibilityViews":visViews,"depthEstimateMetres":depth,"depthSamples":samples,"insideSamples":insideCount,"classification":cls}
             pairsOut.append(row)
