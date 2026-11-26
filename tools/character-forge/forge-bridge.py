@@ -16,7 +16,7 @@ inputs=json.loads(os.environ['ART_FORGE_INPUTS']);outputs=json.loads(os.environ[
 bpy.ops.import_scene.gltf(filepath=inputs['asset-forge/candidate.glb'])
 assert any(o.type=='ARMATURE' for o in bpy.context.scene.objects)
 assert len(bpy.data.actions)>0
-bpy.ops.wm.save_as_mainfile(filepath=outputs['editable'])
+bpy.ops.wm.save_as_mainfile(filepath=outputs['editable'],compress=False)
 bpy.ops.export_scene.gltf(filepath=outputs['model'],export_format='GLB',export_animations=True)
 """)
     manifest={"version":2,"runtimeRoot":"public","index":"public/forge-index.json","jobs":[{"id":"character-roundtrip","adapter":"blender","source":"asset-forge/import.py","inputs":["asset-forge/candidate.glb"],"seed":17,"parameters":{},"outputs":{"model":"public/character.glb","editable":"asset-forge/generated/character.blend"},"budget":{"maxBytes":32000000,"maxTriangles":1000000,"maxTextureSize":4096},"validation":{"requireArmature":True,"requireAnimation":True},"provenance":{"author":"Pocket Works","license":"original","origin":"Universal Character Forge research"}}]}

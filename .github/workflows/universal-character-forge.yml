@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: character-forge-${{ github.ref }}
+  group: character-forge-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 jobs:
   core:
