@@ -18,7 +18,7 @@ function geodesic(adj,seeds){
 function segmented(source,{passes=4,selfWeight=.45,neighborWeight=.55,geoScale=.35,distanceScale=.065}={}){
  const m=structuredClone(source),J=n=>m.joints.find(j=>j.name===n),groupNames=['body','head','trunk','tail','foreL','foreR','hindL','hindR'],groups=Object.fromEntries(groupNames.map(k=>[k,[]]));
  for(const j of m.joints){const k=/^(fore[LR]|hind[LR])-/.exec(j.name)?.[1]??(j.name.startsWith('trunk-')?'trunk':j.name.startsWith('tail-')?'tail':/^(head|neck|ear)/.test(j.name)?'head':'body');groups[k].push(j)}
- const H=m.spec.morphology.height,head=J('head'),neck=J('neck'),chest=J('chest'),tail=J('tail-0'),hip=J('body'),regions=[],forbidden={crossLimb:0,tailFoot:0,earFore:0,trunkShoulder:0};
+ const H=m.spec.morphology.height,head=J('head'),neck=J('neck'),chest=J('chest'),tail=J('tail-0'),hip=J('body'),regions=[],vertexRegions=[],forbidden={crossLimb:0,tailFoot:0,earFore:0,trunkShoulder:0};
  function masks(v){
    const [x,y,z]=v,ax=Math.abs(x),side=x<0?'L':'R',front=z>(J('foreL-scapula').position[2]+J('hindL-hip').position[2])/2;
    const foot=ramp(y,.65*H,.45*H),leg=foot*ramp(ax,.04*H,.12*H);
@@ -98,12 +98,12 @@ export function segmentElephant(source,{write,out,name}){
   {passes:2,selfWeight:.72,neighborWeight:.28},
   {passes:3,selfWeight:.76,neighborWeight:.24}
  ]:[{passes:4,selfWeight:.45,neighborWeight:.55}];
- let chosen=null,bestRows=null,bestStats=null;
+ let chosen=null,bestRows=null,bestStats=null,chosenConfig=null;
  for(const config of configs){
   const candidate=segmented(source,config),rows=compare(candidate.m,candidate.vertexRegions),stats=worst(rows),forbidden=Object.values(candidate.forbidden).every(v=>v===0);
   const accepted=stats.max<=before.max&&stats.p95<=before.p95&&stats.collapsed<=before.collapsed&&forbidden;
   trials.push({config,stats,forbidden:candidate.forbidden,accepted,regions:rows.map(r=>({phase:r.phase,regions:r.regions}))});
-  if(accepted&&(!bestStats||stats.p95<bestStats.p95||(stats.p95===bestStats.p95&&stats.max<bestStats.max))){chosen=candidate;bestRows=rows;bestStats=stats}
+  if(accepted&&(!bestStats||stats.p95<bestStats.p95||(stats.p95===bestStats.p95&&stats.max<bestStats.max))){chosen=candidate;bestRows=rows;bestStats=stats;chosenConfig=config}
  }
  const selected=chosen??sourceBinding,m=selected.m,b=bestRows??compare(m,selected.vertexRegions),after=bestStats??worst(b),approved=!!chosen;
  const active=approved?m:source;
@@ -113,16 +113,16 @@ export function segmentElephant(source,{write,out,name}){
      for(let i=0;i<q.parts.length;i++){const p=q.parts[i];p.positions=deform(x,x.parts[i],w).flat();normals(p);p.vertexColors=Array.from(row.heat[i]).flatMap(t=>[.13+.77*t,.35*(1-t)+.035,.44*(1-t)+.025])}
      for(const view of ['side','front'])write('source-v9-elephant-'+label+'-'+view+'-strain.png',raster(q,{view,size:768}).png);
    }
-   mkdirSync(join(out,'source-v9-elephant-motion'),{recursive:true});const frames=[],contact=[],ground=[],stride=m.spec.gaitStride??m.spec.morphology.height*.105;
-   for(let i=0;i<=24;i++){const phase=i/24,q=structuredClone(m),w=pose(m,'walk',phase);for(let j=0;j<q.parts.length;j++){q.parts[j].positions=deform(m,m.parts[j],w).flat();normals(q.parts[j])}frames.push(q);contact.push({phase,contacts:m.contacts.map(c=>({joint:m.joints[c.joint].name,point:rotate(w[c.joint].q,c.local).map((x,k)=>x+w[c.joint].p[k])}))});ground.push({phase,feet:measureSurfaceFeet(m,q,phase,stride)})}
+   mkdirSync(join(out,'source-v9-elephant-motion'),{recursive:true});const frames=[],contact=[],ground=[],stride=active.spec.gaitStride??active.spec.morphology.height*.105;
+   for(let i=0;i<=24;i++){const phase=i/24,q=structuredClone(active),w=pose(active,'walk',phase);for(let j=0;j<q.parts.length;j++){q.parts[j].positions=deform(active,active.parts[j],w).flat();normals(q.parts[j])}frames.push(q);contact.push({phase,contacts:active.contacts.map(c=>({joint:active.joints[c.joint].name,point:rotate(w[c.joint].q,c.local).map((x,k)=>x+w[c.joint].p[k])}))});ground.push({phase,feet:measureSurfaceFeet(active,q,phase,stride)})}
    const bounds=commonBounds(frames,'side');for(let i=0;i<frames.length;i++)write('source-v9-elephant-motion/'+String(i).padStart(2,'0')+'.png',raster(frames[i],{view:'side',size:640,bounds}).png);
    write('source-v9-elephant-contact.json',JSON.stringify({candidate:approved?'segmented':'source-fallback',frames:contact,surfaceMeasurements:ground,notes:'Measured from actual deformed mesh vertices weighted to foot joints; world root travel included.'},null,2));
  }
- return {model:m,active,report:{name,regions:selected.regions,forbidden:selected.forbidden,before,after,approvedTechnical:approved,selectedConfig:chosen?configs.find(c=>JSON.stringify(c)===JSON.stringify(trials.find(t=>t.accepted&&t.stats.p95===bestStats.p95&&t.stats.max===bestStats.max)?.config))??null:null,trials,regionComparison:{source:a.map(({heat,...x})=>x),segmented:b.map(({heat,...x})=>x)},restSurfaceUnchanged:m.parts.every((p,i)=>JSON.stringify(p.positions)===JSON.stringify(source.parts[i].positions)&&JSON.stringify(p.indices)===JSON.stringify(source.parts[i].indices)),note:'Independent region/graph binding; no blending previous rigs. Massive uses a bounded smoothing sweep; Source retained if no strict non-regression candidate.'}};
+ return {model:m,active,report:{name,regions:selected.regions,forbidden:selected.forbidden,before,after,approvedTechnical:approved,selectedConfig:chosenConfig,trials,regionComparison:{source:a.map(({heat,...x})=>x),segmented:b.map(({heat,...x})=>x)},restSurfaceUnchanged:m.parts.every((p,i)=>JSON.stringify(p.positions)===JSON.stringify(source.parts[i].positions)&&JSON.stringify(p.indices)===JSON.stringify(source.parts[i].indices)),note:'Independent region/graph binding; no blending previous rigs. Massive uses a bounded smoothing sweep; Source retained if no strict non-regression candidate.'}};
 }
 function measureSurfaceFeet(model,deformed,phase,stride){
- const duty=.76,root=typeof model.spec.gaitStride==='number'?model.spec.gaitStride:stride;
- return (model.contacts??[]).map(c=>{const p=model.parts,base=model.joints[c.joint].position,local=cycle((phase+(c.phase??0))%1),stance=local<duty,points=[];
+ const duty=model.spec.gaitDuty??.76;
+ return (model.contacts??[]).map(c=>{const p=model.parts,base=model.joints[c.joint].position,local=((phase+(c.phase??0))%1+1)%1,stance=local<duty,points=[];
   for(let pi=0;pi<p.length;pi++){const src=p[pi],now=deformed.parts[pi];for(let i=0;i<src.positions.length/3;i++){const w=weights(src,i).reduce((s,[j,v])=>s+(j===c.joint?v:0),0);if(w>.18){const v=now.positions.slice(i*3,i*3+3);if(Math.hypot(v[0]-base[0],v[2]-base[2])<model.spec.morphology.height*.17)points.push(v)}}}
   if(!points.length)return {joint:model.joints[c.joint].name,stance,vertices:0};
   const low=Math.min(...points.map(v=>v[1])),sole=points.filter(v=>v[1]<=low+model.spec.morphology.height*.012),center=sole.reduce((a,v)=>a.map((x,k)=>x+v[k]/sole.length),[0,0,0]),anchor=base.map((x,k)=>x+c.local[k]),expected=[anchor[0],(c.groundY??model.spec.groundY??0),anchor[2]+stride*(phase-local)];
