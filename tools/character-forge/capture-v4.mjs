@@ -55,3 +55,64 @@ report.staticGate=stat.maxDirectionError<.01;report.phaseGate=phaseGate;
 if(phaseGate){let comparison=[];for(let f=0;f<16;f++){let phase=f/16,w=worlds[a+Math.round((b-a)*phase)],r=transfer(w);render(w,'cycle-'+String(f).padStart(2,'0'),r);comparison.push({phase,rootCaptureMetres:mul(basis(sub(w[hips].p,first[hips].p)),scale),sourceFootRelative:r.sourceFootRelative,retargetFootRelative:r.retargetFootRelative,sourceGap:r.sourceGap,targetGap:r.targetGap,errors:r.errors,rotations:r.rotations})}report.fullCycle=true;report.comparison=comparison}
 report.limitations='Direct segment directions preserve swing, not exact axial twist, toe orientation or local source bone roll. Target bone lengths and pelvis width differ. No contact solver; full cycle withheld on failed static/sample gate.';
 write('capture-v4-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify({static:report.static,phases:report.phases.map(({errors,...r})=>r),fullCycle:report.fullCycle}));
+
+// V5 orientation candidate. The approved v4 directional solve above remains
+// untouched. Transport source secondary axes from BVH bind channels, then
+// recover signed axial twist around the measured segment direction.
+const bindWorld=world(Array(frames[0].length).fill(0));
+const plane=(v,d)=>sub(v,mul(d,dot(v,d)));
+function axial(source,child,w,fallback=null){
+ const original=child===null?fallback:sub(bindWorld[child].p,bindWorld[source].p);
+ const primary=child===null?rotate(w[source].q,original):sub(w[child].p,w[source].p);
+ const d0=unit(basis(original)),d=unit(basis(primary));
+ const helper=axes.slice().sort((a,b)=>Math.abs(dot(a,unit(original)))-Math.abs(dot(b,unit(original))))[0];
+ const ref=unit(plane(basis(helper),d0));
+ const transported=unit(plane(rotate(swing(d0,d),ref),d));
+ const observed=unit(plane(basis(rotate(w[source].q,helper)),d));
+ if(norm(observed)<.5||norm(transported)<.5)return {direction:d,twist:0,valid:false};
+ return {direction:d,twist:Math.atan2(dot(d,cross(transported,observed)),dot(transported,observed)),valid:true};
+}
+const feet=[['R','Right',rf],['L','Left',lf]].map(([tag,name,source])=>({joint:by(tag+'-foot').id,source,child:optional(name+'ToeBase',name+'Toe'),rest:[0,0,1]}));
+function transferOrientation(w){
+ const dirMap=new Map(mappings.map(x=>[x.joint,x])),footMap=new Map(feet.map(x=>[x.joint,x]));
+ const globals=[],rotations=[],axesReport=[];
+ const old=transfer(w);
+ for(const j of m.joints){
+   const pa=j.parent<0?[0,0,0,1]:globals[j.parent],x=dirMap.get(j.id),f=footMap.get(j.id);
+   let q=j.parent<0?old.rotations[j.id]:pa;
+   if(x||f){
+     const v=x??f,ax=axial(v.source,x?v.sourceChild:f.child,w,forward);
+     q=qmul(quat(ax.direction,ax.twist),swing(v.rest,ax.direction));
+     axesReport.push({joint:j.name,source:joints[v.source].name,twistDegrees:ax.twist*180/Math.PI,valid:ax.valid,directionError:angle(rotate(q,v.rest),ax.direction),toeReference:f?f.child!==null:undefined});
+   }
+   globals.push(q);rotations.push(qmul(inv(pa),q));
+ }
+ const ret=poseFrom(m,rotations);
+ const directionErrors=mappings.map(x=>({joint:m.joints[x.joint].name,error:angle(sub(ret[x.child].p,ret[x.joint].p),basis(sub(w[x.sourceChild].p,w[x.source].p)))}));
+ return {rotations,ret,axesReport,maxDirectionError:Math.max(...directionErrors.map(x=>x.error))};
+}
+const orientationReport={clip:'35_01',method:'v4 swing plus signed source secondary-axis twist, separate foot direction',static:null,frames:[],contactMetrics:[],limitations:['Source twist referenced to zero-channel BVH bind pose; target anatomical roll calibration remains unapproved.','Source foot contact is estimated from toe/ankle height; no IK or artificial locking.','Root travel is measured in metres and applied to diagnostic trajectories; root-centred preview retains fixed framing.']};
+const static5=transferOrientation(rest);orientationReport.static={maxDirectionError:static5.maxDirectionError,axes:static5.axesReport};
+if(phaseGate){
+ for(let i=0;i<16;i++){
+   const phase=i/16,w=worlds[a+Math.round((b-a)*phase)],v=transferOrientation(w),root=mul(basis(sub(w[hips].p,first[hips].p)),scale),old=transfer(w);
+   const positions=feet.map(f=>{
+     const c=m.contacts.find(c=>c.joint===f.joint),current=v.ret[f.joint],previous=old.ret[f.joint],offset=c?.local??[0,0,0];
+     const source=mul(basis(sub(w[f.child??f.source].p,first[hips].p)),scale);
+     return {name:m.joints[f.joint].name,source,baseline:add(add(previous.p,rotate(previous.q,offset)),root),candidate:add(add(current.p,rotate(current.q,offset)),root)};
+   });
+   orientationReport.frames.push({phase,root,maxDirectionError:v.maxDirectionError,axes:v.axesReport,positions});
+   for(const view of ['front','side'])write('orientation-v5-'+String(i).padStart(2,'0')+'-'+view+'.svg',preview(m,{view,rotations:v.rotations,neutral:true,skeleton:true,fixedBounds:[-.95,.95,-.35,1.95]}).svg);
+ }
+ for(const f of feet){
+   const name=m.joints[f.joint].name,seq=orientationReport.frames.map(r=>r.positions.find(x=>x.name===name)),minHeight=Math.min(...seq.map(p=>p.source[1]));
+   let segments=0,baselineMetres=0,candidateMetres=0,sourceMetres=0;
+   const horizontal=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
+   for(let i=1;i<seq.length;i++)if(seq[i-1].source[1]<minHeight+.035&&seq[i].source[1]<minHeight+.035){
+     segments++;sourceMetres+=horizontal(seq[i-1].source,seq[i].source);baselineMetres+=horizontal(seq[i-1].baseline,seq[i].baseline);candidateMetres+=horizontal(seq[i-1].candidate,seq[i].candidate);
+   }
+   orientationReport.contactMetrics.push({name,sourceContactSegments:segments,sourceMetres,baselineMetres,candidateMetres});
+ }
+}
+write('orientation-v5-report.json',JSON.stringify(orientationReport,null,2));
+console.log(JSON.stringify({orientationV5:{static:orientationReport.static.maxDirectionError,frames:orientationReport.frames.length,contactMetrics:orientationReport.contactMetrics}}));
