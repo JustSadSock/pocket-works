@@ -15,6 +15,7 @@ on:
       - "shared/capabilities/spatial-audio.js"
       - "shared/capabilities/continuous-audio.js"
       - "shared/capabilities/virtual-audio.js"
+      - "shared/capabilities/score-director.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
   pull_request:
@@ -25,6 +26,7 @@ on:
       - "shared/capabilities/spatial-audio.js"
       - "shared/capabilities/continuous-audio.js"
       - "shared/capabilities/virtual-audio.js"
+      - "shared/capabilities/score-director.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
 
@@ -98,7 +100,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -162,6 +164,29 @@ jobs:
         with:
           name: audio-asset-forge-smoke-${{ github.run_id }}
           path: .audio-forge-smoke/generated/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render musical identity states
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/score-states.mjs .audio-score-states
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-score-states/manifest.json --base .audio-score-states
+          node tools/audio-forge/finalize-score.mjs .audio-score-states
+          test "$(find .audio-score-states/states -name '*.wav' | wc -l)" -eq 4
+          test -s .audio-score-states/state-journey.wav
+
+      - name: Upload musical identity auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-score-states-${{ github.run_id }}
+          path: |
+            .audio-score-states/states/
+            .audio-score-states/state-journey.wav
+            .audio-score-states/score-graph.json
+            .audio-score-states/score-metrics.json
+            .audio-score-states/manifest.json
           if-no-files-found: error
           retention-days: 7
 
