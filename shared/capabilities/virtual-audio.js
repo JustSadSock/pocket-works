@@ -1,6 +1,7 @@
 import {spatialProfile,createSpatialMixer} from './spatial-audio.js';
 import {createDynamicEmitter,createAdaptiveMusic} from './continuous-audio.js';
 import {createSoundFamilyPlayer} from './sound-family.js';
+import {createScoreDirector} from './score-director.js';
 const bounded=(value,fallback,min,max,label)=>{
  const n=value??fallback;
  if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)throw Error('Invalid '+label);
@@ -86,22 +87,24 @@ export function planVoiceBudget({total=24,events=8,music=4}={}){
 }
 // Optional integration facade. Enforces fixed quotas by construction, without
 // allowing any one category to starve a reserved music or critical event slot.
-export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,volume=.7}={}){
+export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],score,bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,volume=.7}={}){
  const quota=planVoiceBudget(budget);
  if(!Array.isArray(stems)||stems.length>quota.music)throw Error('Music stems exceed voice reservation');
+ if(score!==undefined&&(!score||stems.length||quota.music<2))throw Error('Horizontal score requires two reserved music slots and no vertical stems');
  const musicCount=stems.length;
  let mixer,world,events,music,closed=false;
  try{
   mixer=createSpatialMixer({context,destination,volume});
   world=createVirtualAudioWorld({context,destination:mixer.bus('world'),maxVoices:quota.continuous,maxSources});
   events=createSoundFamilyPlayer({context,destination:mixer.bus('events'),families,fetcher,random,maxVoices:quota.events,maxBuffers});
-  if(stems.length)music=createAdaptiveMusic({context,destination:mixer.bus('music'),stems,bpm,beatsPerBar});
+  if(score)music=createScoreDirector({context,destination:mixer.bus('music'),graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,volume:score.volume});
+  else if(stems.length)music=createAdaptiveMusic({context,destination:mixer.bus('music'),stems,bpm,beatsPerBar});
  }catch(e){music?.destroy();events?.destroy();world?.destroy();mixer?.destroy();throw e;}
  return {
   world,events,music,quota,mixer,
   destroy(){if(closed)return;closed=true;music?.destroy();events.destroy();world.destroy();mixer.destroy();},
   get stats(){
-   const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=music?.state.active?musicCount:0;
+   const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=score?(music?.state.voices??0):(music?.state.active?musicCount:0);
    return {continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending};
   }
  };
