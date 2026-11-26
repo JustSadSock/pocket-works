@@ -47,7 +47,24 @@ def trajectories(motion,rows):
     for k,(name,_) in enumerate(selected[:27]):
         x=40+(k//9)*620;y=810+(k%9)*26;d.rectangle((x,y+4,x+13,y+17),fill=colors[k%len(colors)]);d.text((x+20,y),name[:52],font=small,fill="#333b35")
     im.save(folder/(motion+"-trajectories.png"))
-for motion,rows in audit.get("samples",{}).items():trajectories(motion,rows)
+for motion,rows in audit.get("samples",{}).items():
+    trajectories(motion,rows)
+    contacts=[r.get("stance",[]) for r in rows]
+    if not any(contacts):continue
+    im=Image.new("RGB",(1920,1080),"#e9e7df");dr=ImageDraw.Draw(im)
+    dr.text((40,25),motion+" — measured boot sole height relative to calibrated ground (cm)",font=font,fill="#252a29")
+    for j in range(2):
+        x0=100;y0=260+j*430;w=1680;scale=35
+        dr.text((x0,y0-160),("Right" if j==0 else "Left")+" boot — dark: before / blue: after; shaded: support",font=font,fill="#303931")
+        dr.line((x0,y0,x0+w,y0),fill="#333333",width=2)
+        for i,c in enumerate(contacts):
+            if len(c)<=j or "afterSoleOffset" not in c[j]:continue
+            row=c[j];x=x0+i*w/max(1,len(rows)-1)
+            if row["support"]:dr.rectangle((x-8,y0-120,x+8,y0+120),fill="#d4dccb")
+            for key,color in (("beforeSoleOffset","#9d5548"),("afterSoleOffset","#245d74")):
+                v=row[key]*100;y=y0-max(-110,min(110,v*scale));dr.ellipse((x-5,y-5,x+5,y+5),fill=color)
+            dr.text((x-10,y0+130),str(i),font=small,fill="#343c36")
+    im.save(folder/(motion+"-boot-contact.png"))
 # Actual original key poses with labels and no fabricated imagery.
 for motion in audit.get("samples",{}):
     groups={}

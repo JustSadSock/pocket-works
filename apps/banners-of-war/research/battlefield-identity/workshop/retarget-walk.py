@@ -39,6 +39,10 @@ if not lines[0].startswith("Frames:") or not lines[1].startswith("Frame Time:"):
 nframes=int(lines[0].split(":")[1]);frameTime=float(lines[1].split(":")[1])
 if len(lines[2:])!=nframes or not .001<frameTime<.1:raise ValueError("Invalid BVH frame data")
 count=sum(len(q["channels"]) for q in joints)
+def optional_cb(*names):
+    try:return cb(*names)
+    except ValueError:return None
+toes=[optional_cb("RightToeBase","RightToe","RightFootToe"),optional_cb("LeftToeBase","LeftToe","LeftFootToe")]
 spine=cb("Spine","LowerBack");headBone=cb("Head");shoulderBones=(cb("RightArm","RightShoulder"),cb("LeftArm","LeftShoulder"));armBones=(cb("RightForeArm"),cb("LeftForeArm"))
 def cv(v):return Vector((v.x,-v.z,v.y))*.01
 records=[]
@@ -56,7 +60,7 @@ for i,line in enumerate(lines[2:]):
             elif chn.lower().endswith("rotation"):m=m@Matrix.Rotation(math.radians(v),4,chn[0].upper())
             else:raise ValueError("Unknown BVH channel "+chn)
         matrices.append(m if q["parent"]<0 else matrices[q["parent"]]@m)
-    records.append({"frame":i,"hip":cv(matrices[ch].translation),"legs":[[cv(matrices[k].translation) for k in chain] for chain in clegs],"spine":cv(matrices[spine].translation),"head":cv(matrices[headBone].translation),"shoulders":[cv(matrices[k].translation) for k in shoulderBones],"elbows":[cv(matrices[k].translation) for k in armBones]})
+    records.append({"frame":i,"hip":cv(matrices[ch].translation),"legs":[[cv(matrices[k].translation) for k in chain] for chain in clegs],"spine":cv(matrices[spine].translation),"head":cv(matrices[headBone].translation),"shoulders":[cv(matrices[k].translation) for k in shoulderBones],"elbows":[cv(matrices[k].translation) for k in armBones],"toes":[cv(matrices[k].translation) if k is not None else None for k in toes]})
 if len(records)<80:raise ValueError("Capture too short")
 up=Vector((0,0,1));side=sum((r["legs"][0][0]-r["legs"][1][0] for r in records),Vector((0,0,0)));side.z=0;side.normalize()
 forward=up.cross(side).normalized()
@@ -74,6 +78,15 @@ hipMean=sum(r["hip"].z for r in cycle)/len(cycle)
 rootMean=sum((r["hip"].dot(side) for r in cycle))/len(cycle)
 floor=[min(r["legs"][j][2].z for r in cycle) for j in range(2)]
 mid=[sum((r["legs"][j][2]-r["hip"]).dot(forward) for r in cycle)/len(cycle) for j in range(2)]
+def toe_pitch(row,j):
+    t=row["toes"][j]
+    if t is None:return None
+    v=t-row["legs"][j][2]
+    return math.atan2(v.z,max(.01,v.dot(forward)))
+pitchReference=[]
+for j in range(2):
+    q=[toe_pitch(row,j) for row in cycle if row["legs"][j][2].z-floor[j]<.025/scale and toe_pitch(row,j) is not None]
+    pitchReference.append(sorted(q)[len(q)//2] if q else None)
 # No mocap object visible in character render.
 audit["retarget"]={"source":str(mocap_path.name),"sha256":hashlib.sha256(raw).hexdigest(),"mapping":[[joints[v]["name"] for v in c] for c in clegs],"periodSeconds":(len(cycle)-1)*frameTime,"sourceFrameTime":frameTime,"frames":[cycle[0]["frame"],cycle[-1]["frame"]],"scale":scale,"mode":"captured pelvis, lower-body trajectories and upper-body yaw/arm swing; armed hands constrained to equipment","sourceJointNames":[q["name"] for q in joints]}
 def retarget_gait(phase):
@@ -86,9 +99,16 @@ def retarget_gait(phase):
         dest=ankles0[j]+Vector(((rel.dot(side)-(cycle[0]["legs"][j][2]-cycle[0]["hip"]).dot(side))*scale*sign,-(rel.dot(forward)-mid[j])*scale,(ankle.z-floor[j])*scale))
         preferred=basis(knee-thigh);preferred.z=0
         if preferred.length<.01:preferred=Vector((0,-1,0))
-        errors.append(limb(upper,lower,end,dest,preferred));foot_orientation(j,0)
-        stance.append({"support":ankle.z-floor[j]<.035/scale,"target":vec(dest),"actual":vec(point(end))})
+        support=ankle.z-floor[j]<.035/scale
+        p=toe_pitch(r,j)
+        # Captured toe pitch around lateral axis. In the target frame
+        # forward is -Y; sign converts the source vertical toe motion.
+        pitch=max(-.38,min(.38,-(p-pitchReference[j]))) if p is not None and pitchReference[j] is not None else 0
+        err,contact=plant_boot(j,dest,preferred,pitch,support);errors.append(err)
+        rootTravel=-(r["hip"]-cycle[0]["hip"]).dot(forward)*scale
+        contact.update({"sourceAnkleHeight":ankle.z,"sourceToePitch":p,"rootRelativeY":point(end).y,"rootTravelY":rootTravel})
+        stance.append(contact)
     sw=[max(-.09,min(.09,(r["elbows"][j]-r["shoulders"][j]).dot(forward)*scale*.4)) for j in range(2)]
     errors.extend([arm_pose(0,(.23,-.11-sw[0],-.45),roll=.07),arm_pose(1,(.07,-.32-sw[1]*.3,-.23),bend=(-sign,.04,-.65))])
-    hold_sword();lock_left()
+    hold_sword(4*math.sin(2*math.pi*phase),2*math.cos(2*math.pi*phase));lock_left()
     return errors,stance

@@ -469,12 +469,14 @@ staticContacts=inspect_contacts()
 staticPose=shield_audit()
 staticPose.update({"contacts":staticContacts,"rightWrist":vec(relative_q(R,RF)),"leftWrist":vec(relative_q(L,LF)),"gripSource":audit.get("articulatedHandSource"),"wristAngles":feet_audit()["wrists"]})
 staticBad=any(c.get("unexpected",0)>0 for c in staticContacts) or staticPose["outwardDot"]<.10 or staticPose["forwardDot"]<.35 or staticPose["handleError"]>.035
-audit["staticEquipment"]={"pass":not staticBad,"pose":staticPose,"artisticApproval":False}
+audit["staticEquipment"]={"pass":not staticBad,"pose":staticPose,"artisticApproval":False};audit["samples"]={"static-equipment":[{"phase":0,"joints":snap(),"bladeTip":vec(world_pos(R,tipLocal)),"shield":staticPose}]}
 save()
 if os.environ.get("BOW_WORKSHOP_MOTION")=="static-gear" or staticBad:
+    plan_review_frames([review_points()])
     for view in REVIEW_VIEWS:review_render("key-static-equipment",view)
     for view in ("angle45","side","top","back"):
         review_render("grip-static",view,world_pos(R,gripLocal),.58)
+        review_render("sleeve-seam",view,point(R),.44)
         review_render("shield-mounted",view,world_pos(LF,shieldCenterLocal),1.25)
     # Show the actual attached hardware without obscuring torso. Restore
     # visibility immediately. This is a diagnostic cutaway, not a render of
@@ -498,12 +500,12 @@ else:
     requested=os.environ.get("BOW_WORKSHOP_MOTION")
     motions=(requested,) if requested in ("march","strike") else ("march","strike")
 for motion in motions:
-    count=24 if motion in ("march","strike","retarget-march") else 16;samples[motion]=[];audit["samples"]=samples
+    count=24 if motion in ("march","strike","retarget-march") else 16;samples[motion]=[];audit["samples"]=samples;reviewBounds=[]
     for i in range(count):
         reset_upright();phase=i/count;errors,stance=retarget_gait(phase) if motion=="retarget-march" else attack(phase) if motion=="strike" else gait(motion,phase)
         pts=mesh_points();sc.frame_set(1);bpy.context.view_layer.update();before=mesh_points()
         row={"phase":phase,"joints":snap(),"stance":stance,"maxIKResidual":max(errors),"footContact":feet_audit(),"meshAfterFrameSet":mesh_delta(pts,before),"contacts":inspect_contacts(),"bladeTip":vec(world_pos(R,tipLocal)),"rightWristRelative":vec(relative_q(R,RF)),"leftWristRelative":vec(relative_q(L,LF)),"shield":shield_audit(),"armRelative":{b.name:vec(relative_q(b,b.parent)) for b in (RU,RF,LU,LF) if b.parent}}
-        samples[motion].append(row);save()
+        samples[motion].append(row);reviewBounds.append(review_points());save()
         review_render(motion+"-%02d"%i,"side" if motion!="strike" else "angle45",preview=True)
         row["meshAfterRender"]=mesh_delta(before,mesh_points());save()
         if row["meshAfterRender"]["max"]>.005 or row["meshAfterFrameSet"]["max"]>.005:raise ValueError("Pose lost")
@@ -535,6 +537,7 @@ for motion in motions:
         reset_upright();p=i/count
         return retarget_gait(p) if motion=="retarget-march" else attack(p) if motion=="strike" else gait(motion,p)
     import shutil
+    plan_review_frames(reviewBounds)
     for i in range(count):
         pose_at(i)
         for view in REVIEW_VIEWS:

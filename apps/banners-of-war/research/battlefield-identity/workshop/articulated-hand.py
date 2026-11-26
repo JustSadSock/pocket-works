@@ -132,7 +132,23 @@ def make_posed_glove(hand,center,axis,rad):
     # True digit positions are available for archery hook and equipment fit.
     q["jointWorld"]={k:[wrist+transform@(sp(b)-sourceWrist) for b in chain] for k,chain in digits.items()}
     q["fit"]={"scale":[sx,sy,sz],"fingerAngles":poses,"wrist":vec(wrist),"gripCenter":vec(center)}
-def imported_hook(hand):
+def imported_hook(hand,toward):
     q=posed_hands[hand.name]
     if not q.get("jointWorld"):return hand_frame(hand)[0][0]
-    return sum((q["jointWorld"][k][1].lerp(q["jointWorld"][k][2],.35) for k in ("index","middle","ring")),Vector((0,0,0)))/3
+    toward=Vector(toward).normalized();trees=[]
+    for o in q["objects"]:
+        ev=o.evaluated_get(bpy.context.evaluated_depsgraph_get());me=ev.to_mesh()
+        try:
+            me.calc_loop_triangles();vs=[ev.matrix_world@v.co for v in me.vertices];ts=[tuple(t.vertices) for t in me.loop_triangles]
+            trees.append(BVHTree.FromPolygons(vs,ts,all_triangles=True))
+        finally:ev.to_mesh_clear()
+    contacts=[]
+    for k in ("index","middle","ring"):
+        p=q["jointWorld"][k][1].lerp(q["jointWorld"][k][2],.35);hits=[]
+        for tree in trees:
+            hit,n,index,dist=tree.ray_cast(p+toward*.05,-toward,.085)
+            if hit is not None:hits.append((dist,hit))
+        if not hits:raise ValueError("No evaluated hook surface on "+k)
+        contacts.append(min(hits,key=lambda t:t[0])[1]+toward*.003)
+    q["hookSurfaceContacts"]=[vec(v) for v in contacts]
+    return contacts[1]

@@ -5,7 +5,7 @@ os.environ["BOW_WORKSHOP_ROLE"]="archer"
 source=Path(__file__).with_name("anatomical-motion.py")
 exec(compile(source.read_text().split("# A single-handed sword",1)[0],str(source),"exec"))
 folder=out/"archer-anatomy";folder.mkdir(exist_ok=True)
-audit["study"]="Static archery integrity III";audit["samples"]={};audit["issues"]=[]
+audit["study"]="Static archery fidelity IV";audit["samples"]={};audit["issues"]=[]
 def save():(folder/"archer-audit.json").write_text(json.dumps(audit,indent=2))
 exec(compile(Path(__file__).with_name("review-cameras.py").read_text(),"review-cameras.py","exec"))
 reset()
@@ -39,7 +39,7 @@ near=[v for v in face if abs(v.z-jawZ)<.045]
 if not near:near=face
 jaw=Vector((point(head).x+sign*.045,min(v.y for v in near)-.020,jawZ+.015))
 def hook():
-    if R.name in posed_hands:return hand_frame(R)[0][0]
+    if R.name in posed_hands:return imported_hook(R,forward)
     digits=finger_chains(R)
     p=[]
     for name in ("index","middle","ring"):
@@ -71,7 +71,7 @@ right=fit_contact(0,jaw,-forward+Vector((0,-.10,.28)),"string")
 nock=hook()
 # Arrow support is slightly above and alongside the bow grip. The two
 # hands share ONE line of action. Choose reachable draw length from anatomy.
-offset=side*.024+up*.045
+offset=side*.034+up*.058
 leftBest=None
 for draw in (.72,.69,.66,.63,.60,.57,.54,.51):
     desired=nock+forward*draw-offset
@@ -79,7 +79,17 @@ for draw in (.72,.69,.66,.63,.60,.57,.54,.51):
     if leftBest is None or r["error"]<leftBest[0]:leftBest=(r["error"],draw)
     if r["error"]<.012:break
 draw=leftBest[1];left=fit_contact(1,nock+forward*draw-offset,Vector((0,.22,-.30)),"bow")
-center=hand_frame(L)[0][0];rest=center+offset
+center=hand_frame(L)[0][0]
+# Locate arrow rest above actual gloved hand surface, not a nominal fist.
+# Refit left arm along the common arrow axis after measuring the skin.
+if L.name in posed_hands:
+    surface=vertices(posed_hands[L.name]["objects"])
+    above=max((p-center).dot(up) for p in surface)+.010
+    lateral=max(.030,min(.060,max((p-center).dot(side) for p in surface)+.005))
+    offset=side*lateral+up*max(.045,above)
+    left=fit_contact(1,nock+forward*draw-offset,Vector((0,.22,-.30)),"bow")
+    center=hand_frame(L)[0][0]
+rest=center+offset
 delta=rest-nock;draw=delta.dot(forward);offaxis=(delta-forward*draw).length
 # Inextensible string and approximately inextensible wooden limbs.
 # Both endpoints and the nock are solved together, never animated independently.
@@ -162,8 +172,9 @@ def collision():
 bpy.context.view_layer.update();pts=mesh_points();sc.frame_set(1);bpy.context.view_layer.update()
 elbow=point(RF);backVector=elbow-nock;elbowError=(backVector-forward*backVector.dot(forward)).length
 wristBend=[math.degrees((point(h)-point(f)).angle(hand_frame(h)[0][2])) for f,h in ((RF,R),(LF,L))]
-row={"phase":"full-draw","joints":snap(),"jawAnchor":vec(jaw),"rightContact":right,"leftContact":left,"bowGrip":vec(center),"arrowRest":vec(rest),"stringNock":vec(nock),"arrowTip":vec(tip),"topTip":vec(top),"bottomTip":vec(bot),"drawMetres":draw,"lateralError":offaxis,"arrowAngleDegrees":math.degrees(arrowAxis.angle(forward)),"elbowLineError":elbowError,"elbowBehindNock":-backVector.dot(forward),"wristBendDegrees":wristBend,"stringLength":string_length(span,back,nock),"braceStringLength":stringTarget,"limbLengthError":arcError,"meshAfterFrameSet":mesh_delta(pts,mesh_points()),"contacts":collision()}
+row={"phase":"full-draw","joints":snap(),"jawAnchor":vec(jaw),"rightContact":right,"leftContact":left,"bowGrip":vec(center),"arrowRest":vec(rest),"stringNock":vec(nock),"arrowTip":vec(tip),"topTip":vec(top),"bottomTip":vec(bot),"drawMetres":draw,"lateralError":offaxis,"arrowAngleDegrees":math.degrees(arrowAxis.angle(forward)),"elbowLineError":elbowError,"elbowBehindNock":-backVector.dot(forward),"wristBendDegrees":wristBend,"stringLength":string_length(span,back,nock),"braceStringLength":stringTarget,"limbLengthError":arcError,"meshAfterFrameSet":mesh_delta(pts,mesh_points()),"contacts":collision(),"fingerHookSurfaceContacts":posed_hands.get(R.name,{}).get("hookSurfaceContacts"),"sourceHandFit":{k:q.get("fit") for k,q in posed_hands.items()}}
 audit["samples"]["anchor"]=[row];save()
+plan_review_frames([review_points()])
 for view in REVIEW_VIEWS:
     review_render("key-anchor",view)
 review_render("bow-grip","angle45",center,.55)
