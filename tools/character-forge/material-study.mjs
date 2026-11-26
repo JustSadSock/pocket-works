@@ -28,7 +28,7 @@ export function commonBounds(models,view){let {r,u}=frame(view),b=[Infinity,-Inf
 const lookup=(map,size,u,v)=>{let x=Math.floor(((u%1+1)%1)*size),y=Math.floor(((v%1+1)%1)*size);return 4*(y*size+x)};
 export function raster(model,{view='three-quarter',size=768,bounds=commonBounds([model],view),mode='A',maps={},transparent=false}={}){
  const {d,r,u}=frame(view),scale=(size*.88)/Math.max(bounds[1]-bounds[0],bounds[3]-bounds[2]),cx=(bounds[0]+bounds[1])/2,cy=(bounds[2]+bounds[3])/2;
- const count=size*size,depth=new Float32Array(count).fill(-Infinity),rgba=new Uint8Array(count*4),owners=new Int16Array(count).fill(-1),light=unit([-.45,.85,.55]),fill=unit([.6,.45,-.8]),half=unit(light.map((x,k)=>x+d[k]));
+ const count=size*size,depth=new Float32Array(count).fill(-Infinity),rgba=new Uint8Array(count*4),owners=new Int16Array(count).fill(-1),faces=new Int32Array(count).fill(-1),light=unit([-.45,.85,.55]),fill=unit([.6,.45,-.8]),half=unit(light.map((x,k)=>x+d[k]));
  for(let i=0;i<count;i++){rgba.set([222,218,207,transparent?0:255],i*4)}
  for(let pi=0;pi<model.parts.length;pi++){
    const p=model.parts[pi],kind=materialKind(p.name),mat=profiles[kind],map=maps[kind],projected=[];
@@ -40,9 +40,9 @@ export function raster(model,{view='three-quarter',size=768,bounds=commonBounds(
      const x0=Math.max(0,Math.floor(Math.min(a[0],b[0],c[0]))),x1=Math.min(size-1,Math.ceil(Math.max(a[0],b[0],c[0]))),y0=Math.max(0,Math.floor(Math.min(a[1],b[1],c[1]))),y1=Math.min(size-1,Math.ceil(Math.max(a[1],b[1],c[1])));
      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
        const w0=((b[1]-c[1])*(x+.5-c[0])+(c[0]-b[0])*(y+.5-c[1]))/den,w1=((c[1]-a[1])*(x+.5-c[0])+(a[0]-c[0])*(y+.5-c[1]))/den,w2=1-w0-w1;if(Math.min(w0,w1,w2)<-1e-5)continue;
-       const z=w0*a[2]+w1*b[2]+w2*c[2],i=y*size+x;if(z<=depth[i])continue;depth[i]=z;owners[i]=pi;
+       const z=w0*a[2]+w1*b[2]+w2*c[2],i=y*size+x;if(z<=depth[i])continue;depth[i]=z;owners[i]=pi;faces[i]=t/3;
        let n=unit(ns[0].map((v,k)=>w0*v+w1*ns[1][k]+w2*ns[2][k])),v=pts[0].map((v,k)=>w0*v+w1*pts[1][k]+w2*pts[2][k]);if(dot(n,face)<0)n=face;
-       let base=p.color.slice(),rough=mode==='A'?.72:mat.roughness,metal=mode==='A'?0:mat.metallic;
+       let base=p.vertexColors?ids.reduce((a,j,k)=>a.map((v,d)=>v+p.vertexColors[3*j+d]*[w0,w1,w2][k]),[0,0,0]):p.color.slice(),rough=mode==='A'?.72:mat.roughness,metal=mode==='A'?0:mat.metallic;
        if(mode==='C'&&map){const uv=[v[0]*5+v[2]*2.7,v[1]*5],j=lookup(map.color,map.size,...uv),tangent=unit(cross(Math.abs(n[1])>.95?[1,0,0]:[0,1,0],n)),bitangent=cross(n,tangent);base=base.map((c,k)=>c*(map.color[j+k]/255)**2);rough=map.roughness[j+1]/255;metal=map.roughness[j+2]/255;n=unit(n.map((x,k)=>x+(map.normal[j]/127.5-1)*tangent[k]+(map.normal[j+1]/127.5-1)*bitangent[k]))}
        if(mode==='B')base=base.map((x,k)=>x*(.94+.06*mat.tint[k]));
        const diffuse=.30+.63*Math.max(0,dot(n,light))+.17*Math.max(0,dot(n,fill)),spec=(.035+.28*metal)*(1-.45*rough)*Math.max(0,dot(n,half))**(7+64*(1-rough));
@@ -51,5 +51,5 @@ export function raster(model,{view='three-quarter',size=768,bounds=commonBounds(
    }
  }
  const visible={};for(const i of owners)if(i>=0)visible[model.parts[i].name]=(visible[model.parts[i].name]??0)+1;
- return {png:png(size,size,rgba),rgba,owners,depth,visible,bounds,scale};
+ return {png:png(size,size,rgba),rgba,owners,faces,depth,visible,bounds,scale};
 }
