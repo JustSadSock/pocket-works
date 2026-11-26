@@ -60,3 +60,43 @@ test('All-files mode handles documents, audio and archives without data loss', a
   const result = await download;
   expect(result.suggestedFilename()).toContain('.zip');
 });
+
+test('Archive preview plays WAV locally, switches to safe text and closes on mode change', async ({ page }) => {
+  await page.goto('/apps/press/');
+  await page.locator('[data-mode="unpack"]').click();
+  const sampleRate = 8000;
+  const wav = Buffer.alloc(44 + sampleRate * 2);
+  wav.write('RIFF', 0); wav.writeUInt32LE(wav.length - 8, 4);
+  wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(sampleRate, 24); wav.writeUInt32LE(sampleRate * 2, 28);
+  wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+  wav.write('data', 36); wav.writeUInt32LE(sampleRate * 2, 40);
+  for (let i = 0; i < sampleRate; i++) wav.writeInt16LE(Math.round(Math.sin(i * 2 * Math.PI * 440 / sampleRate) * 800), 44 + i * 2);
+  const zip = await createZip([
+    { blob: new Blob([wav]), path: 'sounds/test.WAV' },
+    { blob: new Blob(['<script>window.previewExecuted = true</script>']), path: 'safe.html' },
+    { blob: new Blob(['unknown']), path: 'unknown.bin' }
+  ]);
+  await page.locator('#picker').setInputFiles({ name: 'preview.zip', mimeType: 'application/zip', buffer: Buffer.from(await zip.arrayBuffer()) });
+  await page.locator('#actionBtn').click();
+  await expect(page.locator('#archiveEntries .file-row')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Предпросмотр sounds/test.WAV' }).click();
+  const audio = page.locator('.archive-preview audio');
+  await expect(audio).toBeVisible();
+  await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.duration)).toBeCloseTo(1, 1);
+  await expect(audio).toHaveAttribute('src', /^blob:/);
+  await expect.poll(() => audio.evaluate(async (a: HTMLAudioElement) => (await fetch(a.src)).headers.get('content-type'))).toBe('audio/wav');
+  await page.getByRole('button', { name: 'Предпросмотр safe.html' }).click();
+  await expect(audio).toHaveCount(0);
+  await expect(page.locator('.preview-text')).toContainText('<script>');
+  expect(await page.evaluate(() => (window as any).previewExecuted)).toBeUndefined();
+  await page.getByRole('button', { name: 'Предпросмотр unknown.bin' }).click();
+  await expect(page.locator('.preview-status')).toContainText('недоступен');
+  await expect(page.locator('.archive-preview')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+  await expect(page.locator('.archive-preview')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Предпросмотр sounds/test.WAV' }).click();
+  await page.locator('[data-mode="photo"]').click();
+  await expect(page.locator('.archive-preview')).toHaveCount(0);
+});
