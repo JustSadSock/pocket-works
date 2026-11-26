@@ -127,6 +127,20 @@ export function decide(receipt,target,now=Date.now(),upstream=null){
   return {schema:1,decision:'reuse-shadow',gameplaySemanticDigest:receipt.gameplaySemanticDigest,gameplayRecordsDigest:receipt.gameplayRecordsDigest,productionAuthorization:false};
  }catch(e){return fresh(e.message);}
 }
+// Admission is evidence of identity, not an independently observed semantic match.
+export function summarizeGameplayComparison(receipt,admission,fresh){
+ if(!receipt||receipt.gameplayCases!==234||receipt.sourceMeasurements!==430||!HEX.test(receipt.gameplaySemanticDigest)||admission?.productionAuthorization!==false)throw Error('Invalid comparison evidence');
+ const hit=admission.decision==='reuse-shadow';
+ if(hit){
+  if(fresh!==null||admission.gameplaySemanticDigest!==receipt.gameplaySemanticDigest||admission.gameplayRecordsDigest!==receipt.gameplayRecordsDigest)throw Error('Ambiguous reused gameplay evidence');
+ }else if(admission.decision!=='execute'||fresh?.cases!==receipt.gameplayCases||fresh?.measurements!==receipt.sourceMeasurements||!HEX.test(fresh.semanticDigest))throw Error('Incomplete fresh gameplay comparison');
+ const semanticMatch=hit?null:fresh.semanticDigest===receipt.gameplaySemanticDigest;
+ return {gameplayCases:receipt.gameplayCases,gameplayExecuted:!hit,gameplayReused:hit,
+  freshGameplayCases:hit?0:fresh.cases,reusedGameplayCases:hit?receipt.gameplayCases:0,
+  historicalGameplayMeasurements:receipt.sourceMeasurements,freshGameplayMeasurements:hit?0:fresh.measurements,
+  sourceGameplaySemanticDigest:receipt.gameplaySemanticDigest,freshGameplaySemanticDigest:hit?null:fresh.semanticDigest,
+  semanticMatch,semanticComparison:hit?'not-executed':semanticMatch?'match':'mismatch'};
+}
 function verifiedReceipt(bundle,path){
  const r=json(path),expected=makeReceipt(bundle,r.issuedAt);
  if(!eq(r,expected))throw Error('Signed receipt differs from original evidence');
@@ -163,8 +177,8 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    const perf=phaseBundle(dir,'performance',p,t),hit=d.decision==='reuse-shadow';
    const g=hit?null:phaseBundle(dir,'gameplay',p,t);
    if(hit&&readdirSync(dir).includes('gameplay'))throw Error('Ambiguous gameplay execution');
-   const report={schema:1,mode:t.role==='replay'?'verified-gameplay-cross-run':'verified-gameplay-trial',sourceRun:r.manifest.run,sourceAttempt:r.manifest.attempt,targetRun:t.run,targetAttempt:t.attempt,admission:d,gameplayCases:234,gameplayExecuted:!hit,gameplayReused:hit,semanticMatch:hit||g.semanticDigest===r.gameplaySemanticDigest,freshGameplayMeasurements:g?.measurements??0,freshPerformanceCases:perf.cases,freshPerformanceMeasurements:perf.measurements,freshPerformanceResult:perf.performance,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
-   writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));if(!report.semanticMatch)process.exitCode=1;
+   const report={schema:2,mode:t.role==='replay'?'verified-gameplay-cross-run':'verified-gameplay-trial',sourceRun:r.manifest.run,sourceAttempt:r.manifest.attempt,targetRun:t.run,targetAttempt:t.attempt,admission:d,...summarizeGameplayComparison(r,d,g),freshPerformanceCases:perf.cases,freshPerformanceMeasurements:perf.measurements,freshPerformanceResult:perf.performance,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+   writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));if(report.semanticMatch===false)process.exitCode=1;
   }else throw Error('Unknown pilot mode');
  }catch(e){console.error(e.message);process.exitCode=1;}
 }
