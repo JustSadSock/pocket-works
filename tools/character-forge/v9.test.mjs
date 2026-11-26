@@ -21,9 +21,9 @@ function finite(m){
  }
 }
 test('v9 four roles share the source anatomy but carry distinct construction and equipment',{skip:!dir},()=>{
- const base=load('base');
+ const base=model('artisan').joints;
  for(const id of roleIds){
-  const m=model(id);assert.deepEqual(m.joints,base.joints);assert.equal(m.spec.artRevision,'v9');assert.equal(m.spec.motionRevision,'v9');assert.equal(m.spec.contactCorrection,'path-v9');assert.equal(m.spec.lod,'source');assert.equal(m.contacts.length,2);assert.ok(m.statistics.triangleCount<150000);assert.ok(m.joints.length<512);finite(m);
+  const m=model(id);assert.deepEqual(m.joints,base);assert.equal(m.spec.artRevision,'v9');assert.equal(m.spec.motionRevision,'v9');assert.equal(m.spec.contactCorrection,'path-v9');assert.equal(m.spec.lod,'source');assert.equal(m.contacts.length,2);assert.ok(m.statistics.triangleCount<150000);assert.ok(m.joints.length<512);finite(m);
   const bin=glb(m),doc=inspectGLB(bin);assert.ok(bin.length<32000000);assert.ok(doc.animations.some(a=>a.name==='walk'));const root=m.joints.find(j=>j.parent<0);assert.ok(doc.animations.find(a=>a.name==='walk').channels.some(c=>c.target.node===root.id&&c.target.path==='translation'));
  }
  const a=model('artisan'),merchant=model('merchant'),inf=model('infantry'),roman=model('legionary');
