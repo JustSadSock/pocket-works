@@ -11,10 +11,10 @@
   --range: #202923;
   --range-light: #303a32;
   --line: rgba(39,49,43,.2);
-  --safe-top: max(12px, var(--app-safe-top));
-  --safe-right: max(12px, var(--app-safe-right));
-  --safe-bottom: max(12px, var(--app-safe-bottom));
-  --safe-left: max(12px, var(--app-safe-left));
+  --safe-top: max(12px, var(--app-safe-top, 0px));
+  --safe-right: max(12px, var(--app-safe-right, 0px));
+  --safe-bottom: max(12px, var(--app-safe-bottom, 0px));
+  --safe-left: max(12px, var(--app-safe-left, 0px));
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }

@@ -108,5 +108,5 @@ self.addEventListener('fetch', (event) => {
 
   const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
   if (!canonicalUrl) return;
-  event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
+  event.respondWith(networkFirstFresh(event.request, canonicalUrl, canonicalUrl));
 });

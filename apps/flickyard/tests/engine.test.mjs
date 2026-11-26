@@ -51,6 +51,9 @@ test('switch mode requires the active target in sequence', () => {
 test('tracking only scores while held and inside the target', () => {
   const session = createSession({ mode: 'track', seed: 7, width: 900, height: 520 });
   const target = getActiveTarget(session);
+  target.moving = false;
+  target.vx = 0;
+  target.vy = 0;
   updateSession(session, 500, 900, 520, true, { x: target.x, y: target.y });
   updateSession(session, 500, 900, 520, true, { x: 0, y: 0 });
   updateSession(session, 500, 900, 520, false, { x: target.x, y: target.y });
