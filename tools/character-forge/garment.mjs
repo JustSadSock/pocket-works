@@ -38,6 +38,9 @@ function torso(ctx,id,style,method,color){let {H,vs,J}=ctx,r=garmentRules[id],lo
  rings.push(station([0,y,cz],[1,0,0],[0,0,-1],rx,rz,fold,frequency,[[J(i<2?'root':i<4?'spine03':'spine01').id,1]]))}
  let main=ringSurface(ctx,id,color,rings,N,{...r});main.pattern={panels:['front','back','side gores','neck opening'],levels,ringCount:N,method};
  let parts=[main];
+ // Hem and neckline bands follow the same measured panel edge, with
+ // independent thickness and explicit semantic layer.
+ for(let [label,ring,offset] of [['hem',rings[0],.010],['neck binding',rings.at(-1),-.014]]){let a={...ring,rad:t=>ring.rad(t).map(x=>x+.004)},z={...a,c:add(a.c,[0,offset,0])};parts.push(ringSurface(ctx,id+' '+label, id==='quilted'?materials.leather:materials.cream,[a,z].sort((a,b)=>a.c[1]-b.c[1]),N,{...r,thickness:.003}))}
  for(let s of ['L','R']){let sh=J('upperarm01.'+s),el=J('lowerarm01.'+s),wr=J('wrist.'+s),pts=[lerp(sh.position,el.position,-.12),lerp(sh.position,el.position,.18),el.position,lerp(el.position,wr.position,.62),lerp(el.position,wr.position,.97)],rr=[.068,.063,.048,.041,.035].map(x=>[x*H/1.75+r.clearance*.65,x*H/1.75+r.clearance*.65]);parts.push(tube(ctx,id+' sleeve '+s,color,pts,rr,N,{...r,fold:method==='hybrid'&&!low?.003:0,weights:[[[sh.id,.8],[J('spine01').id,.2]],[[sh.id,1]],[[sh.id,.45],[el.id,.55]],[[el.id,1]],[[el.id,.85],[wr.id,.15]]]}));
  // Cuff binding is separate, shaped seam edging.
  parts.push(tube(ctx,id+' cuff '+s,materials.cream,[lerp(el.position,wr.position,.91),lerp(el.position,wr.position,.98)],rr.slice(-2).map(v=>v.map(x=>x+.004)),N,{...r,thickness:.003,weights:[[[el.id,1]],[[el.id,1]]]}))}
@@ -102,5 +105,5 @@ export function dress(source,options={},template=null){let t=performance.now(),c
 // Diagnostic, not exact mesh intersection: nearest source normal signed
 // distance for outer garment vertices at rest and four animated phases.
 // Retains negative samples and names rather than hiding lower-layer defects.
-export function garmentAudit(source,m){if(m.spec.style==='low-poly')return {skipped:'Low-poly rest-space transform differs; compare neutral untransformed methods separately'};let results=[];for(let phase of [0,.25,.5,.75]){let w=pose(m,'walk',phase),skin=deform(source,source.parts[0],w),p={...source.parts[0],positions:skin.flat()},near=locator(normals(p)),rows=[];
+export function garmentAudit(source,m,phases=[0,.25,.5,.75]){if(m.spec.style==='low-poly')return {skipped:'Low-poly rest-space transform differs; compare neutral untransformed methods separately'};let results=[];for(let phase of phases){let w=pose(m,'walk',phase),skin=deform(source,source.parts[0],w),p={...source.parts[0],positions:skin.flat()},near=locator(normals(p)),rows=[];
  for(let q of m.parts.filter(p=>p.layer&&p.region!=='head'&&p.region!=='face')){let vs=deform(m,q,w),negative=0,min=Infinity,samples=0;for(let i=0;i<Math.floor(vs.length/2);i+=Math.max(1,Math.floor(vs.length/800))){let v=vs[i],hit=near(v),n=p.normals.slice(hit.index*3,hit.index*3+3),d=dot(sub(v,skin[hit.index]),n);negative+=d<-.008;min=Math.min(min,d);samples++}rows.push({part:q.name,negative,samples,minApproxSignedDistance:min})}results.push({phase,rows})}return results}

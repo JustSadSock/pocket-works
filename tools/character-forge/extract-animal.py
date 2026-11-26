@@ -16,7 +16,7 @@ for sign in [-1,1]:
     scores.append(sum(max(0,(v.z-mid[2])/(hi[2]-lo[2])) for v in pts)/max(1,len(pts)))
 sign=1 if scores[1]>=scores[0] else -1
 # Preserve the right-handed basis when swapping forward and lateral axes.
-sideSign=sign if length==1 else -sign
+sideSign=-sign if length==1 else sign
 def cv(v):return [sideSign*(v[side]-mid[side]),v.z-lo[2],sign*(v[length]-mid[length])]
 parts=[];originalTriangles=0
 for ob in objects:ob.data.calc_loop_triangles();originalTriangles+=len(ob.data.loop_triangles)

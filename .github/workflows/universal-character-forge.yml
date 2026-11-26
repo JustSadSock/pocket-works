@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: character-forge-${{ github.ref }}-${{ github.sha }}
+  group: character-forge-v4-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   core:
@@ -23,18 +23,18 @@ jobs:
         with:
           node-version: 22
       - name: Verify geometry, skinning, determinism, composition and budgets
-        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs
+        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs
       - name: Produce focused morphology, animal and sprite candidates
-        run: node tools/character-forge/native-v3.mjs
+        run: node tools/character-forge/native-v4.mjs
       - name: Compare actual pinned CMU motion
         run: |
           python3 tools/character-forge/fetch-control-motion.py
-          node tools/character-forge/capture-comparison.mjs
+          node tools/character-forge/capture-v4.mjs
       - name: Convert original previews to PNG and video
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg fonts-dejavu-core
-          python3 tools/character-forge/evidence-v3.py
+          python3 tools/character-forge/evidence-v4.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -69,7 +69,7 @@ jobs:
           retention-days: 14
   morph-source:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
     env:
       CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/character-morph
     steps:
@@ -81,12 +81,13 @@ jobs:
         run: |
           python3 tools/character-forge/makehuman-adapter.py
           node tools/character-forge/makehuman-export.mjs
-          node tools/character-forge/human-research.mjs
+          CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v4.test.mjs
+          node tools/character-forge/garment-research.mjs
       - name: Render original human comparison boards
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg
-          python3 tools/character-forge/evidence-v3.py
+          python3 tools/character-forge/evidence-v4.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -97,7 +98,7 @@ jobs:
     needs: [core, morph-source]
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         shell: bash
@@ -106,6 +107,9 @@ jobs:
       BLENDER_VERSION: '5.2.1'
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/download-artifact@v4
         with:
           name: character-forge-core
@@ -142,6 +146,16 @@ jobs:
       - name: Compare one matched transparent frame through existing Art Forge bake
         if: always()
         run: python3 tools/character-forge/sprite-bake.py
+      - name: Optional Blender garment intersections and cloth control
+        if: always()
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py'
+      - name: Optional actual source animal template experiment
+        if: always()
+        run: |
+          apt-get install -y --no-install-recommends librsvg2-bin ffmpeg
+          python3 tools/character-forge/animal-source.py
+          node tools/character-forge/animal-source.mjs
+          for f in "$CHARACTER_EVIDENCE"/source-*.svg; do rsvg-convert "$f" -o "${f%.svg}.png"; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -150,6 +164,11 @@ jobs:
             quality-artifacts/character-bridge/roundtrip-*
             quality-artifacts/character-bridge/forge-*.log
             quality-artifacts/character-bridge/sprite-*.*
+            quality-artifacts/character-bridge/cloth-*
+            quality-artifacts/character-bridge/garment-exact-overlap.json
+            quality-artifacts/character-bridge/animal-source-*
+            quality-artifacts/character-bridge/source-*
+            quality-artifacts/character-bridge/*-source-morphs.png
           retention-days: 14
   studio:
     runs-on: ubuntu-24.04
