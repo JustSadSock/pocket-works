@@ -1,0 +1,138 @@
+name: Universal QA Verified Split Integration
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/universal-qa-verified-split.yml'
+      - 'scripts/universal-qa/verified-split*'
+      - 'scripts/universal-qa/fresh-split.mjs'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/universal-qa/verified-split.test.mjs scripts/universal-qa/fresh-split.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs
+  shadow:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'infra/universal-verified-split'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {shard: 0, route: direct, evidence: 'on'}
+          - {shard: 1, route: sharded, evidence: 'on'}
+          - {shard: 2, route: direct, evidence: 'on'}
+          - {shard: 3, route: sharded, evidence: 'on'}
+          - {shard: 4, route: direct, evidence: 'on'}
+          - {shard: 5, route: sharded, evidence: 'on'}
+          - {shard: 6, route: direct, evidence: 'on'}
+          - {shard: 7, route: sharded, evidence: 'on'}
+          - {shard: 0, route: fallback, evidence: 'off'}
+    env:
+      SHARD: ${{ matrix.shard }}
+      ROUTE: ${{ matrix.route }}
+      PW_QA_SPLIT_BANNERS: '1'
+      PW_QA_VERIFIED_SPLIT_SHADOW: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: 2521b436264b904b4c7e88ac9e00a59c0cbbc688
+          path: controller
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          path: controller/audit-source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          path: candidate
+          persist-credentials: false
+      - name: Acquire and authenticate pinned evidence (fallback on failure)
+        if: matrix.evidence == 'on'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/admission-evidence"
+          mkdir -p "$evidence"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45825802669" > "$evidence/upstream.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45835826339" > "$evidence/probe-run.json"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/1404" > "$evidence/pr.json"
+          gh run download 45825802669 --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-input-1-$SHARD" --dir "$evidence/bundle"
+          gh run download 45825802669 --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-receipt-1-$SHARD" --dir "$evidence"
+          gh attestation verify "$evidence/receipt.json" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-gameplay-receipt.yml@refs/heads/main" --source-ref refs/heads/main --source-digest 2521b436264b904b4c7e88ac9e00a59c0cbbc688 --deny-self-hosted-runners
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15127336596/zip" > "$RUNNER_TEMP/probe.zip"
+          printf '%s  %s\n' d1c5999f3a080be7731ec9e90afc76450b667f9ecf6fed424e226e960fa79882 "$RUNNER_TEMP/probe.zip" | sha256sum -c -
+          unzip -p "$RUNNER_TEMP/probe.zip" aggregate.json > "$evidence/probe.json"
+          jq -n --argjson shard "$SHARD" '{sourceRun:45825802669,probeRun:45835826339,artifact:15127336596,shard:$shard}' > "$evidence/authenticated.json"
+      - name: Exercise actual Universal QA task through direct or sharded executor
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PW_QA_VERIFIED_CONTROLLER="$PWD/controller"
+          export PW_QA_VERIFIED_EVIDENCE="$RUNNER_TEMP/admission-evidence"
+          test "$(git -C candidate rev-parse HEAD)" = 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          cp -a scripts/universal-qa/. candidate/scripts/universal-qa/
+          cp -a scripts/ci-overhaul/. candidate/scripts/ci-overhaul/
+          git -C candidate add scripts
+          git -C candidate -c user.name=QA -c user.email=qa@example.invalid commit -qm 'Local integration overlay'
+          cd candidate
+          export PW_QA_TASK="$(node --input-type=module -e 'import {resolveTasks,ROOT} from "./scripts/universal-qa/plan.mjs";console.log(JSON.stringify(resolveTasks(ROOT,{apps:["banners-of-war"],suite:"completion-lab",profile:"deep"}).find(x=>x.seed===Number(process.env.SHARD))))')"
+          node --input-type=module -e 'import {ROOT,loadSuites} from "./scripts/universal-qa/plan.mjs";import {selectSplit} from "./scripts/universal-qa/fresh-split.mjs";const t=JSON.parse(process.env.PW_QA_TASK),s=loadSuites(ROOT,t.app).find(x=>x.id===t.suite);if(!selectSplit(ROOT,t,s))throw Error("Audited split not selected");'
+          if [[ "$ROUTE" == sharded ]]; then
+            export PW_QA_SHARD="$(jq -n --argjson task "$PW_QA_TASK" '{id:"cpu-plain-001",pool:"cpu-plain",tasks:[$task]}')"
+            node scripts/ci-overhaul/run-shard.mjs
+          else
+            node scripts/universal-qa/run.mjs
+          fi
+          node --input-type=module <<'NODE'
+          import {readFileSync,existsSync,writeFileSync} from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          import {verdict} from './scripts/ci-overhaul/canary-evidence.mjs';
+          const task=JSON.parse(process.env.PW_QA_TASK),dir='qa-artifacts/'+task.key,read=n=>JSON.parse(readFileSync(dir+'/'+n,'utf8')),result=read('result.json'),tree=execFileSync('git',['rev-parse','HEAD^{tree}'],{encoding:'utf8'}).trim();
+          if(result.success!==true||result.key!==task.key||result.exitCode!==0)throw Error('Actual runner did not complete task');
+          const fallback=process.env.ROUTE==='fallback',file=dir+'/verified-split-contract.json';
+          if(fallback){
+            const s=read('split-contract.json');
+            if(existsSync(file)||result.verificationMode||s.reused!==false||s.freshMeasurements!==432||!verdict([task],[result],tree).success)throw Error('Fallback did not preserve fresh legacy evidence');
+            writeFileSync(dir+'/integration-verdict.json',JSON.stringify({route:'fallback',shard:task.seed,success:true,freshMeasurements:s.freshMeasurements},null,2));
+          }else{
+            const c=read('verified-split-contract.json');
+            if(result.verificationMode!=='verified-split-shadow'||c.completed!==c.gameplayCases+c.performanceCases||c.freshGameplayCases+c.reusedGameplayCases!==c.gameplayCases||c.productionAuthorization!==false||existsSync(dir+'/completion-'+task.seed+'.jsonl'))throw Error('Verified split leaked or lost evidence');
+            let rejected=false;try{verdict([task],[result],tree);}catch(e){rejected=e.message.includes('Shadow evidence');}
+            if(!rejected)throw Error('Production gate accepted shadow evidence');
+            const lines=n=>readFileSync(dir+'/'+n,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse),fresh=lines('fresh-measurements.jsonl'),historical=lines('historical-measurements.jsonl');
+            if(fresh.length!==c.freshMeasurements||historical.length!==c.historicalMeasurements||fresh.some(x=>x.origin!=='fresh')||historical.some(x=>x.origin!=='historical'))throw Error('Mixed measurement provenance');
+            writeFileSync(dir+'/integration-verdict.json',JSON.stringify({route:process.env.ROUTE,shard:task.seed,success:true,productionGateRejected:true,...c},null,2));
+          }
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universal-verified-${{ matrix.route }}-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: candidate/qa-artifacts/
+          if-no-files-found: warn
+          retention-days: 7
