@@ -6,7 +6,7 @@ function fixture(options={}){
   const node=()=>{const n={connect(){},disconnect(){this.disconnected=true}};nodes.push(n);return n};
   const context={
     state:'running',destination:{},async resume(){this.state='running'},
-    async decodeAudioData(data){return {data}},
+    async decodeAudioData(data){return {data,length:480,numberOfChannels:1}},
     createBufferSource(){const s={...node(),playbackRate:{value:1},start(){this.started=true},stop(){this.stopped=true;this.onended?.()}};sources.push(s);return s},
     createGain(){return {...node(),gain:{value:1}}},
     createStereoPanner(){return {...node(),pan:{value:0}}}
@@ -70,4 +70,14 @@ test('destroy aborts pending download',async()=>{
   const {player}=fixture({fetcher:(_,{signal})=>new Promise((resolve,reject)=>{signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true});started()})});
   const play=player.play('steel');await waiting;player.destroy();
   assert.equal(await play,false);assert.equal(player.stats.pending,0);assert.equal(player.stats.buffers,0);
+});
+
+test('byte budget counts unique cached and playing PCM; active buffers cannot be evicted from accounting',async()=>{
+ const {player,sources}=fixture({maxDecodedBytes:1920,maxVoices:2});
+ assert.equal(await player.play('steel'),true);assert.equal(player.stats.decodedBytes,1920);
+ assert.equal(await player.play('steel'),false);assert.equal(player.stats.decodedBytes,1920);
+ sources[0].onended();assert.equal(await player.play('steel'),true);
+ assert.equal(player.stats.decodedBytes,1920);player.destroy();assert.equal(player.stats.decodedBytes,0);
+ const small=fixture({maxDecodedBytes:100}).player;
+ assert.equal(await small.play('steel'),false);assert.equal(small.stats.decodedBytes,0);small.destroy();
 });
