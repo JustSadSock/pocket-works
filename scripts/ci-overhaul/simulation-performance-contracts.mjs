@@ -136,6 +136,8 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const [mode,...a]=process.argv.slice(2);
   const context={source:process.env.SOURCE_SHA,run:Number(process.env.GITHUB_RUN_ID),attempt:Number(process.env.GITHUB_RUN_ATTEMPT),auditCommit:process.env.GITHUB_SHA};
   if(![SOURCE,CURRENT_SOURCE].includes(context.source)||!Number.isSafeInteger(context.run)||context.run<1||!Number.isSafeInteger(context.attempt)||context.attempt<1||!/^[a-f0-9]{40}$/.test(context.auditCommit))throw Error('Invalid audit context');
+  // Run metadata belongs to the evidence controller, not the game simulation.
+  for(const key of ['SOURCE_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_SHA'])delete process.env[key];
   if(mode==='plan'){
    const [root,out]=a,o=await loadOriginal(root);writeFileSync(out,JSON.stringify({plan:o.plan,version:o.version,context},null,2)+'\n');
    console.log(JSON.stringify({source:context.source,total:o.plan.total,shards:o.plan.shards.map((s,i)=>({shard:i,gameplay:s.gameplay.length,performance:s.performance.map(r=>r.value)})),productionAuthorization:false}));

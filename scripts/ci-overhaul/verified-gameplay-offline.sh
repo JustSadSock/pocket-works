@@ -19,7 +19,7 @@ prepare_gameplay() {
   image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
   docker pull "$image"
   config="$(docker image inspect --format '{{.Id}}' "$image")"
-  opts=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp -e "SOURCE_SHA=$source_sha" -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e GITHUB_SHA --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$audit,dst=/audit,readonly" -w /work)
+  opts=(--rm --network none --hostname pw-gameplay --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp -e "SOURCE_SHA=$source_sha" -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e GITHUB_SHA --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$audit,dst=/audit,readonly" -w /work)
   runtime="$(docker run "${opts[@]}" "$image" node -p 'process.version')"
   arch="$(docker run "${opts[@]}" "$image" node -p 'process.arch')"
   toolchain="$(docker run "${opts[@]}" "$image" sha256sum /usr/local/bin/node | cut -d' ' -f1)"
@@ -31,6 +31,10 @@ prepare_gameplay() {
   cmp "$RUNNER_TEMP/gameplay-source-before.json" "$RUNNER_TEMP/gameplay-source-inside.json"
   cmp "$RUNNER_TEMP/gameplay-audit-before.json" "$RUNNER_TEMP/gameplay-audit-inside.json"
   jq -n --arg repository "$GITHUB_REPOSITORY" --arg workflow '.github/workflows/verified-gameplay-receipt.yml' --arg role "$role" --arg source "$source_sha" --arg sourceTree "$source_tree" --arg auditCommit "$(git rev-parse HEAD)" --arg auditTree "$(git rev-parse HEAD^{tree})" --arg ref "$GITHUB_REF" --arg event "$GITHUB_EVENT_NAME" --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" --argjson sourceMount "$(cat "$RUNNER_TEMP/gameplay-source-before.json")" --argjson auditMount "$(cat "$RUNNER_TEMP/gameplay-audit-before.json")" --arg image "${image##*@sha256:}" --arg config "${config#sha256:}" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{schema:1,repository:$repository,workflow:$workflow,role:$role,source:$source,sourceTree:$sourceTree,auditCommit:$auditCommit,auditTree:$auditTree,ref:$ref,event:$event,run:$run,attempt:$attempt,sourceMount:$sourceMount,auditMount:$auditMount,environment:{contract:"banners-offline-phase-v1",image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid},productionAuthorization:false}' > "$out/manifest.json"
+  if [[ "$role" = replay ]]; then
+    jq --arg workflow '.github/workflows/verified-gameplay-replay.yml' --argjson upstreamRun "$UPSTREAM_RUN" --argjson upstreamAttempt "$UPSTREAM_ATTEMPT" '.workflow=$workflow | .upstreamRun=$upstreamRun | .upstreamAttempt=$upstreamAttempt' "$out/manifest.json" > "$out/replay-manifest.json"
+    mv "$out/replay-manifest.json" "$out/manifest.json"
+  fi
   docker run "${opts[@]}" --mount "type=bind,src=$out,dst=/out" "$image" node /audit/scripts/ci-overhaul/simulation-performance-contracts.mjs plan /work /out/plan.json
 }
 run_gameplay_phase() {
