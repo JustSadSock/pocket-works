@@ -213,7 +213,7 @@ node --test tools/audio-forge/foundation.test.mjs
 node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
 ```
 
-CI keeps the original three-asset smoke test and additionally generates eleven foundation audition WAVs in an Actions artifact. Unit tests check deterministic expansion and PCM, distinct variants, finite levels, manifest rejection, and expressive MIDI arrangement. Audition quality is a separate human gate. Do not deploy these smoke files as application assets.
+CI keeps the original three-asset smoke test and additionally generates fifteen foundation audition WAVs in an Actions artifact (including four paired performance comparisons). Unit tests check deterministic expansion and PCM, distinct variants, finite levels, manifest rejection, and expressive MIDI arrangement. Audition quality is a separate human gate. Do not deploy these smoke files as application assets.
 
 Next steps: shuffle-bag selection in shared runtime, verified sample provenance and hybrid layer support, additional crowd/mechanism models, instrument-specific articulation and parameterized adaptive stems. Existing games remain unchanged until audition and integration gates pass.
 
@@ -245,3 +245,28 @@ await player.play('blade', { gain: 0.8, pan: -0.3, priority: 1 });
 Selection uses a shuffle bag: each variant is selected once per cycle and adjacent selections differ across cycle boundaries (except singleton families). Concurrent fetch completion can reorder audible playback. Playback-rate and gain jitter are bounded; decoded buffers use a count-bounded LRU cache, concurrent downloads are deduplicated, and voice stealing favors higher priority. The player does not own the context or master mixer. Disable/stop invalidates pending play calls; destroy also aborts pending downloads. Preload may evict earlier entries if the configured cache is smaller than the family. A false result indicates an unavailable, cancelled, or rejected voice. Existing tone feedback is not changed. No distance simulation, loop crossfade, voice virtualization or browser-device validation yet.
 
 Node tests use a mocked Web Audio context; real Chromium/WebKit interaction is a separate gate.
+
+### Expressive performance automation
+
+Music tracks can opt into a `performance` object. Existing scores do not change.
+
+```json
+{
+  "program": 42,
+  "humanizeBeats": 0,
+  "notes": [
+    {"note":"D4","beat":0,"duration":2,"velocity":78},
+    {"note":"F4","beat":2,"duration":2,"velocity":78}
+  ],
+  "performance": {
+    "curves": {
+      "expression": [{"beat":0,"value":65},{"beat":2,"value":110},{"beat":4,"value":55}],
+      "breath": [{"beat":0,"value":45},{"beat":2,"value":95},{"beat":4,"value":40}]
+    },
+    "vibrato": {"depthCents":22,"rateHz":5,"delayBeats":0.24},
+    "attackBend": {"cents":-28,"durationBeats":0.12}
+  }
+}
+```
+
+Curve points use increasing beats and values 0–127; supported controllers are expression (CC11), breath (CC2), and modulation (CC1). Linear interpolation emits up to 32 subdivisions per beat. Pitch gestures use a fixed two-semitone MIDI bend range, bounded vibrato (0–80 cents) and attack bend (-100 to +100 cents); the bend resets after the note. Pitch gestures require non-overlapping monophonic notes on an isolated channel. For these tracks use zero timing jitter or author explicit gaps; overlap legato and pitch gestures cannot be combined. Controller automation is channel-wide. Breath response depends on the SoundFont and is not a physical breath simulator. Attack bend is a small expressive scoop, not full note-to-note portamento. Use the four medieval/orchestral control/expressive audition files to judge the actual render; successful MIDI generation alone does not establish musical quality.
