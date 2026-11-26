@@ -5,7 +5,8 @@ import {PLAN} from './verified-gameplay-receipt.mjs';
 const sha='a'.repeat(40),tree='b'.repeat(40),controller='c'.repeat(40),auditTree='d'.repeat(40),h='e'.repeat(64),repo={full_name:REPO};
 const merge='f'.repeat(40),base='1'.repeat(40),pr={number:1355,state:'open',merged:false,mergeable:true,merge_commit_sha:merge,head:{sha,ref:APP_BRANCH,repo},base:{sha:base,ref:'main',repo}};
 test('only exact approved app PR or merged main is selected',()=>{
- assert.deepEqual(resolveCandidate(pr,controller,controller),{source:merge,sourceRef:'refs/pull/1355/merge',sourcePR:1355});
+ assert.deepEqual(resolveCandidate(pr,controller,base),{source:merge,sourceRef:'refs/pull/1355/merge',sourcePR:1355});
+ assert.throws(()=>resolveCandidate({...pr,base:{...pr.base,sha:'9'.repeat(40)}},controller,base));
  assert.equal(resolveCandidate({...pr,state:'closed',merged:true,merge_commit_sha:sha},controller,controller).source,controller);
  for(const p of [{...pr,number:1},{...pr,head:{...pr.head,repo:{full_name:'other/repo'}}},{...pr,head:{...pr.head,ref:'other'}},{...pr,mergeable:false},{...pr,merge_commit_sha:null},{...pr,state:'closed'}])assert.throws(()=>resolveCandidate(p,controller,controller));
 });
