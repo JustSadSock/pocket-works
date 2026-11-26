@@ -106,6 +106,26 @@ def curl_hand(hand,center,axis,rad):
         return
     for name,bs in finger_chains(hand).items():
         bend_digit(bs,center,axis,rad,.78 if name=="thumb" else 1)
+def grip_proximity(hand,center,axis,radius,limits):
+    axis=Vector(axis).normalized()
+    q=posed_hands.get(hand.name);pts=[]
+    if q and q["objects"]:pts=vertices(q["objects"])
+    else:
+        regions={b.name for b in desc(hand)}
+        for o in core:
+            ev=o.evaluated_get(bpy.context.evaluated_depsgraph_get());me=ev.to_mesh();names={g.index:g.name for g in o.vertex_groups}
+            try:
+                for v in me.vertices:
+                    if sum(g.weight for g in v.groups if names.get(g.group) in regions)>.5:pts.append(ev.matrix_world@v.co)
+            finally:ev.to_mesh_clear()
+    axial=[]
+    for p in pts:
+        d=p-center;t=d.dot(axis)
+        if limits[0]<=t<=limits[1]:axial.append((t,(d-axis*t).length-radius))
+    if not axial:return {"nearSurfaceVertices":0,"closestSurfaceGap":None,"contactBands":0,"vertices":len(pts)}
+    near=[t for t,dist in axial if abs(dist)<=.004]
+    bins={min(5,max(0,int((t-limits[0])/max(.001,limits[1]-limits[0])*6))) for t in near}
+    return {"nearSurfaceVertices":len(near),"closestSurfaceGap":min(abs(dist) for _,dist in axial),"contactBands":len(bins),"vertices":len(pts),"maxSampledRadialIntrusion":max(0,-min(dist for _,dist in axial))}
 def rigid_mesh(name,v,f,matl,b):
     o=mesh(name,v,f,matl,None);attach(o,b);return o
 def leather_loop(name,center,axis,normal,radius,width,b):
@@ -340,6 +360,7 @@ def inspect_contacts():
             tree,_,tris=bvh(o);bodies.append((tree,["rigid armour: "+o.name]*len(tris)))
     result=[];rightNames={b.name for b in desc(R)};leftNames={b.name for b in desc(L)}
     for o in swordParts+shieldParts:
+        if o.hide_render:continue
         tree,vs,tris=bvh(o)
         allowed=rightNames if o==grip else leftNames if o==handle else {LF.name} if o==strap else set()
         for bodyTree,labels in bodies:
@@ -360,8 +381,10 @@ def inspect_contacts():
                 else:bad.append(label)
             result.append({"equipment":o.name,"triangles":len(hits),"allowedSurfaceContacts":near,"unexpected":len(bad),"regions":sorted(set(bad)),"maxEstimatedPenetrationMetres":max(depths,default=0),"estimateNotSolidProof":True})
     for a in swordParts:
+        if a.hide_render:continue
         at,_,_=bvh(a)
         for b in shieldParts:
+            if b.hide_render:continue
             bt,_,_=bvh(b);n=len(at.overlap(bt))
             if n:result.append({"equipment":a.name+"/"+b.name,"unexpected":n,"triangles":n})
     return result
@@ -407,7 +430,7 @@ def gait(motion,phase):
     period,stride,lift,drop,lean=gaits[motion];wave=math.sin(2*math.pi*phase)
     shift_hips((.018*sign*wave,0,-drop+.012*math.cos(4*math.pi*phase)))
     turn(hips,.045*wave);turn(torso,-.07*wave)
-    if lean:rotate_axis(torso,rig.matrix_world.to_3x3()@torso.matrix.to_3x3()@Vector((0,1,0)),Vector((0,-lean,1)))
+    if lean:set_world_rotation(torso,Quaternion(Vector((1,0,0)),lean)@world_of(torso).to_quaternion())
     errors=[];stance=[]
     for j,(upper,lower,end) in enumerate(feet):
         t=(phase+j*.5)%1;support=t<.60;u=t/.60 if support else (t-.60)/.40
@@ -424,23 +447,29 @@ def gait(motion,phase):
 # authored variables are wrist position relative to shoulder, elbow-plane
 # preference, pelvis/chest rotation and forearm pronation, NOT blade direction.
 strike=[
- (0,(.30,-.24,-.30),(.09,-.31,-.24),(0,0,-.040),(0,0,0)),
- (.20,(.40,.04,.20),(.09,-.34,-.22),(.035,.04,-.045),(.14,.28,-.22)),
- (.34,(.38,-.10,.34),(.08,-.35,-.20),(.030,-.01,-.060),(.20,.38,-.12)),
- (.50,(.23,-.49,.01),(.10,-.32,-.24),(-.035,-.11,-.075),(-.15,-.24,.28)),
- (.66,(.16,-.32,-.28),(.08,-.33,-.23),(-.025,-.07,-.055),(-.10,-.16,.15)),
- (1,(.30,-.24,-.30),(.09,-.31,-.24),(0,0,-.040),(0,0,0))]
+ # phase, right hand from shoulder, left guard, pelvis displacement,
+ # pelvis yaw, chest relative yaw, forearm pronation, trunk lean
+ (0,(.30,-.24,-.30),(.09,-.31,-.24),(0,0,-.040),(0,0,0,0)),
+ (.19,(.39,.045,.16),(.09,-.34,-.22),(.045,.065,-.045),(.16,.18,-.19,-.035)),
+ (.32,(.34,-.055,.31),(.08,-.35,-.20),(.025,.025,-.060),(.02,.35,-.14,.005)),
+ (.42,(.25,-.33,.20),(.09,-.35,-.22),(-.015,-.055,-.065),(-.25,.08,.06,.065)),
+ (.53,(.06,-.51,-.025),(.11,-.32,-.24),(-.045,-.125,-.075),(-.32,-.20,.24,.085)),
+ (.68,(.075,-.34,-.29),(.08,-.33,-.23),(-.03,-.080,-.055),(-.18,-.22,.15,.035)),
+ (.84,(.22,-.26,-.31),(.09,-.32,-.24),(-.012,-.03,-.045),(-.06,-.08,.04,.01)),
+ (1,(.30,-.24,-.30),(.09,-.31,-.24),(0,0,-.040),(0,0,0,0))]
 def attack(phase):
     rh,lh,delta,rot=sample_keys(phase,strike);shift_hips((delta[0]*sign,delta[1],delta[2]))
-    turn(hips,rot[0]*sign);turn(torso,rot[1]*sign);errors=[]
+    turn(hips,rot[0]*sign);turn(torso,rot[1]*sign)
+    set_world_rotation(torso,Quaternion(Vector((1,0,0)),rot[3])@world_of(torso).to_quaternion())
+    errors=[];stance=[]
     for j,(upper,lower,end) in enumerate(feet):
-        errors.append(limb(upper,lower,end,ankles0[j]+Vector((0,-.17 if j==0 else .16,0)),(0,-1,0)));foot_orientation(j,0)
+        target=ankles0[j]+Vector((0,-.17 if j==0 else .16,0))
+        pitch=0 if j==0 else .14*math.sin(math.pi*max(0,min(1,(phase-.20)/.62)))**2
+        err,contact=plant_boot(j,target,(0,-1,0),pitch,True);errors.append(err);stance.append(contact)
     errors.extend([arm_pose(0,rh,bend=(sign,.10,-.72),roll=rot[2]),arm_pose(1,lh,bend=(-sign,.04,-.65))])
-    # Flexion/extension peaks slightly after torso rotation; arm and blade
-    # retain follow-through rather than stopping at contact.
     flex=sample_keys(phase,[(0,(0,0)),(.22,(-11,4)),(.38,(-15,3)),(.53,(16,-7)),(.70,(9,-4)),(1,(0,0))])[0]
     hold_sword(*flex);lock_left()
-    return errors,[]
+    return errors,stance
 def feet_audit():
     # Derive actual ground contact from the skinned foot regions, not just
     # the ankle targets. This includes boots/toe geometry.
@@ -467,8 +496,8 @@ hold_sword();lock_left()
 bpy.context.view_layer.update()
 staticContacts=inspect_contacts()
 staticPose=shield_audit()
-staticPose.update({"contacts":staticContacts,"rightWrist":vec(relative_q(R,RF)),"leftWrist":vec(relative_q(L,LF)),"gripSource":audit.get("articulatedHandSource"),"wristAngles":feet_audit()["wrists"]})
-staticBad=any(c.get("unexpected",0)>0 for c in staticContacts) or staticPose["outwardDot"]<.10 or staticPose["forwardDot"]<.35 or staticPose["handleError"]>.035
+staticPose.update({"swordGripContact":grip_proximity(R,world_pos(R,gripLocal),(world_of(R).to_3x3()@axisLocal).normalized(),radius,(gripMin,gripMax)),"shieldGripContact":grip_proximity(L,world_pos(LF,handleLocal),(world_of(LF).to_3x3()@handleAxis).normalized(),.014,(handleMin,handleMax)),"contacts":staticContacts,"rightWrist":vec(relative_q(R,RF)),"leftWrist":vec(relative_q(L,LF)),"gripSource":audit.get("articulatedHandSource"),"wristAngles":feet_audit()["wrists"]})
+staticBad=any(c.get("unexpected",0)>0 for c in staticContacts) or staticPose["outwardDot"]<.10 or staticPose["forwardDot"]<.35 or staticPose["handleError"]>.035 or any(staticPose[k]["contactBands"]<2 or staticPose[k]["nearSurfaceVertices"]<3 for k in ("swordGripContact","shieldGripContact"))
 audit["staticEquipment"]={"pass":not staticBad,"pose":staticPose,"artisticApproval":False};audit["samples"]={"static-equipment":[{"phase":0,"joints":snap(),"bladeTip":vec(world_pos(R,tipLocal)),"shield":staticPose}]}
 save()
 if os.environ.get("BOW_WORKSHOP_MOTION")=="static-gear" or staticBad:
@@ -489,11 +518,18 @@ if os.environ.get("BOW_WORKSHOP_MOTION")=="static-gear" or staticBad:
     finally:
         for o in hidden:o.hide_render=False
     save()
-    if staticBad:raise ValueError("Static equipment fit rejected; motion production withheld")
-    if os.environ.get("BOW_WORKSHOP_MOTION")=="static-gear":raise SystemExit(0)
+    if staticBad and os.environ.get("BOW_WORKSHOP_MOTION") not in ("march","retarget-march"):
+        raise ValueError("Static equipment fit rejected; armed strike production withheld")
+    if staticBad:
+        # Independent gait-only comparison: rejected sword and shield are
+        # hidden. Never claim this as a successful armed motion candidate.
+        for o in swordParts+shieldParts:o.hide_render=True
+        audit["gaitOnlyDueToEquipmentRejection"]=True;save()
 samples={}
+requested=os.environ.get("BOW_WORKSHOP_MOTION")
 mocap=os.environ.get("BOW_WORKSHOP_MOCAP")
-if mocap:
+if requested=="static-gear":motions=()
+elif mocap:
     exec(compile(Path(__file__).with_name("retarget-walk.py").read_text(),"retarget-walk.py","exec"))
     motions=("retarget-march",)
 else:
@@ -527,7 +563,7 @@ for motion in motions:
         bad=bad or max(gaps)>45
     bad=bad or any(abs(s["afterSoleOffset"])>.012 if s["support"] else s["afterSoleOffset"]<-.006 for r in samples[motion] for s in r["stance"] if "afterSoleOffset" in s)
     bad=bad or any(max(w["forearmToPalmDegrees"] for w in r["footContact"]["wrists"])>35 for r in samples[motion])
-    bad=bad or any(r["shield"]["outwardDot"]<.10 or r["shield"]["forwardDot"]<.35 or r["shield"]["armOnBackMetres"]<.07 or r["shield"]["handleError"]>.035 or r["maxIKResidual"]>.025 or any(c.get("unexpected",0) for c in r["contacts"]) for r in samples[motion])
+    bad=bad or staticBad or any(r["shield"]["outwardDot"]<.10 or r["shield"]["forwardDot"]<.35 or r["shield"]["armOnBackMetres"]<.07 or r["shield"]["handleError"]>.035 or r["maxIKResidual"]>.025 or any(c.get("unexpected",0) for c in r["contacts"]) for r in samples[motion])
     audit.setdefault("preflight",{})[motion]={"pass":not bad,"samples":count,"strictContactGate":True}
     save()
     # Capture native six-view local evidence even when the integrity gate
@@ -559,4 +595,4 @@ for motion,rows in samples.items():
     audit.setdefault("footSlipMetres",{})[motion]=max(slip,default=None)
 audit["unexpectedContacts"]=sum(c.get("unexpected",0) for rs in samples.values() for r in rs for c in r["contacts"])
 audit["artisticApproval"]=False;save()
-if not all(r["pass"] for r in audit["preflight"].values()):raise ValueError("Anatomical integrity gate failed; retained original diagnostic and 1080p key poses")
+if not all(r["pass"] for r in audit.get("preflight",{}).values()):raise ValueError("Anatomical integrity gate failed; retained original diagnostic and 1080p key poses")

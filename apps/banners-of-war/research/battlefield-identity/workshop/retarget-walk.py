@@ -94,6 +94,10 @@ def retarget_gait(phase):
     def yaw(v):return math.atan2(v.dot(forward),v.dot(side))
     pelvic=r["legs"][0][0]-r["legs"][1][0];shoulders=r["shoulders"][0]-r["shoulders"][1]
     turn(hips,max(-.28,min(.28,-yaw(pelvic)*sign)));turn(torso,max(-.30,min(.30,-(yaw(shoulders)-yaw(pelvic))*sign)))
+    trunk=r["head"]-r["hip"];incline=max(-.09,min(.12,math.atan2(trunk.dot(forward),max(.05,trunk.z))))
+    shoulderRoll=max(-.07,min(.07,math.atan2(shoulders.z,max(.05,abs(shoulders.dot(side))))))
+    q=Quaternion(Vector((0,1,0)),shoulderRoll*sign)@Quaternion(Vector((1,0,0)),incline)@world_of(torso).to_quaternion()
+    set_world_rotation(torso,q)
     for j,(upper,lower,end) in enumerate(feet):
         thigh,knee,ankle=r["legs"][j];rel=ankle-r["hip"]
         dest=ankles0[j]+Vector(((rel.dot(side)-(cycle[0]["legs"][j][2]-cycle[0]["hip"]).dot(side))*scale*sign,-(rel.dot(forward)-mid[j])*scale,(ankle.z-floor[j])*scale))

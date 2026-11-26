@@ -253,7 +253,7 @@ jobs:
             (
               cd "$work"
               sha256sum apps/banners-of-war/engine.js apps/banners-of-war/research/battlefield-identity/{capture.mjs,battle-art.js,slice.js,slice-renderer.js,terrain-tiles.js,motion.js} > "$dest/runtime-sha256.txt"
-              BOW_EXPECTED_REVISION="$expected" BOW_PROVENANCE_DEST="$dest" python3 "$root/apps/banners-of-war/research/battlefield-identity/workshop/verify-revision.py"
+              BOW_EXPECTED_REVISION="$expected" BOW_PROVENANCE_DEST="$dest" python3 "$root/apps/banners-of-war/research/battlefield-identity/workshop/verify-revision.py" || exit 1
               BOW_ART_OUTPUT="$dest" BOW_BENCH_REVISION="$expected" BOW_BENCH_PROTOCOL="$protocol" node "$script"
             ) || echo "Runner failure for $pair" >> "$parent/runner-failures.txt"
           done
