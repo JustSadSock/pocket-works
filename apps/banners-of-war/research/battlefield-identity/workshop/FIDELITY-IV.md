@@ -1,0 +1,7 @@
+# Character Fidelity IV — source decision
+Workshop III was not artistically accepted. Keep original human torso and accepted shield orientation, real CMU motion, coupled bow system, six cameras and strict gates.
+- Innerscene [Posable anatomical right hand](https://www.innerscene.com/tools/library/3d-parts/posable-anatomical-right-hand-f6098b4f): CC0, MakeHuman/MPFB original, 16 skin joints. Direct source GLB is verified structurally and hashed. Fit mirrored hand to source body without replacing its torso, limbs or head. Source download, mapping and visual quality are not yet established until CI returns.
+- [Hands Rigged](https://blendswap.com/blend/22269), CC0 alternative; not imported because older .blend download availability uncertain.
+- [Emma Lieker anatomical rig](https://github.com/emmalieker/anatomical-hand-model): 21 joint scientific hand, CC BY-NC 4.0; rejected for reusable game assets due to commercial restriction.
+- [Quaternius / KinemIQ CC0 animation pack](https://github.com/Kinemiq/free-game-animations) includes sword slash, guard, walk and block; candidate for future body choreography comparison, not automatically declared superior or integrated. CMU remains measured walking control.
+- Existing World Archery anchor reference, enarmed shield museum references retained. Static grip first: no independent blade aiming, no artificial bow-string elongation. Equipment-only render is an explicitly isolated inspection, not an in-game visual.
