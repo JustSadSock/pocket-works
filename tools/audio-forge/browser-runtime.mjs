@@ -29,8 +29,7 @@ try{
   const result=await page.evaluate(async()=>{
     const {makeSeamlessLoop,createDynamicEmitter,createAdaptiveMusic}=await import('/continuous-audio.js');
     const {createSpatialMixer}=await import('/spatial-audio.js');
-    const {createVirtualAudioWorld}=await import('/virtual-audio.js');
-    const {createSoundFamilyPlayer}=await import('/sound-family.js');
+    const {createBudgetedAudioScene}=await import('/virtual-audio.js');
     function check(condition,message){if(!condition)throw Error(message)}
     const sr=48000;
     const make=(ctx,length,frequency,amp=.12)=>{
@@ -77,7 +76,7 @@ try{
     // Real-time audio context is unlocked by the browser click, not by an autoplay flag.
     window.runtimeDone=false;
     document.querySelector('#start').addEventListener('click',async()=>{
-      let c,mixer,source,musicPlayer,world,events;
+      let c,mixer,source,musicPlayer,world,events,scene;
       try{
         c=new (window.AudioContext||window.webkitAudioContext)();
         await c.resume();check(c.state==='running','AudioContext unlock failed');
@@ -109,21 +108,14 @@ try{
         check(battleDb>-50,'Quantized battle stem missing from output');
         const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);
         check(rms(data)>.005,'Live music bus silent');
-        // Integration slice: two army groups, a travelling listener, ambience,
-        // one-shot combat signals and the already-running adaptive score.
-        const armyBus=mixer.bus('army');mixer.setBusVolume('army',.25);
-        const armyAnalyser=c.createAnalyser();armyAnalyser.fftSize=2048;armyBus.connect(armyAnalyser);
+        const startTime=musicPlayer.state.startTime;
+        source.stop();musicPlayer.stop();
+        // Independent integrated battlefield: a shared mixer and a hard total reservation.
         const march=makeSeamlessLoop(c,make(c,sr,92,.06),{crossfadeSeconds:.1});
         const army=Array.from({length:512},(_,i)=>({
           id:'unit-'+i,buffer:march,position:{x:(i<256?0:200)+(i%16)*2,y:Math.floor(i%256/16)*2},
           priority:i%23===0?3:1,volume:.8,referenceDistance:8,maxDistance:70,zone:'open'
         }));
-        world=createVirtualAudioWorld({context:c,destination:armyBus,maxVoices:12,maxSources:1024});
-        let t0=performance.now();
-        check(await world.reconcile({listener:{x:0,y:0},sources:army}),'Initial army update failed');
-        const initialMs=performance.now()-t0,first=world.activeIds;
-        check(first.length===12&&first.every(id=>Number(id.slice(5))<256),'Initial selection wrong');
-        const firstStats=world.stats;
         // A real decoder and one-shot family share the same mixer, with separate quota.
         const wav=new Uint8Array(44+2400*2),view=new DataView(wav.buffer);
         const str=(at,value)=>{for(let i=0;i<value.length;i++)wav[at+i]=value.charCodeAt(i)};
@@ -132,8 +124,23 @@ try{
         view.setUint32(24,48000,true);view.setUint32(28,96000,true);view.setUint16(32,2,true);view.setUint16(34,16,true);
         str(36,'data');view.setUint32(40,wav.length-44,true);
         for(let i=0;i<2400;i++)view.setInt16(44+i*2,Math.round(4000*Math.sin(i*.1)*Math.sin(Math.PI*i/2400)),true);
-        events=createSoundFamilyPlayer({context:c,destination:mixer.bus('combat'),maxVoices:4,families:{impact:{variants:['impact'],pitchCents:0,gainSpread:0}},fetcher:async()=>new Response(wav)});
+        scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:2},maxSources:1024,
+          families:{impact:{variants:['impact'],pitchCents:0,gainSpread:0}},fetcher:async()=>new Response(wav),
+          stems:[{id:'calm',buffer:make(c,sr,220),base:1},{id:'battle',buffer:make(c,sr,440),threshold:.2,width:.6}]});
+        world=scene.world;events=scene.events;
+        const armyBus=scene.mixer.bus('world');scene.mixer.setBusVolume('world',.25);
+        const armyAnalyser=c.createAnalyser();armyAnalyser.fftSize=2048;armyBus.connect(armyAnalyser);
+        check(await scene.music.start(),'Scene music failed');
+        const sceneClock=scene.music.state.startTime;
+        let t0=performance.now();
+        check(await world.reconcile({listener:{x:0,y:0},sources:army}),'Initial army update failed');
+        const initialMs=performance.now()-t0,first=world.activeIds;
+        check(first.length===12&&first.every(id=>Number(id.slice(5))<256),'Initial selection wrong');
+        const firstStats=world.stats;
+
         check(await events.play('impact',{priority:2}),'Real combat event decode/play failed');
+        const withEvent=scene.stats;check(withEvent.allocated<=18&&withEvent.music===2,'Combined budget invalid');
+        scene.music.setIntensity(1,{quantize:'beat',fadeSeconds:.05});
         t0=performance.now();
         check(await world.reconcile({listener:{x:200,y:0},sources:army}),'Listener travel update failed');
         const retireMs=performance.now()-t0,retiring=world.stats;
@@ -150,18 +157,16 @@ try{
         const armyData=new Float32Array(armyAnalyser.fftSize);armyAnalyser.getFloatTimeDomainData(armyData);
         const armyRms=rms(armyData);
         check(armyRms>.0001&&world.stats.peak===12&&world.stats.failures===0,'Virtual army output or budget invalid');
-        const worldReport={first:firstStats,retiring,final:world.stats,firstIds:first,secondIds:second,initialMs,retireMs,activateMs,armyRms,combatDecoded:true,musicContinued:musicPlayer.state.startTime===time};
+        const worldReport={first:firstStats,retiring,final:world.stats,firstIds:first,secondIds:second,initialMs,retireMs,activateMs,armyRms,combatDecoded:true,withEvent,combined:scene.stats,musicContinued:scene.music.state.startTime===sceneClock};
         check(worldReport.musicContinued,'Scene restarted score');
-        world.destroy();events.destroy();armyAnalyser.disconnect();
-        check(world.stats.active===0&&events.stats.voices===0,'Scene cleanup failed');
-        const startTime=musicPlayer.state.startTime;
-        source.stop();musicPlayer.stop();
+        scene.destroy();armyAnalyser.disconnect();
+        check(scene.stats.allocated===0,'Scene cleanup failed');
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
         check(musicPlayer.state.startTime>startTime,'Restart clock invalid');
         window.runtimeResult={liveRms:rms(data),restart:true,quantizedBeat:boundary,battleDb,world:worldReport};
       }catch(e){window.runtimeResult={error:String(e)}}finally{
-        world?.destroy();events?.destroy();source?.destroy();musicPlayer?.destroy();mixer?.destroy();if(c)await c.close();window.runtimeDone=true;
+        scene?.destroy();source?.destroy();musicPlayer?.destroy();mixer?.destroy();if(c)await c.close();window.runtimeDone=true;
       }
     },{once:true});
     return {loopFrames:loop.length,seam,loopSeam,calm,combat};
