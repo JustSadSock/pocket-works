@@ -1,0 +1,75 @@
+import {spatialProfile} from './spatial-audio.js';
+import {createDynamicEmitter} from './continuous-audio.js';
+const bounded=(value,fallback,min,max,label)=>{
+ const n=value??fallback;
+ if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)throw Error('Invalid '+label);
+ return n;
+};
+// A bounded pool for continuous emitters. Music and one-shots have separate quotas.
+export function createVirtualAudioWorld({context,destination=context?.destination,maxVoices=12,maxSources=4096,minAudible=.002,retentionBonus=.15,releaseSeconds=.05,createEmitter=createDynamicEmitter}={}){
+ if(!context||!destination||!Number.isInteger(maxVoices)||maxVoices<1||maxVoices>64||!Number.isInteger(maxSources)||maxSources<maxVoices||maxSources>16384)throw Error('Invalid audio world budget');
+ const floor=bounded(minAudible,.002,0,1,'audibility floor');
+ const bonus=bounded(retentionBonus,.15,0,1,'retention');
+ const release=bounded(releaseSeconds,.05,.035,1,'release');
+ const active=new Map(),origin=context.currentTime;
+ let disposed=false,busy=false,logical=0,audible=0,selected=0,peak=0,starts=0,retires=0,failures=0;
+ function remove(id,entry){entry.emitter.destroy();active.delete(id);}
+ function getStats(){return {logical,audible,selected,active:active.size,retiring:[...active.values()].filter(v=>v.retireAt!==null).length,virtual:Math.max(0,logical-[...active.values()].filter(v=>v.retireAt===null).length),maxVoices,peak,starts,retires,failures,busy};}
+ return {
+  async reconcile({listener,heading=0,sources}={}){
+   if(disposed||busy)return false;
+   if(!Array.isArray(sources)||sources.length>maxSources)throw Error('Logical source budget exceeded');
+   const ids=new Set(),ranked=[];
+   // Validate the complete snapshot before touching the current audio graph.
+   for(const s of sources){
+    if(!s||typeof s.id!=='string'||!s.id||s.id.length>128||ids.has(s.id))throw Error('Invalid or duplicate emitter ID');
+    ids.add(s.id);
+    const b=s.buffer;
+    if(!b||!Number.isInteger(b.length)||b.length<2||!Number.isFinite(b.sampleRate)||b.sampleRate<8000||![1,2].includes(b.numberOfChannels)||typeof b.getChannelData!=='function')throw Error('Invalid emitter buffer');
+    const volume=bounded(s.volume,1,0,1,'volume'),priority=bounded(s.priority,1,0,10,'priority');
+    const phaseOrigin=bounded(s.phaseOrigin,origin,0,1e12,'phase origin');
+    const spatial={source:s.position,listener,heading,referenceDistance:s.referenceDistance,maxDistance:s.maxDistance,rolloff:s.rolloff,occlusion:s.occlusion,zone:s.zone};
+    const profile=spatialProfile(spatial),gain=volume*profile.gain;
+    if(gain<=floor||priority===0)continue;
+    const incumbent=active.get(s.id);
+    const retained=incumbent&&incumbent.retireAt===null&&incumbent.buffer===b&&incumbent.phaseOrigin===phaseOrigin;
+    ranked.push({id:s.id,buffer:b,volume,spatial,phaseOrigin,score:gain*priority*(retained?1+bonus:1)});
+   }
+   ranked.sort((a,b)=>b.score-a.score||(a.id<b.id?-1:a.id>b.id?1:0));
+   const desired=ranked.slice(0,maxVoices),wanted=new Map(desired.map(s=>[s.id,s]));
+   logical=sources.length;audible=ranked.length;selected=desired.length;busy=true;
+   try{
+    const now=context.currentTime;
+    for(const [id,v] of active){
+     const next=wanted.get(id),same=next&&next.buffer===v.buffer&&next.phaseOrigin===v.phaseOrigin;
+     if(v.retireAt!==null&&now>=v.retireAt){remove(id,v);continue;}
+     if(same){
+      if(v.retireAt!==null||v.volume!==next.volume){v.emitter.setVolume(next.volume);v.volume=next.volume;}
+      v.retireAt=null;v.emitter.update(next.spatial);
+     }else if(v.retireAt===null){
+      // Keep retiring voices in the physical budget until the audio-clock fade has elapsed.
+      v.emitter.setVolume(0);v.retireAt=now+release;retires++;
+     }
+    }
+    for(const s of desired){
+     if(disposed||active.size>=maxVoices)break;
+     if(active.has(s.id))continue;
+     let emitter;
+     try{
+      emitter=createEmitter({context,destination,buffer:s.buffer,spatial:s.spatial,volume:s.volume,loop:true});
+      const v={emitter,buffer:s.buffer,phaseOrigin:s.phaseOrigin,volume:s.volume,retireAt:null};
+      active.set(s.id,v);peak=Math.max(peak,active.size);
+      const offset=Math.max(0,context.currentTime-s.phaseOrigin);
+      const ok=await emitter.start({offsetSeconds:offset,fadeInSeconds:.025});
+      if(disposed)return false;
+      if(!ok){remove(s.id,v);failures++;}else starts++;
+     }catch{if(disposed)return false;if(active.has(s.id))remove(s.id,active.get(s.id));else emitter?.destroy();failures++;}
+    }
+    return !disposed;
+   }finally{busy=false;}
+  },
+  destroy(){if(disposed)return;disposed=true;for(const [id,v] of active)remove(id,v);logical=0;audible=0;selected=0;},
+  get stats(){return getStats()},
+  get activeIds(){return [...active].filter(([,v])=>v.retireAt===null).map(([id])=>id)}
+ };
+}
