@@ -133,3 +133,25 @@ export async function chartedContourSource(s,source,known,{contourDetail=8,verti
  const ribbons=polish?reachRibbons(g,source.bounds,{vertical,threshold:25,allow,overview:contourDetail<=4}):riverRibbons(g,source.bounds,{vertical,threshold:contourDetail<=4?58:25,allow});source.polish=polish;source.contours.chunks.push(...ribbons.chunks);source.contours.stats.bytes+=ribbons.stats.bytes;source.contours.stats.rivers=ribbons.stats;
  source.stats={...source.stats,chartedFine:true,refined,coarseFallbackSamples:n-refined,contours:source.contours.stats,bytes:source.stats.bytes+water.kind.byteLength+water.depth.byteLength+water.shore.byteLength+source.contours.stats.bytes};return source;
 }
+
+// Revealed-only fixed spatial sample tiles. A 32-cell tile is keyed by
+// immutable geography and density, shared across overlapping camera regions.
+// No old lake clipping, duplicate channel raster, or double bed interpolation.
+const scaleTiles=new WeakMap();
+export function clearScaleTiles(g){scaleTiles.get(g)?.clear();scaleTiles.delete(g);}
+export async function scaleTerrainSource(s,cam,{bounds,detail=2,contourDetail=2,vertical,yieldRow=async()=>{}}){
+ if(s.mapVersion!==3||!s.autonomous||!s.map.geography.lakeId)throw Error('Revealed Genesis 3.4 required');
+ const start=clock(),m=s.map,g=m.geography,r=g.detail,f=contourField(m,{polish:true}),W=f.W,H=f.H,[x0,y0,x1,y1]=bounds,cols=(x1-x0)*detail+1,rows=(y1-y0)*detail+1,n=cols*rows,vertices=new Float32Array(n*9),elevations=new Float32Array(n),water={kind:new Uint8Array(n),depth:new Float32Array(n),shore:new Float32Array(n)},cache=scaleTiles.get(g)??new SpatialLRU(24*1024*1024);scaleTiles.set(g,cache);
+ let tileHits=0,tileMisses=0,maxSlice=0,last=clock(),minH=Infinity,maxH=-Infinity;
+ for(let ty=Math.floor(y0/32)*32;ty<y1;ty+=32)for(let tx=Math.floor(x0/32)*32;tx<x1;tx+=32){
+ const ex=Math.min(W,tx+32),ey=Math.min(H,ty+32),tw=(ex-tx)*detail+1,th=(ey-ty)*detail+1,key=[tx,ty,detail].join(':'),hit=cache.get(key);let data=hit;
+ if(hit)tileHits++;else{tileMisses++;data=new Float32Array(tw*th*10);for(let y=0;y<th;y++){for(let x=0;x<tw;x++){const X=tx+x/detail,Y=ty+y/detail,j=(y*tw+x)*10,p=f.sample(X,Y),fx=Math.min(g.width-1,Math.round(X*r)),fy=Math.min(g.height-1,Math.round(Y*r)),i=fy*g.width+fx,wet=g.rain[i],k=Math.min(H-1,Math.floor(Y))*W+Math.min(W-1,Math.floor(X)),z=p.coast<0?-(Math.max(0,.12-p.bed)*3.1+.025):vertical(p.bed),forest=smooth((wet-.45)/.24)*(1-smooth((p.bed-.46)/.24));
+ data[j]=X;data[j+1]=Y;data[j+2]=z;data[j+3]=p.bed;data[j+4]=wet;data[j+5]=m.fert[k];data[j+6]=forest;data[j+7]=1;data[j+8]=g.land[i]&&g.flow[i]/(r*r)>58?.045:1;data[j+9]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));
+ }const now=clock();if(now-last>6){maxSlice=Math.max(maxSlice,now-last);await yieldRow();last=clock();}}cache.put(key,data,data.byteLength);}
+ const ax=Math.max(tx,x0),ay=Math.max(ty,y0),bx=Math.min(ex,x1),by=Math.min(ey,y1);
+ for(let y=(ay-y0)*detail;y<=(by-y0)*detail;y++)for(let x=(ax-x0)*detail;x<=(bx-x0)*detail;x++){const i=y*cols+x,j=((y+(y0-ty)*detail)*tw+x+(x0-tx)*detail)*10,o=i*9;for(let k=0;k<9;k++)vertices[o+k]=data[j+k];elevations[i]=data[j+2];water.shore[i]=data[j+9];minH=Math.min(minH,data[j+3]);maxH=Math.max(maxH,data[j+3]);}
+ await yieldRow();
+ }
+ const sampleMs=clock()-start,contours=await buildContours(m,bounds,{detail:contourDetail,vertical,yieldRow,polish:true}),contourMs=clock()-start-sampleMs,ribbons=reachRibbons(g,bounds,{vertical,threshold:25,overview:contourDetail<=4});contours.chunks.push(...ribbons.chunks);contours.stats.rivers=ribbons.stats;contours.stats.bytes+=ribbons.stats.bytes;
+ return {vertices,elevations,water,contours,indices:new Uint32Array(0),cols,rows,detail,bounds,center:0,polish:true,scaleSurface:true,stats:{ms:clock()-start,maxSlice:Math.max(maxSlice,contours.stats.maxSlice),minH,maxH,contours:contours.stats,sampleMs,contourMs,ribbonMs:clock()-start-sampleMs-contourMs,tileHits,tileMisses,tileBytes:cache.bytes,bytes:vertices.byteLength+elevations.byteLength+water.kind.byteLength+water.depth.byteLength+water.shore.byteLength+contours.stats.bytes}};
+}
