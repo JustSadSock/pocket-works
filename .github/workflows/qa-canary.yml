@@ -17,6 +17,8 @@ on:
 permissions:
   contents: read
   actions: read
+env:
+  PW_QA_SPLIT_BANNERS: ${{ vars.PW_QA_SPLIT_BANNERS || '1' }}
 concurrency:
   group: qa-canary-${{ inputs.delivery_route && 'delivery' || 'shadow' }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -48,7 +50,7 @@ jobs:
           DELIVERY_ROUTE: ${{ inputs.delivery_route }}
           EXPECTED_PLAN_DIGEST: ${{ inputs.expected_plan_digest }}
         run: |
-          node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/*.test.mjs
+          node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/universal-qa/fresh-split.test.mjs scripts/ci-overhaul/*.test.mjs
           mkdir plan
           if test "$GITHUB_EVENT_NAME" = pull_request; then
             GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' node scripts/universal-qa/plan.mjs > plan/legacy.txt
