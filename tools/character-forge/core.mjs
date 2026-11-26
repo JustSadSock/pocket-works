@@ -1,9 +1,12 @@
-// Character Core v0.1: metres, +Y up, +Z forward (glTF). No editor/runtime dependencies.
+import {appearance,styles,lods,classifyPart} from "./style.mjs";
+import {animal} from "./animals.mjs";
+// Character Core v0.2: metres, +Y up, +Z forward (glTF). No editor/runtime dependencies.
 export const profiles=Object.freeze({simplified:{sides:8,rings:5,head:1.08,width:1.02,faceted:true},miniature:{sides:12,rings:8,head:1.16,width:1.10,faceted:false},realistic:{sides:24,rings:14,head:1,width:1,faceted:false}});
 export const recipes=Object.freeze({
  swordsman:{family:'humanoid',outfit:'mail',height:1.78,build:1.04},
  legionary:{family:'humanoid',outfit:'roman',height:1.73,build:1.12},
  citizen:{family:'humanoid',outfit:'town',height:1.69,build:.90},
+ horse:{family:'horse',outfit:'none',height:1.55,build:1},
  rider:{family:'horse',outfit:'rider',height:1.62,build:1},
  elephant:{family:'elephant',outfit:'crew',height:2.9,build:1},
  dog:{family:'dog',outfit:'none',height:.65,build:.86},
@@ -14,28 +17,29 @@ const lerp=(a,b,t)=>add(mul(a,1-t),mul(b,t)),mix=(a,b,t)=>a+(b-a)*t;
 const palette={skin:[.60,.36,.23],mail:[.27,.33,.36],iron:[.48,.55,.57],bronze:[.62,.39,.16],red:[.48,.10,.065],blue:[.14,.29,.40],linen:[.72,.62,.43],leather:[.18,.10,.065],wood:[.33,.19,.09],dark:[.045,.038,.03],hair:[.20,.12,.07],ivory:[.83,.75,.55],horse:[.35,.19,.105],elephant:[.38,.40,.40],dog:[.58,.36,.18],feather:[.32,.42,.49]};
 const finite=(v,min,max,n)=>{if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw Error('Invalid '+n);return v};
 export function validate(spec){
- if(!spec||spec.version!==1||!Object.hasOwn(recipes,spec.recipe)||!Object.hasOwn(profiles,spec.profile))throw Error('Unknown version, recipe or profile');
+ if(!spec||![1,2].includes(spec.version)||!Object.hasOwn(recipes,spec.recipe)||(spec.version===1?!Object.hasOwn(profiles,spec.profile):!Object.hasOwn(styles,spec.style)||!Object.hasOwn(lods,spec.lod)))throw Error('Unknown version, recipe or profile');
  const r=recipes[spec.recipe],m=spec.morphology??{},allowed=['height','build','head','limb','age'];
  if(Object.keys(m).some(k=>!allowed.includes(k)))throw Error('Unknown morphology');
  if(spec.seed!==undefined&&(!Number.isInteger(spec.seed)||spec.seed<0||spec.seed>4294967295))throw Error('Invalid seed');
  const morph={height:finite(m.height??r.height,r.height*.65,r.height*1.4,'height'),build:finite(m.build??r.build,.65,1.5,'build'),head:finite(m.head??1,.8,1.25,'head'),limb:finite(m.limb??1,.85,1.15,'limb'),age:finite(m.age??.45,0,1,'age')};
- const actions=spec.actions??['idle','walk','run','turn'];if(!Array.isArray(actions)||!actions.length||new Set(actions).size!==actions.length||actions.some(a=>!['idle','walk','run','turn','guard','interact'].includes(a)))throw Error('Unsupported action');
+ const actions=spec.actions??['idle','walk','run','turn'];if(!Array.isArray(actions)||!actions.length||new Set(actions).size!==actions.length||actions.some(a=>!['idle','walk','run','turn','guard','interact','fly'].includes(a)))throw Error('Unsupported action');
  if(spec.format!==undefined&&spec.format!=='glb')throw Error('Unsupported target format');
  const budget={maxTriangles:spec.budget?.maxTriangles??100000,maxJoints:spec.budget?.maxJoints??128,maxBytes:spec.budget?.maxBytes??16000000};
  for(const [k,v] of Object.entries(budget))if(!Number.isSafeInteger(v)||v<1||v>100000000)throw Error('Invalid budget '+k);
- return {version:1,recipe:spec.recipe,family:r.family,profile:spec.profile,seed:spec.seed??17,morphology:morph,actions,budget,format:'glb',provenance:[{author:'Pocket Works',license:'original',origin:'Character Forge research geometry'}]};
+ return {version:spec.version,recipe:spec.recipe,family:r.family,profile:spec.version===1?spec.profile:undefined,...(spec.version===2?{style:spec.style,lod:spec.lod,surface:spec.surface??'transported',composite:spec.composite??spec.recipe==='rider',modules:spec.modules??[]}:{}),seed:spec.seed??17,morphology:morph,actions,budget,format:'glb',provenance:[{author:'Pocket Works',license:'original',origin:'Character Forge research geometry'}]};
 }
 function rng(seed){let x=seed>>>0;return ()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296}}
 class Builder{
- constructor(spec){this.spec=spec;this.profile=profiles[spec.profile];this.joints=[];this.parts=[];this.contacts=[];this.sockets=[];this.components=[];this.random=rng(spec.seed)}
+ constructor(spec){this.spec=spec;this.profile=spec.version===1?profiles[spec.profile]:appearance(spec.style,spec.lod);this.joints=[];this.parts=[];this.contacts=[];this.sockets=[];this.components=[];this.random=rng(spec.seed)}
  joint(name,parent,p,role,axis=[1,0,0],limit=90){if(this.joints.some(j=>j.name===name)||parent>=this.joints.length||parent<-1)throw Error('Invalid hierarchy');const id=this.joints.length;this.joints.push({id,name,parent,position:p,local:parent<0?p:sub(p,this.joints[parent].position),role,axis:unit(axis),limitDegrees:limit});return id}
  socket(name,joint,point,role){this.sockets.push({name,joint,local:sub(point,this.joints[joint].position),role})}
- part(name,color,joint){const p={name,color:palette[color]??color,positions:[],normals:[],indices:[],joints:[],weights:[],binding:joint};this.parts.push(p);return p}
+ part(name,color,joint){const p={name,component:classifyPart(name),color:palette[color]??color,positions:[],normals:[],indices:[],joints:[],weights:[],binding:joint};this.parts.push(p);return p}
  vertex(p,v,n,j,k=j,w=1){p.positions.push(...v);p.normals.push(...unit(n));p.joints.push(j,k,0,0);p.weights.push(w,1-w,0,0);return p.positions.length/3-1}
  // Connected indexed surface with capped rings; weights interpolate at each anatomical bend.
  loft(name,stations,color,sideCount=this.profile.sides){
-  const p=this.part(name,color,stations[0].j),N=sideCount;
+  const p=this.part(name,color,stations[0].j),N=sideCount;let priorU=null;
   for(let i=0;i<stations.length;i++){let s=stations[i],a=stations[Math.max(0,i-1)].p,b=stations[Math.min(stations.length-1,i+1)].p,t=unit(sub(b,a)),u=unit(cross(Math.abs(t[1])>.9?[0,0,1]:[0,1,0],t)),v=cross(t,u);
+   if(this.spec.version===2&&this.spec.surface==='transported'&&priorU){let projected=sub(priorU,mul(t,dot(priorU,t)));if(Math.hypot(...projected)>.001)u=unit(projected);v=cross(t,u)}priorU=u;
    for(let k=0;k<N;k++){let q=k*2*Math.PI/N,rad=add(mul(u,Math.cos(q)*s.r[0]),mul(v,Math.sin(q)*s.r[1]));this.vertex(p,add(s.p,rad),add(mul(u,Math.cos(q)/s.r[0]),mul(v,Math.sin(q)/s.r[1])),s.j,s.k??s.j,s.w??1)}
   }
   for(let i=0;i<stations.length-1;i++)for(let k=0;k<N;k++){let a=i*N+k,b=i*N+(k+1)%N,c=b+N,d=a+N;p.indices.push(a,b,c,a,c,d)}
@@ -57,6 +61,11 @@ function human(b,prefix,origin,parent,scale,outfit,seated=false){
  b.egg(prefix+'nose',pos(0,hipY+.397,.057*head),[.015*h,.023*h,.022*h],skin,skull);
  for(let s of [-1,1]){b.egg(prefix+'eye'+s,pos(s*.028*head,hipY+.421,.054*head),[.008*h,.005*h,.004*h],'dark',skull);b.egg(prefix+'ear'+s,pos(s*.065*head,hipY+.405,0),[.012*h,.022*h,.014*h],skin,skull)}
  b.egg(prefix+'hair or helmet',pos(0,hipY+.451,-.008),[.072*h*head,.053*h*head,.070*h*head],town?'hair':armor?'bronze':'iron',skull);
+ if(b.spec.version===2){
+  const hem=hipY-.12,top=hipY+.055; b.loft(prefix+(town?'tunic skirt':'mail skirt'),[{p:pos(0,hem,0),r:[.139*h*w,.101*h*w],j:hip},{p:pos(0,hem+.05,0),r:[.129*h*w,.095*h*w],j:hip},{p:pos(0,top,0),r:[.118*h*w,.088*h*w],j:hip}],town?cloth:'mail');
+  if(town){b.egg(prefix+'shoulder bag',pos(-.145*w,hipY+.01,.045),[.069*h,.087*h,.041*h],'leather',hip);b.bar(prefix+'bag strap',pos(-.13*w,hipY+.23,.09),pos(.09*w,hipY+.035,.09),.012*h,'leather',chest)}
+  b.socket(prefix+'waist',hip,pos(0,hipY+.035,0),'belt'); b.socket(prefix+'headwear',skull,pos(0,hipY+.45,0),'headwear');
+ }
  if(armor){b.egg(prefix+'crest',pos(0,hipY+.516,-.005),[.018*h,.04*h,.075*h],'red',skull);for(let i=0;i<5;i++)b.loft(prefix+'lamella'+i,[{p:pos(0,hipY+.08+i*.034,0),r:[(.125+i*.004)*h*w,.091*h*w],j:chest},{p:pos(0,hipY+.104+i*.034,0),r:[(.127+i*.004)*h*w,.093*h*w],j:chest}],'iron')}
  b.loft(prefix+'belt',[{p:pos(0,hipY+.018,0),r:[.119*h*w,.086*h*w],j:hip},{p:pos(0,hipY+.047,0),r:[.120*h*w,.087*h*w],j:hip}],'leather');
  b.egg(prefix+'buckle',pos(0,hipY+.033,.087*w),[.024*h,.017*h,.009*h],'bronze',hip);
@@ -101,11 +110,12 @@ function bird(b){let h=b.spec.morphology.height,p=(x,y,z)=>[x*h,y*h,z*h],root=b.
  for(let s of [-1,1]){let a=b.joint('wing-'+s,root,p(s*.17,.65,.04),'wing',[0,0,1],85),tip=b.joint('wing-tip-'+s,a,p(s*.54,.58,-.18),'wing.tip',[0,0,1],60);b.limb('wing'+s,[p(s*.17,.65,.04),p(s*.54,.58,-.18),p(s*.82,.51,-.31)],[.15*h,.12*h,.012*h],[a,tip,tip],'feather');let f=b.joint('foot-'+s,root,p(s*.12,.07,0),'foot',[1,0,0],40);b.bar('leg'+s,p(s*.12,.36,0),p(s*.12,.07,0),.026*h,'bronze',f);b.contacts.push({joint:f,role:'sole',local:[0,-.07*h,0],phase:s<0?0:.5})}
  b.components.push({name:'bird',family:'avian',root,template:'avian-v1'})}
 export function build(spec){let s=validate(spec),b=new Builder(s),t=performance.now();
+ if(s.version===2&&!['transported','legacy-rings'].includes(s.surface))throw Error('Unsupported surface');
  if(s.family==='humanoid')human(b,'',[0,0,0],-1,s.morphology.height,recipes[s.recipe].outfit);
- else if(s.family==='bird')bird(b);else quadruped(b,s.family);
+ else if(s.family==='bird')bird(b);else if(s.version===2)animal(b,s.family,human);else quadruped(b,s.family);
  const triangleCount=b.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices=b.parts.reduce((n,p)=>n+p.positions.length/3,0);
  if(triangleCount>s.budget.maxTriangles||b.joints.length>s.budget.maxJoints)throw Error('Geometry budget exceeded');
- return {spec:s,joints:b.joints,parts:b.parts,contacts:b.contacts,sockets:b.sockets,components:b.components,statistics:{triangleCount,vertices,joints:b.joints.length,geometryAndRigMs:performance.now()-t},approval:'unreviewed'}
+ return {spec:s,joints:b.joints,parts:b.parts,contacts:b.contacts,sockets:b.sockets,components:b.components,modules:b.parts.map(p=>({part:p.name,kind:p.component,binding:p.binding})),statistics:{triangleCount,vertices,joints:b.joints.length,geometryAndRigMs:performance.now()-t},approval:'unreviewed'}
 }
 export function quat(axis,angle){return [...mul(unit(axis),Math.sin(angle/2)),Math.cos(angle/2)]}
 export function qmul(a,b){let av=a.slice(0,3),bv=b.slice(0,3);return [...add(add(mul(bv,a[3]),mul(av,b[3])),cross(av,bv)),a[3]*b[3]-dot(av,bv)]}
