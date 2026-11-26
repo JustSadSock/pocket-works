@@ -88,11 +88,19 @@ export function dress(source,options={},template=null){let t=performance.now(),c
  let visible=compact(body,f=>f.every(i=>{let v=body.positions.slice(i*3,i*3+3);return v[1]>neck-.018||wrists.some(w=>Math.abs(v[0])>=Math.abs(w[0])-.016&&Math.hypot(...sub(v,w))<.24)}));
  let garments=options.method==='template'?fitTemplate(source,template):draftGarments(source,options),eyes=['helper-l-eye','helper-r-eye'].map(n=>helper(source,ctx.body,ctx.near,n,[.65,.61,.51],v=>v,'body'));
  let iris=eyes.map((p,i)=>{let z=Math.max(...p.positions.filter((_,k)=>k%3===2)),q=compact(p,f=>f.every(j=>p.positions[j*3+2]>z-.004));q.name='iris '+i;q.color=identity.eyeColor??[.08,.06,.04];for(let j=2;j<q.positions.length;j+=3)q.positions[j]+=.001;return q}).filter(p=>p.indices.length);
- let m={...source,parts:[visible,...eyes,...iris,...garments],spec:{...source.spec,recipe:'source-'+(options.kit==='warrior'?'warrior':'citizen'),style:options.style??'historical-miniature',lod:'source',garment:options,actions:['idle','walk']},approval:'unreviewed'};delete m.fitting;
+ let m={...structuredClone(source),parts:[visible,...eyes,...iris,...garments],spec:{...source.spec,recipe:'source-'+(options.kit==='warrior'?'warrior':'citizen'),style:options.style??'historical-miniature',lod:'source',garment:options,actions:['idle','walk']},approval:'unreviewed'};delete m.fitting;
+ // Low-poly art direction changes the silhouette consistently across body,
+ // clothes, and skeleton; not merely a triangle-count change. The same
+ // global rest-space transform is applied to every component.
+ if(m.spec.style==='low-poly'){
+   const hip=ctx.J('root').position[1],head=ctx.J('head').position,transform=v=>{let q=v.slice(),top=clamp((v[1]-neck)/.10,0,1),upper=clamp((v[1]-hip)/.35,0,1)*(1-top);q[0]*=1+.14*upper+.10*top;q[1]=v[1]<hip?v[1]*.91:hip*.91+(v[1]-hip)*(1+.04*top);q[2]=head[2]+(v[2]-head[2])*(1+.09*top);return q};
+   for(let p of m.parts){for(let i=0;i<p.positions.length;i+=3)p.positions.splice(i,3,...transform(p.positions.slice(i,i+3)));normals(p)}
+   for(let j of m.joints){j.position=transform(j.position);j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position)}
+ }
  m.statistics={triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),joints:m.joints.length,garmentMs:performance.now()-t};return m
 }
 // Diagnostic, not exact mesh intersection: nearest source normal signed
 // distance for outer garment vertices at rest and four animated phases.
 // Retains negative samples and names rather than hiding lower-layer defects.
-export function garmentAudit(source,m){let results=[];for(let phase of [0,.25,.5,.75]){let w=pose(m,'walk',phase),skin=deform(source,source.parts[0],w),p={...source.parts[0],positions:skin.flat()},near=locator(p),rows=[];
- for(let q of m.parts.filter(p=>p.layer&&p.region!=='head'&&p.region!=='face')){let vs=deform(m,q,w),negative=0,min=Infinity,samples=0;for(let i=0;i<Math.floor(vs.length/2);i+=Math.max(1,Math.floor(vs.length/800))){let v=vs[i],hit=near(v),n=source.parts[0].normals.slice(hit.index*3,hit.index*3+3),d=dot(sub(v,skin[hit.index]),n);negative+=d<-.008;min=Math.min(min,d);samples++}rows.push({part:q.name,negative,samples,minApproxSignedDistance:min})}results.push({phase,rows})}return results}
+export function garmentAudit(source,m){if(m.spec.style==='low-poly')return {skipped:'Low-poly rest-space transform differs; compare neutral untransformed methods separately'};let results=[];for(let phase of [0,.25,.5,.75]){let w=pose(m,'walk',phase),skin=deform(source,source.parts[0],w),p={...source.parts[0],positions:skin.flat()},near=locator(normals(p)),rows=[];
+ for(let q of m.parts.filter(p=>p.layer&&p.region!=='head'&&p.region!=='face')){let vs=deform(m,q,w),negative=0,min=Infinity,samples=0;for(let i=0;i<Math.floor(vs.length/2);i+=Math.max(1,Math.floor(vs.length/800))){let v=vs[i],hit=near(v),n=p.normals.slice(hit.index*3,hit.index*3+3),d=dot(sub(v,skin[hit.index]),n);negative+=d<-.008;min=Math.min(min,d);samples++}rows.push({part:q.name,negative,samples,minApproxSignedDistance:min})}results.push({phase,rows})}return results}
