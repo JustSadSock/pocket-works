@@ -32,7 +32,7 @@ export function raster(model,{view='three-quarter',size=768,bounds=commonBounds(
  for(let i=0;i<count;i++){rgba.set([222,218,207,transparent?0:255],i*4)}
  if(groundLine){const y=Math.round(size/2+cy*scale);if(y>=0&&y<size)for(let x=0;x<size;x++)rgba.set([141,139,128,255],(y*size+x)*4)}
  for(let pi=0;pi<model.parts.length;pi++){
-   const p=model.parts[pi],kind=p.material?.kind??materialKind(p.name),mat=profiles[kind]??profiles.leather,map=maps[kind]??maps.leather,projected=[];
+   const p=model.parts[pi],kind=p.material?.kind??materialKind(p.name),mat=profiles[kind]??profiles.leather,map=maps[kind]??(kind==='wood'?null:maps.leather),projected=[];
    for(let i=0;i<p.positions.length;i+=3){const v=p.positions.slice(i,i+3);projected.push([(dot(v,r)-cx)*scale+size/2,size/2-(dot(v,u)-cy)*scale,dot(v,d)])}
    for(let t=0;t<p.indices.length;t+=3){
      const ids=p.indices.slice(t,t+3),[a,b,c]=ids.map(i=>projected[i]),den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(den)<1e-7)continue;
@@ -43,7 +43,7 @@ export function raster(model,{view='three-quarter',size=768,bounds=commonBounds(
        const w0=((b[1]-c[1])*(x+.5-c[0])+(c[0]-b[0])*(y+.5-c[1]))/den,w1=((c[1]-a[1])*(x+.5-c[0])+(a[0]-c[0])*(y+.5-c[1]))/den,w2=1-w0-w1;if(Math.min(w0,w1,w2)<-1e-5)continue;
        const z=w0*a[2]+w1*b[2]+w2*c[2],i=y*size+x;if(z<=depth[i])continue;depth[i]=z;owners[i]=pi;faces[i]=t/3;
        let n=unit(ns[0].map((v,k)=>w0*v+w1*ns[1][k]+w2*ns[2][k])),v=pts[0].map((v,k)=>w0*v+w1*pts[1][k]+w2*pts[2][k]);if(dot(n,face)<0)n=face;
-       let base=p.vertexColors?ids.reduce((a,j,k)=>a.map((v,d)=>v+p.vertexColors[3*j+d]*[w0,w1,w2][k]),[0,0,0]):p.color.slice(),rough=mode==='A'?.72:mat.roughness,metal=mode==='A'?0:mat.metallic;
+       let base=p.vertexColors?ids.reduce((a,j,k)=>a.map((v,d)=>v+p.vertexColors[3*j+d]*[w0,w1,w2][k]),[0,0,0]):p.color.slice(),rough=mode==='A'?.72:(p.material?.roughness??mat.roughness),metal=mode==='A'?0:(p.material?.metallic??mat.metallic);
        if(p.vertexTint)base=base.map((v,k)=>v*ids.reduce((sum,j,l)=>sum+p.vertexTint[3*j+k]*[w0,w1,w2][l],0));
        if(mode==='C'&&map){const uv=p.texcoords?[0,1].map(k=>ids.reduce((s,j,l)=>s+p.texcoords[2*j+k]*[w0,w1,w2][l],0)):[v[0]*5+v[2]*2.7,v[1]*5],j=lookup(map.color,map.size,...uv),tangent=unit(cross(Math.abs(n[1])>.95?[1,0,0]:[0,1,0],n)),bitangent=cross(n,tangent);base=base.map((c,k)=>c*(map.color[j+k]/255)**2);rough=map.roughness[j+1]/255;metal=map.roughness[j+2]/255;n=unit(n.map((x,k)=>x+(map.normal[j]/127.5-1)*tangent[k]+(map.normal[j+1]/127.5-1)*bitangent[k]))}
        if(mode==='B')base=base.map((x,k)=>x*(.94+.06*mat.tint[k]));
