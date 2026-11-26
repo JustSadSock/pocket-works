@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -314,6 +314,35 @@ jobs:
         with:
           name: sound-forge-ensemble-room-${{ github.run_id }}
           path: .audio-ensemble-room/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  recorded-timbre-audition:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install audio decoder
+        run: sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+      - name: Import pinned original recordings and render matched timbre studies
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-timbre-lab.mjs .audio-recorded-timbre
+          test "$(find .audio-recorded-timbre/sources -type f | wc -l)" -eq 11
+          test "$(find .audio-recorded-timbre/auditions -name '*.wav' | wc -l)" -eq 10
+          test -s .audio-recorded-timbre/auditions/river-meadow.wav
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recorded-timbre-${{ github.run_id }}
+          path: .audio-recorded-timbre/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
