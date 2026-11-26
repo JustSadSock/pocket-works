@@ -154,14 +154,25 @@ jobs:
           test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Restore original rejected relief for matched review
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45740395351
+          artifact-ids: 15081585122
+          path: /tmp/bow-relief-control
+      - name: Verify photographic material source scans
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-relief-scans.py
       - name: Render one focused landscape
         run: |
           python3 -m py_compile apps/banners-of-war/research/battlefield-identity/workshop/relief-render.py
           "$BLENDER" --background --factory-startup --disable-autoexec --threads 4 --python-exit-code 1 --python apps/banners-of-war/research/battlefield-identity/workshop/relief-render.py
+      - name: Compare same physical patch with Workshop II original
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/compare-relief.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-historic-relief
+          name: focused-iii-historic-relief
           path: quality-artifacts/focused-relief
           if-no-files-found: error
           retention-days: 14

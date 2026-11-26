@@ -5,7 +5,7 @@ from mathutils import Vector
 out=Path(os.environ["BOW_ART_OUTPUT"]);patch=json.loads((out/"relief-patch.json").read_text())
 bpy.ops.wm.read_factory_settings(use_empty=True);scene=bpy.context.scene
 scene.render.engine="CYCLES";scene.cycles.samples=8;scene.cycles.use_denoising=True
-scene.render.resolution_x=1200;scene.render.resolution_y=800;scene.render.resolution_percentage=100
+scene.render.resolution_x=1920;scene.render.resolution_y=1280;scene.render.resolution_percentage=100
 scene.view_settings.view_transform="AgX"
 def mesh(name,vs,fs):
     m=bpy.data.meshes.new(name);m.from_pydata(vs,[],fs);m.update();o=bpy.data.objects.new(name,m);scene.collection.objects.link(o);return o
@@ -42,9 +42,41 @@ wood=mathop(n,l,"MULTIPLY",attr(n,"canopy"),.85)
 base=blend(n,l,grass,soil,mathop(n,l,"MAXIMUM",wood,mathop(n,l,"MULTIPLY",noise.outputs["Fac"],.35)))
 base=blend(n,l,base,stone,mathop(n,l,"MINIMUM",.83,slope))
 r=mathop(n,l,"SUBTRACT",1,mathop(n,l,"DIVIDE",attr(n,"road"),4.5));base=blend(n,l,base,road,mathop(n,l,"MAXIMUM",0,r))
+# Material transitions follow actual terrain/road/river fields. Two new
+# verified photographic scans are used only in their appropriate zones:
+# leaf litter on woodland floor and stony compacted soil in road ruts.
+def saturate(v):return mathop(n,l,"MINIMUM",1,mathop(n,l,"MAXIMUM",0,v))
+def smooth_mask(value,lo,hi):
+    t=saturate(mathop(n,l,"DIVIDE",mathop(n,l,"SUBTRACT",value,lo),hi-lo))
+    return mathop(n,l,"MULTIPLY",mathop(n,l,"MULTIPLY",t,t),mathop(n,l,"SUBTRACT",3,mathop(n,l,"MULTIPLY",2,t)))
+def scan(name,kind,scale,noncolor=False):
+    im=bpy.data.images.load(str(out/(name+"-"+kind+".jpg")),check_existing=True)
+    if noncolor:im.colorspace_settings.name="Non-Color"
+    node=n.new("ShaderNodeTexImage");node.image=im;node.extension="REPEAT"
+    v=n.new("ShaderNodeVectorMath");v.operation="SCALE";l.new(coord,v.inputs[0]);v.inputs["Scale"].default_value=scale;l.new(v.outputs[0],node.inputs["Vector"])
+    return node.outputs["Color"]
+forest=scan("forest_floor","diff",1/2.1)
+path=scan("stony_dirt_path","diff",1/2.0)
+forestHeight=scan("forest_floor","disp",1/2.1,True)
+pathHeight=scan("stony_dirt_path","disp",1/2.0,True)
+forestMask=smooth_mask(attr(n,"canopy"),.43,.76)
+roadDist=attr(n,"road")
+roadMask=mathop(n,l,"SUBTRACT",1,smooth_mask(roadDist,2.0,4.7))
+# Historical cart track: worn twin wheel lines within actual road width,
+# central grass/moss verge and feathered shoulders, no added road topology.
+rut=mathop(n,l,"SUBTRACT",1,smooth_mask(mathop(n,l,"ABSOLUTE",mathop(n,l,"SUBTRACT",roadDist,1.55),0),.36,.85))
+roadCore=mathop(n,l,"MULTIPLY",roadMask,mathop(n,l,"MAXIMUM",.38,rut))
+shore=attr(n,"shore")
+bank=mathop(n,l,"MULTIPLY",smooth_mask(shore,0,.8),mathop(n,l,"SUBTRACT",1,smooth_mask(shore,1.2,4.6)))
+base=blend(n,l,base,forest,forestMask)
+base=blend(n,l,base,path,roadCore)
+base=blend(n,l,base,stone,mathop(n,l,"MULTIPLY",bank,.54))
 l.new(base,p.inputs["Base Color"]);p.inputs["Roughness"].default_value=.84
-# No mesh displacement: normals from actual geometry and fine scanned relief only.
-bump=n.new("ShaderNodeBump");bump.inputs["Strength"].default_value=.24;bump.inputs["Distance"].default_value=.20;l.new(base,bump.inputs["Height"]);l.new(bump.outputs[0],p.inputs["Normal"])
+# Scanned microrelief supplies surface normals only. The road and shoreline
+# stay exactly on the authoritative surface and no mesh displacement is used.
+height=blend(n,l,base,forestHeight,forestMask)
+height=blend(n,l,height,pathHeight,roadCore)
+bump=n.new("ShaderNodeBump");bump.inputs["Strength"].default_value=.36;bump.inputs["Distance"].default_value=.11;l.new(height,bump.inputs["Height"]);l.new(bump.outputs[0],p.inputs["Normal"])
 # Crown & Marches Genesis 3.4 uses a continuous signed shoreline and
 # a water classification independent of terrain material. Here, retain the
 # precise tactical projected surface and clip water polygons to the signed
@@ -129,8 +161,8 @@ for tree in patch["trees"]:
 world=bpy.data.worlds.new("Soft blue sky");world.use_nodes=True;world.node_tree.nodes["Background"].inputs[0].default_value=(.45,.57,.72,1);world.node_tree.nodes["Background"].inputs[1].default_value=.35;scene.world=world
 def look(o,p):o.rotation_euler=(Vector(p)-o.location).to_track_quat("-Z","Y").to_euler()
 sun=bpy.data.lights.new("Low late afternoon sun","SUN");sun.energy=2.9;sun.angle=math.radians(3);sun.color=(1,.89,.70)
-o=bpy.data.objects.new("Sun",sun);scene.collection.objects.link(o);o.location=(-120,-60,90);look(o,(0,0,0))
+o=bpy.data.objects.new("Sun",sun);scene.collection.objects.link(o);o.location=(-140,-90,70);look(o,(0,0,0))
 cam=bpy.data.objects.new("Fixed relief camera",bpy.data.cameras.new("Relief"));scene.collection.objects.link(cam);scene.camera=cam;cam.data.type="ORTHO";cam.data.ortho_scale=patch["camera"]["scale"]
 target=Vector(patch["camera"]["target"]);cam.location=target+Vector(patch["camera"]["offset"]);look(cam,target)
 scene.render.filepath=str(out/"historic-relief-tactical.png");bpy.ops.render.render(write_still=True)
-(out/"relief-study.json").write_text(json.dumps({"physicalHash":patch["physicalHash"],"camera":patch["camera"],"vertices":len(points),"trees":len(patch["trees"]),"sourceModels":provenance,"reference":"https://www.woodlandtrust.org.uk/visiting-woods/woods/symonds-yat-west/","waterAudit":waterAudit,"projection":"orthographic 60 degree tactical","noRuntimeIntegration":True},indent=2))
+(out/"relief-study.json").write_text(json.dumps({"physicalHash":patch["physicalHash"],"camera":patch["camera"],"vertices":len(points),"trees":len(patch["trees"]),"sourceModels":provenance,"surfaceScans":json.loads((out/"local-scans.json").read_text()),"reference":"https://www.woodlandtrust.org.uk/visiting-woods/woods/symonds-yat-west/","waterAudit":waterAudit,"projection":"orthographic 60 degree tactical","noRuntimeIntegration":True},indent=2))
