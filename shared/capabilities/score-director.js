@@ -1,6 +1,6 @@
 import {nextMusicBoundary} from './continuous-audio.js';
 // Horizontal score transport. One current clip and at most one scheduled successor.
-export function createScoreDirector({context,destination=context?.destination,graph,buffers,bridgeBuffers={},volume=.7}={}){
+export function createScoreDirector({context,destination=context?.destination,graph,buffers,bridgeBuffers={},volume=.7,maxDecodedBytes=128*1024*1024}={}){
  if(!context||!destination||!graph||!graph.states||!graph.edges||!Number.isFinite(volume)||volume<0||volume>1)throw Error('Invalid score director');
  const entries=Object.entries(graph.states);
  if(!entries.length||entries.length>32||!Object.hasOwn(graph.states,graph.initial))throw Error('Invalid score graph');
@@ -22,6 +22,13 @@ export function createScoreDirector({context,destination=context?.destination,gr
   if(extra.length||!clips.get(from)?.edges.has(to)||!target||!desc||!b||!Number.isInteger(b.length)||b.length<2||b.length/b.sampleRate>15||b.sampleRate!==target.buffer.sampleRate||b.numberOfChannels!==target.buffer.numberOfChannels||typeof b.getChannelData!=='function')throw Error('Invalid score bridge '+key);
   bridges.set(key,b);
  }
+ if(!Number.isSafeInteger(maxDecodedBytes)||maxDecodedBytes<1)throw Error('Invalid score memory budget');
+ const bytes=b=>b.length*b.numberOfChannels*4;
+ const baseBytes=[...new Set([...clips.values()].map(c=>c.buffer).concat([...bridges.values()]))].reduce((n,b)=>n+bytes(b),0);
+ // At most two composite buffers can be held by scheduled/playing voices.
+ const largest=[...bridges].map(([edge,b])=>bytes(b)+bytes(clips.get(edge.split(':')[1]).buffer)).sort((a,b)=>b-a);
+ const reservedBytes=baseBytes+2*(largest[0]??0);
+ if(!Number.isSafeInteger(reservedBytes)||reservedBytes>maxDecodedBytes)throw Error('Score decoded memory budget exceeded');
  const master=context.createGain();master.gain.value=volume;master.connect(destination);
  let current=null,pending=null,queued=null,closed=false,starting=false,epoch=0;
  function cleanup(v){if(!v)return;try{v.source.stop()}catch{};try{v.source.disconnect()}catch{};try{v.gain.disconnect()}catch{}}
@@ -93,6 +100,7 @@ export function createScoreDirector({context,destination=context?.destination,gr
   },
   update,stop,
   destroy(){if(closed)return;closed=true;stop();master.disconnect()},
-  get state(){return {current:current?.id??null,pending:pending?.next.id??null,queued:queued?.id??null,transitionAt:pending?.at??null,transitionEnd:pending?.end??null,voices:(current?1:0)+(pending?1:0),startTime:current?.startTime??null,bridgeUntil:pending?.next.bridgeUntil??current?.bridgeUntil??null}}
+  get memory(){return {baseBytes,reservedBytes,maxDecodedBytes}},
+ get state(){return {current:current?.id??null,pending:pending?.next.id??null,queued:queued?.id??null,transitionAt:pending?.at??null,transitionEnd:pending?.end??null,voices:(current?1:0)+(pending?1:0),startTime:current?.startTime??null,bridgeUntil:pending?.next.bridgeUntil??current?.bridgeUntil??null}}
  };
 }
