@@ -14,7 +14,8 @@
         "genesis-living-regression.test.mjs",
         "genesis-living-visual.test.mjs",
         "genesis-waters.test.mjs",
-        "genesis-contours.test.mjs"
+        "genesis-contours.test.mjs",
+        "genesis-hydrography.test.mjs"
       ],
       "tier": "smoke"
     },

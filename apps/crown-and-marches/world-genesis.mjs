@@ -79,3 +79,6 @@ function generateInternal(seed,W,H,continental,options,auditProfile){
  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;if(terrain[i]!==3)continue;const saddle=height[i-W]>height[i]+.035&&height[i+W]>height[i]+.035||height[i-1]>height[i]+.035&&height[i+1]>height[i]+.035;pass[i]=+(saddle&&relief[i]<.14);}
  const result={height,land,moisture,fert,terrain,resource,river,down,flow,basin,temperature,ridge,pass,delta,coast,landmass:landmass(land,W,H),relief,lakeDepth,geography:{config,width:w,height:h,detail:r,bed:high,surface:hyd.filled,land:mask,flow:hyd.flow,down:hyd.down,basin:hyd.basin,lake:hyd.lake,rain,chains:g.chains,erosion:{removed,deposited},...(beforeErosion?{beforeErosion}:{})}};if(modern){const physical=height.slice();if(hydrography)result.geography.coastRefinement=coastRefinement;aggregateHydrology(result,W,H,{natural:true,hydrography});result.routingHeight=result.height.slice();result.height=physical;return result;}return config.revision===HYDRO_REVISION?aggregateHydrology(result,W,H):result;
 }
+
+// A controlled physical terrain fixture uses exactly the production flood.
+export function analyzeHydrographyBed(bed,land,width,height,rain){return drainage(bed,land,width,height,rain);}

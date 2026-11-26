@@ -16,6 +16,7 @@ export function contourField(m){
  const fx=X*r,fy=Y*r,x=Math.floor(fx),y=Math.floor(fy),z=bed(fx,fy),coast=scalar(fx,fy,i=>g.land[i]?Math.max(.0001,g.bed[i]-.12):Math.min(-.0001,g.bed[i]-.12));
  let id=0,best=Infinity;for(let dy=0;dy<=1;dy++)for(let dx=0;dx<=1;dx++){const j=at(x+dx,y+dy),label=basins.labels[j],d=(fx-x-dx)**2+(fy-y-dy)**2;if(label&&d<best){id=label;best=d;}}
  let distance=Infinity,level=id?basins.levels[id]:0,physical=-1,limit=-1;
+ if(g.lakeId){if(id){physical=level-z;const support=scalar(fx,fy,i=>{const d=level-g.bed[i];return g.lakeId[i]===id?Math.max(.000001,d):Math.min(-.000001,d);});const lake=Math.min(physical,support,coast);return {bed:z,coast,lake,level,id,physical,limit:Infinity,distance:0,coarseLand:!!m.land[C(Math.floor(Y),0,H-1)*W+C(Math.floor(X),0,W-1)]};}return {bed:z,coast,lake:-1,level:0,id:0,physical:-1,limit:Infinity,distance:Infinity,coarseLand:!!m.land[C(Math.floor(Y),0,H-1)*W+C(Math.floor(X),0,W-1)]};}
  if(id){const range=Math.ceil(r*.5)+1;for(let dy=-range;dy<=range;dy++)for(let dx=-range;dx<=range;dx++){const j=at(x+dx,y+dy);if(g.lakeWater[j]&&basins.labels[j]===id)distance=Math.min(distance,Math.hypot(fx-x-dx,fy-y-dy)/r);}
  physical=level-z;limit=(.5-distance)*.08;
  }
@@ -84,7 +85,7 @@ export function clearContourCache(g){bakedCache.get(g)?.clear();bakedCache.delet
 // Edge endpoint and width are shared by every adjacent ribbon.
 export function riverRibbons(g,bounds,{vertical,threshold=25}={}){
  const [x0,y0,x1,y1]=bounds,r=g.detail,w=g.width,h=g.height,tiles=new Map(),valid=i=>i>=0&&g.land[i]&&!g.lakeWater?.[i]&&g.flow[i]/(r*r)>=threshold;
- const node=i=>({x:(i%w)/r,y:Math.floor(i/w)/r,z:vertical(g.lakeWater?.[i]?g.surface[i]:g.bed[i])+.035,w:C(.018+.024*Math.log2(Math.max(12,g.flow[i]/(r*r))/12),.018,.165)});
+ const node=i=>({x:(i%w)/r,y:Math.floor(i/w)/r,z:vertical(g.lakeWater?.[i]?(g.lakeId?g.lakeLevels[g.lakeId[i]]:g.surface[i]):g.bed[i])+.035,w:C(.018+.024*Math.log2(Math.max(12,g.flow[i]/(r*r))/12),.018,.165)});
  const incoming=i=>{const x=i%w,y=Math.floor(i/w),a=[];for(let Y=Math.max(0,y-1);Y<=Math.min(h-1,y+1);Y++)for(let X=Math.max(0,x-1);X<=Math.min(w-1,x+1);X++){const j=Y*w+X;if(valid(j)&&g.down[j]===i)a.push(j);}return a;};
  let edges=0,triangles=0;
  for(let y=Math.max(0,Math.floor((y0-1)*r));y<=Math.min(h-1,Math.ceil((y1+1)*r));y++)for(let x=Math.max(0,Math.floor((x0-1)*r));x<=Math.min(w-1,Math.ceil((x1+1)*r));x++){
@@ -106,6 +107,7 @@ export function riverRibbons(g,bounds,{vertical,threshold=25}={}){
  const chunks=[...tiles.values()].map(({data,...b})=>({...b,vertices:Float32Array.from(data)}));return {chunks,stats:{edges,triangles,bytes:chunks.reduce((n,c)=>n+c.vertices.byteLength,0)}};
 }
 export function connectedLakePairs(g){
+ if(g.lakeNetwork){const r=g.detail,w=g.width;return g.lakeNetwork.links.map(p=>{const a={x:(p.fromNode%w)/r,y:Math.floor(p.fromNode/w)/r},b={x:(p.toNode%w)/r,y:Math.floor(p.toNode/w)/r};return {...p,a,b,distance:Math.hypot(a.x-b.x,a.y-b.y)};});}
  const b=lakeBasins(g),r=g.detail,w=g.width,pairs=[],seen=new Set();
  for(let i=0;i<g.land.length;i++){if(!g.lakeWater[i])continue;const id=b.labels[i],j=g.down[i];if(!id||j<0||b.labels[j]===id)continue;let p=j;for(let k=0;k<r*96&&p>=0&&g.land[p];k++){const to=b.labels[p];if(to===id)break;if(to&&to!==id&&g.lakeWater[p]){const key=id+':'+to;if(!seen.has(key)){seen.add(key);const a={x:(i%w)/r,y:Math.floor(i/w)/r},z={x:(p%w)/r,y:Math.floor(p/w)/r};pairs.push({from:id,to,fromNode:i,toNode:p,steps:k+1,distance:Math.hypot(a.x-z.x,a.y-z.y),a,b:z});}break;}p=g.down[p];}}
  return pairs;
