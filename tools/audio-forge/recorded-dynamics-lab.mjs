@@ -18,8 +18,8 @@ const extra=[
  ['horn',50,.85,'Brass/F Horn/sus/MOHorn_sus_D2_v3_1.wav','aec5cfdb8e2532338f69f6726c77c1d8e5044f0d'],
  ['horn',53,.35,'Brass/F Horn/sus/MOHorn_sus_F2_v1_1.wav','90c68f7833a7aa2325dea7159aad8af4c9b13a76'],
  ['horn',53,.85,'Brass/F Horn/sus/MOHorn_sus_F2_v3_1.wav','af9345753c5b31083a3e344dd7bbf6c978de59c3'],
- ['horn',57,.35,'Brass/F Horn/sus/MOHorn_sus_A2_v1_1.wav','d358aadfb3bb1e0f28ab742d96f5418dc750057b'],
- ['horn',57,.85,'Brass/F Horn/sus/MOHorn_sus_A2_v3_1.wav','d4088d29905d60944c524d443f66c55035301e47'],
+ ['horn',60,.35,'Brass/F Horn/sus/MOHorn_sus_C3_v1_1.wav','e53d2d03f0902c9f3a6add7c6bf51122bcc7d573'],
+ ['horn',60,.85,'Brass/F Horn/sus/MOHorn_sus_C3_v3_1.wav','69e3187ccc4d4338931d412a9f50978ca576db5c'],
  ['trumpet',74,.35,'Brass/Trumpet/sus/Sum_SHTrumpet_sus_D4_v1_rr1.wav','5270a6927aa41b90f804df59b9888449aa01a2bb'],
  ['trumpet',74,.85,'Brass/Trumpet/sus/Sum_SHTrumpet_sus_D4_v3_rr1.wav','815560ece9f2e8d0ad6a33ba24a014345ea59814'],
  ['trumpet',77,.35,'Brass/Trumpet/sus/Sum_SHTrumpet_sus_F4_v1_rr1.wav','c14125cf6f506ed3a5d495fee4130381d050b109'],
@@ -36,12 +36,12 @@ function decode(file){
 function add(record,dir,meta,candidates){
  const file=path.join(dir,record.path),bytes=readFileSync(file);
  if(sha(bytes)!==record.sha256)throw Error('Source checksum mismatch');
- const pcm=decode(file),matches=[];
+ const pcm=decode(file),matches=[],rejected=[];
  for(const expected of candidates){
   try{matches.push(prepareRecordedNote(pcm,expected));}
-  catch(e){if(!String(e).includes('disagrees with reviewed zone'))throw e;}
+  catch(e){rejected.push({expected,message:String(e)});if(!String(e).includes('disagrees with reviewed zone'))throw e;}
  }
- if(matches.length!==1)throw Error('Ambiguous or unsupported measured register '+record.id);
+ if(matches.length!==1){writeFileSync(path.join(root,'pitch-rejection.json'),JSON.stringify({id:record.id,sourceSha256:record.sha256,candidates,rejected},null,2)+'\n');throw Error('Ambiguous or unsupported measured register '+record.id+': '+JSON.stringify(rejected));}
  const z=matches[0],recipe={...meta,midi:z.expectedMidi,reviewedRoots:candidates};
  zones.push({...z,...meta,id:record.id,sourceSha256:record.sha256});
  library.insert({...record,recipe,tags:[...new Set([...record.tags,meta.articulation,meta.instrument,'research-only'])]},dir);
