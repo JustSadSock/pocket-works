@@ -14,6 +14,7 @@ on:
       - "shared/capabilities/sound-family.js"
       - "shared/capabilities/spatial-audio.js"
       - "shared/capabilities/continuous-audio.js"
+      - "shared/capabilities/virtual-audio.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
   pull_request:
@@ -23,6 +24,7 @@ on:
       - "shared/capabilities/sound-family.js"
       - "shared/capabilities/spatial-audio.js"
       - "shared/capabilities/continuous-audio.js"
+      - "shared/capabilities/virtual-audio.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
 
@@ -96,7 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
