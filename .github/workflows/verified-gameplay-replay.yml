@@ -1,0 +1,77 @@
+name: Verified Gameplay Historical Replay
+on:
+  workflow_run:
+    workflows: [Verified Gameplay Receipt Shadow]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+concurrency:
+  group: gameplay-historical-replay-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+  cancel-in-progress: false
+jobs:
+  replay:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.repository.full_name == github.repository &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_sha == github.sha &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/verified-gameplay-receipt.test.mjs
+      - uses: actions/checkout@v4
+        with:
+          ref: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          path: audit-source
+          persist-credentials: false
+      - name: Authenticate completed upstream evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_RUN: ${{ github.event.workflow_run.id }}
+          UPSTREAM_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$UPSTREAM_RUN" =~ ^[0-9]+$ && "$UPSTREAM_ATTEMPT" =~ ^[0-9]+$ ]]
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$UPSTREAM_RUN" > "$RUNNER_TEMP/upstream.json"
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$GITHUB_SHA" --argjson run "$UPSTREAM_RUN" --argjson attempt "$UPSTREAM_ATTEMPT" '.id==$run and .run_attempt==$attempt and .repository.full_name==$repo and .head_repository.full_name==$repo and .path==".github/workflows/verified-gameplay-receipt.yml" and .head_sha==$sha and .head_branch=="main" and .status=="completed" and .conclusion=="success" and (.event=="push" or .event=="workflow_dispatch")' "$RUNNER_TEMP/upstream.json"
+          gh run download "$UPSTREAM_RUN" --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-input-$UPSTREAM_ATTEMPT" --dir "$RUNNER_TEMP/bundle"
+          gh run download "$UPSTREAM_RUN" --repo "$GITHUB_REPOSITORY" --name "verified-gameplay-receipt-$UPSTREAM_ATTEMPT" --dir "$RUNNER_TEMP/signed"
+          gh attestation verify "$RUNNER_TEMP/signed/receipt.json" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/verified-gameplay-receipt.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
+      - name: Independent exact-commit replay with mandatory fresh performance
+        env:
+          UPSTREAM_RUN: ${{ github.event.workflow_run.id }}
+          UPSTREAM_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source scripts/ci-overhaul/verified-gameplay-offline.sh
+          prepare_gameplay replay
+          node "$tool" admit "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/signed/receipt.json" "$out" "$RUNNER_TEMP/admission.json" "$RUNNER_TEMP/upstream.json"
+          run_gameplay_phase performance
+          if ! jq -e '.decision == "reuse-shadow" and .productionAuthorization == false' "$RUNNER_TEMP/admission.json" >/dev/null; then
+            run_gameplay_phase gameplay
+          fi
+          verify_gameplay_mounts
+          node "$tool" finish "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/signed/receipt.json" "$out" "$RUNNER_TEMP/admission.json" "$RUNNER_TEMP/trial.json" "$RUNNER_TEMP/upstream.json"
+          cat "$RUNNER_TEMP/trial.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-cross-run-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/trial.json
+          if-no-files-found: warn
+          retention-days: 7

@@ -4,11 +4,13 @@ on:
     paths:
       - '.github/workflows/verified-gameplay-receipt.yml'
       - 'scripts/ci-overhaul/verified-gameplay-*'
+      - '.github/workflows/verified-gameplay-replay.yml'
   push:
     branches: [main]
     paths:
       - '.github/workflows/verified-gameplay-receipt.yml'
       - 'scripts/ci-overhaul/verified-gameplay-*'
+      - '.github/workflows/verified-gameplay-replay.yml'
   workflow_dispatch:
 permissions:
   contents: read

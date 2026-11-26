@@ -10,6 +10,7 @@ export const SOURCE='45d6ce53df3cd5013a605bba972d94f1c0cd8dce';
 export const SOURCE_TREE='9a9cc376c7ce39e9a7116cf7fd8f6ec3e720b80c';
 export const PLAN='81f618b94fadc8e1bd96ff66a339528c55b768e72ac50767ada94de409e2ee25';
 export const WORKFLOW='.github/workflows/verified-gameplay-receipt.yml';
+export const REPLAY_WORKFLOW='.github/workflows/verified-gameplay-replay.yml';
 const REPO='JustSadSock/pocket-works',HEX=/^[a-f0-9]{64}$/,SHA=/^[a-f0-9]{40}$/,EPOCH=946684800;
 const IMAGE='be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb';
 const LIMIT=128*1024*1024;
@@ -100,12 +101,26 @@ export function makeReceipt(root,now=Date.now(),mainOnly=true){
  if(!int(now))throw Error('Invalid issuance time');
  return {schema:1,kind:'banners-gameplay-shadow-v1',manifest:m,planDigest:PLAN,shard:0,gameplayCases:g.cases,gameplaySemanticDigest:g.semanticDigest,gameplayRecordsDigest:g.recordsDigest,gameplayPhaseDigest:g.phaseDigest,sourceMeasurements:g.measurements,issuedAt:now,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 }
-export function decide(receipt,target,now=Date.now()){
+// The upstream API result is independent of the downloaded receipt.
+// Only the exact completed main run that triggered this read-only replay is eligible.
+export function validateReplayTarget(m){
+ if(m?.workflow!==REPLAY_WORKFLOW||m.role!=='replay'||m.event!=='workflow_run'||m.ref!=='refs/heads/main'||!int(m.upstreamRun)||!int(m.upstreamAttempt)||m.run===m.upstreamRun)throw Error('Invalid independent replay identity');
+ validateManifest({...m,workflow:WORKFLOW,role:'trial',event:'push'},'trial');
+ return m;
+}
+export function checkUpstream(u,s,t){
+ if(!u||u.id!==s.run||u.run_attempt!==s.attempt||u.id!==t.upstreamRun||u.run_attempt!==t.upstreamAttempt||
+ u.repository?.full_name!==REPO||u.head_repository?.full_name!==REPO||u.path!==WORKFLOW||
+ u.head_branch!=='main'||u.head_sha!==s.auditCommit||u.head_sha!==t.auditCommit||u.event!==s.event||
+ u.status!=='completed'||u.conclusion!=='success')throw Error('Upstream is not the exact completed trusted run');
+}
+export function decide(receipt,target,now=Date.now(),upstream=null){
  const fresh=reason=>({schema:1,decision:'execute',reason,productionAuthorization:false});
  try{
-  const s=validateManifest(receipt.manifest,'source'),t=validateManifest(target,'trial');
+  const s=validateManifest(receipt.manifest,'source'),cross=target?.role==='replay',t=cross?validateReplayTarget(target):validateManifest(target,'trial');
+  if(cross)checkUpstream(upstream,s,t);else if(upstream!==null)throw Error('Unexpected upstream');
   if(receipt.kind!=='banners-gameplay-shadow-v1'||receipt.schema!==1||receipt.planDigest!==PLAN||receipt.shard!==0||receipt.gameplayCases!==234||receipt.sourceMeasurements!==430||receipt.productionAuthorization!==false||receipt.allowResultReuse!==false||receipt.allowImpactSkipping!==false||![receipt.gameplaySemanticDigest,receipt.gameplayRecordsDigest,receipt.gameplayPhaseDigest].every(x=>HEX.test(x))||!int(receipt.issuedAt)||!int(now)||now<receipt.issuedAt||now-receipt.issuedAt>7*86400000)throw Error('Invalid or expired receipt');
-  for(const key of ['repository','workflow','ref','event','source','sourceTree','auditCommit','auditTree','run','attempt'])if(s[key]!==t[key])throw Error('Different source identity: '+key);
+  for(const key of ['repository','ref','source','sourceTree','auditCommit','auditTree',...(cross?[]:['workflow','event','run','attempt'])])if(s[key]!==t[key])throw Error('Different source identity: '+key);
   for(const key of ['sourceMount','auditMount'])if(!eq(s[key],t[key]))throw Error('Different mounted input: '+key);
   const changed=Object.keys(s.environment).filter(k=>s.environment[k]!==t.environment[k]).sort();
   if(changed.length)return {...fresh('Execution environment differs'),changedFields:changed};
@@ -116,6 +131,14 @@ function verifiedReceipt(bundle,path){
  const r=json(path),expected=makeReceipt(bundle,r.issuedAt);
  if(!eq(r,expected))throw Error('Signed receipt differs from original evidence');
  return r;
+}
+function replayUpstream(m,path){
+ if(m.role!=='replay'){if(path)throw Error('Unexpected upstream file');return null;}
+ if(!path||process.env.GITHUB_EVENT_NAME!=='workflow_run')throw Error('Missing replay trigger');
+ const event=json(process.env.GITHUB_EVENT_PATH),u=json(path);
+ const e=event.workflow_run;
+ if(event.action!=='completed'||!e||e.id!==u.id||e.run_attempt!==u.run_attempt||e.head_sha!==u.head_sha||e.conclusion!=='success'||e.status!=='completed'||e.head_repository?.full_name!==REPO||e.repository?.full_name!==REPO||e.head_branch!=='main'||e.event!==u.event)throw Error('API run differs from workflow trigger');
+ return u;
 }
 function actualContext(m){
  if(m.repository!==process.env.GITHUB_REPOSITORY||m.auditCommit!==process.env.GITHUB_SHA||m.auditTree!==git(process.cwd(),['rev-parse','HEAD^{tree}']).toString().trim()||m.run!==Number(process.env.GITHUB_RUN_ID)||m.attempt!==Number(process.env.GITHUB_RUN_ATTEMPT)||m.ref!==process.env.GITHUB_REF||m.event!==process.env.GITHUB_EVENT_NAME)throw Error('Different actual workflow context');
@@ -131,16 +154,16 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    console.log(JSON.stringify(r));
   }else if(mode==='admit'){
    // Caller must first authenticate the exact receipt with gh attestation verify.
-   const [bundle,path,targetDir,out]=a,r=verifiedReceipt(bundle,path),t=validateManifest(json(join(targetDir,'manifest.json')),'trial');actualContext(t);validatePlan(json(join(targetDir,'plan.json')),t);
-   const d=decide(r,t);writeFileSync(out,JSON.stringify(d,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(d));
+   const [bundle,path,targetDir,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(targetDir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);validatePlan(json(join(targetDir,'plan.json')),t);
+   const u=replayUpstream(t,upstreamPath),d=decide(r,t,Date.now(),u);writeFileSync(out,JSON.stringify(d,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(d));
   }else if(mode==='finish'){
-   const [bundle,path,dir,admissionPath,out]=a,r=verifiedReceipt(bundle,path),t=validateManifest(json(join(dir,'manifest.json')),'trial');actualContext(t);
-   const p=validatePlan(json(join(dir,'plan.json')),t),d=json(admissionPath),expected=decide(r,t);
+   const [bundle,path,dir,admissionPath,out,upstreamPath]=a,r=verifiedReceipt(bundle,path),raw=json(join(dir,'manifest.json')),t=raw.role==='replay'?validateReplayTarget(raw):validateManifest(raw,'trial');actualContext(t);
+   const p=validatePlan(json(join(dir,'plan.json')),t),d=json(admissionPath),u=replayUpstream(t,upstreamPath),expected=decide(r,t,Date.now(),u);
    if(!eq(d,expected))throw Error('Admission changed');
    const perf=phaseBundle(dir,'performance',p,t),hit=d.decision==='reuse-shadow';
    const g=hit?null:phaseBundle(dir,'gameplay',p,t);
    if(hit&&readdirSync(dir).includes('gameplay'))throw Error('Ambiguous gameplay execution');
-   const report={schema:1,mode:'verified-gameplay-trial',sourceRun:r.manifest.run,sourceAttempt:r.manifest.attempt,admission:d,gameplayCases:234,gameplayExecuted:!hit,gameplayReused:hit,semanticMatch:hit||g.semanticDigest===r.gameplaySemanticDigest,freshGameplayMeasurements:g?.measurements??0,freshPerformanceCases:perf.cases,freshPerformanceMeasurements:perf.measurements,freshPerformanceResult:perf.performance,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+   const report={schema:1,mode:t.role==='replay'?'verified-gameplay-cross-run':'verified-gameplay-trial',sourceRun:r.manifest.run,sourceAttempt:r.manifest.attempt,targetRun:t.run,targetAttempt:t.attempt,admission:d,gameplayCases:234,gameplayExecuted:!hit,gameplayReused:hit,semanticMatch:hit||g.semanticDigest===r.gameplaySemanticDigest,freshGameplayMeasurements:g?.measurements??0,freshPerformanceCases:perf.cases,freshPerformanceMeasurements:perf.measurements,freshPerformanceResult:perf.performance,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
    writeFileSync(out,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(report,null,2));if(!report.semanticMatch)process.exitCode=1;
   }else throw Error('Unknown pilot mode');
  }catch(e){console.error(e.message);process.exitCode=1;}
