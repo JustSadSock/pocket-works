@@ -5,32 +5,65 @@
       "id": "engine",
       "kind": "node-test",
       "tier": "smoke",
-      "files": ["tests/engine.test.mjs"]
+      "files": [
+        "tests/engine.test.mjs"
+      ]
     },
     {
       "id": "visual",
       "kind": "visual",
       "tier": "smoke",
-      "viewports": ["mobile", "desktop"],
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
       "ready": "#launchButton",
       "steps": [
-        { "action": "screenshot" },
-        { "action": "click", "selector": "#launchButton" },
-        { "action": "visible", "selector": "#runHud" },
-        { "action": "screenshot" },
-        { "action": "click", "selector": "#pauseButton" },
-        { "action": "visible", "selector": "#pauseOverlay" },
-        { "action": "screenshot" },
-        { "action": "click", "selector": "#resumeButton" },
-        { "action": "visible", "selector": "#runHud" },
-        { "action": "screenshot" }
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#launchButton"
+        },
+        {
+          "action": "visible",
+          "selector": "#runHud"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pauseButton"
+        },
+        {
+          "action": "visible",
+          "selector": "#pauseOverlay"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#resumeButton"
+        },
+        {
+          "action": "visible",
+          "selector": "#runHud"
+        },
+        {
+          "action": "screenshot"
+        }
       ]
     },
     {
       "id": "journey",
       "kind": "playwright",
-      "tier": "deep",
-      "files": ["qa/aim-trainer.spec.ts"]
+      "tier": "smoke",
+      "files": [
+        "qa/aim-trainer.spec.ts"
+      ]
     }
   ]
 }
