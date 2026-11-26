@@ -184,14 +184,19 @@ try{
         scene.destroy();armyAnalyser.disconnect();
         check(scene.stats.allocated===0,'Scene cleanup failed');
         scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:2},
-          families:{impact:{variants:['impact']}},fetcher:async()=>new Response(wav),
-          score:{graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
+          families:{impact:{variants:['impact']}},fetcher:async()=>new Response(wav),maxEventDecodedBytes:65536,maxScoreDecodedBytes:2097152,
+          stingers:{victory:{url:'victory',cooldown:2}},score:{graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
           buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)},bridgeBuffers:{'peace:battle':make(c,sr*.5,330)}}});
         director=scene.music;
         const scoreBus=scene.mixer.bus('music'),scoreAnalyser=c.createAnalyser();
         scoreAnalyser.fftSize=4096;scoreAnalyser.smoothingTimeConstant=0;scoreBus.connect(scoreAnalyser);
         check(await director.start(),'Horizontal start failed');
         const peaceStart=director.state.startTime;
+        const stingerAccepted=await scene.playStinger('victory');
+        check(stingerAccepted&&!await scene.playStinger('victory'),'Stinger decode or cooldown failed');
+        const memory={events:scene.stats.eventDecodedBytes,score:scene.stats.scoreReservedBytes};
+        check(memory.events>0&&memory.events<=65536&&memory.score>0&&memory.score<=2097152,'Decoded budget exceeded');
+        check(scene.stats.allocated<=18&&director.state.startTime===peaceStart,'Stinger broke music transport');
         const waitClock=async t=>{const deadline=performance.now()+3000;while(c.currentTime<t&&performance.now()<deadline)await new Promise(r=>setTimeout(r,20));check(c.currentTime>=t,'Horizontal audio clock stalled')};
         await waitClock(peaceStart+.2);
         function scoreBand(hz){
@@ -211,7 +216,7 @@ try{
         const peaceAfter=scoreBand(220),battleAfter=scoreBand(440);
         check(director.state.current==='battle'&&director.state.voices===1&&battleAfter>-50&&peaceAfter<battleAfter-15,'Horizontal clip replacement invalid');
         await waitClock(bridgeUntil+2.2);const bridgeAfterLoop=scoreBand(330);check(scoreBand(440)>-50&&bridgeAfterLoop<scoreBand(440)-15,'Bridge repeated inside destination loop');
-        const horizontal={bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
+        const horizontal={stingerAccepted,memory,bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
         scene.destroy();scoreAnalyser.disconnect();check(director.state.voices===0&&scene.stats.allocated===0,'Horizontal cleanup failed');
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
