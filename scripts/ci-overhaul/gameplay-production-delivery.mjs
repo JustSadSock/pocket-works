@@ -44,13 +44,15 @@ export function verifyMixed(raw,ctx,readTask,auditTask){
   passed.push(taskDigest(t));
  }
  if(digest(canonical(passed.sort()))!==p.planDigest)fail('Original task digest mismatch');
- return {schema:1,route:'legacy-mixed-v1',tree:ctx.tree,source:ctx.source,run:ctx.run,attempt:ctx.attempt,planDigest:p.planDigest,expected:p.count,passed:p.count,success:true,verifiedTasks:verified,freshTasks:p.count-verified,reusedGameplayCases:reused,productionAuthorization:verified>0,allowImpactSkipping:false,rows};
+ const hitRows=rows.filter(r=>r.mode==='verified-gameplay'),controller=hitRows[0]?.controller??null,controllerTree=hitRows[0]?.controllerTree??null;
+ if(hitRows.some(r=>r.controller!==controller||r.controllerTree!==controllerTree))fail('Verified tasks used different controllers');
+ return {schema:1,route:'legacy-mixed-v1',tree:ctx.tree,source:ctx.source,run:ctx.run,attempt:ctx.attempt,planDigest:p.planDigest,expected:p.count,passed:p.count,success:true,verifiedTasks:verified,freshTasks:p.count-verified,reusedGameplayCases:reused,productionAuthorization:verified>0,allowImpactSkipping:false,controller,controllerTree,rows};
 }
 export function verifyGateSummary(raw,summary,ctx){
  const p=describePlan(raw);
  if(summary?.route!=='legacy-mixed-v1')return verifyLegacy(raw,summary,ctx.tree);
  if(summary.schema!==1||summary.success!==true||summary.source!==ctx.source||summary.tree!==ctx.tree||summary.run!==ctx.run||summary.attempt!==ctx.attempt||summary.planDigest!==p.planDigest||summary.expected!==p.count||summary.passed!==p.count||summary.allowImpactSkipping!==false||!Array.isArray(summary.rows)||summary.rows.length!==p.count)fail('Mandatory summary identity or coverage mismatch');
- const tasks=new Map(p.tasks.map(t=>[t.key,t])),seen=new Set();let verified=0,reused=0;
+ const tasks=new Map(p.tasks.map(t=>[t.key,t])),seen=new Set();let verified=0,reused=0,controller=null,controllerTree=null;
  for(const r of summary.rows){
   const t=tasks.get(r.key);if(!t||seen.has(r.key))fail('Unexpected task in mandatory summary');seen.add(r.key);
   if(r.mode==='fresh'){if(r.reusedGameplayCases!==0)fail('Fresh task claims reuse');}
@@ -58,10 +60,11 @@ export function verifyGateSummary(raw,summary,ctx){
    const n=t.seed<4?234:233;
    const perf=[0,4,5,6,7].includes(t.seed)?1:0;
    if(!ctx.enabled||!eligibleTask(t)||!['exact-commit','exact-tree-merge'].includes(r.identity)||!SHA.test(r.controller)||!SHA.test(r.controllerTree)||r.reusedGameplayCases!==n||r.freshPerformanceCases!==perf||r.freshPerformanceMeasurements!==perf*2||t.seed===(ctx.run+ctx.attempt)%8)fail('Unapproved mandatory summary hit');
-   verified++;reused+=n;
+   if((controller&&controller!==r.controller)||(controllerTree&&controllerTree!==r.controllerTree))fail('Mandatory summary mixes controllers');
+   controller=r.controller;controllerTree=r.controllerTree;verified++;reused+=n;
   }else fail('Unknown mandatory summary mode');
  }
- if(summary.verifiedTasks!==verified||summary.freshTasks!==p.count-verified||summary.reusedGameplayCases!==reused||summary.productionAuthorization!==(verified>0))fail('Mandatory summary totals differ');
+ if(summary.verifiedTasks!==verified||summary.freshTasks!==p.count-verified||summary.reusedGameplayCases!==reused||summary.productionAuthorization!==(verified>0)||summary.controller!==controller||summary.controllerTree!==controllerTree)fail('Mandatory summary totals differ');
  return {success:true,expected:p.count,planDigest:p.planDigest,verifiedTasks:verified,reusedGameplayCases:reused};
 }
 function checkTask(root,t){
