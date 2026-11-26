@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -219,6 +219,25 @@ jobs:
         with:
           name: sound-forge-artistic-lab-${{ github.run_id }}
           path: .audio-artistic-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render original plucked instrument laboratory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/string-lab.mjs .audio-string-lab
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-string-lab/manifest.json --base .audio-string-lab
+          node tools/audio-forge/finalize-string-lab.mjs .audio-string-lab
+          test "$(find .audio-string-lab/notes -name '*.wav' | wc -l)" -eq 18
+          test -s .audio-string-lab/river-crossing-AB.wav
+
+      - name: Upload original string instrument auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-string-lab-${{ github.run_id }}
+          path: .audio-string-lab/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
