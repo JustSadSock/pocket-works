@@ -19,7 +19,8 @@
         "genesis-atlas-visual.test.mjs",
         "atlas-projection.test.mjs",
         "atlas-scale.test.mjs",
-        "atlas-surface-requests.test.mjs"
+        "atlas-surface-requests.test.mjs",
+        "atlas-human-layout.test.mjs"
       ],
       "tier": "smoke"
     },

@@ -1,4 +1,4 @@
-import {drawHumanGeography} from './atlas-human-geography.mjs';
+import {composeHumanGeography} from './atlas-human-geography.mjs';
 import {projectedContext} from './atlas-projection.mjs';
 import {AtlasCampaignSurface} from './atlas-campaign-surface.mjs';
 import {W,H,N,xx,yy,idx,PALETTE,COLORS,clamp,strength,hash,cityType,neighbors,charted,adoption,KNOWLEDGE,observedOwner,observedCities,freshIntel} from './world.mjs';
@@ -225,7 +225,7 @@ for(const i of visible){const x=xx(i)+.5,y=yy(i)+.5,p=s.map.terrain[i],n=grainAt
 c.restore();}
 if(!atlasPainted&&this.artCandidate&&mode!=='grid')forestStands(c,s,visibleCell,scale,minX,maxX,minY,maxY);
 c.lineCap='round';if(atlasPainted){}else if(this.artCandidate&&mode!=='grid')sliceRivers(c,s,visible,scale);else for(const wide of [false,true]){c.strokeStyle=wide?'#488b99':'#679eaa';c.lineWidth=Math.max((wide?1.25:.65)/scale,wide?.17:.08);c.beginPath();for(const i of visible){let d=s.map.down[i];if(!s.map.river[i]||d<0||!visibleCell(d)||((s.map.flow?.[i]||50)>190)!==wide)continue;let ax=xx(i)+.5,ay=yy(i)+.5,dx=xx(d)-xx(i),dy=yy(d)-yy(i),fraction=s.map.land[d]?1:.5,z=(hash(s.seed+'stream'+i)%17-8)/100;c.moveTo(ax,ay);c.quadraticCurveTo(ax+dx*fraction*.5-dy*z,ay+dy*fraction*.5+dx*z,ax+dx*fraction,ay+dy*fraction);}c.stroke();}
-const human=atlasPainted&&cam.atlasHuman!==false&&scale>=7;if(human){const humanStats=drawHumanGeography(raw,s,cam,{visible,cities:fog?observedCities(s,pf):s.cities,known:visibleCell,fresh,fog,project:cam.projection?.project??((x,y)=>[x,y])});this.humanStats=humanStats;this.canvas.dataset.atlasHuman=JSON.stringify(humanStats);}else{this.humanStats=null;delete this.canvas.dataset.atlasHuman;}
+const human=atlasPainted&&cam.atlasHuman!==false&&scale>=7;if(human){const humanStats=composeHumanGeography(raw,s,cam,{visible,cities:fog?observedCities(s,pf):s.cities,known:visibleCell,fresh,fog,project:cam.projection?.project??((x,y)=>[x,y])},this.atlasSurface.requests.presented);this.humanStats=humanStats;this.canvas.dataset.atlasHuman=JSON.stringify(humanStats);}else{this.humanStats=null;delete this.canvas.dataset.atlasHuman;}
 if(!human&&cam.zoom>1.7){
  c.lineWidth=Math.max(.10,1.15/scale);c.strokeStyle='#614b36b0';c.beginPath();
  for(const i of visible)if(s.road[i])for(const j of neighbors(i))if(j>i&&visibleCell(j)&&s.road[j]){c.moveTo(xx(i)+.5,yy(i)+.5);c.lineTo(xx(j)+.5,yy(j)+.5);}c.stroke();
