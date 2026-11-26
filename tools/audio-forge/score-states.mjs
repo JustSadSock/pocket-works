@@ -67,8 +67,14 @@ const bridges=[
   track(46,[note('D4',0,.7,54),note('A4',.75,.65,60),note('F#4',1.5,.65,64),note('E4',2.25,.6,60)],80),
   track(73,[note('F#5',1.5,.65,60),note('E5',2.25,.6,64)],52)]}
 ].map(s=>({...s,duration:60/s.tempo*s.beatsPerBar*s.bars}));
-const jobs=[...states,...bridges].map(s=>({name:'score-'+s.id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks:s.tracks,output:'generated/'+s.id+'.wav',post:{normalizeDb:-3}}));
+const stingers=[
+ {id:'victory',tempo:120,beatsPerBar:4,bars:1,tracks:[track(60,[note('D4',0,.42,98),note('F#4',.5,.42,104),note('A4',1,.85,108),note('D5',2,1.7,103)]),track(48,[note('D3',2,1.7,76),note('F#3',2,1.7,76),note('A3',2,1.7,76)]),track(47,[note('D2',0,.35,88),note('D2',2,.65,96)])]},
+ {id:'defeat',tempo:80,beatsPerBar:4,bars:1,tracks:[track(42,[note('A3',0,.85,75),note('F3',1,.85,68),note('D3',2,1.7,57)]),track(48,[note('D3',0,3.6,48),note('Ab3',0,1.8,52),note('A3',2,1.6,47)])]},
+ {id:'discovery',tempo:108,beatsPerBar:3,bars:1,tracks:[track(46,[note('D4',0,.4,65),note('A4',.5,.4,73),note('E5',1,.4,77),note('F#5',1.5,1.2,83)]),track(73,[note('A5',1.5,1.1,68)],52)]}
+].map(s=>({...s,duration:60/s.tempo*s.beatsPerBar*s.bars}));
+const jobs=[...states,...bridges,...stingers].map(s=>({name:'score-'+s.id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks:s.tracks,output:'generated/'+s.id+'.wav',post:{normalizeDb:-3}}));
 const graph={version:1,initial:'peace',states:Object.fromEntries(states.map(({tracks,...s})=>[s.id,{...s,file:'states/'+s.id+'.wav'}])),edges:{peace:['tension','battle'],tension:['peace','battle'],battle:['aftermath'],aftermath:['peace','tension','battle']}};
 graph.bridges=Object.fromEntries(bridges.map(({tracks,edge,...s})=>[edge,{...s,file:'bridges/'+s.id+'.wav'}]));
+graph.stingers=Object.fromEntries(stingers.map(({tracks,...s})=>[s.id,{...s,file:'stingers/'+s.id+'.wav'}]));
 writeFileSync(path.join(root,'manifest.json'),JSON.stringify({version:2,jobs},null,2)+'\n');
 writeFileSync(path.join(root,'score-graph.json'),JSON.stringify(graph,null,2)+'\n');
