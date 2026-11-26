@@ -73,7 +73,22 @@ const stingers=[
  {id:'discovery',tempo:108,beatsPerBar:3,bars:1,tracks:[track(46,[note('D4',0,.4,65),note('A4',.5,.4,73),note('E5',1,.4,77),note('F#5',1.5,1.2,83)]),track(73,[note('A5',1.5,1.1,68)],52)]}
 ].map(s=>({...s,duration:60/s.tempo*s.beatsPerBar*s.bars}));
 const jobs=[...states,...bridges,...stingers].map(s=>({name:'score-'+s.id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks:s.tracks,output:'generated/'+s.id+'.wav',post:{normalizeDb:-3}}));
+// Partition each existing orchestration into a base and a state-specific detail stem.
+const partition={peace:[0,1],tension:[0,1],battle:[0,3],aftermath:[0,2]};
+const adaptive={};
+for(const s of states){
+ const baseIndices=partition[s.id];
+ const parts=[['base',s.tracks.filter((_,i)=>baseIndices.includes(i))],['detail',s.tracks.filter((_,i)=>!baseIndices.includes(i))]];
+ adaptive[s.id]={};
+ for(const [part,tracks] of parts){
+  const id='adaptive-'+s.id+'-'+part;
+  jobs.push({name:'score-'+id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks,output:'generated/'+id+'.wav',post:{normalizeDb:-6}});
+  adaptive[s.id][part]={id,duration:s.duration,file:'adaptive/'+s.id+'-'+part+'.wav'};
+ }
+ Object.assign(adaptive[s.id].detail,{threshold:.1,width:.8,gain:.55,base:0});
+}
 const graph={version:1,initial:'peace',states:Object.fromEntries(states.map(({tracks,...s})=>[s.id,{...s,file:'states/'+s.id+'.wav'}])),edges:{peace:['tension','battle'],tension:['peace','battle'],battle:['aftermath'],aftermath:['peace','tension','battle']}};
+graph.adaptive=adaptive;
 graph.bridges=Object.fromEntries(bridges.map(({tracks,edge,...s})=>[edge,{...s,file:'bridges/'+s.id+'.wav'}]));
 graph.stingers=Object.fromEntries(stingers.map(({tracks,...s})=>[s.id,{...s,file:'stingers/'+s.id+'.wav'}]));
 writeFileSync(path.join(root,'manifest.json'),JSON.stringify({version:2,jobs},null,2)+'\n');
