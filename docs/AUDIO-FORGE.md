@@ -216,3 +216,32 @@ node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-
 CI keeps the original three-asset smoke test and additionally generates eleven foundation audition WAVs in an Actions artifact. Unit tests check deterministic expansion and PCM, distinct variants, finite levels, manifest rejection, and expressive MIDI arrangement. Audition quality is a separate human gate. Do not deploy these smoke files as application assets.
 
 Next steps: shuffle-bag selection in shared runtime, verified sample provenance and hybrid layer support, additional crowd/mechanism models, instrument-specific articulation and parameterized adaptive stems. Existing games remain unchanged until audition and integration gates pass.
+
+### Sound family playback (opt-in)
+
+```js
+import { createSoundFamilyPlayer } from './shared/capabilities/sound-family.js';
+// Use the application's existing AudioContext and mixer destination.
+const player = createSoundFamilyPlayer({
+  context,
+  destination: masterGain,
+  maxVoices: 16,
+  maxBuffers: 32,
+  families: {
+    blade: {
+      variants: ['assets/audio/generated/blade-impact-01.ogg',
+                 'assets/audio/generated/blade-impact-02.ogg'],
+      gain: 0.7,
+      pitchCents: 35,
+      gainSpread: 0.1
+    }
+  }
+});
+await player.preload('blade'); // optional; a user gesture is still needed for playback
+await player.play('blade', { gain: 0.8, pan: -0.3, priority: 1 });
+// on app teardown: player.destroy();
+```
+
+Selection uses a shuffle bag: each variant is selected once per cycle and adjacent selections differ across cycle boundaries (except singleton families). Concurrent fetch completion can reorder audible playback. Playback-rate and gain jitter are bounded; decoded buffers use a count-bounded LRU cache, concurrent downloads are deduplicated, and voice stealing favors higher priority. The player does not own the context or master mixer. Disable/stop invalidates pending play calls; destroy also aborts pending downloads. Preload may evict earlier entries if the configured cache is smaller than the family. A false result indicates an unavailable, cancelled, or rejected voice. Existing tone feedback is not changed. No distance simulation, loop crossfade, voice virtualization or browser-device validation yet.
+
+Node tests use a mocked Web Audio context; real Chromium/WebKit interaction is a separate gate.
