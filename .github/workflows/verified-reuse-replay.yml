@@ -22,6 +22,11 @@ jobs:
       (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        replica: [1, 2]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,7 +78,29 @@ jobs:
           cat "$out/replay.json" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-replay-${{ github.run_attempt }}
+          name: verified-replay-${{ github.run_attempt }}-${{ matrix.replica }}
           path: ${{ runner.temp }}/receipt-input/replay.json
           retention-days: 7
           if-no-files-found: error
+
+  summarize:
+    needs: replay
+    if: always() && needs.replay.result != 'skipped'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: verified-replay-${{ github.run_attempt }}-*
+          path: replay-reports
+      - name: Audit both strict replay outcomes
+        env:
+          UPSTREAM_RUN: ${{ github.event.workflow_run.id }}
+          UPSTREAM_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+          MATRIX_RESULT: ${{ needs.replay.result }}
+        run: node scripts/ci-overhaul/verified-replay-summary.mjs replay-reports
