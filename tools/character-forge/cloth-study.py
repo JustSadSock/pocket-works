@@ -24,7 +24,7 @@ if v7.exists():
                 q=parts[j];hits=trees[i].overlap(trees[j])
                 if not hits:continue
                 a,b=p["name"],q["name"];names={a,b}
-                expected=any("binding" in n or "welt" in n or "loop" in n or "clasp" in n for n in names)
+                expected=any("binding" in n or "welt" in n or "loop" in n or "clasp" in n for n in names) or (p["layer"]==0 and q["layer"]==0) or (min(p["layer"],q["layer"])==0 and any("scalp" in n or "beard" in n for n in names))
                 if "waist belt" in names and "tunic" in names:expected=False
                 category="attachment-review" if expected else "visible-layer-risk"
                 target=seams if expected else risks
