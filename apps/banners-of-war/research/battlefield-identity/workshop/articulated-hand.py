@@ -75,12 +75,14 @@ def source_rotate(b,axis,angle):
     m=Matrix.Rotation(angle,4,v.normalized())@m;m.translation=p;b.matrix=m;source_update()
 def flex_source(name,angles):
     chain=digits[name]
+    initial=(sp(chain[1])-sp(chain[0])).normalized()
+    bend=sourcePalm if name!="thumb" else (sourcePalm-sourceAcross*.8).normalized()
+    hinge=initial.cross(bend).normalized()
     for j,b in enumerate(chain):
         axis0=(sp(chain[j+1])-sp(b)).normalized() if j<2 else (sourceRig.matrix_world@b.tail-sp(b)).normalized()
         # Curl toward palmar side. The axis is kept transverse to phalanx.
         bend=sourcePalm if name!="thumb" else (sourcePalm-sourceAcross*.8).normalized()
-        ax=axis0.cross(bend)
-        if ax.length<.01:ax=sourceAcross
+        ax=hinge if hinge.length>.5 else sourceAcross
         source_rotate(b,ax,math.radians(angles[j]))
 def make_posed_glove(hand,center,axis,rad):
     q=posed_hands[hand.name]
@@ -102,14 +104,12 @@ def make_posed_glove(hand,center,axis,rad):
     sz=(sx+sy)*.5
     transform=targetBasis@Matrix.Diagonal(Vector((sx,sy,sz)))@srcBasis.inverted()
     gripAxis=axis
-    # Vary flexion for cylinder grip or three-finger string hook. No
-    # mesh segments or finger translation; deformation comes from skin.
-    if rad<.008:
-        poses={"index":(34,55,24),"middle":(38,57,28),"ring":(42,58,30),"pinky":(52,58,32),"thumb":(18,20,15)}
-    else:
-        k=max(0,min(1,(.023-rad)/.014))
-        poses={name:(49+12*k+i*3,55+12*k,23+10*k) for i,name in enumerate(("index","middle","ring","pinky"))}
-        poses["thumb"]=(24,34,21)
+    # Named authored pose library; never tune finger angles to the weapon.
+    library=json.loads(Path(__file__).with_name("hand-poses.json").read_text())
+    role=os.environ.get("BOW_HAND_POSE") or ("draw" if rad<.008 else "bow" if os.environ.get("BOW_WORKSHOP_ROLE")=="archer" else "sword" if hand==R else "shield")
+    poses=library[role]
+    if role in ("sword","shield"):
+        source_rotate(digits["thumb"][0],sourceForward,math.radians(-24))
     for name,angles in poses.items():flex_source(name,angles)
     # Use the source wrist and target sleeve junction; no translating the
     # entire hand to fake a contact. A narrow sleeve seam is preserved.
@@ -131,7 +131,7 @@ def make_posed_glove(hand,center,axis,rad):
         attach(ob,hand);q["objects"].append(ob)
     # True digit positions are available for archery hook and equipment fit.
     q["jointWorld"]={k:[wrist+transform@(sp(b)-sourceWrist) for b in chain] for k,chain in digits.items()}
-    q["fit"]={"scale":[sx,sy,sz],"fingerAngles":poses,"wrist":vec(wrist),"gripCenter":vec(center)}
+    q["fit"]={"scale":[sx,sy,sz],"poseName":role,"fingerAngles":poses,"wrist":vec(wrist),"gripCenter":vec(center)}
 def imported_hook(hand,toward):
     q=posed_hands[hand.name]
     if not q.get("jointWorld"):return hand_frame(hand)[0][0]
