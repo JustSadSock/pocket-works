@@ -27,7 +27,7 @@ export function createBannersAudioAdapter({context,destination=context?.destinat
  if(score&&(!['peace','tension','battle','aftermath'].every(id=>Object.hasOwn(score.graph?.states??{},id))||score.graph.initial!=='peace'))throw Error('Invalid battlefield score states');
  const scene=createScene({context,destination,budget,families,score,stingers:assets.stingers,fetcher});
  const preferences={muted:!!settings.muted,fx:clamp(finite(settings.fx,.65),0,1),ambient:clamp(finite(settings.ambient,.4),0,1),music:clamp(finite(settings.music,.55),0,1)};
- let prior=new Map(),last=null,epoch=0,closed=false,enabled=false,busy=false,visible=true,playingNow=false,aftermathUntil=-Infinity,battleSeen=false,result=null,desired='peace',intensity=0;
+ let prior=new Map(),latestAudible=new Set(),last=null,epoch=0,closed=false,enabled=false,busy=false,visible=true,playingNow=false,aftermathUntil=-Infinity,battleSeen=false,result=null,resultPlayed=false,desired='peace',intensity=0;
  const counts=Object.create(null);
  function volumes(){
   const gate=visible&&!preferences.muted?1:0;
@@ -35,16 +35,15 @@ export function createBannersAudioAdapter({context,destination=context?.destinat
   scene.mixer.setBusVolume('world',gate*preferences.ambient);
   scene.mixer.setBusVolume('music',gate*preferences.music);
  }
- function resetEvents(){epoch++;prior.clear();last=null;scene.events.stopAll();}
- function resetMusic(){battleSeen=false;aftermathUntil=-Infinity;result=null;desired='peace';intensity=0;scene.music?.stop();}
+ function resetEvents(){epoch++;prior.clear();latestAudible.clear();last=null;scene.events.stopAll();}
+ function resetMusic(){battleSeen=false;aftermathUntil=-Infinity;result=null;resultPlayed=false;desired='peace';intensity=0;scene.music?.stop();}
  function updateMusic(observation,t,outcome){
   const music=scene.music;
   if(!music)return;
   music.update();
   if(outcome&&result===null){
    result=outcome;aftermathUntil=t+6;
-   // Request only an explicit public outcome from the game; never infer hidden losses.
-   if(!preferences.muted&&Object.hasOwn(assets.stingers??{},outcome))void scene.playStinger(outcome);
+   // Public outcomes are caller events, never inferred from hidden unit losses.
   }
   if(observation.battle){battleSeen=true;aftermathUntil=t+6;}
   else if(battleSeen&&t>=aftermathUntil)battleSeen=false;
@@ -56,6 +55,9 @@ export function createBannersAudioAdapter({context,destination=context?.destinat
    // A battle must pass through its authored aftermath before returning to peace.
    const target=edges.includes(next)?next:edges.includes('aftermath')?'aftermath':null;
    if(target)music.request(target,{quantize:'beat',fadeSeconds:.3});
+  }
+  if(result&&!resultPlayed&&!preferences.muted&&!state.pending&&state.current==='aftermath'&&context.currentTime>=(state.bridgeUntil??0)&&Object.hasOwn(assets.stingers??{},result)){
+   resultPlayed=true;void scene.playStinger(result);
   }
   const target=result!==null?.2:observation.intensity;
   if(Math.abs(target-intensity)>=.08){intensity=target;music.setIntensity(target,{quantize:'beat',fadeSeconds:.3});}
@@ -90,25 +92,24 @@ export function createBannersAudioAdapter({context,destination=context?.destinat
     const q=F.sample(s.terrain,clamp(cam.x,0,F.W),clamp(cam.y,0,F.H));
     const river=s.terrain.hasRiver===false?Infinity:Math.abs(cam.x-F.riverX(s.terrain,cam.y));
     const levels={wind:.21,water:clamp(1-river/160,0,1)*.32,forest:clamp(finite(q.canopy),0,1)*.36};
+    const tickEpoch=epoch;
     await scene.world.reconcile({listener:{x:0,y:0},sources:active?Object.entries(ambient).map(([id,buffer])=>({id,buffer,position:{x:0,y:0},volume:levels[id]})):[]});
-    if(closed)return false;
+    if(closed||tickEpoch!==epoch)return false;
     if(!active||!playing){last=null;scene.music?.update();return true;}
     if(scene.music&&!scene.music.state.current)await scene.music.start();
-    if(closed)return false;
+    if(closed||tickEpoch!==epoch)return false;
     const elapsed=last===null?0:t-last;
+    latestAudible=new Set(s.units.filter(u=>audible(F,s,u)).map(u=>u.id));
     if(last===null||elapsed>0){
      const snapshot=soundEvents(F,s,cam,prior,elapsed);prior=snapshot.next;
-     const unitIds=new Set(s.units.filter(u=>audible(F,s,u)).map(u=>u.id));
      const token=epoch;
      if(elapsed>0&&!preferences.muted){
-      const requests=[];
       for(const e of snapshot.events.slice(0,8)){
-       if(!kinds.has(e.kind)||!unitIds.has(e.id))continue;
+       if(!kinds.has(e.kind)||!latestAudible.has(e.id))continue;
        const variant=e.kind+':'+e.variant,key=Object.hasOwn(families,variant)?variant:e.kind;
        if(!Object.hasOwn(families,key))continue;
-       requests.push(scene.events.play(key,{gain:clamp(finite(e.gain)/Math.sqrt(Math.max(1,speed)),0,1),pan:clamp(finite(e.pan),-1,1),rate:Math.min(1.6,Math.sqrt(speed)),priority:e.kind==='volley'||e.kind==='signal'?3:1,canStart:()=>!closed&&token===epoch&&visible&&!preferences.muted}).then(ok=>{if(ok&&token===epoch)counts[e.kind]=(counts[e.kind]??0)+1;}));
+       void scene.events.play(key,{gain:clamp(finite(e.gain)/Math.sqrt(Math.max(1,speed)),0,1),pan:clamp(finite(e.pan),-1,1),rate:Math.min(1.6,Math.sqrt(speed)),priority:e.kind==='volley'||e.kind==='signal'?3:1,canStart:()=>!closed&&token===epoch&&visible&&!preferences.muted&&latestAudible.has(e.id)}).then(ok=>{if(ok&&token===epoch)counts[e.kind]=(counts[e.kind]??0)+1;},()=>{});
       }
-      await Promise.all(requests);
      }
     }
     if(closed)return false;
