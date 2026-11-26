@@ -37,7 +37,8 @@ function phase(root,name,plan,m){
 export function assembleRenewable(root,sourceBundle,receipt,catalog,target,rawPlan,ctx,decision,out,now=Date.now()){
  const plan=validatePlan(rawPlan,target),hit=decision.decision==='reuse-shadow';
  // Admission cannot silently change after a phase started.
- if(!eq(decision,decideRenewable(catalog,receipt,target,rawPlan,ctx,now)))fail('Admission changed; fresh retry required');
+ if(hit&&!eq(decision,decideRenewable(catalog,receipt,target,rawPlan,ctx,now)))fail('Admission changed; fresh retry required');
+ if(!hit&&decision.decision!=='execute')fail('Unknown admission decision');
  const perf=phase(root,'performance',plan,target),game=hit?phase(sourceBundle,'gameplay',plan,receipt.manifest):phase(root,'gameplay',plan,target);
  if(hit&&(readdirSync(root).includes('gameplay')||game.proof.semanticDigest!==receipt.gameplaySemanticDigest))fail('Invalid historical gameplay');
  const comparison=hit?'not-executed':receipt&&catalog&&catalog.source===target.source&&catalog.sourceTree===target.sourceTree&&catalog.auditCommit===target.auditCommit&&eq(receipt.manifest.sourceMount,target.sourceMount)&&eq(receipt.manifest.auditMount,target.auditMount)?(game.proof.semanticDigest===receipt.gameplaySemanticDigest?'match':'mismatch'):'no-comparable-baseline';
@@ -72,8 +73,8 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   if(mode==='admit'){writeFileSync(out,JSON.stringify(d,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(d));}
   else if(mode==='finish'){
    const before=json(decisionPath);
-   if(before.decision==='execute'&&d.decision==='reuse-shadow'){e={};} // no promotion after fresh execution
-   assembleRenewable(root,e.bundle,e.receipt,e.catalog,target,plan,ctx,before,out);
+   if(before.decision==='reuse-shadow'&&!eq(before,d)){console.log('Admission revoked; execute fresh gameplay');process.exitCode=75;}
+   else assembleRenewable(root,e.bundle,e.receipt,e.catalog,target,plan,ctx,before,out);
   }else fail('Unknown admission command');
  }catch(e){console.error(e.message);process.exitCode=1;}
 }
