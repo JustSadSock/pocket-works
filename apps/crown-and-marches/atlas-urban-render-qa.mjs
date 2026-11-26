@@ -18,7 +18,7 @@ try{
    await page.goto(url+'urban-render-fixture');
    const result=await page.evaluate(async()=>{
     const {composeHumanGeography,humanArchitectureSheet}=await import('./atlas-human-geography.mjs'),{urbanRenderFixture}=await import('./atlas-urban-render-fixture.mjs'),canvas=document.querySelector('#fixture'),c=canvas.getContext('2d'),results=[];
-    for(const candidate of ['urban','compact','cultural']){const {s,opts,cam,receipt}=urbanRenderFixture();opts.candidate=candidate;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,canvas.width,canvas.height);
+    for(const candidate of ['cultural','historical','organic']){const {s,opts,cam,receipt}=urbanRenderFixture();opts.candidate=candidate;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,canvas.width,canvas.height);
     c.scale(cam.s,cam.s);const first=composeHumanGeography(c,s,cam,opts,receipt);
     const bytes=c.getImageData(0,0,canvas.width,canvas.height).data;let pixels=0;for(let i=3;i<bytes.length;i+=4)if(bytes[i])pixels++;
     s.day++;const repeat=composeHumanGeography(c,s,cam,opts,receipt);
@@ -27,7 +27,7 @@ try{
     results.push({candidate,first,repeat,construction,pixels,sheet:[sheet.width,sheet.height]});}return results;
    });
    for(const sample of result){const f=sample.first;assert.ok(f.plans.some(p=>p.courtyards>0),'courtyard branch not exercised');assert.ok(f.fields>0,'field branch not exercised');assert.ok(f.buildings>0&&f.spriteBuilds>0,'sprite branch not exercised');assert.ok(f.roads>0&&f.roadEdges.length>0,'road branch not exercised');assert.ok(f.bridgeEdges.some(e=>e.continuous&&e.spans>0),'bridge branch not exercised');assert.ok(f.plans.some(p=>p.walls>0),'wall branch not exercised');assert.ok(f.piers>0,'pier branch not exercised');assert.ok(sample.pixels>100,'no pixels rendered');assert.ok(sample.repeat.reused&&sample.repeat.layoutMs===0&&sample.repeat.drawMs===0,'calendar-only change invalidated layer');assert.ok(!sample.construction.reused,'same-day construction failed to invalidate');assert.deepEqual(sample.sheet,[1200,760]);}assert.deepEqual(errors,[]);
-   await page.locator('#fixture').screenshot({path:join(output,engine+'-urban-render-fixture.png')});for(const candidate of ['urban','compact','cultural'])await page.locator('#sheet-'+candidate).screenshot({path:join(output,engine+'-urban-render-sheet-'+candidate+'.png')});results.push({engine,passed:true,ms:Date.now()-start,candidates:result});
+   await page.locator('#fixture').screenshot({path:join(output,engine+'-urban-render-fixture.png')});for(const candidate of ['cultural','historical','organic'])await page.locator('#sheet-'+candidate).screenshot({path:join(output,engine+'-urban-render-sheet-'+candidate+'.png')});results.push({engine,passed:true,ms:Date.now()-start,candidates:result});
   }catch(e){await page?.screenshot({path:join(output,engine+'-urban-render-failure.png')}).catch(()=>{});results.push({engine,passed:false,ms:Date.now()-start,error:String(e.stack||e),errors});}finally{await browser?.close();save();}
  }
  assert.ok(results.length===2&&results.every(x=>x.passed),'Urban Canvas preflight failed; expensive QA not started');

@@ -22,7 +22,8 @@
         "atlas-surface-requests.test.mjs",
         "atlas-human-layout.test.mjs",
         "atlas-urban.test.mjs",
-        "atlas-cultural.test.mjs"
+        "atlas-cultural.test.mjs",
+        "atlas-historical.test.mjs"
       ],
       "tier": "smoke"
     },
