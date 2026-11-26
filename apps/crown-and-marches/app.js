@@ -289,6 +289,7 @@ if(['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(lo
    const m=state.map,known=i=>full||charted(state,player(),i);let i=state.cities.find(c=>c.capital&&c.f===player())?.i??state.cities[0].i;
    if(name==='continent'){cam.x=W/2;cam.y=H/2;cam.zoom=1;}
    else if(name==='capital'){home();cam.zoom=12;}
+   else if(['port','road','rivercity'].includes(name)){const cities=state.cities.filter(c=>known(c.i));const city=cities.filter(c=>name==='port'?m.coast[c.i]:name==='rivercity'?m.river[c.i]:c.infra>0).sort((a,b)=>(b.infra??0)-(a.infra??0)||b.pop-a.pop)[0];if(!city)return {missing:true,name};i=city.i;cam.x=xx(i)+.5;cam.y=yy(i)+.5;cam.zoom=10;selection={kind:'city',id:city.id};}
    else{let best=-Infinity;for(let j=0;j<m.land.length;j++){if(!known(j))continue;let score=-Infinity;if(name==='mountain'&&m.land[j])score=m.height[j];if(name==='river'&&m.land[j]&&m.river[j])score=Math.log1p(m.flow[j]);if(name==='mouth'&&m.land[j]&&m.coast[j]&&m.river[j])score=Math.log1p(m.flow[j]);if(name==='coast'&&m.land[j]&&m.coast[j])score=m.height[j]+.01*Math.log1p(m.flow[j]);if(name==='lake'&&!m.land[j]&&m.geography.lakeCoverage?.[j])score=m.geography.lakeCoverage[j];if(name==='forest'&&m.land[j]&&m.terrain[j]===2)score=m.moisture[j];if(score>best){best=score;i=j;}}if(!Number.isFinite(best))return {missing:true,name};cam.x=xx(i)+.5;cam.y=yy(i)+.5;cam.zoom=13;}
    changed();return {name,full,tilt,cell:i,intent:surface?.requests.intent??intent,camera:{x:cam.x,y:cam.y,zoom:cam.zoom}};
   },
