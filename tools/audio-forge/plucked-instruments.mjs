@@ -40,6 +40,7 @@ export function pluckNote({instrument='lute',midi,velocity=.7,duration=1,seed=1}
  // Velocity affects both excitation spectrum and output amplitude.
  const gain=(.12+.5*velocity**1.45)/peak;
  for(let i=0;i<out.length;i++)out[i]*=gain;
+ out[0]=out[out.length-1]=0; // canonical positive zero at boundaries
  return out;
 }
 export function renderPluckedScore({tempo=100,bars=8,meter=4,tracks,seed=1}={}){
