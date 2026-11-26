@@ -62,14 +62,14 @@ export async function buildContours(m,bounds,{detail=8,vertical,yieldRow=async()
 // charted-only source through the caller's fallback, never this cache.
 const bakedCache=new WeakMap();
 export class SpatialLRU {
- constructor(limit=32*1024*1024){this.limit=limit;this.bytes=0;this.items=new Map();}
- get(k){const a=this.items.get(k);if(a){this.items.delete(k);this.items.set(k,a);}return a?.value;}
- put(k,value,bytes){const old=this.items.get(k);if(old)this.bytes-=old.bytes;this.items.delete(k);if(bytes>this.limit)return value;this.items.set(k,{value,bytes});this.bytes+=bytes;while(this.bytes>this.limit){const key=this.items.keys().next().value;this.bytes-=this.items.get(key).bytes;this.items.delete(key);}return value;}
+ constructor(limit=32*1024*1024){this.limit=limit;this.bytes=0;this.items=new Map();this.hits=0;this.misses=0;this.evictions=0;}
+ get(k){const a=this.items.get(k);if(a){this.hits++;this.items.delete(k);this.items.set(k,a);}else this.misses++;return a?.value;}
+ put(k,value,bytes){const old=this.items.get(k);if(old)this.bytes-=old.bytes;this.items.delete(k);if(bytes>this.limit)return value;this.items.set(k,{value,bytes});this.bytes+=bytes;while(this.bytes>this.limit){const key=this.items.keys().next().value;this.bytes-=this.items.get(key).bytes;this.items.delete(key);this.evictions++;}return value;}
  clear(){this.items.clear();this.bytes=0;}
 }
 export async function contourSource(s,cam,{bounds,detail=8,contourDetail=8,vertical,yieldRow=async()=>{},diagnostic=false}={}){
  if(s.mapVersion!==3||!s.autonomous||(s.discovery&&!s.discovery.fullMap&&!s.autonomous))throw Error('Explicit revealed v3 required for contour source');
- const m=s.map,g=m.geography,cache=bakedCache.get(g)??new SpatialLRU();bakedCache.set(g,cache);const key=[...bounds,detail,contourDetail,diagnostic].join(':');const hit=cache.get(key);if(hit)return {...hit,stats:{...hit.stats,cacheHit:true,cacheBytes:cache.bytes}};
+ const m=s.map,g=m.geography,cache=bakedCache.get(g)??new SpatialLRU();bakedCache.set(g,cache);const key=[...bounds,detail,contourDetail,diagnostic].join(':');const hit=cache.get(key);if(hit)return {...hit,stats:{...hit.stats,cacheHit:true,cacheBytes:cache.bytes,cacheHits:cache.hits,cacheMisses:cache.misses,cacheEvictions:cache.evictions}};
  const source=await naturalWatersSource(s,cam,{bounds,detail,vertical,yieldRow}),field=contourField(m),[x0,y0]=bounds,begin=clock();
  // Keep a physical terrain bed underneath the independent clipped water.
  // Lake surface and ocean plane are not baked into terrain or materials.
@@ -77,8 +77,9 @@ export async function contourSource(s,cam,{bounds,detail=8,contourDetail=8,verti
  source.vertices[o+2]=z;source.vertices[o+3]=p.bed;source.vertices[o+7]=1;source.elevations[i]=z;source.water.kind[i]=0;source.water.depth[i]=0;source.water.shore[i]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));if(wet)source.vertices[o+8]=1;else source.vertices[o+8]=Math.max(.016,source.vertices[o+8]);
  }if(y%8===0)await yieldRow();}
  source.contours=await buildContours(m,bounds,{detail:contourDetail,vertical,yieldRow,diagnostic});const rivers=riverRibbons(g,bounds,{vertical,threshold:contourDetail<=4?58:25});source.contours.chunks.push(...rivers.chunks);source.contours.stats.rivers=rivers.stats;source.contours.stats.bytes+=rivers.stats.bytes;source.diagnostic=diagnostic;
- source.stats={...source.stats,ms:source.stats.ms+clock()-begin,contours:source.contours.stats,bytes:source.stats.bytes+source.contours.stats.bytes,cacheHit:false};cache.put(key,source,source.stats.bytes);source.stats.cacheBytes=cache.bytes;return source;
+ source.stats={...source.stats,ms:source.stats.ms+clock()-begin,contours:source.contours.stats,bytes:source.stats.bytes+source.contours.stats.bytes,cacheHit:false};cache.put(key,source,source.stats.bytes);source.stats.cacheBytes=cache.bytes;source.stats.cacheHits=cache.hits;source.stats.cacheMisses=cache.misses;source.stats.cacheEvictions=cache.evictions;return source;
 }
+export function configureContourCache(g,limit){clearContourCache(g);bakedCache.set(g,new SpatialLRU(limit));}
 export function clearContourCache(g){bakedCache.get(g)?.clear();bakedCache.delete(g);}
 
 // Geometry is world-space and independent of the terrain mesh LOD.

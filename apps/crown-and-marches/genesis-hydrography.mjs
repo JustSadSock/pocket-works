@@ -11,12 +11,12 @@ function simple(mask,w,h,x,y){
  if(!near)return false;let seen=0,groups=0;for(let a=0;a<9;a++)if((bits&(1<<a))&&!(seen&(1<<a))){let q=1<<a,component=0;while(q){const bit=q&-q;q^=bit;if(seen&bit)continue;seen|=bit;component|=bit;const k=31-Math.clz32(bit),u=k%3,v=Math.floor(k/3);for(const [dx,dy] of D){const X=u+dx,Y=v+dy;if(X>=0&&X<3&&Y>=0&&Y<3){const b=1<<(Y*3+X);if((bits&b)&&!(seen&b))q|=b;}}}if(component&near)groups++;}if(groups!==1)return false;}
  return true;
 }
-export function refineCoast(bed,mask,w,h,r,signed,variation){
+export function refineCoast(bed,mask,w,h,r,signed,variation,rain=null){
  let changed=0,rejected=0,modified=0;const half=r/2;
  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x,X=x/r,Y=y/r,d=signed(X,Y);if(Math.abs(d)>=1.35)continue;
  // Continuous low-frequency alongshore offsets, tapering away from coast.
  const offset=C(variation(X,Y),-.34,.34)*(1-S(Math.abs(d)/1.35)),v=d+offset,desired=+(v>0),anchor=x%r===half&&y%r===half;
- if(desired!==mask[i]){if(anchor||!simple(mask,w,h,x,y)){rejected++;continue;}mask[i]=desired;changed++;}
+ if(desired!==mask[i]){if(anchor||!simple(mask,w,h,x,y)){rejected++;continue;}if(rain){if(!desired)rain[i]=0;else{let sum=0,count=0;for(const [dx,dy] of D){const j=(y+dy)*w+x+dx;if(mask[j]){sum+=rain[j];count++;}}rain[i]=count?sum/count:.55;}}mask[i]=desired;changed++;}
  const target=.12+Math.sign(v)*Math.max(.0001,Math.abs(v)*.035),blend=1-S(Math.abs(d)/1.35),z=bed[i]*(1-blend)+target*blend;
  bed[i]=mask[i]?Math.max(.120001,z):Math.min(.119999,z);modified++;
  }

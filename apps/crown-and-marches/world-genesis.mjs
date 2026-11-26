@@ -67,7 +67,7 @@ function generateInternal(seed,W,H,continental,options,auditProfile){
  for(let i=0;i<N;i++)high[i]+=erosion[i];
  for(let pass=0;pass<2;pass++){erosion.fill(0);for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(!mask[i])continue;let j=-1,drop=0;for(const k of [i-1,i+1,i-w,i+w])if(mask[k]&&high[i]-high[k]>drop){drop=high[i]-high[k];j=k;}if(j>=0){const move=Math.max(0,drop-.115/r)*.19;erosion[i]-=move;erosion[j]+=move;}}for(let i=0;i<N;i++)high[i]+=erosion[i];}
  if(config.revision===LIVING_REVISION||hydrography){hyd=null;erosion=null;}
- const coastRefinement=hydrography?refineCoast(high,mask,w,h,r,(X,Y)=>sample(signed,W,H,X-.5,Y-.5),(X,Y)=>(noise(salt^176,X,Y,3.7)-.5)*.50+(noise(salt^291,X,Y,1.45)-.5)*.18):null;
+ const coastRefinement=hydrography?refineCoast(high,mask,w,h,r,(X,Y)=>sample(signed,W,H,X-.5,Y-.5),(X,Y)=>(noise(salt^176,X,Y,3.7)-.5)*.50+(noise(salt^291,X,Y,1.45)-.5)*.18,rain):null;
  hyd=drainage(high,mask,w,h,rain,scratch);scratch=null;
  // Standing water is represented by the filled water surface; preserve
  // separate bed height and lake depth for research. Sea remains the same coast.
