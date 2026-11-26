@@ -400,7 +400,9 @@ mocap=os.environ.get("BOW_WORKSHOP_MOCAP")
 if mocap:
     exec(compile(Path(__file__).with_name("retarget-walk.py").read_text(),"retarget-walk.py","exec"))
     motions=("retarget-march",)
-else:motions=("march","strike")
+else:
+    requested=os.environ.get("BOW_WORKSHOP_MOTION")
+    motions=(requested,) if requested in ("march","strike") else ("march","strike")
 for motion in motions:
     count=24 if motion in ("march","strike","retarget-march") else 16;samples[motion]=[];audit["samples"]=samples
     for i in range(count):
@@ -421,24 +423,32 @@ for motion in motions:
         checks[field]={"maxStepDegrees":max(gaps),"pathDegrees":sum(gaps),"neutralDeviation":max(qangle(q[0],x) for x in q)}
     audit.setdefault("continuity",{})[motion]=checks
     bad=any(c["maxStepDegrees"]>12 or c["neutralDeviation"]>25 or c["pathDegrees"]>90 for c in checks.values())
+    for field in samples[motion][0]["armRelative"]:
+        q=[r["armRelative"][field] for r in samples[motion]]
+        gaps=[qangle(a,b) for a,b in zip(q,q[1:]+q[:1])]
+        checks[field]={"maxStepDegrees":max(gaps),"pathDegrees":sum(gaps)}
+        bad=bad or max(gaps)>45
+    bad=bad or any(max(w["forearmToPalmDegrees"] for w in r["footContact"]["wrists"])>35 for r in samples[motion])
     bad=bad or any(r["shield"]["outwardDot"]<.10 or r["shield"]["forwardDot"]<.35 or r["shield"]["armOnBackMetres"]<.07 or r["shield"]["handleError"]>.035 or r["maxIKResidual"]>.025 or any(c.get("unexpected",0) for c in r["contacts"]) for r in samples[motion])
     audit.setdefault("preflight",{})[motion]={"pass":not bad,"samples":count,"strictContactGate":True}
     save()
-    # Native 1080p key poses even on rejected candidates. Full six-view
-    # motion recording only when inexpensive anatomical preflight passes.
+    # Capture native six-view local evidence even when the integrity gate
+    # rejects the pose. This is a single character/action, never an atlas.
+    # A rejected cycle remains visibly marked as rejected in the manifest.
     def pose_at(i):
         reset_upright();p=i/count
         return retarget_gait(p) if motion=="retarget-march" else attack(p) if motion=="strike" else gait(motion,p)
-    for i in sorted({0,count//4,count//2,3*count//4}):
+    import shutil
+    for i in range(count):
         pose_at(i)
-        for view in REVIEW_VIEWS:review_render("key-"+motion+"-%02d"%i,view)
-        if motion=="strike":
+        for view in REVIEW_VIEWS:
+            name=motion+"-%02d"%i
+            review_render(name,view)
+            if i in (0,count//4,count//2,3*count//4):
+                shutil.copyfile(folder/(name+"-"+view+".png"),folder/("key-"+name+"-"+view+".png"))
+        if motion=="strike" and i in (0,count//4,count//2,3*count//4):
             review_render("grip-"+motion+"-%02d"%i,"angle45",world_pos(R,gripLocal),.52)
             review_render("shield-rear-"+motion+"-%02d"%i,"back",world_pos(LF,shieldCenterLocal),1.25)
-    if not bad:
-        for i in range(count):
-            pose_at(i)
-            for view in REVIEW_VIEWS:review_render(motion+"-%02d"%i,view)
     save()
 # Audit foot slip in the world frame during consecutive stance samples.
 for motion,rows in samples.items():

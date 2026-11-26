@@ -83,7 +83,7 @@ def retarget_gait(phase):
     turn(hips,max(-.28,min(.28,-yaw(pelvic)*sign)));turn(torso,max(-.30,min(.30,-(yaw(shoulders)-yaw(pelvic))*sign)))
     for j,(upper,lower,end) in enumerate(feet):
         thigh,knee,ankle=r["legs"][j];rel=ankle-r["hip"]
-        dest=ankles0[j]+Vector((0,-(rel.dot(forward)-mid[j])*scale,(ankle.z-floor[j])*scale))
+        dest=ankles0[j]+Vector(((rel.dot(side)-(cycle[0]["legs"][j][2]-cycle[0]["hip"]).dot(side))*scale*sign,-(rel.dot(forward)-mid[j])*scale,(ankle.z-floor[j])*scale))
         preferred=basis(knee-thigh);preferred.z=0
         if preferred.length<.01:preferred=Vector((0,-1,0))
         errors.append(limb(upper,lower,end,dest,preferred));foot_orientation(j,0)

@@ -62,7 +62,7 @@ for motion in audit.get("samples",{}):
             if p is None:continue
             x=(i%3)*640;y=54+(i//3)*500;img=flatten(p,(620,430));board.paste(img,(x+10,y+40));draw.text((x+15,y+8),v,font=small,fill="#28312b")
         board.save(folder/(phase+"-sheet.png"))
-spec={"sword":[("march",1.08),("strike",1.5)],"retarget":[("retarget-march",audit.get("retarget",{}).get("periodSeconds",1.08))],"archer":[]}
+spec={"sword":[(m,p) for m,p in (("march",1.08),("strike",1.5)) if not os.environ.get("BOW_WORKSHOP_MOTION") or os.environ["BOW_WORKSHOP_MOTION"]==m],"retarget":[("retarget-march",audit.get("retarget",{}).get("periodSeconds",1.08))],"archer":[]}
 clips=[];deferred=[]
 def encode(frames,video,period,mosaic=False):
     with tempfile.TemporaryDirectory() as td:
@@ -80,8 +80,8 @@ def encode(frames,video,period,mosaic=False):
             clips.append({"file":str(dest.relative_to(root)),"speed":1 if mode=="normal" else .5,"period":period,"sourceFrames":len(frames),"resolution":[3840,1440] if mosaic else [1920,1080],"loops":3})
 for motion,period in spec[role]:
     rows=audit.get("samples",{}).get(motion,[])
-    if not audit.get("preflight",{}).get(motion,{}).get("pass"):
-        deferred.append({"motion":motion,"reason":"Anatomical gate rejected or incomplete; original 1080p key poses retained","previewFrames":len(rows)});continue
+    if not rows or motion not in audit.get("preflight",{}):
+        deferred.append({"motion":motion,"reason":"Incomplete local diagnostics","previewFrames":len(rows)});continue
     n=len(rows);perView=[]
     for view in views:
         frames=[folder/("%s-%02d-%s.png"%(motion,i,view)) for i in range(n)]
@@ -93,4 +93,4 @@ for motion,period in spec[role]:
         encode(frames,motion+"-"+view,period)
     encode(list(zip(*perView)),motion+"-synchronized",period,True)
 if role=="archer":deferred.append({"motion":"shot","reason":"Static anchor only; wait for direct artistic approval"})
-(root/"clip-index.json").write_text(json.dumps({"clips":clips,"deferred":deferred,"nativeFramesRetained":True,"interpolation":False},indent=2))
+(root/"clip-index.json").write_text(json.dumps({"clips":clips,"deferred":deferred,"nativeFramesRetained":True,"interpolation":False,"artisticApproval":False,"anatomicalPreflight":audit.get("preflight",audit.get("staticGate"))},indent=2))
