@@ -93,10 +93,10 @@ export class BakedTerrainGL{
 }
 
 // Integration guard: never access full fine geography for a charted-only map.
-export async function prepareGeographicCandidate(s,cam,{bounds,detail=8,contourDetail=8,vertical,diagnostic=false,polish=false,surfaceScale=false,check=()=>{}}={}){
+export async function prepareGeographicCandidate(s,cam,{bounds,detail=8,contourDetail=8,vertical,diagnostic=false,polish=false,surfaceScale=false,identity=false,check=()=>{}}={}){
  check();const yieldRow=async()=>{check();await sleep();check();};
  if(polish&&s.mapVersion===3&&s.discovery?.fullMap&&!s.autonomous)s={...s,autonomous:true};
- if(s.mapVersion===3&&!s.autonomous&&s.map.geography?.lakeId){const snapshot=model(s),source=await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true,omitRivers:polish});await chartedContourSource(s,source,snapshot.known,{contourDetail,vertical,polish,yieldRow,continuous:surfaceScale});source.scaleSurface=surfaceScale;return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true,check});}
+ if(s.mapVersion===3&&!s.autonomous&&s.map.geography?.lakeId){const snapshot=model(s),source=await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true,omitRivers:polish});await chartedContourSource(s,source,snapshot.known,{contourDetail,vertical,polish,yieldRow,continuous:surfaceScale,identity});source.scaleSurface=surfaceScale;source.identity=identity;return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true,check});}
  if(s.mapVersion!==3||!s.autonomous){const terrain=await prepareBakedTerrain(s,cam,{sourceOverride:await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true}),geology:'living',closeLOD:true});return {...terrain,stats:{...terrain.stats,fogFallback:true}};}
- const source=surfaceScale&&!diagnostic&&s.map.geography?.lakeId?await scaleTerrainSource(s,cam,{bounds,detail,contourDetail,vertical,yieldRow}):await contourSource(s,cam,{bounds,detail,contourDetail,vertical,diagnostic,polish,yieldRow});return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true,check});
+ const source=surfaceScale&&!diagnostic&&s.map.geography?.lakeId?await scaleTerrainSource(s,cam,{bounds,detail,contourDetail,vertical,yieldRow,identity}):await contourSource(s,cam,{bounds,detail,contourDetail,vertical,diagnostic,polish,yieldRow});source.identity=identity;return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true,check});
 }
