@@ -55,7 +55,7 @@ for(const name of ['base','young-woman','older-woman','older-man','tall-heavy','
  morphRows.push({name,passed:true,triangleCount:m.statistics.triangleCount,vertices:m.statistics.vertices,robeOuterVertices:p.outerVertexCount,robeThickness:p.thickness,contacts:m.contacts.map(c=>({joint:m.joints[c.joint].name,vertexCount:c.vertexCount,groundY:c.groundY}))});
 }
 const morphBounds=commonBounds(Object.values(morphModels),'three-quarter');for(const [name,m] of Object.entries(morphModels))write('v9-morph-'+name+'-matched.png',raster(m,{view:'three-quarter',bounds:morphBounds,size:512,mode:'C',maps:selectedMaps}).png);
-const low=produceRoleV9(source('base'),'merchant',null,{style:'low-poly'}),high=models.merchant;
+const low=produceRoleV9(source(roleMorphs.merchant.morph),'merchant',null,{style:'low-poly'}),high=models.merchant;
 const styleReport={lowPoly:{style:low.spec.style,lod:low.spec.lod,triangles:low.statistics.triangleCount,bounds:commonBounds([posed(low)],'three-quarter')},historical:{style:high.spec.style,lod:high.spec.lod,triangles:high.statistics.triangleCount,bounds:commonBounds([restModels.merchant],'three-quarter')},sameTopology:low.statistics.triangleCount===high.statistics.triangleCount,sameJointNames:JSON.stringify(low.joints.map(j=>j.name))===JSON.stringify(high.joints.map(j=>j.name)),independentLod:low.spec.lod===high.spec.lod};
 write('v9-merchant-low-poly.glb',glb(low,{detailMaps:selectedMaps}));write('v9-merchant-low-poly.png',raster(posed(low),{view:'three-quarter',size:768,mode:'C',maps:selectedMaps}).png);
 const artisan=models.artisan,walkFrames=[],contactFrames=[],jointFrames=[],H=artisan.spec.morphology.height;
