@@ -263,7 +263,7 @@ if horse_rig and extended:
     world=horse_rig.matrix_world.copy()
     bones={b.name:b for b in horse_rig.pose.bones}
     rest={n:world@b.bone.head_local for n,b in bones.items()}
-    audit=out/"horse-rig-preflight.json"
+    audit=out/("horse-rig-preflight.json" if os.environ.get("BOW_RIG_PREFLIGHT") else "horse-rig-production.json")
     report={"rig":horse_rig.name,"rigWorld":[list(r) for r in world],
         "horseRootWorld":[list(r) for r in horse_root.matrix_world],
         "bones":[{"name":n,"parent":b.parent.name if b.parent else None,
@@ -378,6 +378,13 @@ if horse_rig and extended:
         if max(ys)-min(ys)<.05:raise ValueError("Trot lacks skinned hoof travel "+k)
     if phase_distance(actual["FL"],actual["BR"])>3 or phase_distance(actual["FR"],actual["BL"])>3 or phase_distance(actual["FL"],actual["FR"])<5:
         raise ValueError("Measured trot is not diagonal: "+str(actual))
+    gallop=[]
+    for i in range(16):
+        m=sample_horse("Gallop",i/16)[0];apply_horse_matrices(m);gallop.append(measured_hooves())
+    report["gallopHoofTrajectories"]={k:[list(s[k]) for s in gallop] for k in anatomy}
+    save_audit()
+    for k in anatomy:
+        if max(s[k].y for s in gallop)-min(s[k].y for s in gallop)<.05:raise ValueError("Gallop lacks skinned hoof travel "+k)
     gait_meta={"saddleBone":seat_bone.name,"limbChains":anatomy,"controllerChains":controls,"trot":"diagonal phase resampling of exact Walk clip, measured on actual skinned hoof vertices","exactClips":[exact_action(k).name for k in ("Idle","Walk","Gallop")]}
     report["verifiedMapping"]=gait_meta
     save_audit()
