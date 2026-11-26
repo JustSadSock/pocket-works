@@ -56,6 +56,14 @@ test('Pocket Deck boots into an authored home and switches to dense library',asy
   monitor.assertClean();
 });
 
+test('home defers hidden library card construction until the Library opens',async({page})=>{
+  await openDeck(page);
+  await expect(page.locator('#app-list .app-entry')).toHaveCount(0);
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await expect(page.locator('#app-list .app-entry').first()).toBeVisible();
+  expect(await page.locator('#app-list .app-entry').count()).toBeGreaterThan(30);
+});
+
 test('widgets can be configured, reordered and saved without losing previous shelf data',async({page},info)=>{
   await openDeck(page);
   await page.locator('#deck-customize').click();
