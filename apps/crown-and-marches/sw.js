@@ -25,6 +25,7 @@ const APP_SHELL = [
   './world-rendering-gl.mjs',
   './world-rendering-baked.mjs',
   './atlas-campaign-surface.mjs',
+  './atlas-projection.mjs',
   './battle.mjs',
   './render.mjs',
   './geography-review.mjs',

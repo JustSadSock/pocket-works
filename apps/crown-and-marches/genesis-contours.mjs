@@ -1,4 +1,5 @@
 // Explicit geographic contours. Immutable authority; no decorative flooding.
+import {chartInk} from './atlas-projection.mjs';
 import {reachRibbons} from './genesis-atlas-visual.mjs';
 import {lakeBasins,naturalWatersSource} from './genesis-waters.mjs';
 const C=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),L=(a,b,t)=>a+(b-a)*t;
@@ -122,13 +123,13 @@ export function connectedLakePairs(g){
 export async function chartedContourSource(s,source,known,{contourDetail=8,vertical,yieldRow=async()=>{},polish=false}={}){
  const m=s.map,g=m.geography,r=g.detail,W=(g.width-1)/r,H=(g.height-1)/r,[x0,y0]=source.bounds,n=source.cols*source.rows,field=contourField(m,{polish});
  const allow=(X,Y)=>{for(let y=Math.max(0,Math.floor(Y-1));y<=Math.min(H-1,Math.floor(Y+1));y++)for(let x=Math.max(0,Math.floor(X-1));x<=Math.min(W-1,Math.floor(X+1));x++)if(!known[y*W+x])return false;return true;};
- const water={kind:new Uint8Array(n),depth:new Float32Array(n),shore:new Float32Array(n)};let refined=0;
+ const water={kind:new Uint8Array(n),depth:new Float32Array(n),shore:new Float32Array(n)},ink=polish?new Float32Array(n):null;let refined=0;
  for(let y=0;y<source.rows;y++){for(let x=0;x<source.cols;x++){const i=y*source.cols+x,o=i*9,X=x0+x/source.detail,Y=y0+y/source.detail;
- if(!allow(X,Y)){if(source.vertices[o+8]<=1.5){water.kind[i]=+(source.vertices[o+7]<.5);water.depth[i]=Math.max(0,.12-source.vertices[o+3]);water.shore[i]=Math.abs(source.vertices[o+7]-.5)*.1;}continue;}
+ if(ink)ink[i]=chartInk(known,W,H,X,Y);if(!allow(X,Y)){if(source.vertices[o+8]<=1.5){water.kind[i]=+(source.vertices[o+7]<.5);water.depth[i]=Math.max(0,.12-source.vertices[o+3]);water.shore[i]=Math.abs(source.vertices[o+7]-.5)*.1;if(polish)source.vertices[o+8]=1;}continue;}
  const p=field.sample(X,Y),wet=p.coast<0||p.lake>0,z=p.coast<0?-(Math.max(0,.12-p.bed)*3.1+.025):vertical(p.bed);
- source.vertices[o+2]=source.elevations[i]=z;source.vertices[o+3]=p.bed;source.vertices[o+7]=1;source.vertices[o+8]=wet?1:Math.max(.016,source.vertices[o+8]);water.shore[i]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));refined++;
+ source.vertices[o+2]=source.elevations[i]=z;source.vertices[o+3]=p.bed;source.vertices[o+7]=1;source.vertices[o+8]=polish?1:wet?1:Math.max(.016,source.vertices[o+8]);if(polish){const fx=Math.min(g.width-1,Math.round(X*r)),fy=Math.min(g.height-1,Math.round(Y*r)),j=fy*g.width+fx,wetness=g.rain[j];source.vertices[o+4]=wetness;source.vertices[o+6]=smooth((wetness-.45)/.24)*(1-smooth((p.bed-.46)/.24));}water.shore[i]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));refined++;
  }if(y%8===0)await yieldRow();}
- source.water=water;source.contours=await buildContours(m,source.bounds,{detail:contourDetail,vertical,yieldRow,allow,polish});
+ source.water=water;source.ink=ink;source.contours=await buildContours(m,source.bounds,{detail:contourDetail,vertical,yieldRow,allow,polish});
  const ribbons=polish?reachRibbons(g,source.bounds,{vertical,threshold:25,allow,overview:contourDetail<=4}):riverRibbons(g,source.bounds,{vertical,threshold:contourDetail<=4?58:25,allow});source.polish=polish;source.contours.chunks.push(...ribbons.chunks);source.contours.stats.bytes+=ribbons.stats.bytes;source.contours.stats.rivers=ribbons.stats;
  source.stats={...source.stats,chartedFine:true,refined,coarseFallbackSamples:n-refined,contours:source.contours.stats,bytes:source.stats.bytes+water.kind.byteLength+water.depth.byteLength+water.shore.byteLength+source.contours.stats.bytes};return source;
 }
