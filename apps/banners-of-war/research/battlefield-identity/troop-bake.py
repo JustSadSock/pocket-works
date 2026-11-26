@@ -275,109 +275,185 @@ if horse_rig and extended:
         audit.write_text(json.dumps(report,indent=2))
     save_audit()
     print("Actual imported horse hierarchy",json.dumps(report),flush=True)
-    candidates={}
-    for n,h in rest.items():
-        if abs(h.x)<.035 or abs(h.y)<.12 or h.z<-.30 or h.z>.78:continue
-        k=(1 if h.x>0 else -1,1 if h.y>0 else -1)
-        candidates.setdefault(k,[]).append(n)
-    report["distalCandidates"]={str(k):v for k,v in candidates.items()}
+    # Pinned CC0 Quaternius rig, source blob f931b71d46df91b3c897997a12c01188f6ad1c8f.
+    # Explicit anatomy from the original preflight; controllers never identify limbs.
+    anatomy={
+        "FL":("FrontShoulder.L","FrontUpperLeg.L","FrontLowerLeg.L"),
+        "FR":("FrontShoulder.R","FrontUpperLeg.R","FrontLowerLeg.R"),
+        "BL":("BackShoulder.L","BackLeg.L","BackUpperLeg.L","BackLowerLeg.L"),
+        "BR":("BackShoulder.R","BackLeg.R","BackUpperLeg.R","BackLowerLeg.R")}
+    controls={"FL":("IKFrontLeg.L","FF.L","PoleTarget.L"),
+              "FR":("IKFrontLeg.R","FF.R","PoleTarget.R"),
+              "BL":("IKBackLeg.L","FFB.L","PoleTargetBack.L"),
+              "BR":("IKBackLeg.R","FFB.R","PoleTargetBack.R")}
+    report["anatomy"]=anatomy;report["controllers"]=controls
+    report["constraints"]={n:[{"type":c.type,"name":c.name,"targetBone":getattr(c,"subtarget","")} for c in b.constraints] for n,b in bones.items()}
     save_audit()
-    if len(candidates)!=4:raise ValueError("Four anatomical hoof quadrants required; see horse-rig-preflight.json")
-    def ancestors(n):
-        b=bones[n];path=[]
-        while b:
-            path.append(b.name);b=b.parent
-        return path
-    feet={k:min(v,key=lambda n:(round(rest[n].z,3),-len(ancestors(n)),n)) for k,v in candidates.items()}
-    paths={k:ancestors(n) for k,n in feet.items()}
-    chains={}
-    for k,path in paths.items():
-        shared=set(n for other,p in paths.items() if other!=k for n in p)
-        exclusive=[n for n in path if n not in shared]
-        if len(exclusive)<2:raise ValueError("No independent limb "+str((k,path)))
-        root=bones[exclusive[-1]]
-        names=[root.name]+[b.name for b in root.children_recursive]
-        leaf=feet[k]
-        if rest[root.name].z-rest[leaf].z<.22:raise ValueError("Insufficient limb articulation "+str((k,names)))
-        chains[k]=(names,leaf)
-    report["limbChains"]={str(k):{"root":v[0][0],"bones":v[0],"footJoint":v[1],"jointPath":paths[k]} for k,v in chains.items()}
+    for k,names in anatomy.items():
+        for n in names+controls[k]:
+            if n not in bones:raise ValueError("Pinned rig bone absent: "+n)
+        for parent,child in zip(names,names[1:]):
+            if bones[child].parent!=bones[parent]:raise ValueError("Unexpected anatomical hierarchy "+child)
+        h=rest[names[-1]]
+        if (h.x>0)!=(k[1]=="L") or (h.y<0)!=(k[0]=="F") or rest[names[0]].z-h.z<.22:
+            raise ValueError("Unexpected anatomical orientation "+k)
+    all_names=[n for k in anatomy for n in anatomy[k]+controls[k]]
+    if len(set(all_names))!=len(all_names):raise ValueError("Overlapping horse limb mapping")
+    # Binding evidence: count actual positive weights, not the Blender deform flag.
+    # Select fixed low, weighted hoof vertices in the source mesh for gait testing.
+    weights={n:0.0 for n in bones};weighted_counts={n:0 for n in bones}
+    candidates={k:[] for k in anatomy}
+    for o in horse_objects:
+        groups={g.index:g.name for g in o.vertex_groups}
+        if not any(m.type=="ARMATURE" and m.object==horse_rig for m in o.modifiers):continue
+        for v in o.data.vertices:
+            influence={groups.get(g.group,""):g.weight for g in v.groups if g.weight>0}
+            for n,w in influence.items():
+                if n in weights:weights[n]+=w;weighted_counts[n]+=1
+            p=o.matrix_world@v.co
+            for k in anatomy:
+                score=sum(influence.get(n,0) for n in anatomy[k]+controls[k])
+                if score>.55 and (p.x>0)==(k[1]=="L") and (p.y<0)==(k[0]=="F"):
+                    candidates[k].append((p.z,o.name,v.index))
+    report["skinWeights"]={n:{"weightSum":weights[n],"vertices":weighted_counts[n]} for n in bones}
+    markers={}
+    for k,items in candidates.items():
+        items.sort()
+        if not items or sum(weights[n] for n in anatomy[k])<=0:raise ValueError("Missing anatomical skin binding "+k)
+        z=items[0][0]
+        markers[k]=[(o,i) for h,o,i in items if h<=z+.10][:64]
+        if not markers[k]:raise ValueError("No skinned hoof vertices "+k)
+    report["hoofMarkers"]=markers
+    # Inspect exact slot/channel data, retaining controls only as auxiliary
+    # motion channels synchronized to their own anatomical chain.
+    def action_channels(action):
+        channels=set()
+        for layer in getattr(action,"layers",[]):
+            for strip in layer.strips:
+                for bag in getattr(strip,"channelbags",[]):
+                    channels.update(fc.data_path for fc in bag.fcurves)
+        return sorted(channels)
+    report["animationChannels"]={mode:action_channels(exact_action(mode)) for mode in ("Idle","Walk","Gallop")}
     save_audit()
-    if len(set(n for a,_ in chains.values() for n in a))!=sum(len(a) for a,_ in chains.values()):
-        raise ValueError("Trot requires four disjoint horse limb chains")
-    samples=[sample_horse("Walk",i/16) for i in range(16)]
-    report["walkJointTrajectories"]={str(k):[list(s[1][leaf]) for s in samples] for k,(_,leaf) in chains.items()}
+    def measured_hooves():
+        deps=bpy.context.evaluated_depsgraph_get();points={}
+        for name in {o for m in markers.values() for o,i in m}:
+            ob=bpy.data.objects[name].evaluated_get(deps);me=ob.to_mesh()
+            try:
+                if len(me.vertices)!=len(bpy.data.objects[name].data.vertices):raise ValueError("Horse mesh topology changed")
+                points[name]={i:ob.matrix_world@me.vertices[i].co for m in markers.values() for o,i in m if o==name}
+            finally:ob.to_mesh_clear()
+        return {k:sum((points[o][i] for o,i in m),Vector((0,0,0)))/len(m) for k,m in markers.items()}
+    def apply_horse_matrices(matrices):
+        horse_rig.animation_data.action=None
+        for b in horse_rig.pose.bones:b.matrix_basis=matrices[b.name].copy()
+        bpy.context.view_layer.update()
+    samples=[sample_horse("Walk",i/16)[0] for i in range(16)]
+    walk=[]
+    for m in samples:
+        apply_horse_matrices(m);walk.append(measured_hooves())
+    report["walkHoofTrajectories"]={k:[list(s[k]) for s in walk] for k in anatomy}
     save_audit()
-    for k,(_,leaf) in chains.items():
-        ys=[s[1][leaf].y for s in samples]
-        if max(ys)-min(ys)<.05:raise ValueError("Walk clip has no meaningful forward hoof motion: "+str((k,leaf)))
-    peaks={k:min(range(16),key=lambda i:samples[i][1][leaf].y) for k,(_,leaf) in chains.items()}
+    for k in anatomy:
+        ys=[s[k].y for s in walk]
+        if max(ys)-min(ys)<.05:raise ValueError("Walk lacks skinned hoof travel "+k)
+    peaks={k:min(range(16),key=lambda i:walk[i][k].y) for k in anatomy}
     def trot(phase):
-        base={k:v.copy() for k,v in samples[int(phase*16)%16][0].items()}
-        for k,(names,leaf) in chains.items():
-            i=(peaks[k]+round(phase*16)+(0 if k[0]==k[1] else 8))%16
-            for n in names:base[n]=samples[i][0][n].copy()
+        frame=round(phase*16)%16
+        base={n:v.copy() for n,v in samples[frame].items()}
+        for k in anatomy:
+            i=(peaks[k]+frame+(0 if k in ("FL","BR") else 8))%16
+            for n in anatomy[k]+controls[k]:base[n]=samples[i][n].copy()
         return base
-    gait_meta={"saddleBone":seat_bone.name,"limbChains":{str(k):v[0] for k,v in chains.items()},"trot":"diagonal phase resampling of exact Walk clip","exactClips":[exact_action(k).name for k in ("Idle","Walk","Gallop")]}
+    trot_points=[]
+    for i in range(16):
+        apply_horse_matrices(trot(i/16));trot_points.append(measured_hooves())
+    report["trotHoofTrajectories"]={k:[list(s[k]) for s in trot_points] for k in anatomy}
+    actual={k:min(range(16),key=lambda i:trot_points[i][k].y) for k in anatomy}
+    def phase_distance(a,b):return min((a-b)%16,(b-a)%16)
+    report["trotPeakPhases"]=actual
+    save_audit()
+    for k in anatomy:
+        ys=[s[k].y for s in trot_points]
+        if max(ys)-min(ys)<.05:raise ValueError("Trot lacks skinned hoof travel "+k)
+    if phase_distance(actual["FL"],actual["BR"])>3 or phase_distance(actual["FR"],actual["BL"])>3 or phase_distance(actual["FL"],actual["FR"])<5:
+        raise ValueError("Measured trot is not diagonal: "+str(actual))
+    gait_meta={"saddleBone":seat_bone.name,"limbChains":anatomy,"controllerChains":controls,"trot":"diagonal phase resampling of exact Walk clip, measured on actual skinned hoof vertices","exactClips":[exact_action(k).name for k in ("Idle","Walk","Gallop")]}
     report["verifiedMapping"]=gait_meta
     save_audit()
     print("Validated horse limb chains",json.dumps(gait_meta),flush=True)
-if not os.environ.get("BOW_RIG_PREFLIGHT"):
-    def apply_pose(frame):
-        global temporary
-        for o in temporary:bpy.data.objects.remove(o,do_unlink=True)
-        temporary=[];pivot.rotation_euler.z=0
-        rapid=41<=frame<=53
-        source=5+((frame-41)//4)*4 if rapid else 1 if frame in [57,61] or frame>=65 else frame
-        if horse_rig:
-            if extended:
-                mode="Gallop" if rapid else "Walk" if frame in [5,9,13,17] else "Idle"
-                phase=((frame-41)//4%4)/4 if rapid else ((frame-5)//4%4)/4 if mode=="Walk" else ((frame-25)//4%4)/4 if frame in [25,29,33,37] else 0
-                saved=trot((frame-65)/16) if frame>=65 else sample_horse(mode,phase)[0]
-                for o in human_roots:o.location=human_base[o.name].copy()
-            else:
-                mode="Idle" if frame in [1,21] else "Gallop" if frame>=25 else "Walk"
-                saved=sample_horse(mode,0 if frame in [1,21] else ((frame-5)//4%4)/4)[0]
-            sc.frame_set(source);horse_rig.animation_data.action=None
-            for bone in horse_rig.pose.bones:bone.matrix_basis=saved[bone.name].copy()
-            bpy.context.view_layer.update()
-            if extended:
-                delta=horse_rig.matrix_world@seat_bone.matrix@seat_local-seat_ref
-                for o in human_roots:o.location=human_base[o.name]+delta
-                bpy.context.view_layer.update()
-            sign=1 if point(RH).x>point(LH).x else -1;light=kind=="lightHorse"
-            # Different seat, posture and weapon carriage for heavy and light cavalry.
-            lean=.30 if rapid and light else .18 if rapid else .12 if frame>=65 else .04
-            aim(torso,(0,-lean,1))
-            aim(RH,(sign*(.40 if light else .48),-.30 if light else -.18,-.72));aim(LH,(-sign*(.40 if light else .48),-.30 if light else -.18,-.72));aim(RK,(0,.38 if light else .24,-1));aim(LK,(0,.38 if light else .24,-1))
-            aim(LU,(.10,-.50,-.78));aim(LF,(-.15,-.85,.02))
-            if frame in [25,29,33,37]:
-                if light:
-                    d={25:(-.65,-.25,.60),29:(-.45,-.8,.30),33:(.12,-1,-.1),37:(.30,-.55,-.5)}[frame];aim(RU,d);aim(RF,(.10,-1,.12))
-                else:
-                    d={25:(-.10,-.60,-.20),29:(-.05,-1,.10),33:(-.02,-1,-.05),37:(-.15,-.65,-.45)}[frame];aim(RU,d);aim(RF,(0,-1,.05))
-            elif frame==57 or rapid:aim(RU,(-.10,-.82,-.22));aim(RF,(0,-1,.04))
-            elif frame==61:aim(RU,(-.12,-.45,-.68));aim(RF,(0,-.7,-.25))
-            else:aim(RU,(-.10,-.7,-.60));aim(RF,(0,-1,.12))
+def apply_pose(frame,diagnostic_phase=None):
+    global temporary
+    for o in temporary:bpy.data.objects.remove(o,do_unlink=True)
+    temporary=[];pivot.rotation_euler.z=0
+    rapid=41<=frame<=53
+    source=5+((frame-41)//4)*4 if rapid else 1 if frame in [57,61] or frame>=65 else frame
+    if horse_rig:
+        if extended:
+            mode="Gallop" if rapid else "Walk" if frame in [5,9,13,17] else "Idle"
+            phase=((frame-41)//4%4)/4 if rapid else ((frame-5)//4%4)/4 if mode=="Walk" else ((frame-25)//4%4)/4 if frame in [25,29,33,37] else 0
+            phase=diagnostic_phase if diagnostic_phase is not None else phase
+            saved=trot(diagnostic_phase if diagnostic_phase is not None else (frame-65)/16) if frame>=65 else sample_horse(mode,phase)[0]
+            for o in human_roots:o.location=human_base[o.name].copy()
         else:
-            sc.frame_set(source);bpy.context.view_layer.update()
-            if rapid:
-                ph=(frame-41)/16;stride=sin(ph*2*pi)
-                aim(RH,(0,-stride*.63,-1));aim(LH,(0,stride*.63,-1));aim(RK,(0,.12+max(0,-stride)*.68,-1));aim(LK,(0,.12+max(0,stride)*.68,-1));aim(torso,(0,-.13,1))
-            if kind=="archer":
-                draw=frame in [25,29,57];lift=frame in [25,29,33,37,57]
-                aim(LU,(.05,-1,-.04 if lift else -.55));aim(LF,(0,-1,.06 if lift else -.25))
-                right={57:(-.50,-.48,-.16),25:(-.60,-.24,.05),29:(-.66,-.17,.17),33:(-.78,.22,.08),37:(-.58,.10,-.30)}
-                aim(RU,right.get(frame,(-.24,-.40,-.78)));aim(RF,(.35,-.10,.65 if draw else -.42))
-                temporary=bow_geometry(draw,0 if lift else -.65)
-                for o in temporary:o.parent=pivot
-            elif kind=="sword" and frame in [25,29,33,37,57,61]:
-                d={57:(-.35,-.30,.45),25:(-.45,-.20,.78),29:(-.26,-.80,.35),33:(.18,-1,-.14),37:(.25,-.55,-.42),61:(-.10,-.48,-.72)}[frame]
-                aim(RU,d);aim(RF,(.08,-1,.36 if frame in [57,25] else -.12))
-            elif kind=="spear" and frame in [57,61]:
-                aim(RU,(.08,-.45,-.52 if frame==57 else -.75));aim(RF,(-.08,-1,.06 if frame==57 else -.16))
-            if frame==21:
-                aim(LU,(-.10,-.72,-.43));aim(LF,(.30,-.78,.30))
+            mode="Idle" if frame in [1,21] else "Gallop" if frame>=25 else "Walk"
+            saved=sample_horse(mode,0 if frame in [1,21] else ((frame-5)//4%4)/4)[0]
+        sc.frame_set(source);horse_rig.animation_data.action=None
+        for bone in horse_rig.pose.bones:bone.matrix_basis=saved[bone.name].copy()
         bpy.context.view_layer.update()
+        if extended:
+            delta=horse_rig.matrix_world@seat_bone.matrix@seat_local-seat_ref
+            for o in human_roots:o.location=human_base[o.name]+delta
+            bpy.context.view_layer.update()
+        sign=1 if point(RH).x>point(LH).x else -1;light=kind=="lightHorse"
+        # Different seat, posture and weapon carriage for heavy and light cavalry.
+        lean=.30 if rapid and light else .18 if rapid else .12 if frame>=65 else .04
+        aim(torso,(0,-lean,1))
+        aim(RH,(sign*(.40 if light else .48),-.30 if light else -.18,-.72));aim(LH,(-sign*(.40 if light else .48),-.30 if light else -.18,-.72));aim(RK,(0,.38 if light else .24,-1));aim(LK,(0,.38 if light else .24,-1))
+        aim(LU,(.10,-.50,-.78));aim(LF,(-.15,-.85,.02))
+        if frame in [25,29,33,37]:
+            if light:
+                d={25:(-.65,-.25,.60),29:(-.45,-.8,.30),33:(.12,-1,-.1),37:(.30,-.55,-.5)}[frame];aim(RU,d);aim(RF,(.10,-1,.12))
+            else:
+                d={25:(-.10,-.60,-.20),29:(-.05,-1,.10),33:(-.02,-1,-.05),37:(-.15,-.65,-.45)}[frame];aim(RU,d);aim(RF,(0,-1,.05))
+        elif frame==57 or rapid:aim(RU,(-.10,-.82,-.22));aim(RF,(0,-1,.04))
+        elif frame==61:aim(RU,(-.12,-.45,-.68));aim(RF,(0,-.7,-.25))
+        else:aim(RU,(-.10,-.7,-.60));aim(RF,(0,-1,.12))
+    else:
+        sc.frame_set(source);bpy.context.view_layer.update()
+        if rapid:
+            ph=(frame-41)/16;stride=sin(ph*2*pi)
+            aim(RH,(0,-stride*.63,-1));aim(LH,(0,stride*.63,-1));aim(RK,(0,.12+max(0,-stride)*.68,-1));aim(LK,(0,.12+max(0,stride)*.68,-1));aim(torso,(0,-.13,1))
+        if kind=="archer":
+            draw=frame in [25,29,57];lift=frame in [25,29,33,37,57]
+            aim(LU,(.05,-1,-.04 if lift else -.55));aim(LF,(0,-1,.06 if lift else -.25))
+            right={57:(-.50,-.48,-.16),25:(-.60,-.24,.05),29:(-.66,-.17,.17),33:(-.78,.22,.08),37:(-.58,.10,-.30)}
+            aim(RU,right.get(frame,(-.24,-.40,-.78)));aim(RF,(.35,-.10,.65 if draw else -.42))
+            temporary=bow_geometry(draw,0 if lift else -.65)
+            for o in temporary:o.parent=pivot
+        elif kind=="sword" and frame in [25,29,33,37,57,61]:
+            d={57:(-.35,-.30,.45),25:(-.45,-.20,.78),29:(-.26,-.80,.35),33:(.18,-1,-.14),37:(.25,-.55,-.42),61:(-.10,-.48,-.72)}[frame]
+            aim(RU,d);aim(RF,(.08,-1,.36 if frame in [57,25] else -.12))
+        elif kind=="spear" and frame in [57,61]:
+            aim(RU,(.08,-.45,-.52 if frame==57 else -.75));aim(RF,(-.08,-1,.06 if frame==57 else -.16))
+        if frame==21:
+            aim(LU,(-.10,-.72,-.43));aim(LF,(.30,-.78,.30))
+    bpy.context.view_layer.update()
+# Short, independently retained visual diagnostic before expensive production.
+if os.environ.get("BOW_RIG_PREFLIGHT"):
+    if not horse_rig or not extended:raise ValueError("Preflight requires mounted extended rig")
+    folder=out/"gait-diagnostic";folder.mkdir(exist_ok=True)
+    sc.render.resolution_x=sc.render.resolution_y=320;sc.cycles.samples=5
+    cam.data.ortho_scale=4.8;target=Vector((0,0,1.4))
+    cam.location=target+Vector((0,-5,3.4));look(cam,target)
+    livery(0)
+    for gait,frame in (("walk",5),("trot",65),("gallop",41)):
+        for i in range(8):
+            apply_pose(frame,i/8);pivot.rotation_euler.z=-pi/2;bpy.context.view_layer.update()
+            sc.render.filepath=str(folder/(gait+"-"+str(i)+".png"))
+            bpy.ops.render.render(write_still=True)
+    report["diagnosticRendered"]=True;save_audit()
+else:
     # A common physical projection. Larger cavalry frustum with same source pixel/metre.
     ground=0 if horse_rig else z0
     target=Vector((0,0,1.45 if horse_rig else .85));cam.location=target+Vector((0,-5,5*math.tan(pi/3)));look(cam,target)
