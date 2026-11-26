@@ -48,9 +48,9 @@ test('public combat and outcome route score through aftermath and one stinger',a
  const {adapter,log}=fixture({score:true});await adapter.unlock();
  await adapter.update(state(0,[{...unit,contact:2}]),cam,{playing:true});
  assert.equal(adapter.status().desired,'battle');
- await adapter.update(state(.2),cam,{playing:true,outcome:'victory'});
- await adapter.update(state(.4),cam,{playing:true,outcome:'victory'});
- await adapter.update(state(.6),cam,{playing:true,outcome:'victory'});
+ await adapter.update(state(.2),cam,{playing:false,outcome:'victory'});
+ await adapter.update(state(.4),cam,{playing:false,outcome:'victory'});
+ await adapter.update(state(.6),cam,{playing:false,outcome:'victory'});
  assert.deepEqual(log.filter(x=>x[0]==='music').map(x=>x[1]),['battle','aftermath']);
  assert.equal(log.filter(x=>x[0]==='stinger').length,1);
  adapter.reset();await adapter.update(state(0),cam,{playing:true});
