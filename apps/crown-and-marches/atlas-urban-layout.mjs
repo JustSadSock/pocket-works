@@ -5,7 +5,7 @@ const C=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),D=(a,b)=>Math.hypot(a[0]-b[0],a[1
 function hash(x,y){let n=Math.imul(x+731,374761393)^Math.imul(y+511,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;}
 export function segmentDistance(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=C(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);}
 export function sampleLine(a,b,fn,step=.045){const n=Math.max(1,Math.ceil(D(a,b)/step));for(let i=0;i<=n;i++)if(!fn(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n))return false;return true;}
-export function settlementClass(c){return c.capital?'capital':c.fort>=1?'fortified':c.port>0?'port':c.pop>900||c.specialization==='trade'?'trade':c.developed>=3?'farm':'village';}
+export function settlementClass(c){return c.fort>=1?'fortified':c.port>0?'port':c.capital?'capital':c.pop>900||c.specialization==='trade'?'trade':c.specialization==='farming'||c.developed>=3?'farm':'village';}
 export function planUrbanTown(city,env){
  const {width,dry,water,road,eligible}=env,origin=[city.i%width+.5,Math.floor(city.i/width)+.5],kind=settlementClass(city),pop=city.pop||0,seed=city.i+city.id*7919,buildings=[],streets=[],walls=[],piers=[],plazas=[],missing=[];
  const radius=C(.58+Math.sqrt(pop)/46+(city.capital?.30:0),.62,1.95),target=C(Math.round(pop/37)+(city.capital?9:0),5,64),factor=.76;
@@ -29,7 +29,7 @@ export function planUrbanTown(city,env){
  const append=(p,kind)=>{if(!p||p.length<2)return false;let a=0;for(let i=1;i<p.length;i++){if(i===p.length-1||!safe(p[a],p[i+1])||D(p[a],p[i+1])>.42){addStreet(p[a],p[i],kind);a=i;}}return true;};
  const spokes=kind==='village'?3:kind==='farm'?4:6;for(let k=0;k<spokes;k++){const a=k*Math.PI*2/spokes+(hash(seed,k)-.5)*.48,r=radius*(.62+.20*hash(seed,k+90));append(route(at(Math.cos(a)*r,Math.sin(a)*r)),k<2?'main':'lane');}
  // Side streets connect the branches into compact, nonuniform blocks.
- const ends=streets.flat().filter(p=>D(p,center)>.25);for(let k=0;k<ends.length&&streets.length<45;k++){const a=ends[k],options=ends.filter(b=>D(a,b)>.28&&D(a,b)<.64&&!segCache.some(([u,v])=>D(a,u)<.03&&D(b,v)<.03||D(a,v)<.03&&D(b,u)<.03)).sort((a,b)=>D(a,center)-D(b,center));for(const b of options.slice(0,3))if(addStreet(a,b,'lane'))break;}
+ const ends=streets.flat().filter(p=>D(p,center)>.25);for(let k=0;k<ends.length&&streets.length<(kind==='village'?12:kind==='farm'?20:45);k++){const a=ends[k],options=ends.filter(b=>D(a,b)>.28&&D(a,b)<.64&&!segCache.some(([u,v])=>D(a,u)<.03&&D(b,v)<.03||D(a,v)<.03&&D(b,u)<.03)).sort((a,b)=>D(a,center)-D(b,center));for(const b of options.slice(0,3))if(addStreet(a,b,'lane'))break;}
  for(const p of approaches){const path=route(p);if(path){append(path,'main');addStreet(path.at(-1),p,'main');}}
  if(safe(center,origin))addStreet(center,origin,'main');
  if(city.capital||kind==='trade'||kind==='port'){const p=at(.05,.18);if(footprint(...p,.10))plazas.push({p,r:.12});}
