@@ -8,7 +8,7 @@ test('v7 deterministic material maps contain distinct normal and roughness chann
  for(const kind of Object.keys(profiles)){const a=materialMaps(kind,32),b=materialMaps(kind,32);assert.deepEqual(a,b);assert.equal(a.color.length,4096);assert.notDeepEqual(a.normal,a.color);assert.equal(png(32,32,a.color).subarray(0,8).toString('hex'),'89504e470d0a1a0a')}
 });
 test('v7 depth raster preserves nearest actual surface regardless of part order',()=>{
- const make=(name,z,color)=>({name,color,positions:[-.5,-.5,z,.5,-.5,z,0,.5,z],normals:[0,0,1,0,0,1,0,0,1],indices:[0,1,2]});
+ const make=(name,z,color)=>({name,color,positions:[-.5,-.5+z*.08,z,.5,-.5+z*.08,z,0,.5+z*.08,z],normals:[0,0,1,0,0,1,0,0,1],indices:[0,1,2]});
  const a=make('cloth',.2,[.4,.2,.1]),b=make('boot',.1,[.1,.2,.4]),opts={view:'front',size:64,bounds:[-.6,.6,-.6,.6]};
  const x=raster({parts:[a,b]},opts),y=raster({parts:[b,a]},opts);assert.deepEqual(x.rgba,y.rgba);assert.equal(x.visible.boot,undefined);assert.ok(x.visible.cloth>0);assert.equal(x.faces[32*64+32],0);
 });
