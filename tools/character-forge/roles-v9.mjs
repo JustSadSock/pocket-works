@@ -200,7 +200,7 @@ export function produceRoleV9(source,id,identityOverride=null,{style='historical
  if(!roleProfiles[id])throw Error('Unknown role '+id);
  const m=produceRole(source,id,identityOverride,'historical-miniature'),start=performance.now();
  m.parts=m.parts.filter(p=>!['iron breastplate','iron conical helmet','iron nasal','heater shield','iron shield rim','iron shield boss','leather shield forearm strap'].includes(p.name)&&!p.name.startsWith('quilted padded rib'));
- m.spec.artRole=id;m.spec.artRevision='v9';m.spec.miniaturePose='v9';m.spec.motionRevision='v9';m.spec.contactCorrection='path-v9';m.spec.actions=['idle','walk'];
+ m.spec.artRole=id;m.spec.artRevision='v9';m.spec.miniaturePose='v9';m.spec.motionRevision='v9';m.spec.contactCorrection='path-v9';m.spec.actions=id==='artisan'?['idle','walk']:['idle'];
  let role;
  if(id==='artisan')role=artisanKit(m);
  if(id==='merchant')role=merchantKit(m);
