@@ -36,7 +36,7 @@ left=findbone(armature,[r'leftfoot$',r'footleft$',r'leftankle$',r'ankleleft$',r'
 right=findbone(armature,[r'rightfoot$',r'footright$',r'rightankle$',r'ankleright$',r'rfoot$'])
 root=findbone(armature,[r'^hips$',r'^pelvis$',r'^root$',r'^mixamorig:hips$'])
 if not left or not right or not root:raise RuntimeError("Could not identify bilateral feet and root on CC0 rig: "+str([p.name for p in armature.pose.bones]))
-start,end=map(float,chosenAction.frame_range);fps=30;scene=bpy.context.scene;scene.render.fps=fps
+start,end=map(float,chosenAction.frame_range);scene=bpy.context.scene;fps=scene.render.fps or 24
 frames=[]
 for frame in range(math.floor(start),math.ceil(end)+1):
  scene.frame_set(frame);bpy.context.view_layer.update();mw=armature.matrix_world
