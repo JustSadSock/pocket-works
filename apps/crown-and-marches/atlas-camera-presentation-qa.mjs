@@ -54,11 +54,32 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
       steps.push(step);gaps.push(...raf);
       if(!step.ok)break;
      }
-     const finalMeta=steps.length===8&&steps.every(s=>s.ok)?r.meta():null,finalPixels=finalMeta?await hash():null,sorted=gaps.slice().sort((a,b)=>a-b),fps=gaps.length?1000*gaps.length/gaps.reduce((a,b)=>a+b,0):0,p95=sorted.length?sorted[Math.ceil(.95*sorted.length)-1]:Infinity;
-     return {steps,gaps,fps,p95,initialPixels:pixels,finalPixels,pixelEquivalent:!!finalPixels&&pixels===finalPixels,initialCache:startMeta.cache,finalCache:finalMeta?.cache??null,terrainCacheReuse:!!finalMeta&&finalMeta.cache.hits>startMeta.cache.hits,spatialLayerReuse:steps.some(s=>s.meta?.human?.spatialReuse),finalCamera:finalMeta?.camera??null};
+     const sweep={gaps:[],frames:[],errors:[]};
+     for(let i=0;i<60;i++){
+      const before=Number(c.dataset.atlasFrame),q=r.motion(i%2===0?1.5:-1.5,i%4<2?.6:-.6,1),began=performance.now();let prev=began,sample=null;
+      while(performance.now()-began<2500){
+       const t=await new Promise(requestAnimationFrame);sweep.gaps.push(t-prev);prev=t;
+       const d=c.dataset;let req=null,rec=null;try{req=JSON.parse(d.atlasRequest||'null');rec=JSON.parse(d.atlasReceipt||'null');}catch{}
+       const v=q.viewport,k=q.camera,ex=(v.width/2-(k.ox-v.left))/k.s,ey=(v.height/2-(k.oy-v.top))/k.s,reg=rec&&rec.region,vis=req&&req.visible;
+       const valid=d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&Number(d.atlasIntent)===q.intent&&Number(d.atlasFrame)>before&&req&&rec&&req.id===Number(d.atlasRequestId)&&req.intent===q.intent&&rec.id===req.id&&rec.intent===req.intent&&rec.key===req.key&&rec.revision===req.revision&&reg&&vis&&reg[0]<=vis[0]&&reg[1]<=vis[1]&&reg[2]>=vis[2]&&reg[3]>=vis[3]&&Math.abs(rec.view.x-ex)<1e-7&&Math.abs(rec.view.y-ey)<1e-7&&Math.abs(rec.view.s-k.s)<1e-9&&JSON.stringify(rec.view.viewport)===JSON.stringify(v)&&JSON.stringify(req.view.viewport)===JSON.stringify(v);
+       if(valid){sample={frame:Number(d.atlasFrame),latencyMs:performance.now()-began,camera:k,viewport:v,expectedView:{x:ex,y:ey,s:k.s},receipt:{id:rec.id,intent:rec.intent,key:rec.key,revision:rec.revision,view:rec.view}};break;}
+      }
+      if(!sample){sweep.errors.push({frame:i,error:'sustained motion frame had no current receipt',dataset:{...c.dataset},pending:r.pending(),expected:q});break;}
+      sweep.frames.push(sample);
+     }
+     const restoreBefore=Number(c.dataset.atlasFrame),restore=r.restoreCamera(camera),restoreStart=performance.now();let restoreReceipt=null,restorePrev=restoreStart;
+     while(performance.now()-restoreStart<90000){
+      const t=await new Promise(requestAnimationFrame);sweep.gaps.push(t-restorePrev);restorePrev=t;
+      const d=c.dataset;let req=null,rec=null;try{req=JSON.parse(d.atlasRequest||'null');rec=JSON.parse(d.atlasReceipt||'null');}catch{}
+      const v=restore.viewport,k=restore.camera,ex=(v.width/2-(k.ox-v.left))/k.s,ey=(v.height/2-(k.oy-v.top))/k.s,reg=rec&&rec.region,vis=req&&req.visible;
+      if(d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&Number(d.atlasIntent)===restore.intent&&Number(d.atlasFrame)>restoreBefore&&req&&rec&&req.id===Number(d.atlasRequestId)&&req.intent===restore.intent&&rec.id===req.id&&rec.intent===req.intent&&rec.key===req.key&&rec.revision===req.revision&&reg&&vis&&reg[0]<=vis[0]&&reg[1]<=vis[1]&&reg[2]>=vis[2]&&reg[3]>=vis[3]&&Math.abs(rec.view.x-ex)<1e-7&&Math.abs(rec.view.y-ey)<1e-7&&Math.abs(rec.view.s-k.s)<1e-9&&JSON.stringify(rec.view.viewport)===JSON.stringify(v)){restoreReceipt={ok:true,latencyMs:performance.now()-restoreStart,receipt:rec,expectedView:{x:ex,y:ey,s:k.s}};break;}
+     }
+     if(!restoreReceipt)sweep.errors.push({error:'restore after sustained motion did not present',dataset:{...c.dataset},pending:r.pending(),expected:restore});sweep.restore=restoreReceipt;
+     const finalMeta=steps.length===8&&steps.every(s=>s.ok)&&sweep.frames.length===60&&sweep.errors.length===0&&sweep.restore?.ok?r.meta():null,finalPixels=finalMeta?await hash():null,sorted=sweep.gaps.slice().sort((a,b)=>a-b),fps=sweep.gaps.length?1000*sweep.gaps.length/sweep.gaps.reduce((a,b)=>a+b,0):0,p95=sorted.length?sorted[Math.ceil(.95*sorted.length)-1]:Infinity;
+     return {steps,sweep,gaps:sweep.gaps,fps,p95,initialPixels:pixels,finalPixels,pixelEquivalent:!!finalPixels&&pixels===finalPixels,initialCache:startMeta.cache,finalCache:finalMeta?.cache??null,terrainCacheReuse:!!finalMeta&&finalMeta.cache.hits>startMeta.cache.hits,spatialLayerReuse:steps.some(s=>s.meta?.human?.spatialReuse),finalCamera:finalMeta?.camera??null};
     });
     result.motion=motion;
-    if(motion.steps.length!==8||motion.steps.some(s=>!s.ok))result.errors.push('camera traversal or presentation receipt failed');
+    if(motion.steps.length!==8||motion.steps.some(s=>!s.ok))result.errors.push('camera traversal or presentation receipt failed');if(motion.sweep?.frames.length!==60||motion.sweep.errors.length||!motion.sweep.restore?.ok)result.errors.push('sustained camera sweep or receipt validation failed');
     if(!motion.terrainCacheReuse)result.errors.push('previously visited terrain region was not reused');
     if(!motion.pixelEquivalent)result.errors.push('return-to-origin canvas pixels differ');
     if(motion.fps<55||motion.p95>33.3)result.errors.push('camera motion threshold failed');
