@@ -11,7 +11,7 @@ const launcher={chromium,webkit}[engine];
 if(!launcher)throw new Error('Unknown engine');
 const out=path.resolve(process.argv[3]??'.audio-runtime-browser');
 await mkdir(out,{recursive:true});
-const files=new Set(['continuous-audio.js','spatial-audio.js','sound-family.js','virtual-audio.js','score-director.js']);
+const files=new Set(['continuous-audio.js','spatial-audio.js','sound-family.js','virtual-audio.js','score-director.js','music-ducking.js']);
 const server=createServer(async(req,res)=>{
   try{
     const name=req.url.slice(1);
@@ -185,13 +185,14 @@ try{
         check(scene.stats.allocated===0,'Scene cleanup failed');
         scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:2},
           families:{impact:{variants:['impact']}},fetcher:async()=>new Response(wav),maxEventDecodedBytes:65536,maxScoreDecodedBytes:2097152,
-          stingers:{victory:{url:'victory',cooldown:2}},score:{graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
+          stingers:{victory:{url:'victory',cooldown:2,states:['peace'],duckGain:.35,duckHold:.4}},score:{graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
           buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)},bridgeBuffers:{'peace:battle':make(c,sr*.5,330)}}});
         director=scene.music;
         const scoreBus=scene.mixer.bus('music'),scoreAnalyser=c.createAnalyser();
         scoreAnalyser.fftSize=4096;scoreAnalyser.smoothingTimeConstant=0;scoreBus.connect(scoreAnalyser);
         check(await director.start(),'Horizontal start failed');
         const peaceStart=director.state.startTime;
+        check(await scene.preloadStinger('victory'),'Stinger preload failed');
         const stingerAccepted=await scene.playStinger('victory');
         check(stingerAccepted&&!await scene.playStinger('victory'),'Stinger decode or cooldown failed');
         const memory={events:scene.stats.eventDecodedBytes,score:scene.stats.scoreReservedBytes};
@@ -203,7 +204,12 @@ try{
           const a=new Float32Array(scoreAnalyser.frequencyBinCount);scoreAnalyser.getFloatFrequencyData(a);
           const b=Math.round(hz*scoreAnalyser.fftSize/c.sampleRate);return Math.max(a[b-1],a[b],a[b+1]);
         }
+        const ducked=scoreBand(220);
+        const duckUntil=scene.stats.musicDucking.until;
+        check(scene.stats.musicDucking.gain<.5,'Music duck gain failed');
+        await waitClock(duckUntil+.15);
         const peaceBefore=scoreBand(220),battleBefore=scoreBand(440);
+        check(peaceBefore-ducked>6,'Rendered music ducking did not recover');
         check(peaceBefore>-50&&battleBefore<peaceBefore-15,'Peace spectrum invalid');
         check(director.request('battle',{quantize:'beat',fadeSeconds:.12}),'Horizontal request failed');
         const transition=director.state.transitionAt,end=director.state.transitionEnd;
@@ -216,7 +222,8 @@ try{
         const peaceAfter=scoreBand(220),battleAfter=scoreBand(440);
         check(director.state.current==='battle'&&director.state.voices===1&&battleAfter>-50&&peaceAfter<battleAfter-15,'Horizontal clip replacement invalid');
         await waitClock(bridgeUntil+2.2);const bridgeAfterLoop=scoreBand(330);check(scoreBand(440)>-50&&bridgeAfterLoop<scoreBand(440)-15,'Bridge repeated inside destination loop');
-        const horizontal={stingerAccepted,memory,bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
+        check(!await scene.playStinger('victory'),'Incompatible state accepted stinger');
+        const horizontal={stingerAccepted,memory,ducked,duckRecoveryDb:peaceBefore-ducked,bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
         scene.destroy();scoreAnalyser.disconnect();check(director.state.voices===0&&scene.stats.allocated===0,'Horizontal cleanup failed');
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
