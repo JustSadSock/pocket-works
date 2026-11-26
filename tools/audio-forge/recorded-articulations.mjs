@@ -39,9 +39,9 @@ export function renderArticulatedPhrase({bank,instrument,notes,seconds,maxShift=
  if(!bank||typeof bank.select!=='function'||!Array.isArray(notes)||!notes.length||notes.length>512||!Number.isFinite(seconds)||seconds<.1||seconds>90)throw Error('Invalid articulation phrase');
  const out=new Float32Array(Math.round(seconds*48000)),choices=[];let lastEnd=0;
  for(const n of notes){
-  if(!Number.isFinite(n.start)||!Number.isFinite(n.duration)||n.start<0||n.duration<.08||n.duration>8)throw Error('Invalid articulated note');
+  if(!Number.isFinite(n.start)||!Number.isFinite(n.duration)||n.start<0||n.duration<.1||n.duration>8)throw Error('Invalid articulated note');
   const start=Math.round(n.start*48000),end=Math.round((n.start+n.duration)*48000);
-  if(start<lastEnd||end>out.length||end<=start)throw Error('Unaligned articulation grid');
+  if(start<lastEnd||end>out.length||end-start<4800)throw Error('Unaligned articulation grid');
   const chosen=bank.select({instrument,articulation:n.articulation,midi:n.midi,pressure:n.pressure,maxShift,roundRobin,lockedVelocity});
   // Discrete recorded dynamic layers; pressure scales amplitude but does not
   // claim to morph the physical timbre continuously between recorded layers.
