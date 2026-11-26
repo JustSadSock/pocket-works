@@ -38,14 +38,17 @@ export function expandManifest(manifest) {
     const random = rng(seed);
     for (let i=0;i<count;i++) {
       const name = f.id+'-'+String(i+1).padStart(2,'0');
-      jobs.push({name,type:'physics',model:f.model,seed:Math.floor(random()*4294967296),strength:Math.max(.1,Math.min(1,strength+(random()*2-1)*spread)),duration:f.duration,output:output+'/'+name+'.'+format,post:{normalizeDb:-5,...f.post}});
+      jobs.push({name,type:'physics',model:f.model,seed:Math.floor(random()*4294967296),strength:Math.max(.1,Math.min(1,strength+(random()*2-1)*spread)),duration:f.duration,output:output+'/'+name+'.'+format,post:{...f.post}});
     }
   }
   if (jobs.length > 512) throw new Error('Manifest exceeds 512 jobs');
   const outputs = new Set();
+  const names = new Set();
   for (const j of jobs) {
     if (!j || typeof j.output !== 'string' || outputs.has(j.output)) throw new Error('Missing or duplicate output');
     outputs.add(j.output);
+    if (typeof j.name !== 'string' || names.has(j.name)) throw new Error('Missing or duplicate job name');
+    names.add(j.name);
   }
   return jobs;
 }
@@ -80,7 +83,7 @@ export function renderPhysics(job) {
       add(start+i,amp*Math.sin(phase)*Math.min(1,i/18)*Math.exp(-decay*i/n),pan);
     }
   }
-  const shift=.87+r()*.26;
+  const shift=(.87+r()*.26)*(.85+.2*strength);
   if(job.model==='sword'||job.model==='shield'){
     const sword=job.model==='sword';
     burst(.002,.026,.95,900,15500,0,6);
@@ -119,10 +122,19 @@ export function renderPhysics(job) {
   for(let i=0;i<out.length;i++) out[i]*=gain;
   return {samples:out,sampleRate:sr,channels:2};
 }
+function pitchKey(note){
+  if (typeof note === 'number' && Number.isInteger(note) && note>=0 && note<=127) return note;
+  const m=/^([A-Ga-g])([#b]?)(-?\d+)$/.exec(String(note));
+  if(!m) throw new Error('Invalid note');
+  const key=(Number(m[3])+1)*12+({C:0,D:2,E:4,F:5,G:7,A:9,B:11})[m[1].toUpperCase()]+(m[2]==='#'?1:m[2]==='b'?-1:0);
+  if(key<0||key>127) throw new Error('Out-of-range note');
+  return key;
+}
 // Opt-in expressive MIDI arrangement. Legacy flat notes remain untouched.
 export function arrangeTracks(job){
   if(!Array.isArray(job.tracks)||!job.tracks.length||job.tracks.length>15) throw new Error('Expected 1–15 music tracks');
   const seed=bounded(job.seed,42,0,0xffffffff,'seed'), used=new Set();
+  if (!Number.isInteger(seed)) throw new Error('Expected integer music seed');
   return job.tracks.map((track,index)=>{
     const channel=bounded(track.channel,index<9?index:index+1,0,15,'channel');
     const program=bounded(track.program,0,0,127,'program');
@@ -133,14 +145,14 @@ export function arrangeTracks(job){
     const dynamic=bounded(track.humanizeVelocity,5,0,15,'humanizeVelocity');
     const legato=bounded(track.legato,0,0,.12,'legato');
     if(!Array.isArray(track.notes)||!track.notes.length||track.notes.length>10000) throw new Error('Invalid track notes');
-    const sorted=track.notes.map(n=>({...n,beat:bounded(n.beat,0,0,10000,'beat'),duration:bounded(n.duration,1,.02,1000,'duration'),velocity:bounded(n.velocity,80,1,127,'velocity')})).sort((a,b)=>a.beat-b.beat);
+    const sorted=track.notes.map(n=>({...n,note:pitchKey(n.note),beat:bounded(n.beat,0,0,10000,'beat'),duration:bounded(n.duration,1,.02,1000,'duration'),velocity:bounded(n.velocity,80,1,127,'velocity')})).sort((a,b)=>a.beat-b.beat);
     // Legato is explicit and monophonic: never overlap a repeated pitch.
     if(legato&&sorted.some((n,i)=>i>0&&n.beat<sorted[i-1].beat+sorted[i-1].duration-1e-7)) throw new Error('Legato track must be monophonic');
     const notes=sorted.map(n=>({...n,channel,beat:Math.max(0,n.beat+(r()*2-1)*timing),velocity:Math.round(Math.max(1,Math.min(127,n.velocity+(r()*2-1)*dynamic)))}));
     if(legato) for(let i=0;i<notes.length-1;i++){
       const n=notes[i],next=notes[i+1], gap=sorted[i+1].beat-sorted[i].beat-sorted[i].duration;
       const touch=gap<=.025;
-      const overlap=touch&&String(n.note)!==String(next.note)?legato:0;
+      const overlap=touch&&pitchKey(n.note)!==pitchKey(next.note)?legato:0;
       n.duration=Math.max(.02,Math.min(touch?next.beat-n.beat+overlap:n.duration,next.beat-n.beat+overlap));
     }
     const controls=[[7,bounded(track.volume,100,0,127,'volume')],[10,bounded(track.pan,64,0,127,'pan')],[11,bounded(track.expression,110,0,127,'expression')],[1,bounded(track.modulation,0,0,127,'modulation')]];
