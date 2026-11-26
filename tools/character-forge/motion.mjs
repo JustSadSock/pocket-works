@@ -27,8 +27,27 @@ function miniatureFrame(model,action,phase,quat){
    return mul(quat([0,0,1],z),mul(quat([0,1,0],y),quat([1,0,0],x)));
  });
 }
+function miniatureFrameV9(model,action,phase,quat){
+ const walk=action==='walk',t=phase*TAU,cycle=(x)=>Math.sin(x*TAU),mul=(a,b)=>[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
+ return model.joints.map(j=>{
+  const name=j.name,left=name.endsWith('.L'),sign=left?1:-1,offset=left?0:Math.PI,leg=cycle(phase+offset),swing=Math.max(0,Math.sin((phase+offset)*TAU));
+  let x=0,y=0,z=0;
+  if(/^upperarm01\./.test(name)){z=-sign*.10;x=walk?.24*Math.sin(t+offset+Math.PI):0}
+  if(/^lowerarm01\./.test(name)){x=.23+(walk?.10*Math.max(0,Math.sin(t+offset+Math.PI)):0)}
+  if(/^upperleg01\./.test(name)){x=walk?.24*Math.sin(t+offset):0}
+  if(/^lowerleg01\./.test(name)){x=walk?.58*swing:0}
+  if(/^foot\./.test(name)){x=walk?-.16*swing:0}
+  if(name==='pelvis'||name==='root'){y=walk?.025*Math.sin(t):0}
+  if(name==='spine03'){y=walk?-.035*Math.sin(t):0;x=walk?.018*Math.sin(2*t):.012}
+  if(name==='spine02'){y=walk?.025*Math.sin(t+.3):0}
+  if(name==='spine01'){y=walk?.012*Math.sin(t+.5):0}
+  if(name==='neck01'){x=walk?-.018*Math.sin(2*t):0}
+  if(name==='head'){x=walk?.012*Math.sin(2*t+.2):.015;y=walk?-.018*Math.sin(t):0}
+  return mul(quat([0,0,1],z),mul(quat([0,1,0],y),quat([1,0,0],x)));
+ });
+}
 export function motionFrame(model,action,phase,quat){
- if(model.spec.miniaturePose==='v8')return miniatureFrame(model,action,phase,quat);
+ if(model.spec.miniaturePose==='v9')return miniatureFrameV9(model,action,phase,quat);if(model.spec.miniaturePose==='v8')return miniatureFrame(model,action,phase,quat);
  const fam=model.spec.family,g=gaitProfiles[fam]??gaitProfiles.humanoid,move=['walk','run'].includes(action),speed=action==='run'?1.45:1;
  return model.joints.map(j=>{
  let a=0,name=j.name,attached=/^(rider|crew)\//.test(name),left=/L(?:-|$)|\.L$/.test(name),leg=/^fore|^hind/.test(name),id=leg?(name.startsWith('fore')?(left?0:1):(left?2:3)):(left?0:1);
@@ -36,10 +55,10 @@ export function motionFrame(model,action,phase,quat){
  if(move&&!attached){if(j.role==='leg.upper')a=swing?g.swing*Math.cos(Math.PI*u):-g.swing*Math.cos(Math.PI*u);if(j.role==='leg.lower')a=swing?g.knee*Math.sin(Math.PI*u):.04*Math.sin(Math.PI*u);if(j.role==='leg.distal')a=(fam==='horse'?-1:1)*(swing?g.distal*Math.sin(Math.PI*u):0);if(j.role==='leg.pastern'||j.role==='foot')a=swing?-.12*Math.sin(Math.PI*u):.04*Math.sin(Math.PI*u);if(j.role==='arm.upper')a=(left?1:-1)*.24*Math.sin(phase*TAU);a*=speed}
  if(j.role==='spine')a=(fam==='elephant'?.022:.045)*Math.sin(phase*TAU*2);
  if(j.role==='neck'&&move&&!attached)a=.06*Math.sin(phase*TAU*2+.7);
- if(j.role==='tail'||j.role==='trunk')a=.10*Math.sin(phase*TAU+j.id*.35);
+ if(j.role==='tail'||j.role==='trunk')a=(model.spec.motionRevision==='v9'?(j.role==='trunk'?.13:.075):.10)*Math.sin(phase*TAU*(j.role==='tail'?1.35:1)+j.id*.35);if(j.role==='ear')a=.11*Math.sin(phase*TAU*2+j.id*.47);
  if(attached&&move){if(j.role==='spine')a=-.045*Math.sin(phase*TAU*2);if(j.role==='arm.lower')a=.025*Math.sin(phase*TAU*2+.6);if(['v3','v4'].includes(model.spec.motionRevision)){if(j.role==='pelvis')a=-.035*Math.sin(phase*TAU*2+.35);if(j.role==='head')a=.025*Math.sin(phase*TAU*2-.45);if(j.role==='leg.upper')a=.035*Math.sin(phase*TAU*2+(left?0:.6));if(j.role==='leg.lower')a=-.025*Math.sin(phase*TAU*2)}}
  if(j.role.startsWith('wing')){let s=left?-1:1;if(action==='fly')a=s*(j.role==='wing'?sampleCurve(phase,[[0,-.6],[.32,.65],[.70,-.85],[1,-.6]]):.35*Math.sin(phase*TAU+.8));else a=s*.10;}
- if(model.spec.motionRevision==='v4'&&move&&['horse','elephant'].includes(fam)){
+ if(['v4','v9'].includes(model.spec.motionRevision)&&move&&['horse','elephant'].includes(fam)){
    let t=phase*TAU,horse=fam==='horse',roll=(horse?.035:.055)*Math.sin(t),pitch=(horse?.047:.022)*Math.sin(2*t+.25);
    if(j.parent<0)return quat([0,0,1],roll);
    if(j.role==='spine'&&!attached)a=pitch;
