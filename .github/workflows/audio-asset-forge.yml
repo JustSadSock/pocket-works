@@ -437,6 +437,8 @@ jobs:
           node tools/audio-forge/recorded-ensemble-lab.mjs .audio-recorded-ensemble .audio-recorded-dynamics
           test "$(find .audio-recorded-ensemble -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
           test -s .audio-recorded-ensemble/evening-standard-AB.wav
+          test "$(find .audio-recorded-ensemble/expanded -maxdepth 1 -name '*.wav' | wc -l)" -eq 11
+          test -s .audio-recorded-ensemble/expanded/evening-standard-room-ABC.wav
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.recorded_ensemble.outcome == 'success' }}
         with:

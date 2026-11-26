@@ -28,3 +28,18 @@ test('independent overlapping tracks reconstruct the stereo mix and preserve ide
  assert.throws(()=>renderRecordedEnsemble({...opts,tracks:[tracks[0],tracks[0]]}),/Invalid ensemble track/);
  assert.throws(()=>renderRecordedEnsemble({...opts,tracks:[{...tracks[0],pan:2}]}),/Invalid ensemble track/);
 });
+
+test('opt-in individual stems preserve the approved dry mix and reconstruct shared groups',()=>{
+ const a=zones(),notes=midi=>[{midi,start:0,duration:.8,articulation:'arco',pressure:.7}];
+ const tracks=[{id:'a',instrument:'fixture',group:'strings',pan:-.8,gain:.5,notes:notes(69)},{id:'b',instrument:'fixture',group:'strings',pan:.8,gain:.5,notes:notes(72)},{id:'c',instrument:'fixture',group:'woodwind',pan:0,gain:.3,notes:notes(69)}];
+ const opts={zones:a,tracks,seconds:1},dry=renderRecordedEnsemble(opts),r=renderRecordedEnsemble({...opts,includeTrackStems:true});
+ assert.equal(dry.trackStems,undefined);assert.deepEqual(r.mix,dry.mix);assert.deepEqual(r.stems,dry.stems);assert.equal(r.master,dry.master);
+ assert.deepEqual(Object.keys(r.trackStems),['a','b','c']);
+ for(let i=0;i<r.mix.length;i++){
+  const {a,b,c}=r.trackStems;
+  assert.ok(Math.abs(a[i]+b[i]-r.stems.strings[i])<1e-6);
+  assert.equal(c[i],r.stems.woodwind[i]);
+  assert.ok(Math.abs(a[i]+b[i]+c[i]-r.mix[i])<1e-6);
+ }
+ assert.throws(()=>renderRecordedEnsemble({...opts,includeTrackStems:1}),/Invalid recorded ensemble/);
+});

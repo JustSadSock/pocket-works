@@ -2,9 +2,9 @@
 // Multiple tracks may play the same instrument with different parts.
 import {renderRecordedPerformance} from './recorded-performance.mjs';
 const SR=48000;
-export function renderRecordedEnsemble({zones,tracks,seconds,mode='morph'}={}){
- if(!Array.isArray(zones)||!zones.length||zones.length>256||!Array.isArray(tracks)||!tracks.length||tracks.length>16||!Number.isFinite(seconds)||seconds<.15||seconds>90||!['morph','discrete'].includes(mode))throw Error('Invalid recorded ensemble');
- const frames=Math.round(seconds*SR),stems={},choices={},ids=new Set(),mix=new Float32Array(frames*2);
+export function renderRecordedEnsemble({zones,tracks,seconds,mode='morph',includeTrackStems=false}={}){
+ if(typeof includeTrackStems!=='boolean'||!Array.isArray(zones)||!zones.length||zones.length>256||!Array.isArray(tracks)||!tracks.length||tracks.length>16||!Number.isFinite(seconds)||seconds<.15||seconds>90||!['morph','discrete'].includes(mode))throw Error('Invalid recorded ensemble');
+ const frames=Math.round(seconds*SR),stems={},trackStems=Object.create(null),choices={},ids=new Set(),mix=new Float32Array(frames*2);
  for(const t of tracks){
   if(typeof t.id!=='string'||!/^[a-z0-9-]{1,48}$/.test(t.id)||ids.has(t.id)||!['strings','woodwind','brass','plucked','percussion'].includes(t.group)||!Number.isFinite(t.pan)||Math.abs(t.pan)>1||!Number.isFinite(t.gain)||t.gain<=0||t.gain>1)throw Error('Invalid ensemble track');
   ids.add(t.id);
@@ -12,7 +12,12 @@ export function renderRecordedEnsemble({zones,tracks,seconds,mode='morph'}={}){
   if(r.samples.length!==frames)throw Error('Ensemble frame mismatch');
   const a=stems[t.group]??(stems[t.group]=new Float32Array(frames*2));
   const l=Math.sqrt((1-t.pan)/2)*t.gain,rr=Math.sqrt((1+t.pan)/2)*t.gain;
-  for(let i=0;i<frames;i++){a[i*2]+=r.samples[i]*l;a[i*2+1]+=r.samples[i]*rr;}
+  const individual=includeTrackStems?(trackStems[t.id]=new Float32Array(frames*2)):null;
+  for(let i=0;i<frames;i++){
+   const left=r.samples[i]*l,right=r.samples[i]*rr;
+   a[i*2]+=left;a[i*2+1]+=right;
+   if(individual){individual[i*2]=left;individual[i*2+1]=right;}
+  }
   choices[t.id]=r.choices;
  }
  let peak=0;
@@ -28,5 +33,11 @@ export function renderRecordedEnsemble({zones,tracks,seconds,mode='morph'}={}){
   const g=master*Math.min(1,i/240,(frames-1-i)/2400);
   for(let c=0;c<2;c++){const k=i*2+c;mix[k]*=g;for(const a of arrays)a[k]*=g;}
  }
- return {mix,stems,choices,master,frames,sampleRate:SR,channels:2};
+ // Individual stems use exactly the same master and fade as the approved mix.
+ // Their peaks never change the established group/mix mastering decision.
+ for(const a of Object.values(trackStems))for(let i=0;i<frames;i++){
+  const g=master*Math.min(1,i/240,(frames-1-i)/2400);
+  a[i*2]*=g;a[i*2+1]*=g;
+ }
+ return {mix,stems,choices,master,frames,sampleRate:SR,channels:2,...(includeTrackStems?{trackStems}:{})};
 }
