@@ -43,8 +43,7 @@ test('merges the three laboratory banks by source hash and preserves every recip
   assert.equal(commonEntry.sourceRecipes.length,3);
   const db=new DatabaseSync(path.join(output,'catalog.sqlite'));
   try{assert.equal(db.prepare('PRAGMA integrity_check').get().integrity_check,'ok');}finally{db.close();}
- });
- finally{rmSync(tmp,{recursive:true,force:true});}
+ }finally{rmSync(tmp,{recursive:true,force:true});}
 });
 test('rejects identical bytes with conflicting rights declarations',()=>{
  const tmp=mkdtempSync(path.join(os.tmpdir(),'sound-forge-rights-'));
