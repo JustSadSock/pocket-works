@@ -83,7 +83,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
       // Sequential: supports a family larger than a small cache budget.
       try{for(const url of def.urls){if(destroyed)return false;await load(url)}return true}catch{return false}
     },
-    async play(id,{gain=1,pan=0,rate=1,priority=0,spatial}={}){
+    async play(id,{gain=1,pan=0,rate=1,priority=0,spatial,canStart,onStart}={}){
       const def=definitions.get(id);
       if(!enabled||destroyed||!def||pending>=maxVoices) return false;
       const epoch=generation;pending++;
@@ -96,6 +96,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
         if(context.state!=='running'||epoch!==generation||destroyed||!enabled)return false;
         const url=def.bag.next(),buffer=await load(url);
         if(!enabled||destroyed||epoch!==generation||context.state!=='running')return false;
+        if(typeof canStart==='function'&&!canStart())return false;
         priority=finite(priority,0);
         if(voices.size>=maxVoices){
           const victim=[...voices].reduce((a,b)=>b.priority<a.priority?b:a);
@@ -129,6 +130,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
         voices.add(voice);
         source.onended=()=>{if(!voices.has(voice))return;if(tail)voice.tailTimer=setTimeout(()=>remove(voice),Math.ceil(tail*1000)+20);else remove(voice)};
         source.start();
+        if(typeof onStart==='function')try{onStart({time:context.currentTime,duration:buffer.length/(buffer.sampleRate??context.sampleRate??48000)/source.playbackRate.value})}catch{}
         return true;
       }catch{
         if(voice)remove(voice,true);
