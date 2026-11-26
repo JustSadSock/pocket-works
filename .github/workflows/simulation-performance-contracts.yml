@@ -1,0 +1,93 @@
+name: Simulation Performance Contract Shadow
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/simulation-performance-contracts.yml'
+      - 'scripts/ci-overhaul/simulation-performance-contracts*'
+permissions:
+  contents: read
+concurrency:
+  group: simulation-performance-contracts-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contract:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test scripts/ci-overhaul/simulation-performance-contracts.test.mjs
+  execute:
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          path: audit-source
+          persist-credentials: false
+      - name: Execute original and both fresh phases in separate offline containers
+        env:
+          SOURCE_SHA: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          SHARD: ${{ matrix.shard }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C audit-source rev-parse HEAD)" = "$SOURCE_SHA"
+          src="$RUNNER_TEMP/split-source"
+          out="$RUNNER_TEMP/split-output"
+          mkdir -p "$src" "$out/legacy" "$out/gameplay" "$out/performance"
+          git -C audit-source archive HEAD apps/banners-of-war shared scripts package.json package-lock.json | tar -xf - -C "$src"
+          image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
+          docker pull "$image"
+          opts=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp -e SOURCE_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e GITHUB_SHA --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$PWD/scripts/ci-overhaul,dst=/audit,readonly" -w /work)
+          docker run "${opts[@]}" --mount "type=bind,src=$out/legacy,dst=/out" "$image" node /audit/simulation-performance-contracts.mjs plan /work /out/plan.json
+          docker run "${opts[@]}" --mount "type=bind,src=$out/legacy,dst=/out" "$image" node apps/banners-of-war/completion-runner.mjs "$SHARD" 8 /out
+          for phase in gameplay performance; do
+            docker run "${opts[@]}" --mount "type=bind,src=$out/$phase,dst=/out" "$image" node /audit/simulation-performance-contracts.mjs phase /work "$SHARD" "$phase" /out
+          done
+          node scripts/ci-overhaul/simulation-performance-contracts.mjs compare "$SHARD" "$out/legacy/plan.json" "$out/legacy" "$out/gameplay" "$out/performance" "$out/comparison.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: split-full-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/split-output/comparison.json
+          if-no-files-found: warn
+          retention-days: 7
+  compare:
+    needs: execute
+    if: always() && needs.execute.result != 'skipped'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: split-full-${{ github.run_attempt }}-*
+          path: samples
+      - name: Verify full eight-shard coverage and exact gameplay parity
+        env:
+          SOURCE_SHA: 45d6ce53df3cd5013a605bba972d94f1c0cd8dce
+          MATRIX_RESULT: ${{ needs.execute.result }}
+        run: |
+          node scripts/ci-overhaul/simulation-performance-contracts.mjs aggregate samples comparison.json
+          cat comparison.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulation-performance-contract-comparison
+          path: comparison.json
+          if-no-files-found: warn
