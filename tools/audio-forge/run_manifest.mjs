@@ -332,7 +332,7 @@ function generateManifest(manifestPath, baseDir, generated) {
             const fade=Math.min(1,i/24,(frames-1-i)/240);
             decoded[i*2]*=fade;decoded[i*2+1]*=fade;
           }
-          samples=mixHybrid(samples,decoded,job.sampleMix);
+          samples=mixHybrid(samples,decoded,job.sampleMix,{compensateRms:job.compensateRms===true});
           console.log('Sample provenance: '+entry.id+' '+entry.license+' sha256:'+entry.sha256);
         }
         writePcm16Wav(rawOutput, samples, audio.sampleRate, audio.channels);
