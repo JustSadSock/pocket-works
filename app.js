@@ -6,6 +6,7 @@ import {
 
 import { loadRegistry as fetchRegistry, getRegistrySnapshot, setRegistrySnapshot, subscribeRegistry } from './shared/launcher-registry.js';
 import { reconcileKeyed, setText } from './shared/launcher-dom-reconcile.js';
+import { selectVisibleApps } from './shared/launcher-visible-apps.js';
 import { inspectOfflineReadiness } from './shared/offline-readiness.js';
 import { createShelfStateStore } from './shared/shelf-state.js';
 import { installShelfTools } from './shared/shell-tools.js';
@@ -407,11 +408,14 @@ function compareApps(left, right) {
 function visibleApps() {
   const query = shelfState.query.trim();
   const view = deck?.getView() || 'library';
-  const pool = view === 'home' ? registry : (deck?.getVisibleList() || registry);
-  return pool
-    .filter((app) => appMatchesQuery(app, query))
-    .filter((app) => view === 'archive' || appMatchesFilter(app))
-    .sort(compareApps);
+  return selectVisibleApps({
+    view,
+    registry,
+    visibleList: deck?.getVisibleList(),
+    queryMatches: app => appMatchesQuery(app, query),
+    filterMatches: app => appMatchesFilter(app),
+    compare: compareApps
+  });
 }
 
 function filterCounts() {
