@@ -1,6 +1,6 @@
 import {nextMusicBoundary} from './continuous-audio.js';
 // Horizontal score transport. One current clip and at most one scheduled successor.
-export function createScoreDirector({context,destination=context?.destination,graph,buffers,volume=.7}={}){
+export function createScoreDirector({context,destination=context?.destination,graph,buffers,bridgeBuffers={},volume=.7}={}){
  if(!context||!destination||!graph||!graph.states||!graph.edges||!Number.isFinite(volume)||volume<0||volume>1)throw Error('Invalid score director');
  const entries=Object.entries(graph.states);
  if(!entries.length||entries.length>32||!Object.hasOwn(graph.states,graph.initial))throw Error('Invalid score graph');
@@ -15,15 +15,28 @@ export function createScoreDirector({context,destination=context?.destination,gr
   if(!Array.isArray(edges)||new Set(edges).size!==edges.length||edges.some(e=>e===id||!Object.hasOwn(graph.states,e)))throw Error('Invalid score edges '+id);
   clips.set(id,{id,buffer:b,bpm:s.tempo,meter:s.beatsPerBar,edges:new Set(edges)});
  }
+ const bridges=new Map();
+ for(const [key,desc] of Object.entries(graph.bridges??{})){
+  const [from,to,...extra]=key.split(':');
+  const target=clips.get(to),b=bridgeBuffers[key];
+  if(extra.length||!clips.get(from)?.edges.has(to)||!target||!desc||!b||!Number.isInteger(b.length)||b.length<2||b.length/b.sampleRate>15||b.sampleRate!==target.buffer.sampleRate||b.numberOfChannels!==target.buffer.numberOfChannels||typeof b.getChannelData!=='function')throw Error('Invalid score bridge '+key);
+  bridges.set(key,b);
+ }
  const master=context.createGain();master.gain.value=volume;master.connect(destination);
  let current=null,pending=null,queued=null,closed=false,starting=false,epoch=0;
  function cleanup(v){if(!v)return;try{v.source.stop()}catch{};try{v.source.disconnect()}catch{};try{v.gain.disconnect()}catch{}}
- function make(id,when,level){
+ function make(id,when,level,bridge){
   const clip=clips.get(id),source=context.createBufferSource();let gain;
   try{
-   gain=context.createGain();gain.gain.value=level;source.buffer=clip.buffer;source.loop=true;
+   gain=context.createGain();gain.gain.value=level;source.loop=true;
+   let bridgeDuration=0;
+   if(bridge){
+    const target=clip.buffer,combined=context.createBuffer(target.numberOfChannels,bridge.length+target.length,target.sampleRate);
+    for(let c=0;c<target.numberOfChannels;c++){const data=combined.getChannelData(c);data.set(bridge.getChannelData(c));data.set(target.getChannelData(c),bridge.length);}
+    bridgeDuration=bridge.length/bridge.sampleRate;source.buffer=combined;source.loopStart=bridgeDuration;source.loopEnd=combined.length/combined.sampleRate;
+   }else source.buffer=clip.buffer;
    source.connect(gain);gain.connect(master);source.start(when);
-   return {id,clip,source,gain,startTime:when};
+   return {id,clip,source,gain,startTime:when+bridgeDuration,bridgeUntil:bridgeDuration?when+bridgeDuration:null};
   }catch(e){try{source.stop()}catch{};source.disconnect();gain?.disconnect();throw e;}
  }
  function schedule(request){
@@ -31,7 +44,8 @@ export function createScoreDirector({context,destination=context?.destination,gr
   const now=context.currentTime;
   const at=quantize==='immediate'?Math.max(now+.03,current.startTime):nextMusicBoundary({startTime:current.startTime,now,bpm:current.clip.bpm,beatsPerBar:current.clip.meter,quantize});
   const end=at+fadeSeconds;
-  const next=make(id,at,0);
+  const bridge=bridges.get(current.id+':'+id);
+  const next=make(id,at,0,bridge);
   try{
    const a=current.gain.gain,b=next.gain.gain;
    a.setValueAtTime(1,at);b.setValueAtTime(0,at);
@@ -79,6 +93,6 @@ export function createScoreDirector({context,destination=context?.destination,gr
   },
   update,stop,
   destroy(){if(closed)return;closed=true;stop();master.disconnect()},
-  get state(){return {current:current?.id??null,pending:pending?.next.id??null,queued:queued?.id??null,transitionAt:pending?.at??null,transitionEnd:pending?.end??null,voices:(current?1:0)+(pending?1:0),startTime:current?.startTime??null}}
+  get state(){return {current:current?.id??null,pending:pending?.next.id??null,queued:queued?.id??null,transitionAt:pending?.at??null,transitionEnd:pending?.end??null,voices:(current?1:0)+(pending?1:0),startTime:current?.startTime??null,bridgeUntil:pending?.next.bridgeUntil??current?.bridgeUntil??null}}
  };
 }
