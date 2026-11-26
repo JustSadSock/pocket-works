@@ -6,7 +6,7 @@ from mathutils.bvhtree import BVHTree
 src=Path(__file__).with_name("sword-motion.py")
 exec(compile(src.read_text().split("# Distinct load, acceleration",1)[0].replace('os.environ["BOW_TROOP"]="sword"','os.environ["BOW_TROOP"]=os.environ.get("BOW_WORKSHOP_ROLE","sword")'),str(src),"exec"))
 folder=out/("retarget" if os.environ.get("BOW_WORKSHOP_MOCAP") else "anatomy");folder.mkdir(exist_ok=True)
-audit["study"]="Anatomical Motion II";audit["samples"]={};audit["issues"]=[]
+audit["study"]="Anatomical Integrity III";audit["samples"]={};audit["issues"]=[]
 def save():(folder/"anatomy-audit.json").write_text(json.dumps(audit,indent=2))
 def norm(n):return re.sub("[^a-z0-9]","",n.lower())
 def desc(b):
@@ -139,6 +139,71 @@ def leather_loop(name,center,axis,normal,radius,width,b):
         for t in (-.5,.5):vs.append(tuple(p+axis*width*t))
     for j in range(16):fs.append((j*2,j*2+1,j*2+3,j*2+2))
     o=rigid_mesh(name,vs,fs,leather,b);m=o.modifiers.new("Leather thickness","SOLIDIFY");m.thickness=.004;return o
+# Anatomical joint-frame solver. The weapon is never an IK target.
+# All axes are calibrated from the actual source joints and digit roots.
+from mathutils import Quaternion
+def basis3(axis,side):
+    x=Vector(axis).normalized();y=Vector(side)-x*Vector(side).dot(x)
+    if y.length<1e-5:raise ValueError("Degenerate anatomical frame")
+    y.normalize();z=x.cross(y).normalized()
+    return Matrix((x,y,z)).transposed()
+def set_world_rotation(b,q):
+    m=world_of(b);s=m.to_scale();p=m.translation.copy()
+    b.matrix=rig.matrix_world.inverted()@Matrix.LocRotScale(p,q,s)
+    bpy.context.view_layer.update()
+def orient(b,local_frame,axis,side):
+    q=(basis3(axis,side)@local_frame.transposed()).to_quaternion()
+    set_world_rotation(b,q)
+def calibration(chain):
+    u,f,h=chain;v=point(f)-point(u);w=point(h)-point(f)
+    n=v.cross(w)
+    if n.length<1e-5:n=v.cross(Vector((0,0,1)))
+    if n.length<1e-5:n=v.cross(Vector((0,1,0)))
+    n.normalize()
+    return {"lengths":(v.length,w.length),"upper":world_of(u).to_quaternion().inverted().to_matrix()@basis3(v,n),"lower":world_of(f).to_quaternion().inverted().to_matrix()@basis3(w,n)}
+armFrames=[calibration(c) for c in arms]
+shieldNormalLocal=None
+def arm_pose(i,offset,bend=None,roll=0):
+    u,f,h=arms[i];cal=armFrames[i];a=point(u)
+    target=a+Vector((offset[0]*sign,offset[1],offset[2]))
+    d=target-a;v=d.normalized();l1,l2=cal["lengths"]
+    r=max(abs(l1-l2)+.018,min(l1+l2-.012,d.length))
+    pref=Vector(bend if bend is not None else ((sign if i==0 else -sign),.08,-.70))
+    pref-=v*pref.dot(v)
+    if pref.length<1e-5:raise ValueError("Degenerate elbow plane")
+    pref.normalize();z=(l1*l1-l2*l2+r*r)/(2*r)
+    elbow=a+v*z+pref*math.sqrt(max(0,l1*l1-z*z));end=a+v*r
+    va=elbow-a;vb=end-elbow;n=va.cross(vb).normalized()
+    orient(u,cal["upper"],va,n)
+    # The forearm can rotate axially, but the wrist will retain its calibrated
+    # relation to it. Left shield surface must always face away from chest.
+    vb=end-point(f);axis=vb.normalized()
+    if i==1 and shieldNormalLocal is not None:
+        outward=Vector((-sign*.35,-1,.04))
+        orient(f,basis3(cal["lower"].col[0],shieldNormalLocal),axis,outward)
+    else:
+        side=Quaternion(axis,roll)@n
+        orient(f,cal["lower"],axis,side)
+    return (point(h)-end).length
+def neutral_hand(hand,forearm,across_hint):
+    (c,across,forward,palm,w),_=hand_frame(hand)
+    source=world_of(hand).to_quaternion().inverted().to_matrix()@basis3(forward,across)
+    axis=(point(hand)-point(forearm)).normalized()
+    orient(hand,source,axis,Vector(across_hint))
+def lock_hand(hand,forearm,rel):
+    m=rig.matrix_world.inverted()@world_of(forearm)@rel
+    m.translation=hand.matrix.translation.copy();hand.matrix=m;bpy.context.view_layer.update()
+def relative_q(hand,forearm):
+    return (world_of(forearm).to_quaternion().inverted()@world_of(hand).to_quaternion()).normalized()
+# Fit both pieces of equipment in a real guard pose, not the old source idle.
+reset()
+arm_pose(0,(.30,-.24,-.30),roll=0)
+arm_pose(1,(.09,-.31,-.24),bend=(-sign,.04,-.65))
+neutral_hand(R,RF,(0,0,1))
+neutral_hand(L,LF,(0,0,1))
+rightRel=world_of(RF).inverted()@world_of(R)
+rightNeutral=relative_q(R,RF)
+
 # A single-handed sword, grip crossing the closed fingers rather than
 # extending longitudinally from the wrist joint.
 (rc,ra,rf,rn,rw),_=hand_frame(R)
@@ -156,49 +221,69 @@ swordParts=[grip,guard,pommel,bladeObj];gripLocal=local(R,rc);axisLocal=world_of
 # offset from the actual arm; the fist holds the distal fixed loop.
 (lc,la,lf,ln,lw),_=hand_frame(L)
 elbow=point(LF);wrist=point(L);arm=(wrist-elbow).normalized()
-normal=Vector((0,-1,0));normal=(normal-arm*normal.dot(arm)).normalized()
+normal=Vector((-sign*.35,-1,.04));normal=(normal-arm*normal.dot(arm)).normalized()
 across=arm;up=normal.cross(across).normalized()
-if up.z<0:up=-up
-center=(elbow+wrist)*.5+normal*.105
+if up.z<0:across=-across;up=-up
+# Exterior side and a physical clearance measured along its outward normal.
+center=elbow+(wrist-elbow)*.58+normal*.145
+shieldNormalLocal=world_of(LF).to_quaternion().inverted()@normal
+shieldCenterLocal=local(LF,center)
+shieldFit={"normal":vec(shieldNormalLocal),"center":vec(shieldCenterLocal),"halfWidth":.265,"halfHeight":.325}
+audit["shieldFit"]=shieldFit
 vs=[tuple(center+normal*.045)];faces=[];N=40
 for r in (.5,1):
     for i in range(N):
-        a=2*math.pi*i/N;vs.append(tuple(center+across*(.32*r*math.cos(a))+up*(.39*r*math.sin(a))+normal*.045*(1-r*r)))
+        a=2*math.pi*i/N;vs.append(tuple(center+across*(.265*r*math.cos(a))+up*(.325*r*math.sin(a))+normal*.045*(1-r*r)))
 for i in range(N):faces.append((0,1+i,1+(i+1)%N));faces.append((1+i,1+N+i,1+N+(i+1)%N,1+(i+1)%N))
 board=rigid_mesh("Forearm targe / painted boards",vs,faces,paint,LF);m=board.modifiers.new("Wood thickness","SOLIDIFY");m.thickness=.018
 shieldParts=[board]
 for i in range(N):
     a=2*math.pi*i/N;b=2*math.pi*(i+1)/N
-    p=lambda q:center+across*(.32*math.cos(q))+up*(.39*math.sin(q))
+    p=lambda q:center+across*(.265*math.cos(q))+up*(.325*math.sin(q))
     rim=rod("Targe rawhide rim",p(a),p(b),.009,leather,None,6);attach(rim,LF);shieldParts.append(rim)
-# Back of shield: two loops, the proximal arm enarme and fixed distal grip.
-forearmCenter=elbow+(wrist-elbow)*.32+normal*.07
-strap=leather_loop("Forearm enarme",forearmCenter,arm,-normal,.095,.046,LF)
+# Rear attachment: wrap around the actual proximal forearm, with both
+# ends extending to the back face. No strap crosses the painted front.
+forearmCenter=elbow+(wrist-elbow)*.30
+side=arm.cross(normal).normalized();strapVerts=[];strapFaces=[]
+for k in range(21):
+    t=math.pi*k/20
+    p=forearmCenter+side*(.075*math.cos(t))-normal*(.061*math.sin(t))+normal*.008
+    for sgn in (-1,1):strapVerts.append(tuple(p+arm*.025*sgn))
+for k in range(20):strapFaces.append((k*2,k*2+1,k*2+3,k*2+2))
+strap=rigid_mesh("Forearm enarme inner loop",strapVerts,strapFaces,leather,LF)
+mod=strap.modifiers.new("Leather thickness","SOLIDIFY");mod.thickness=.004
 handleCenter=lc
 handle=rod("Fixed shield hand grip",handleCenter-la*.054,handleCenter+la*.054,.014,leather,None);attach(handle,LF)
-for sign0 in (-1,1):
-    end=handleCenter+la*sign0*.054
-    mount=end+normal*.11
-    o=rod("Shield grip bracket",end,mount,.012,leather,None);attach(o,LF);shieldParts.append(o)
-# Both ends of the enarme are visibly fastened to the wooden board.
-# Attach rivets at the true back-facing board surface.
+def mount_to_back(p):
+    # Project into the actual curved board coordinates and find its rear
+    # surface. Clamp hardware to the interior ellipse, not outside the edge.
+    u=(p-center).dot(across);v=(p-center).dot(up);r=math.hypot(u/.265,v/.325)
+    if r>.91:u*=.91/r;v*=.91/r;r=.91
+    return center+across*u+up*v+normal*(.045*(1-r*r)-.018)
 for sgn in (-1,1):
-    end=forearmCenter+arm.cross(-normal).normalized()*.095*sgn
-    back=end+normal*((center-end).dot(normal)+.022)
-    anchor=rod("Enarme riveted tab",end,back,.015,leather,None,8);attach(anchor,LF);shieldParts.append(anchor)
-    pin=rod("Enarme rivet",back-normal*.006,back+normal*.01,.009,steel,None,8);attach(pin,LF);shieldParts.append(pin)
+    end=handleCenter+la*sgn*.054;mount=mount_to_back(end)
+    o=rod("Shield grip bracket",end,mount,.009,leather,None,8);attach(o,LF);shieldParts.append(o)
+    end=forearmCenter+side*.075*sgn+normal*.008;mount=mount_to_back(end)
+    anchor=rod("Enarme riveted tab",end,mount,.012,leather,None,8);attach(anchor,LF);shieldParts.append(anchor)
+    pin=rod("Enarme rivet",mount-normal*.003,mount+normal*.024,.008,steel,None,8);attach(pin,LF);shieldParts.append(pin)
 shieldParts.extend([strap,handle])
-# Reproduce grip orientation relative to the forearm. Hand centre and
-# longitudinal grip axis are calibrated from its actual digit roots.
-leftRel=world_of(LF).inverted()@world_of(L);handleLocal=local(LF,handleCenter);handleAxis=world_of(LF).inverted().to_3x3()@la
+leftRel=world_of(LF).inverted()@world_of(L)
+leftNeutral=relative_q(L,LF)
+handleLocal=local(LF,handleCenter);handleAxis=world_of(LF).inverted().to_3x3()@la
 def lock_left():
-    m=rig.matrix_world.inverted()@world_of(LF)@leftRel;m.translation=L.matrix.translation;L.matrix=m;bpy.context.view_layer.update()
+    lock_hand(L,LF,leftRel)
     c=world_pos(LF,handleLocal);a=(world_of(LF).to_3x3()@handleAxis).normalized();curl_hand(L,c,a,.014)
     return (point(L)-(world_of(LF)@leftRel).translation).length
-def hold_sword(direction):
-    a=(world_of(R).to_3x3()@axisLocal).normalized()
-    rotate_axis(R,a,Vector((direction[0]*sign,direction[1],direction[2])))
+def hold_sword(_unused=None):
+    # No world-space blade aim, no shortest-arc spin about the wrist.
+    # Fingers/guard/blade follow the calibrated fixed wrist relation.
+    lock_hand(R,RF,rightRel)
     c=world_pos(R,gripLocal);a=(world_of(R).to_3x3()@axisLocal).normalized();curl_hand(R,c,a,radius)
+def shield_audit():
+    n=(world_of(LF).to_quaternion()@shieldNormalLocal).normalized()
+    c=world_pos(LF,shieldCenterLocal);armMid=(point(LF)+point(L))*.5
+    outward=(armMid-point(torso)).normalized();front=Vector((0,-1,0))
+    return {"faceNormal":vec(n),"boardCenter":vec(c),"forearmMid":vec(armMid),"outwardDot":n.dot(outward),"forwardDot":n.dot(front),"armOnBackMetres":(c-armMid).dot(n),"handleError":(world_pos(LF,handleLocal)-hand_frame(L)[0][0]).length}
 # Evaluated triangle BVHs. Allow hand/grip and arm/strap contacts only,
 # never blade/body, shield board/body, or weapon/shield intersections.
 def geometry(o,with_labels=False):
@@ -272,22 +357,26 @@ def gait(motion,phase):
         angle=(-.18*max(0,1-u*5)+.24*max(0,(u-.78)/.22)) if support else .18*math.cos(math.pi*u)
         foot_orientation(j,angle)
         stance.append({"support":support,"target":vec(dest),"actual":vec(point(end)),"rootRelativeY":point(end).y,"rootTravelY":-stride*phase/.60})
-    errors.extend([hand_target(0,(.20,-.12+.065*wave,-.46)),hand_target(1,(-.19,-.35-.035*wave,-.24))])
-    hold_sword((.12,-.28,.95));lock_left()
+    errors.extend([arm_pose(0,(.23,-.11+.065*wave,-.45),roll=.10*wave),arm_pose(1,(.07,-.32-.035*wave,-.23),bend=(-sign,.04,-.65))])
+    hold_sword();lock_left()
     return errors,stance
+# One conservative diagonal cut, with a continuous elbow plane. The
+# authored variables are wrist position relative to shoulder, elbow-plane
+# preference, pelvis/chest rotation and forearm pronation, NOT blade direction.
 strike=[
- (0,(.29,-.29,-.23),(-.19,-.44,-.14),(.35,-.50,.80),(0,0,-.055)),
- (.22,(.40,.02,.20),(-.20,-.43,-.13),(.56,.35,.75),(.05,.045,-.065)),
- (.36,(.39,-.12,.30),(-.20,-.48,-.08),(.38,-.25,.89),(.04,0,-.075)),
- (.50,(.18,-.52,.02),(-.25,-.34,-.13),(.36,-.91,-.14),(-.045,-.12,-.085)),
- (.66,(.17,-.34,-.24),(-.19,-.41,-.15),(.28,-.60,-.50),(-.025,-.075,-.065)),
- (1,(.29,-.29,-.23),(-.19,-.44,-.14),(.35,-.50,.80),(0,0,-.055))]
+ (0,(.30,-.24,-.30),(.09,-.31,-.24),(0,0,-.040),(0,0,0)),
+ (.20,(.40,.04,.20),(.09,-.34,-.22),(.035,.04,-.045),(.14,.28,-.22)),
+ (.34,(.38,-.10,.34),(.08,-.35,-.20),(.030,-.01,-.060),(.20,.38,-.12)),
+ (.50,(.23,-.49,.01),(.10,-.32,-.24),(-.035,-.11,-.075),(-.15,-.24,.28)),
+ (.66,(.16,-.32,-.28),(.08,-.33,-.23),(-.025,-.07,-.055),(-.10,-.16,.15)),
+ (1,(.30,-.24,-.30),(.09,-.31,-.24),(0,0,-.040),(0,0,0))]
 def attack(phase):
-    rh,lh,d,delta=sample_keys(phase,strike);shift_hips((delta[0]*sign,delta[1],delta[2]));turn(hips,.20*math.sin(2*math.pi*phase));turn(torso,.34*math.sin(2*math.pi*phase))
-    errors=[]
+    rh,lh,delta,rot=sample_keys(phase,strike);shift_hips((delta[0]*sign,delta[1],delta[2]))
+    turn(hips,rot[0]*sign);turn(torso,rot[1]*sign);errors=[]
     for j,(upper,lower,end) in enumerate(feet):
         errors.append(limb(upper,lower,end,ankles0[j]+Vector((0,-.17 if j==0 else .16,0)),(0,-1,0)));foot_orientation(j,0)
-    errors.extend([hand_target(0,rh),hand_target(1,lh)]);hold_sword(d);lock_left()
+    errors.extend([arm_pose(0,rh,bend=(sign,.10,-.72),roll=rot[2]),arm_pose(1,lh,bend=(-sign,.04,-.65))])
+    hold_sword();lock_left()
     return errors,[]
 def feet_audit():
     # Derive actual ground contact from the skinned foot regions, not just
@@ -304,32 +393,53 @@ def feet_audit():
         a=point(upper)-point(lower);b=point(end)-point(lower)
         result.append({"kneeDegrees":math.degrees(a.angle(b)),"lowestSurfaceZ":min((v.z for v in points),default=None),"toeYRange":[min(v.y for v in points),max(v.y for v in points)] if points else None,"footVertices":len(points)})
     return {"feet":result,"hipsZ":point(hips).z,"headZ":point(bone("Head")).z,"sourceGroundZ":z0,"wrists":[{"hand":h.name,"forearmToPalmDegrees":math.degrees((point(h)-point(f)).angle(hand_frame(h)[0][2]))} for f,h in ((RF,R),(LF,L))]}
-def render(name,view,target=None,scale=3.4):
-    t=Vector(target if target is not None else (0,0,1.02))
-    offset={"front":(0,-5,1.1),"side":(5,0,1.1),"game":(0,-5,5*math.sqrt(3)),"grip":(1,-1,.35),"back":(1,1,.3)}[view]
-    cam.location=t+Vector(offset);look(cam,t);cam.data.ortho_scale=scale
-    sc.render.filepath=str(folder/(name+".png"));bpy.ops.render.render(write_still=True)
+# All views share exact camera target, fixed orthographic scale and pose.
+exec(compile(Path(__file__).with_name("review-cameras.py").read_text(),"review-cameras.py","exec"))
 samples={}
 mocap=os.environ.get("BOW_WORKSHOP_MOCAP")
 if mocap:
     exec(compile(Path(__file__).with_name("retarget-walk.py").read_text(),"retarget-walk.py","exec"))
     motions=("retarget-march",)
-else:motions=("march","strike","fast","cautious","combat-walk")
+else:motions=("march","strike")
 for motion in motions:
-    count=12 if motion in ("march","strike","retarget-march") else 8;samples[motion]=[];audit["samples"]=samples
+    count=24 if motion in ("march","strike","retarget-march") else 16;samples[motion]=[];audit["samples"]=samples
     for i in range(count):
         reset_upright();phase=i/count;errors,stance=retarget_gait(phase) if motion=="retarget-march" else attack(phase) if motion=="strike" else gait(motion,phase)
         pts=mesh_points();sc.frame_set(1);bpy.context.view_layer.update();before=mesh_points()
-        row={"phase":phase,"joints":snap(),"stance":stance,"maxIKResidual":max(errors),"footContact":feet_audit(),"meshAfterFrameSet":mesh_delta(pts,before),"contacts":inspect_contacts(),"bladeTip":vec(world_pos(R,tipLocal))}
+        row={"phase":phase,"joints":snap(),"stance":stance,"maxIKResidual":max(errors),"footContact":feet_audit(),"meshAfterFrameSet":mesh_delta(pts,before),"contacts":inspect_contacts(),"bladeTip":vec(world_pos(R,tipLocal)),"rightWristRelative":vec(relative_q(R,RF)),"leftWristRelative":vec(relative_q(L,LF)),"shield":shield_audit(),"armRelative":{b.name:vec(relative_q(b,b.parent)) for b in (RU,RF,LU,LF) if b.parent}}
         samples[motion].append(row);save()
-        render(motion+"-%02d"%i,"side" if motion in ("march","retarget-march") else "game")
+        review_render(motion+"-%02d"%i,"side" if motion!="strike" else "angle45",preview=True)
         row["meshAfterRender"]=mesh_delta(before,mesh_points());save()
-        if i in (0,4) and motion in ("march","strike"):
-            for view in ("front","side","game"):render(motion+"-%02d-"%i+view,view)
-        if motion=="strike" and i==0:
-            render("sword-grip","grip",world_pos(R,gripLocal),.38)
-            render("shield-enarmes","back",world_pos(LF,handleLocal),.88)
         if row["meshAfterRender"]["max"]>.005 or row["meshAfterFrameSet"]["max"]>.005:raise ValueError("Pose lost")
+    # Quaternion geodesic angle includes the loop closure and is invariant
+    # under q/-q representation. No unwrapped Euler artefacts.
+    def qangle(a,b):return math.degrees(2*math.acos(min(1,max(0,abs(Quaternion(a).normalized().dot(Quaternion(b).normalized()))))))
+    checks={}
+    for field in ("rightWristRelative","leftWristRelative"):
+        q=[r[field] for r in samples[motion]]
+        gaps=[qangle(a,b) for a,b in zip(q,q[1:]+q[:1])]
+        checks[field]={"maxStepDegrees":max(gaps),"pathDegrees":sum(gaps),"neutralDeviation":max(qangle(q[0],x) for x in q)}
+    audit.setdefault("continuity",{})[motion]=checks
+    bad=any(c["maxStepDegrees"]>12 or c["neutralDeviation"]>25 or c["pathDegrees"]>90 for c in checks.values())
+    bad=bad or any(r["shield"]["outwardDot"]<.10 or r["shield"]["forwardDot"]<.35 or r["shield"]["armOnBackMetres"]<.07 or r["shield"]["handleError"]>.035 or r["maxIKResidual"]>.025 or any(c.get("unexpected",0) for c in r["contacts"]) for r in samples[motion])
+    audit.setdefault("preflight",{})[motion]={"pass":not bad,"samples":count,"strictContactGate":True}
+    save()
+    # Native 1080p key poses even on rejected candidates. Full six-view
+    # motion recording only when inexpensive anatomical preflight passes.
+    def pose_at(i):
+        reset_upright();p=i/count
+        return retarget_gait(p) if motion=="retarget-march" else attack(p) if motion=="strike" else gait(motion,p)
+    for i in sorted({0,count//4,count//2,3*count//4}):
+        pose_at(i)
+        for view in REVIEW_VIEWS:review_render("key-"+motion+"-%02d"%i,view)
+        if motion=="strike":
+            review_render("grip-"+motion+"-%02d"%i,"angle45",world_pos(R,gripLocal),.52)
+            review_render("shield-rear-"+motion+"-%02d"%i,"back",world_pos(LF,shieldCenterLocal),1.25)
+    if not bad:
+        for i in range(count):
+            pose_at(i)
+            for view in REVIEW_VIEWS:review_render(motion+"-%02d"%i,view)
+    save()
 # Audit foot slip in the world frame during consecutive stance samples.
 for motion,rows in samples.items():
     slip=[]
@@ -340,4 +450,4 @@ for motion,rows in samples.items():
     audit.setdefault("footSlipMetres",{})[motion]=max(slip,default=None)
 audit["unexpectedContacts"]=sum(c.get("unexpected",0) for rs in samples.values() for r in rs for c in r["contacts"])
 audit["artisticApproval"]=False;save()
-if audit["unexpectedContacts"]:raise ValueError("Equipment intersections remain; see original frames and audit")
+if not all(r["pass"] for r in audit["preflight"].values()):raise ValueError("Anatomical integrity gate failed; retained original diagnostic and 1080p key poses")

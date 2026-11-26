@@ -5,9 +5,13 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const root=process.cwd(),src=resolve(root,'apps/banners-of-war/research/battlefield-identity/capture.mjs'),tmp=resolve(root,'apps/banners-of-war/research/battlefield-identity/.paired-zoom.mjs');
 const original=await readFile(src,'utf8'),cut=original.lastIndexOf('\nlet browser;');if(cut<0)throw Error('Capture source changed');
+const protocol=process.env.BOW_BENCH_PROTOCOL;
+if(!['cold','warm'].includes(protocol))throw Error('Unknown benchmark protocol');
 let prefix=original.slice(0,cut);
 prefix=prefix.replace("for(let motion of ['static','pan','zoom'])for(let mode of ['direct','batch','layer','scaled','world-row','world-row','layer','batch','direct','auto','auto'])","for(let motion of (process.env.BOW_BENCH_PROTOCOL==='cold'?['zoom']:['static','pan','zoom']))for(let mode of (process.env.BOW_BENCH_PROTOCOL==='cold'?['auto','auto']:['direct','batch','layer','scaled','world-row','world-row','layer','batch','direct','auto','auto']))").replace("let sameCounts=['static','pan','zoom'].every","let sameCounts=(process.env.BOW_BENCH_PROTOCOL==='cold'?['zoom']:['static','pan','zoom']).every").replace('results.push({motion,mode,fps:','results.push({motion,mode,intervals:timings,fps:');
 if(!prefix.includes('intervals:timings')||!prefix.includes('BOW_BENCH_PROTOCOL'))throw Error('Benchmark instrumentation mismatch');
+prefix=prefix.replaceAll("process.env.BOW_BENCH_PROTOCOL==='cold'",JSON.stringify(protocol==='cold'));
+if(prefix.includes('process.env.BOW_BENCH_PROTOCOL'))throw Error('Node environment leaked into browser benchmark');
 const tail=`
 import {createHash} from 'node:crypto';
 import os from 'node:os';
