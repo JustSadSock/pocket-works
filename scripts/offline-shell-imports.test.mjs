@@ -10,7 +10,10 @@ test('every direct launcher entry import is present in the offline service-worke
  const block=worker.match(/const APP_SHELL = \[([\s\S]*?)\n\];/);
  assert.ok(block,'service worker APP_SHELL declaration is missing');
  const shell=new Set([...block[1].matchAll(/['"]([^'"]+)['"]/g)].map(match=>match[1]));
- const imports=[...app.matchAll(/^\s*import\s+(?:[^'";\n]+\s+from\s+)?['"]([^'"]+)['"]\s*;?\s*$/gm)].map(match=>match[1]);
+ const imports=[...app.matchAll(/^\s*import\b[\s\S]*?;/gm)].map(block=>{
+  const match=block[0].match(/\bfrom\s+['"]([^'"]+)['"]|^\s*import\s+['"]([^'"]+)['"]/);
+  return match?.[1]??match?.[2];
+ }).filter(Boolean);
  assert.ok(imports.length>0,'launcher entry imports were not detected');
  const missing=imports.filter(spec=>spec.startsWith('./')&&!shell.has(spec));
  assert.deepEqual(missing,[],'offline shell must precache every direct launcher entry import');
