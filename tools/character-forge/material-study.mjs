@@ -31,7 +31,7 @@ export function raster(model,{view='three-quarter',size=768,bounds=commonBounds(
  const count=size*size,depth=new Float32Array(count).fill(-Infinity),rgba=new Uint8Array(count*4),owners=new Int16Array(count).fill(-1),faces=new Int32Array(count).fill(-1),light=unit([-.45,.85,.55]),fill=unit([.6,.45,-.8]),half=unit(light.map((x,k)=>x+d[k]));
  for(let i=0;i<count;i++){rgba.set([222,218,207,transparent?0:255],i*4)}
  for(let pi=0;pi<model.parts.length;pi++){
-   const p=model.parts[pi],kind=materialKind(p.name),mat=profiles[kind],map=maps[kind],projected=[];
+   const p=model.parts[pi],kind=p.material?.kind??materialKind(p.name),mat=profiles[kind],map=maps[kind],projected=[];
    for(let i=0;i<p.positions.length;i+=3){const v=p.positions.slice(i,i+3);projected.push([(dot(v,r)-cx)*scale+size/2,size/2-(dot(v,u)-cy)*scale,dot(v,d)])}
    for(let t=0;t<p.indices.length;t+=3){
      const ids=p.indices.slice(t,t+3),[a,b,c]=ids.map(i=>projected[i]),den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(den)<1e-7)continue;
