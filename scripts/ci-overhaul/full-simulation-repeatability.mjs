@@ -92,7 +92,7 @@ function load(dir,name){
  const raw=readFileSync(file);
  return {raw,digest:sha(raw),data:name.endsWith('.jsonl')?raw.toString('utf8').trim().split('\n').map(x=>JSON.parse(x)):JSON.parse(raw)};
 }
-function readRun(kind,dir,expected){
+export function readRun(kind,dir,expected){
  const task=TASKS[kind];if(!task)throw Error('Unknown task');
  const files=kind==='crown'?Object.keys(CROWN):['completion-0.jsonl','completion-0-summary.json'];
  const actual=readdirSync(dir).sort(),needed=[...files,'console.log','result.json'].sort();
