@@ -21,14 +21,21 @@ git -C "$controller/audit-source" checkout --quiet --detach "$ACTUAL_QA_SOURCE"
   cd "$controller"
   export GITHUB_SHA="$ACTUAL_QA_CONTROLLER"
   source scripts/ci-overhaul/gameplay-renewal-offline.sh
+  if [[ "${PW_QA_PRODUCTION_HIT_ONLY:-0}" == 1 ]]; then
+    set -E
+    trap 'exit 75' ERR
+  fi
   prepare_gameplay source
+  trap - ERR
   node "$outer/scripts/ci-overhaul/gameplay-renewable-admission.mjs" admit "$out" "$evidence" "$RUNNER_TEMP/decision.json"
+  if [[ "${PW_QA_PRODUCTION_HIT_ONLY:-0}" == 1 ]] && ! jq -e '.decision=="reuse-shadow" and .productionAuthorization==false and .allowResultReuse==false' "$RUNNER_TEMP/decision.json" >/dev/null; then exit 75; fi
   run_gameplay_phase performance
   if ! jq -e '.decision=="reuse-shadow" and .productionAuthorization==false and .allowResultReuse==false' "$RUNNER_TEMP/decision.json" >/dev/null; then run_gameplay_phase gameplay; fi
   verify_gameplay_mounts
   status=0
   node "$outer/scripts/ci-overhaul/gameplay-renewable-admission.mjs" finish "$out" "$evidence" "$dest" "$RUNNER_TEMP/decision.json" || status=$?
   if [[ "$status" = 75 ]]; then
+    if [[ "${PW_QA_PRODUCTION_HIT_ONLY:-0}" == 1 ]]; then exit 75; fi
     test ! -d "$out/gameplay"
     run_gameplay_phase gameplay
     verify_gameplay_mounts
