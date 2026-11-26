@@ -88,7 +88,7 @@ export class BakedTerrainGL{
 // Integration guard: never access full fine geography for a charted-only map.
 export async function prepareGeographicCandidate(s,cam,{bounds,detail=8,contourDetail=8,vertical,diagnostic=false,polish=false}={}){
  if(polish&&s.mapVersion===3&&s.discovery?.fullMap&&!s.autonomous)s={...s,autonomous:true};
- if(s.mapVersion===3&&!s.autonomous&&s.map.geography?.lakeId){const snapshot=model(s),source=await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true});await chartedContourSource(s,source,snapshot.known,{contourDetail,vertical,polish,yieldRow:()=>new Promise(r=>setTimeout(r,0))});return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true});}
+ if(s.mapVersion===3&&!s.autonomous&&s.map.geography?.lakeId){const snapshot=model(s),source=await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true,omitRivers:polish});await chartedContourSource(s,source,snapshot.known,{contourDetail,vertical,polish,yieldRow:()=>new Promise(r=>setTimeout(r,0))});return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true});}
  if(s.mapVersion!==3||!s.autonomous){const terrain=await prepareBakedTerrain(s,cam,{sourceOverride:await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true}),geology:'living',closeLOD:true});return {...terrain,stats:{...terrain.stats,fogFallback:true}};}
  const source=await contourSource(s,cam,{bounds,detail,contourDetail,vertical,diagnostic,polish,yieldRow:()=>new Promise(r=>setTimeout(r,0))});return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true});
 }

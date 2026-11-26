@@ -35,3 +35,21 @@ export function pickProjectedMesh(terrain,lod,{centerY,datum=0,tilt=0},X,Y){
  for(let row=start;row<=end;row++){const points=[b+row*dy,b+(row+frac)*dy,b+(row+1)*dy];for(let k=1;k<3;k++){const y0=points[k-1],y1=points[k];if(y1-y0<1e-9)continue;const p0=project(y0),p1=project(y1);if(Y<Math.min(p0,p1)-1e-7||Y>Math.max(p0,p1)+1e-7)continue;const y=Math.abs(p1-p0)<1e-9?y1:y0+(y1-y0)*C((Y-p0)/(p1-p0));const z=(y-centerY)*tilt+(height(y)-datum)*cs;if(z>depth){depth=z;best=y;}}}
  return [X,best??guess];
 }
+
+// The same independent water and ribbon triangles used by the GPU also
+// provide the top visible surface for fleet markers and pointer rays.
+const waterTiles=new WeakMap();
+function waterIndex(terrain){
+ let index=waterTiles.get(terrain);if(index)return index;index=new Map();
+ for(const chunk of terrain.contours?.chunks??[]){const a=chunk.vertices;for(let i=0;i<a.length;i+=18){const x0=Math.floor(Math.min(a[i],a[i+6],a[i+12])/4),x1=Math.floor(Math.max(a[i],a[i+6],a[i+12])/4),y0=Math.floor(Math.min(a[i+1],a[i+7],a[i+13])/4),y1=Math.floor(Math.max(a[i+1],a[i+7],a[i+13])/4);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const key=x+':'+y;let list=index.get(key);if(!list)index.set(key,list=[]);list.push([a,i]);}}}
+ waterTiles.set(terrain,index);return index;
+}
+function barycentric(x,y,a,b,c){const d=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(d)<1e-12)return null;const u=((b[1]-c[1])*(x-c[0])+(c[0]-b[0])*(y-c[1]))/d,v=((c[1]-a[1])*(x-c[0])+(a[0]-c[0])*(y-c[1]))/d,w=1-u-v;return Math.min(u,v,w)<-1e-7?null:[u,v,w];}
+const tri=(a,i)=>[[a[i],a[i+1],a[i+2]],[a[i+6],a[i+7],a[i+8]],[a[i+12],a[i+13],a[i+14]]];
+export function atlasSurfaceHeight(terrain,lod,x,y){let z=meshHeight(terrain,lod,x,y);for(const [a,i] of waterIndex(terrain).get(Math.floor(x/4)+':'+Math.floor(y/4))??[]){const t=tri(a,i),weights=barycentric(x,y,...t);if(weights)z=Math.max(z,weights.reduce((n,w,j)=>n+w*t[j][2],0));}return z;}
+export function pickAtlasSurface(terrain,lod,cfg,x,y){
+ const base=pickProjectedMesh(terrain,lod,cfg,x,y);if(!cfg.tilt)return base;const {centerY,tilt,datum=0}=cfg,cs=Math.sqrt(1-tilt*tilt),depth=(Y,z)=>(Y-centerY)*tilt+(z-datum)*cs;
+ let best=base[1],front=depth(best,meshHeight(terrain,lod,x,best));const guess=centerY+(y-centerY)/cs,index=waterIndex(terrain),seen=new Map();
+ for(let ty=Math.floor((guess-25)/4);ty<=Math.floor((guess+25)/4);ty++)for(const [a,i] of index.get(Math.floor(x/4)+':'+ty)??[]){let offsets=seen.get(a);if(!offsets)seen.set(a,offsets=new Set());if(offsets.has(i))continue;offsets.add(i);const t=tri(a,i),projected=t.map(p=>[p[0],centerY+(p[1]-centerY)*cs-(p[2]-datum)*tilt]),weights=barycentric(x,y,...projected);if(!weights)continue;const Y=weights.reduce((n,w,j)=>n+w*t[j][1],0),z=weights.reduce((n,w,j)=>n+w*t[j][2],0),d=depth(Y,z);if(d>=front){front=d;best=Y;}}
+ return [x,best];
+}
