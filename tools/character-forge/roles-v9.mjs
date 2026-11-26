@@ -187,7 +187,7 @@ function legionaryKit(m){
 }
 function contacts(m){
  const H=m.spec.morphology.height??1.7,boots=['L','R'].map(side=>{const p=m.parts.find(x=>x.name==='boot '+side),j=J(m,'foot.'+side);if(!p)throw Error('Missing boot '+side);const ys=p.positions.filter((_,i)=>i%3===1),low=Math.min(...ys),ids=Array.from({length:p.positions.length/3},(_,i)=>i).filter(i=>p.positions[i*3+1]<=low+H*.008),center=ids.reduce((a,i)=>a.map((x,k)=>x+p.positions[i*3+k]/ids.length),[0,0,0]);return {joint:j.id,local:sub(center,j.position),groundY:low,phase:side==='L'?0:.5,surfaceContact:true,vertexCount:ids.length}});
- const ground=Math.min(...boots.map(c=>c.groundY));m.contacts=boots.map(c=>({...c,groundY:ground}));m.spec.groundY=ground;m.spec.gaitDuty=.62;m.spec.gaitStride=H*.21;m.spec.swingHeight=.05;
+ const ground=Math.min(...boots.map(c=>c.groundY));m.contacts=boots.map(c=>({...c,groundY:ground}));m.spec.groundY=ground;m.spec.gaitDuty=.62;m.spec.gaitStride=H*.65;m.spec.swingHeight=.05;
 }
 function lowPolyTransform(m){
  const hip=J(m,'root').position[1],head=J(m,'head').position,neck=J(m,'neck01').position[1],transform=v=>{let q=v.slice(),top=clamp((v[1]-neck)/.10,0,1),upper=clamp((v[1]-hip)/.35,0,1)*(1-top);q[0]*=1+.14*upper+.10*top;q[1]=v[1]<hip?v[1]*.91:hip*.91+(v[1]-hip)*(1+.04*top);q[2]=head[2]+(v[2]-head[2])*(1+.09*top);return q};
