@@ -1,5 +1,16 @@
 import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';import {join} from 'node:path';import {build,pose,animation,poseFrom,deform,rootOffset,rotate} from './core.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {resolveProfile} from './morphology.mjs';import {spriteProduction} from './sprite.mjs';
 const out=process.env.CHARACTER_EVIDENCE;mkdirSync(out,{recursive:true});const reg=JSON.parse(readFileSync(new URL('animal-morphs.json',import.meta.url))),write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2)),results=[],motions=[];
+if(process.env.CHARACTER_V7_FOCUS==='1'){
+ // Keep the exact legacy benchmark asset and bridge input. Only one horse
+ // control; no new animal or native human animation atlases.
+ const citizen=build({version:2,recipe:'citizen',style:'historical-miniature',lod:'medium',anatomy:'v3',motionRevision:'v3',actions:['idle','walk','fly'],composite:false});
+ const p=spriteProduction(citizen,{size:128,frames:8});mkdirSync(join(out,'sprites-citizen'),{recursive:true});
+ for(const f of p.frames)write('sprites-citizen/'+f.direction+'-'+f.index+'.svg',f.svg);
+ json('sprites-citizen/metadata.json',{...p.metadata,frames:p.frames.map(({svg,...f})=>f)});write('sprites-citizen/model.glb',glb(citizen));
+ const rider=build({version:2,recipe:'rider',style:'historical-miniature',lod:'medium',anatomy:'v4',motionRevision:'v4',actions:['idle','walk','fly'],composite:true});mkdirSync(join(out,'rider-historical-miniature-medium'),{recursive:true});write('rider-historical-miniature-medium/character.glb',glb(rider));
+ const horse=build({...resolveProfile(reg,'horse','base'),anatomy:'v5',motionRevision:'v4'});write('v5-horse-base.glb',glb(horse));write('v5-horse-base-side.svg',preview(horse,{view:'side',neutral:true}).svg);
+ json('native-v7-focus.json',{benchmarkAsset:'unchanged native v3 citizen, 8 frames by 4 directions',horse:'v5 base control only',bridge:'unchanged rider GLB'});
+}else{
 for(let family of ['horse','elephant'])for(let name of Object.keys(reg.profiles[family])){
  let spec=resolveProfile(reg,family,name);spec.anatomy='v4';spec.motionRevision='v4';let t=performance.now(),m=build(spec),ms=performance.now()-t,base=family+'-'+name;write(base+'.glb',glb(m));json(base+'.spec.json',spec);for(let view of ['front','side','three-quarter'])write(base+'-'+view+'.svg',preview(m,{view,neutral:true}).svg);results.push({family,name,...m.statistics,ms});
  if(name==='base'){let old=build({...spec,anatomy:'v3'});for(let view of ['front','side','three-quarter']){let a=preview(old,{view,neutral:true}).bounds,b=preview(m,{view,neutral:true}).bounds,bounds=[Math.min(a[0],b[0]),Math.max(a[1],b[1]),Math.min(a[2],b[2]),Math.max(a[3],b[3])];write(family+'-old-'+view+'.svg',preview(old,{view,neutral:true,fixedBounds:bounds}).svg);write(family+'-new-'+view+'.svg',preview(m,{view,neutral:true,fixedBounds:bounds}).svg)}}
@@ -34,3 +45,5 @@ for(const name of ['base','courser','draft']){
  }
 }
 json('native-v5-horse-report.json',{models:horse5,motion:horseMotion,limitations:['Revised thorax/neck loft and recessed proximal limb chains; not a unified watertight animal skin.','Preserves v4 motion and hoof geometry; visual and contact acceptance open.']});
+
+}
