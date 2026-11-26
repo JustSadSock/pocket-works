@@ -68,3 +68,44 @@ test('score reservation deduplicates source PCM and budgets two bridge composite
  const p=createScoreDirector({...options,maxDecodedBytes:expected});
  assert.equal(p.memory.reservedBytes,expected);p.destroy();
 });
+
+test('unified layers follow their state grid, keep phase, and reserve the worst edge',async()=>{
+ const {context,nodes,graph,buffers}=fixture();
+ const layers={peace:[{id:'pulse',buffer:{...buffers.peace},threshold:.2,width:.6}],battle:[{id:'brass',buffer:{...buffers.battle},threshold:.4,width:.6}]};
+ assert.throws(()=>createScoreDirector({context,graph,buffers,layers,maxVoices:3}),/voice reservation/);
+ assert.throws(()=>createScoreDirector({context,graph,buffers,layers:{peace:[{id:'bad',buffer:{...buffers.peace,length:10}}]}}),/unaligned/);
+ assert.equal(nodes.length,0);
+ const p=createScoreDirector({context,graph,buffers,layers,maxVoices:4});
+ await p.start();assert.equal(p.state.voices,2);assert.equal(p.state.requiredVoices,4);
+ const sources=()=>nodes.filter(n=>n.kind==='source');
+ assert.equal(sources()[0].started,sources()[1].started);
+ const layerGain=nodes.filter(n=>n.kind==='gain').at(-1).gain;
+ context.currentTime=.2;p.setIntensity(.8,{quantize:'beat',fadeSeconds:.1});
+ assert.ok(layerGain.events.some(e=>e[0]==='ramp'&&Math.abs(e[1]-1)<1e-9&&Math.abs(e[2]-.65)<1e-9));
+ assert.equal(sources().length,2);assert.equal(p.state.startTime,.05);
+ p.request('battle',{fadeSeconds:.25});
+ assert.equal(p.state.voices,4);assert.equal(sources()[2].started,sources()[3].started);
+ context.currentTime=2.31;p.update();assert.equal(p.state.current,'battle');assert.equal(p.state.voices,2);
+ assert.equal(p.state.intensity,.8);
+ p.setIntensity(0,{fadeSeconds:0});assert.equal(sources().length,4);
+ p.destroy();assert.ok(nodes.every(n=>n.disconnected));
+});
+test('bridge prefix is silent on extra layers and identical loop grid is preserved',async()=>{
+ const {context,nodes,graph,buffers}=fixture();
+ context.createBuffer=(numberOfChannels,length,sampleRate)=>{
+  const data=Array.from({length:numberOfChannels},()=>new Float32Array(length));
+  return {numberOfChannels,length,sampleRate,getChannelData:c=>data[c]};
+ };
+ buffers.battle=context.createBuffer(1,144000,48000);
+ const layer=context.createBuffer(1,144000,48000);layer.getChannelData(0).fill(.3);
+ const bridge=context.createBuffer(1,24000,48000);bridge.getChannelData(0).fill(.1);
+ graph.bridges={'peace:battle':{file:'bridge.wav'}};
+ const options={context,graph,buffers,bridgeBuffers:{'peace:battle':bridge},layers:{battle:[{id:'brass',buffer:layer}]}};
+ const p=createScoreDirector(options);assert.ok(p.memory.reservedBytes>p.memory.baseBytes);
+ await p.start();context.currentTime=.2;p.request('battle');
+ const [base,extra]=nodes.filter(n=>n.kind==='source').slice(1);
+ assert.equal(base.started,extra.started);assert.equal(base.loopStart,extra.loopStart);
+ assert.equal(extra.buffer.getChannelData(0)[23999],0);
+ assert.ok(Math.abs(extra.buffer.getChannelData(0)[24000]-.3)<1e-6);
+ p.destroy();
+});
