@@ -56,7 +56,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
      }
      const sweep={gaps:[],frames:[],errors:[]};
      for(let i=0;i<60;i++){
-      const before=Number(c.dataset.atlasFrame),q=r.motion(i%2===0?1.5:-1.5,i%4<2?.6:-.6,1),began=performance.now();let prev=began,sample=null;
+      const before=Number(c.dataset.atlasFrame),q=r.motion(Math.floor(i/5)%2===0?2.4:-2.4,Math.floor(i/10)%2===0?1.2:-1.2,1),began=performance.now();let prev=began,sample=null;
       while(performance.now()-began<2500){
        const t=await new Promise(requestAnimationFrame);sweep.gaps.push(t-prev);prev=t;
        const d=c.dataset;let req=null,rec=null;try{req=JSON.parse(d.atlasRequest||'null');rec=JSON.parse(d.atlasReceipt||'null');}catch{}
