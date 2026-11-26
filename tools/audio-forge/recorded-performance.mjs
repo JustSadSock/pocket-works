@@ -57,15 +57,31 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
  for(const [i,e] of events.entries()){
   const {n,start,end,curve,selected}=e,len=end-start,connected=n.connected===true,nextConnected=events[i+1]?.n.connected===true;
   const fade=Math.min(Math.round(transitionSeconds*SR),Math.floor(len/3)),attack=Math.min(240,Math.floor(len/4)),release=Math.min(3840,Math.floor(len/3));
-  const voices=selected.map(({z})=>voice(z,n.midi,connected?Math.round(.16*SR):0,n.sustain===true));
+  const offset=connected?Math.round(.16*SR):0;
+  let alignment={correlation:0,delay:0};
+  if(selected.length===2){
+   const [a,b]=selected.map(x=>x.z),rates=[a,b].map(z=>2**((n.midi-z.measuredMidi)/12));
+   const half=Math.ceil(SR/(440*2**((n.midi-69)/12))/2),anchor=offset+9600;
+   if([a,b].every((z,k)=>(anchor+2400+half)*rates[k]+1<z.samples.length)){
+    let best=-1;
+    for(let d=-half;d<=half;d+=2){
+     let xy=0,xx=0,yy=0;
+     for(let j=0;j<2400;j+=4){const x=read(a.samples,(anchor+j+Math.max(0,-d))*rates[0]),y=read(b.samples,(anchor+j+Math.max(0,d))*rates[1]);xy+=x*y;xx+=x*x;yy+=y*y;}
+     const c=xx*yy>1e-15?xy/Math.sqrt(xx*yy):-1;
+     if(c>best){best=c;alignment={correlation:c,delay:d};}
+    }
+   }
+  }
+  const voices=selected.map(({z},k)=>voice(z,n.midi,(offset+(k===0?Math.max(0,-alignment.delay):Math.max(0,alignment.delay)))*2**((n.midi-z.measuredMidi)/12),n.sustain===true));
   let point=0,pressure=curve[0].value;
   function next(p){
    const x=voices[0].next();
    if(voices.length===1)return x*p;
    const y=voices[1].next(),t=clamp((p-selected[0].v)/(selected[1].v-selected[0].v),0,1);
-   return (x*(1-t)+y*t)*p;
+   const c=clamp(alignment.correlation,0,1),correction=Math.min(1.35,1/Math.sqrt((1-t)**2+t*t+2*c*t*(1-t)));
+   return (x*(1-t)+y*t)*p*correction;
   }
-  const meta={midi:n.midi,articulation:n.articulation,startFrame:start,frames:len,connected,sustain:n.sustain===true,sourceIds:voices.map(v=>v.id),sourceHashes:voices.map(v=>v.hash),variants:selected.map(x=>x.z.variant),layers:selected.map(x=>x.v),boundaryStep:0,wraps:[]};
+  const meta={midi:n.midi,articulation:n.articulation,startFrame:start,frames:len,connected,sustain:n.sustain===true,sourceIds:voices.map(v=>v.id),sourceHashes:voices.map(v=>v.hash),variants:selected.map(x=>x.z.variant),layers:selected.map(x=>x.v),boundaryStep:0,wraps:[],alignment};
   for(let j=0;j<len;j++){
    const u=j/(len-1);while(point+1<curve.length-1&&u>curve[point+1].at)point++;
    const l=curve[point],r=curve[point+1];pressure=l.value+(r.value-l.value)*(u-l.at)/(r.at-l.at);
