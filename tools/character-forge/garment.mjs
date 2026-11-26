@@ -151,10 +151,19 @@ function fitSkirtOverTrousers(p,stations,sections,N,lower,thickness){
  }).filter(s=>s.points.length);
  const original=sections.slice(0,3).map(s=>s.radius.slice());
  const margin=thickness+.009;
+ // A tailored skirt bridges the two thighs with a rounded panel profile,
+ // rather than inflating a circular tube. Interpolate into the elliptical
+ // waist and measure against the polygon's inward clearance planes.
+ const shape=(i,k)=>{const a=k*2*Math.PI/N,xy=[Math.cos(a),-Math.sin(a)];return i<2?xy.map(x=>Math.sign(x)*Math.abs(x)**(2/3)):xy};
  const fit=(sample)=>{
    const i=sample.y<=levels[1]?0:1,t=(sample.y-levels[i])/(levels[i+1]-levels[i]),a=sections[i],b=sections[i+1],center=lerp(a.center,b.center,t),r=lerp(a.radius,b.radius,t),fold=(1-t)*a.foldAmplitude+t*b.foldAmplitude;
-   const effective=r.map(x=>Math.max(.01,x*Math.cos(Math.PI/N)-margin-fold));
-   const ratio=Math.max(...sample.points.map(v=>Math.hypot((v[0]-center[0])/effective[0],(v[2]-center[1])/effective[1])));
+   const poly=Array.from({length:N},(_,k)=>lerp(shape(i,k).map((x,d)=>x*Math.max(.01,a.radius[d]-a.foldAmplitude)),shape(i+1,k).map((x,d)=>x*Math.max(.01,b.radius[d]-b.foldAmplitude)),t));
+   let ratio=0;
+   for(let k=0;k<N;k++){
+     const v=poly[k],w=poly[(k+1)%N],e=sub(w,v),length=Math.hypot(...e),normal=[-e[1]/length,e[0]/length],support=dot(v,normal);
+     if(support<=0)throw Error('Invalid skirt clearance polygon');
+     for(const q of sample.points)ratio=Math.max(ratio,(dot([q[0]-center[0],q[2]-center[1]],normal)+margin)/support);
+   }
    return {i,t,ratio,r};
  };
  const before=Math.max(1,...samples.map(s=>fit(s).ratio));
@@ -167,12 +176,12 @@ function fitSkirtOverTrousers(p,stations,sections,N,lower,thickness){
  const after=Math.max(1,...samples.map(s=>fit(s).ratio));
  if(after>1.01)throw Error('Skirt layer clearance cannot be achieved with fixed waist: '+after);
  for(let i=0;i<2;i++){
-   const delta=sections[i].radius.map((v,k)=>v-original[i][k]),ring=stations[i],old=ring.rad;
-   ring.rad=a=>old(a).map((v,k)=>v+delta[k]);
+   const delta=sections[i].radius.map((v,k)=>v-original[i][k]),ring=stations[i],old=ring.rad,c=sections[i].center;
    for(let k=0;k<N;k++){
-     const a=k*2*Math.PI/N,idx=(i*N+k)*3;
-     p.positions[idx]+=delta[0]*Math.cos(a);p.positions[idx+2]-=delta[1]*Math.sin(a);
+     const a=k*2*Math.PI/N,idx=(i*N+k)*3,xy=shape(i,k),rad=old(a);
+     p.positions[idx]=c[0]+(rad[0]+delta[0])*xy[0];p.positions[idx+2]=c[1]+(rad[1]+delta[1])*xy[1];
    }
+   ring.rad=a=>old(a).map((v,k)=>v+delta[k]);sections[i].panelProfile='rounded side gore';
  }
  return {sampleCount:samples.length,points:samples.reduce((n,s)=>n+s.points.length,0),before,after,original,adjusted:sections.slice(0,3).map(s=>s.radius.slice()),note:'Conservative rest-pose section envelope including lining and fold allowance; not a dynamic or triangle-intersection proof.'};
 }
