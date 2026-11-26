@@ -64,8 +64,9 @@ export function createDynamicEmitter({context,destination=context?.destination,b
       if(closed||starting||source)return false;
       starting=true;const token=++epoch;const nodes=[];
       try{
-        if(context.state==='suspended'||context.state==='interrupted')await context.resume();
-        if(closed||token!==epoch||context.state!=='running')return false;
+        const offline=typeof context.startRendering==='function';
+        if(!offline&&(context.state==='suspended'||context.state==='interrupted'))await context.resume();
+        if(closed||token!==epoch||(!offline&&context.state!=='running')||(offline&&context.state==='closed'))return false;
         const s=context.createBufferSource();nodes.push(s);s.buffer=buffer;s.loop=Boolean(loop);
         const filter=context.createBiquadFilter();nodes.push(filter);filter.type='lowpass';filter.Q.value=.707;
         const gain=context.createGain();nodes.push(gain);
@@ -113,18 +114,20 @@ export function createAdaptiveMusic({context,destination=context?.destination,st
   const target=s=>s.gain*(s.base+(1-s.base)*clamp((value-s.threshold)/s.width,0,1));
   function dispose(){
     const old=voices;voices=[];startTime=null;
-    for(const v of old){try{v.source.stop()}catch{};v.source.disconnect();v.gain.disconnect()}
+    for(const v of old){try{v.source.stop()}catch{};try{v.source.disconnect()}catch{};try{v.gain?.disconnect()}catch{}}
   }
   return {
     async start(){
       if(closed||starting||voices.length)return false;
       starting=true;const token=++epoch;
       try{
-        if(context.state==='suspended'||context.state==='interrupted')await context.resume();
-        if(closed||token!==epoch||context.state!=='running')return false;
+        const offline=typeof context.startRendering==='function';
+        if(!offline&&(context.state==='suspended'||context.state==='interrupted'))await context.resume();
+        if(closed||token!==epoch||(!offline&&context.state!=='running')||(offline&&context.state==='closed'))return false;
         for(const track of tracks){
-          const source=context.createBufferSource(),gain=context.createGain();
-          voices.push({source,gain,track});
+          const source=context.createBufferSource();
+          const voice={source,gain:null,track};voices.push(voice);
+          const gain=context.createGain();voice.gain=gain;
           source.buffer=track.buffer;source.loop=true;gain.gain.value=target(track);
           source.connect(gain);gain.connect(master);
         }
