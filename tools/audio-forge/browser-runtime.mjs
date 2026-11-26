@@ -241,12 +241,14 @@ try{
         scene.destroy();scoreAnalyser.disconnect();check(director.state.voices===0&&scene.stats.allocated===0,'Horizontal cleanup failed');
         let banners=null;
         if(hasGameContract){
-          const {createBannersAudioAdapter}=await import('/tools/audio-forge/adapters/banners-of-war.js');
+          const {createBannersAudioAdapter,deriveBattleMusic}=await import('/tools/audio-forge/adapters/banners-of-war.js');
           const {soundEvents,audible}=await import('/banners-game-contract.js');
           const F={W:1000,H:1000,alive:u=>u.n>0,visible:(_s,_side,u)=>u.visible,spec:()=>({horse:0}),sample:()=>({canopy:.5}),riverX:()=>20};
           const cam={x:0,y:0,k:1},unit={id:1,x:0,y:0,n:90,side:0,v:1,contact:0,motionDistance:0};
           const hidden={...unit,id:2,side:1,visible:false,contact:30};
           const snap=(time,u)=>({time,fog:true,terrain:{},units:[u,hidden]});
+          const observation=deriveBattleMusic({F,s:snap(0,unit),cam,audible});
+          check(!observation.battle&&!observation.tension&&observation.units===1,'Hidden enemy affected score');
           const adapter=createBannersAudioAdapter({context:c,F,soundEvents,audible,assets:{approved:true,families:{step:{variants:['fixture'],pitchCents:0,gainSpread:0}},ambient:{wind:march}},budget:{total:8,events:4,music:0},fetcher:async()=>new Response(wav)});
           try{
             check(await adapter.unlock(),'Banners unlock failed');
