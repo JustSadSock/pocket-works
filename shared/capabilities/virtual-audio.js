@@ -87,25 +87,39 @@ export function planVoiceBudget({total=24,events=8,music=4}={}){
 }
 // Optional integration facade. Enforces fixed quotas by construction, without
 // allowing any one category to starve a reserved music or critical event slot.
-export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],score,bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,volume=.7}={}){
+export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],score,bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,maxEventDecodedBytes=64*1024*1024,maxScoreDecodedBytes=128*1024*1024,stingers={},volume=.7}={}){
  const quota=planVoiceBudget(budget);
  if(!Array.isArray(stems)||stems.length>quota.music)throw Error('Music stems exceed voice reservation');
  if(score!==undefined&&(!score||stems.length||quota.music<2))throw Error('Horizontal score requires two reserved music slots and no vertical stems');
  const musicCount=stems.length;
+ const eventFamilies=Object.assign(Object.create(null),families??{}),stingerDefs=new Map();
+ for(const [id,d] of Object.entries(stingers)){
+  if(!/^[a-z][a-z0-9-]{0,63}$/.test(id)||!d||typeof d.url!=='string'||!d.url.trim())throw Error('Invalid stinger');
+  const key='music-stinger:'+id;
+  if(Object.hasOwn(eventFamilies,key))throw Error('Stinger family collision');
+  eventFamilies[key]={variants:[d.url],gain:bounded(d.gain,.8,0,1,'stinger gain'),pitchCents:0,gainSpread:0};
+  stingerDefs.set(id,{key,cooldown:bounded(d.cooldown,1,0,60,'stinger cooldown'),priority:bounded(d.priority,5,0,10,'stinger priority'),last:-Infinity,pending:false});
+ }
  let mixer,world,events,music,closed=false;
  try{
   mixer=createSpatialMixer({context,destination,volume});
   world=createVirtualAudioWorld({context,destination:mixer.bus('world'),maxVoices:quota.continuous,maxSources});
-  events=createSoundFamilyPlayer({context,destination:mixer.bus('events'),families,fetcher,random,maxVoices:quota.events,maxBuffers});
-  if(score)music=createScoreDirector({context,destination:mixer.bus('music'),graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,volume:score.volume});
+  events=createSoundFamilyPlayer({context,destination:mixer.bus('events'),families:eventFamilies,fetcher,random,maxVoices:quota.events,maxBuffers,maxDecodedBytes:maxEventDecodedBytes});
+  if(score)music=createScoreDirector({context,destination:mixer.bus('music'),graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,volume:score.volume,maxDecodedBytes:maxScoreDecodedBytes});
   else if(stems.length)music=createAdaptiveMusic({context,destination:mixer.bus('music'),stems,bpm,beatsPerBar});
  }catch(e){music?.destroy();events?.destroy();world?.destroy();mixer?.destroy();throw e;}
  return {
   world,events,music,quota,mixer,
+  async playStinger(id){
+   const d=stingerDefs.get(id);
+   if(closed||!d||d.pending||context.currentTime-d.last<d.cooldown)return false;
+   d.pending=true;
+   try{const ok=await events.play(d.key,{priority:d.priority,rate:1});if(ok)d.last=context.currentTime;return ok;}finally{d.pending=false;}
+  },
   destroy(){if(closed)return;closed=true;music?.destroy();events.destroy();world.destroy();mixer.destroy();},
   get stats(){
    const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=score?(music?.state.voices??0):(music?.state.active?musicCount:0);
-   return {continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending};
+   return {continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending,eventDecodedBytes:events.stats.decodedBytes,scoreReservedBytes:score?(music?.memory.reservedBytes??0):0};
   }
  };
 }
