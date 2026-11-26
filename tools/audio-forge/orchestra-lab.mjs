@@ -8,7 +8,9 @@ import {renderBowedPhrase} from './bowed-instruments.mjs';
 import {renderWindPhrase} from './wind-instruments.mjs';
 import {renderPluckedScore} from './plucked-instruments.mjs';
 import {openLibrary} from './persistent-library.mjs';
+import {rng} from './foundation.mjs';
 const root=path.resolve(process.argv[2]??'.audio-orchestra-lab'),sr=48000,metrics=[];
+const expressive=process.argv.includes('--expressive-ensemble'),random=rng(892);
 mkdirSync(path.join(root,'notes'),{recursive:true});mkdirSync(path.join(root,'stems'),{recursive:true});
 function write(file,samples,channels=1){
  const b=Buffer.alloc(44+samples.length*2);
@@ -17,6 +19,7 @@ function write(file,samples,channels=1){
  if(peak<1e-8)throw Error('Silent audition '+file);
  writeFileSync(path.join(root,file),b);const m={file,channels,frames:samples.length/channels,peak,rms:Math.sqrt(energy/samples.length),sha256:createHash('sha256').update(b).digest('hex')};metrics.push(m);return m;
 }
+if(!expressive){
 const library=openLibrary(path.join(root,'library'));
 function sample(id,a,tags,recipe){
  const m=write('notes/'+id+'.wav',a.samples);
@@ -36,6 +39,7 @@ try{
  for(const e of library.list())library.resolve(e.id);
  writeFileSync(path.join(root,'library/index.json'),JSON.stringify({approval:'research-only',entries:library.list()},null,2)+'\n');
 }finally{library.close();}
+}
 const tempo=112,bars=16,meter=4,seconds=bars*meter*60/tempo,frames=Math.round(seconds*sr),beat=60/tempo;
 const chords=[[50,57,65],[46,53,62],[43,50,58],[45,52,61],[50,57,65],[48,55,64],[46,53,62],[45,52,61],[43,50,58],[46,53,62],[50,57,65],[45,52,61],[50,57,65],[46,53,62],[45,52,61],[50,57,66]];
 const hornPitches=[[62,65,69],[65,69,70],[67,65,62],[64,61,57],[62,65,69],[67,64,60],[65,62,58],[61,64,69],[67,70,74],[70,69,65],[65,69,74],[69,64,61],[62,65,69],[70,69,65],[64,61,69],[66,64,62]];
@@ -45,7 +49,9 @@ function phrase(pitches,kind){
   let t=i*4;
   return row.map((midi,j)=>{
    const duration=[1,1,2][j],start=t*beat;t+=duration;
-   const tail=i===15&&j===2?.20:0,pressure=(i<4?.45:i<8?.68:i<12?.82:.64)+(j===1?.045:0);
+   const tail=i===15&&j===2?.20:0;
+   const base=(i<4?.45:i<8?.68:i<12?.82:.64)+(j===1?.045:0);
+   const pressure=expressive?Math.max(.18,Math.min(.96,base*(.91+.16*Math.sin(Math.PI*((i%4)*4+j*1.3)/16))+(random()-.5)*.075)):base;
    const articulation=j===0?'accent':'slur';
    if(kind==='brass')return {midi,start,duration:(duration-tail)*beat,pressure,articulation};
    return {midi,start,duration:(duration-tail)*beat,pressure,articulation:i===0&&j===0?'detached':j===0?'bow-change':'legato'};
@@ -53,7 +59,7 @@ function phrase(pitches,kind){
  });
 }
 const hornNotes=phrase(hornPitches,'brass'),trumpetNotes=phrase(trumpetPitches,'brass');
-for(const [instrument,notes] of [['horn',hornNotes],['trumpet',trumpetNotes]]){
+if(!expressive)for(const [instrument,notes] of [['horn',hornNotes],['trumpet',trumpetNotes]]){
  const a=renderBrassPhrase({instrument,notes:notes.map(n=>({...n,articulation:'tongued'})),seconds,seed:72}),b=renderBrassPhrase({instrument,notes,seconds,seed:72});
  const am=write(instrument+'-tongued.wav',a.samples),bm=write(instrument+'-slurred.wav',b.samples);
  const target=Math.min(am.rms,bm.rms),gap=Math.round(sr*.7),ab=new Float32Array(frames*2+gap);
@@ -72,14 +78,22 @@ add(stems.brass,trumpet,0,.28,.30);
 const vn=phrase(trumpetPitches,'bowed'),cn=phrase(chords.map(c=>[c[0],c[1],c[0]]),'bowed');
 add(stems.strings,renderBowedPhrase({instrument:'violin',notes:vn,seconds,seed:112}).samples,0,-.48,.30);
 add(stems.strings,renderBowedPhrase({instrument:'cello',notes:cn,seconds,seed:113}).samples,0,.35,.22);
+if(expressive){
+ // Second players use independent bow positions and tiny ensemble offsets, not copies of PCM.
+ for(const [instrument,notes,delay,pan,gain,seed] of [['violin',vn,.012,-.63,.12,192],['cello',cn,.018,.47,.09,193]]){
+  const part=notes.map(n=>({...n,pressure:Math.max(.1,n.pressure*.84),position:instrument==='violin'?.19:.25}));
+  add(stems.strings,renderBowedPhrase({instrument,notes:part,seconds,seed}).samples,Math.round(delay*sr),pan,gain);
+ }
+}
 const fn=hornNotes.map((n,i)=>({midi:n.midi+12<=84?n.midi+12:n.midi,start:n.start,duration:n.duration,pressure:n.pressure*.65,connected:i%3!==0}));
 add(stems.woodwind,renderWindPhrase({instrument:'flute',notes:fn,seconds,seed:83}).samples,0,.48,.22);
-const harpNotes=chords.flatMap((c,i)=>Array.from({length:8},(_,j)=>({midi:c[j%3]+(j%4===3?12:0),beat:i*4+j*.5,duration:.43,velocity:j===0?.75:.42})));
+const harpNotes=chords.flatMap((c,i)=>Array.from({length:8},(_,j)=>({midi:c[j%3]+(j%4===3?12:0),beat:i*4+j*.5+(expressive&&j>0?(random()-.5)*.025:0),duration:.43,velocity:expressive?Math.max(.1,(j===0?.75:.42)+(random()-.5)*.12):j===0?.75:.42})));
 stems.plucked.set(renderPluckedScore({tempo,bars,meter,seed:19,tracks:[{instrument:'harp',notes:harpNotes,gain:.56,pan:.35}]}).samples);
 for(let i=0;i<bars;i++){
  for(const [instrument,t,v,pan,gain] of [['timpani',0,.75,-.12,.32],['warDrum',2,.65,.08,.26],...(i>=4?[['snare',1,.55,.25,.16],['snare',3,.65,.25,.16]]:[]),...(i===8||i===15?[['cymbal',0,.85,.42,.17]]:[])]){
   const midi=instrument==='timpani'?chords[i][0]-12:43;
-  add(stems.percussion,strikePercussion({instrument,midi,velocity:v,seed:300+i*16+Math.round(t*2)}).samples,Math.round((i*4+t)*beat*sr),pan,gain);
+  const variation=expressive?(random()-.5)*.10:0,delay=expressive&&i*4+t>0?(random()-.5)*.016:0;
+  add(stems.percussion,strikePercussion({instrument,midi,velocity:Math.max(.1,Math.min(1,v+variation)),seed:300+i*16+Math.round(t*2)}).samples,Math.round(((i*4+t)*beat+delay)*sr),pan,gain);
  }
 }
 const mix=new Float32Array(frames*2);
@@ -90,4 +104,4 @@ const master=Math.min(1,.75/peak);
 for(let i=0;i<frames;i++){const gain=master*Math.min(1,i/240,(frames-1-i)/2400);for(let c=0;c<2;c++){const k=i*2+c;mix[k]*=gain;for(const a of Object.values(stems))a[k]*=gain;}}
 for(const [id,a] of Object.entries(stems))write('stems/'+id+'.wav',a,2);
 write('march-of-the-vale.wav',mix,2);
-writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',tempo,bars,meter,seconds:frames/sr,master,comparisonOrder:['tongued','slurred'],secondStarts:frames/sr+.7,metrics},null,2)+'\n');
+writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',performance:expressive?'expressive-ensemble':'control',tempo,bars,meter,seconds:frames/sr,master,comparisonOrder:['tongued','slurred'],secondStarts:frames/sr+.7,metrics},null,2)+'\n');
