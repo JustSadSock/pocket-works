@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {build,rootOffset,pose} from './core.mjs';import {glb,inspectGLB} from './glb.mjs';import {readFileSync} from 'node:fs';import {dress,draftGarments,bindTemplate,garmentAudit,measuredLimbRadii} from './garment.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {build,rootOffset,pose} from './core.mjs';import {glb,inspectGLB} from './glb.mjs';import {readFileSync} from 'node:fs';import {dress,draftGarments,bindTemplate,garmentAudit,measuredLimbRadii,sewLining} from './garment.mjs';
 const spec=recipe=>({version:2,recipe,style:'historical-miniature',lod:'medium',anatomy:'v4',motionRevision:'v4',actions:['idle','walk'],composite:recipe==='rider'});
 test('v4 animal geometry and translation channel; prior species remain available',()=>{for(let r of ['horse','elephant','rider','dog','bird']){let m=build(spec(r));assert.ok(m.parts.length>5);assert.ok(m.parts.every(p=>p.positions.every(Number.isFinite)));let d=inspectGLB(glb(m));assert.ok(d.animations.find(a=>a.name==='walk').channels.some(c=>c.target.path==='translation'));if(r==='horse')assert.ok(m.parts.some(p=>p.name==='foreL-sole'));if(r==='elephant')assert.ok(m.parts.some(p=>p.name.startsWith('shaped pinna')))}});
 test('source garment methods preserve anatomy and unique skin weights',{skip:!process.env.CHARACTER_EVIDENCE_SOURCE},()=>{const dir=process.env.CHARACTER_EVIDENCE_SOURCE,load=n=>JSON.parse(readFileSync(dir+'/makehuman-'+n+'.json')),base=load('base'),src=load('tall-heavy'),opt={style:'historical-miniature',kit:'warrior',identity:{}},temp=bindTemplate(base,draftGarments(base,{...opt,method:'pattern'}));let a=dress(src,{...opt,method:'pattern'}),b=dress(src,{...opt,method:'template'},temp),c=dress(src,{...opt,method:'hybrid'});assert.ok(c.parts.some(p=>p.name==='boot L'));assert.ok(c.parts.some(p=>p.name==='quilted'));assert.ok(c.parts.some(p=>p.name==='iron skullcap'));assert.equal(b.parts.find(p=>p.name==='shirt').indices.length,temp.find(p=>p.name==='shirt').indices.length);assert.notDeepEqual(a.parts.find(p=>p.name==='shirt').positions,c.parts.find(p=>p.name==='shirt').positions);for(let m of [a,b,c])assert.ok(glb(m).length>10000);assert.ok(src.fitting);let boot=c.parts.find(p=>p.name==='boot L');for(let i=0;i<boot.weights8.length;i++)if(boot.weights8[i]>0)assert.ok(!c.joints[boot.joints8[i]].name.startsWith('toe'));assert.ok(c.parts[0].indices.length<src.parts[0].indices.length)});
@@ -15,6 +15,35 @@ test('template fitting preserves authored semantic influences on all garments, i
    for(let i=0;i<p.templateBinding.length;i++){
      const expected=new Map(p.templateBinding[i].skin);
      for(let k=0;k<8;k++){const w=q.weights8[i*8+k];if(w>0){const name=target.joints[q.joints8[i*8+k]].name;assert.ok(expected.has(name),p.name+' '+name);assert.ok(Math.abs(expected.get(name)-w)<1e-6);if(p.name.startsWith('boot'))assert.ok(!name.startsWith('toe'))}}
+   }
+ }
+});
+
+test('v5 lining closes boundary with opposite winding and no disconnected shell',()=>{
+ const p={name:'panel',positions:[0,0,0,1,0,0,1,1,0,0,1,0],indices:[0,1,2,0,2,3],normals:[],joints:Array.from({length:16},()=>0),weights:Array.from({length:16},(_,i)=>i%4===0?1:0),joints8:Array.from({length:32},()=>0),weights8:Array.from({length:32},(_,i)=>i%8===0?1:0)};
+ sewLining(p,.01);assert.equal(p.outerVertexCount,4);assert.equal(p.positions.length/3,8);assert.ok(Math.abs(p.positions[14]+.01)<1e-9);assertClosed(p);
+});
+function assertClosed(p){
+ const edges=new Map(),adj=new Map();
+ for(let i=0;i<p.indices.length;i+=3)for(let k=0;k<3;k++){
+   const a=p.indices[i+k],b=p.indices[i+(k+1)%3],key=a<b?a+':'+b:b+':'+a,e=edges.get(key)??{count:0,orientation:0};e.count++;e.orientation+=a<b?1:-1;edges.set(key,e);
+   if(!adj.has(a))adj.set(a,new Set());if(!adj.has(b))adj.set(b,new Set());adj.get(a).add(b);adj.get(b).add(a);
+ }
+ for(const [key,e] of edges){assert.equal(e.count,2,p.name+' nonmanifold '+key);assert.equal(e.orientation,0,p.name+' inconsistent winding '+key)}
+ const seen=new Set([0]),queue=[0];for(let i=0;i<queue.length;i++)for(const k of adj.get(queue[i])??[])if(!seen.has(k)){seen.add(k);queue.push(k)}
+ assert.equal(seen.size,p.positions.length/3,p.name+' disconnected vertices');
+}
+test('v5 actual source continuous garment across six morphs and two art directions',{skip:!process.env.CHARACTER_EVIDENCE_SOURCE},()=>{
+ const dir=process.env.CHARACTER_EVIDENCE_SOURCE;
+ for(const name of ['base','young-woman','older-woman','older-man','tall-heavy','short-light']){
+   const src=JSON.parse(readFileSync(dir+'/makehuman-'+name+'.json'));
+   for(const [kit,style] of [['tunic','historical-miniature'],['warrior','low-poly']]){
+     const m=dress(src,{surfaceRevision:5,kit,style,method:'hybrid'});
+     for(const name of kit==='warrior'?['shirt','quilted']:['tunic']){
+       const p=m.parts.find(q=>q.name===name);assert.ok(p);assert.equal(p.pattern.armholes,2);assertClosed(p);
+       assert.ok(p.positions.every(Number.isFinite));assert.ok(!m.parts.some(q=>q.name.startsWith(name+' sleeve')));
+     }
+     assert.ok(glb(m).length>10000);
    }
  }
 });
