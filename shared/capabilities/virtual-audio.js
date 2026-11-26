@@ -109,7 +109,7 @@ export function createBudgetedAudioScene({context,destination=context?.destinati
   world=createVirtualAudioWorld({context,destination:mixer.bus('world'),maxVoices:quota.continuous,maxSources});
   events=createSoundFamilyPlayer({context,destination:mixer.bus('events'),families:eventFamilies,fetcher,random,maxVoices:quota.events,maxBuffers,maxDecodedBytes:maxEventDecodedBytes});
   if(score||stems.length)ducker=createMusicDucker({context,destination:mixer.bus('music')});
-  if(score)music=createScoreDirector({context,destination:ducker.input,graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,volume:score.volume,maxDecodedBytes:maxScoreDecodedBytes});
+  if(score)music=createScoreDirector({context,destination:ducker.input,graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,layers:score.layers,intensity:score.intensity,maxVoices:quota.music,volume:score.volume,maxDecodedBytes:maxScoreDecodedBytes});
   else if(stems.length)music=createAdaptiveMusic({context,destination:ducker.input,stems,bpm,beatsPerBar});
  }catch(e){music?.destroy();ducker?.destroy();events?.destroy();world?.destroy();mixer?.destroy();throw e;}
  return {
