@@ -5,7 +5,7 @@ export function chartInk(known,W,H,X,Y,identity=false){
  let d=identity?2:1,radius=identity?2:1;for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){const a=x+dx,b=y+dy;if(a<0||a>=W||b<0||b>=H||known[b*W+a])continue;d=Math.min(d,Math.hypot(Math.max(a-X,0,X-a-1),Math.max(b-Y,0,Y-b-1)));}
  // Inward fade only; never extrapolate a hidden cell. Irregularity derives
  // from world coordinates, not from unknown terrain.
- const edge=identity?1.08+.25*Math.sin(X*2.7+Y*1.9)+.11*Math.sin(Y*9-X*7):.64+.13*Math.sin(X*7+Y*5)+.08*Math.sin(Y*17-X*11),t=C(d/edge);return t*t*(3-2*t);
+ const edge=identity?1.20+.27*Math.sin(X*2.1+Y*1.6)+.17*Math.sin(Y*6.3-X*5.2):.64+.13*Math.sin(X*7+Y*5)+.08*Math.sin(Y*17-X*11),t=C(d/edge);return t*t*(3-2*t);
 }
 export function meshHeight(terrain,lod,X,Y){
  const l=terrain.lods[lod];if(!l)return 0;const [a,b,c,d]=terrain.bounds;if(X<a||Y<b||X>c||Y>d)return 0;
