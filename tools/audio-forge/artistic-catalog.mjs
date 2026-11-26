@@ -1,5 +1,5 @@
 // Register original procedural effects in a separate research-only library.
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,rmSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import path from 'node:path';
@@ -36,4 +36,25 @@ try{
  for(const e of entries)lib.resolve(e.id);
  writeFileSync(path.join(vault,'index.json'),JSON.stringify({approval:'research-only',entries:lib.list()},null,2)+'\n');
 }finally{lib.close();}
-writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',metrics},null,2)+'\n');
+// Matched RMS A/B comparisons use attenuation only, avoiding loudness bias
+// from peak-normalizing a more dynamic performance.
+const comparisons=[];
+mkdirSync(path.join(root,'comparisons'),{recursive:true});
+for(const id of ['moorland','last-standard','iron-horizon']){
+ const pair=['control','expressive'].map(mode=>metrics.find(m=>m.name===id+'-'+mode));
+ const target=Math.min(...pair.map(m=>m.rms));
+ const gains=pair.map(m=>target/m.rms);
+ const out='comparisons/'+id+'-AB.wav';
+ const pieces=[];
+ for(let i=0;i<2;i++){
+  const file=path.join(root,'comparisons',id+'-'+i+'.wav');
+  execFileSync('sox',['-R',path.join(root,pair[i].file),file,'vol',String(gains[i])]);
+  pieces.push(file);
+ }
+ const silence=path.join(root,'comparisons','gap.wav');
+ execFileSync('sox',['-R','-n','-r','48000','-c','2','-b','16',silence,'trim','0','.7']);
+ execFileSync('sox',['-R',pieces[0],silence,pieces[1],path.join(root,out)]);
+ comparisons.push({file:out,order:['control','expressive'],targetRms:target,gains,secondStarts:pair[0].seconds+.7,sha256:createHash('sha256').update(readFileSync(path.join(root,out))).digest('hex')});
+ for(const file of [...pieces,silence])rmSync(file);
+}
+writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',metrics,comparisons},null,2)+'\n');
