@@ -512,3 +512,28 @@ stingers: {
 ```
 
 The browser fixture now checks a real spectrum recovery of more than 6 dB, preloading, cooldown and state rejection. Mock regression coverage includes overlap, release, asynchronous admission and invalid input. At 4141d1e the previous native browser checks passed with 8,820 bytes retained effects PCM and 1,632,000 bytes score reservation in each engine. The independent platform quality gate rejected the separated Playwright install commands, so validate.yml now retries the original required `npx playwright install --with-deps chromium webkit` command after refreshing APT; the validator is unchanged.
+
+### Unified horizontal and vertical adaptation
+
+The existing score director now accepts optional state-specific `layers` and initial `intensity`. Each layer must match its state's base buffer sample rate and frame count exactly; each can specify the existing stem gain law (base, threshold, width, gain). Source voices within one state start on the same audio-clock timestamp. A state transition crossfades the entire outgoing and incoming groups, not just the base. When a bridge is present, it is played in the base source while the extra layers have equal-length silent prefixes. All incoming sources loop only the destination portion.
+
+```js
+const scene = createBudgetedAudioScene({
+ context, families, budget:{total:20,events:4,music:4},
+ score:{graph,buffers,bridgeBuffers,
+   layers:{
+    peace:[{id:'cello',buffer:peaceDetail,threshold:0.1,width:0.8,gain:0.55}],
+    battle:[{id:'ostinato',buffer:battleDetail,threshold:0.1,width:0.8,gain:0.55}]
+   },intensity:0.2}
+});
+await scene.music.start();
+scene.music.setIntensity(0.85,{quantize:'beat',fadeSeconds:0.4});
+scene.music.request('battle',{quantize:'bar',fadeSeconds:0.3});
+scene.music.update();
+```
+
+The director checks the maximum sum of source counts for all allowed graph edges before allocating nodes; one base plus one detail per state requires four music slots during a transition. The scene passes its reserved music quota into the director. Optional layers are counted in unique base PCM and the conservative two-group bridge-composite reservation. The score transport keeps the global requested intensity, applies it to new states, and can update current and scheduled groups without restarting them. Each group uses its own musical grid for quantized gain changes. This is not dynamic composition synthesis or automatic arrangement selection.
+
+The score-state recipe also renders eight independently mixed base/detail WAVs (two per state) while preserving all previous control assets. The graph's `adaptive` entries describe these files; application code loads the base files into `buffers` instead of the original full mixes and maps each detail file to `layers`. The new adaptive-journey WAV is an offline storyboard using the actual layer gain law and the existing authored bridges, not a native browser recording. Independent normalization of the stem groups intentionally changes their balance relative to the original full mix; artistic approval is still needed. The current browser fixture uses distinct tones to verify the two state-specific layers, muting within the destination, silence during the bridge, and the four-slot music quota. Seven score regression scenarios were checked with mock nodes before native CI.
+
+At 2d5614b native ducking recovered 9.11866/9.11863 dB in Chromium/WebKit, consistent with the configured gain 0.35. Both browsers passed, including the 4096-source stress test. The prior Validate health failure is resolved; remaining platform matrix checks must complete separately.
