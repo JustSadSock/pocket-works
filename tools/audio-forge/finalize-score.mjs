@@ -8,6 +8,7 @@ const graph=JSON.parse(readFileSync(path.join(root,'score-graph.json'),'utf8'));
 const sr=48000,clips=new Map(),metrics=[];
 mkdirSync(path.join(root,'states'),{recursive:true});
 mkdirSync(path.join(root,'bridges'),{recursive:true});
+mkdirSync(path.join(root,'stingers'),{recursive:true});
 function write(name,pcm){
  const b=Buffer.alloc(44+pcm.length*2);
  b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(2,22);b.writeUInt32LE(sr,24);b.writeUInt32LE(sr*4,28);b.writeUInt16LE(4,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);
@@ -19,7 +20,7 @@ function write(name,pcm){
  writeFileSync(path.join(root,name),b);
  metrics.push({file:name,frames:pcm.length/2,peak,rms:Math.sqrt(sum/pcm.length),sha256:createHash('sha256').update(b).digest('hex')});
 }
-for(const [id,s] of [...Object.entries(graph.states),...Object.entries(graph.bridges??{})]){
+for(const [id,s] of [...Object.entries(graph.states),...Object.entries(graph.bridges??{}),...Object.entries(graph.stingers??{})]){
  const frames=Math.round(sr*s.duration);
  const raw=execFileSync('sox',['-R',path.join(root,'generated',(s.id??id)+'.wav'),'-t','raw','-e','floating-point','-b','32','-L','-c','2','-r',String(sr),'-','pad','0',frames+'s','trim','0',frames+'s'],{maxBuffer:32*1024*1024});
  if(raw.length!==frames*8)throw Error('Wrong musical sample grid for '+id);
