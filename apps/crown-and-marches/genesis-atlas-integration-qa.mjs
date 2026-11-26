@@ -15,6 +15,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 try{
  const exemplars=packExemplars(await loadLibrary(join(tmpdir(),'crown-dem-library'))),payload=join(output,'frozen-exemplars.json');writeFileSync(payload,JSON.stringify(exemplars));
  activateWorld({worldSize:'standard'});const m=generate('living-atlas-standard-continent',3,'continent',{revision:'genesis-3.4.0',detail:4,approach:'field',exemplars});records.push({continent:{exits:auditMajorExits(m,192,128),repair:auditExitRepair(m,192,128),components:auditQuotientComponents(m,192,128),physical:auditPhysicalEdges(m,192,128)}});save();
+ for(const shape of ['classic','continent','continents','archipelago','inland-sea','isolated','straits']){const map=shape==='continent'?m:generate('living-atlas-standard-'+shape,3,shape,{revision:'genesis-3.4.0',detail:4,approach:'field',exemplars}),before=map.down.slice(),audit=auditQuotientComponents(map,192,128);assert.ok(before.every((x,i)=>x===map.down[i]),'audit mutated Genesis');for(const candidate of audit.results.filter(x=>x.candidate)){assert.ok(candidate.acyclic);assert.equal(candidate.visited,24576);assert.ok(candidate.remaining<audit.original);assert.ok(candidate.changes.every(x=>x.evidence));}records.push({componentTrial:{shape,audit}});save();}
  let ready=false;for(let i=0;i<50;i++){try{if((await fetch(url)).ok){ready=true;break;}}catch{}await sleep(200);}assert.ok(ready,'site unavailable');
  let failed=0;
  for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
