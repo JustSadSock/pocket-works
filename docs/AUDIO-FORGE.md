@@ -537,3 +537,22 @@ The director checks the maximum sum of source counts for all allowed graph edges
 The score-state recipe also renders eight independently mixed base/detail WAVs (two per state) while preserving all previous control assets. The graph's `adaptive` entries describe these files; application code loads the base files into `buffers` instead of the original full mixes and maps each detail file to `layers`. The new adaptive-journey WAV is an offline storyboard using the actual layer gain law and the existing authored bridges, not a native browser recording. Independent normalization of the stem groups intentionally changes their balance relative to the original full mix; artistic approval is still needed. The current browser fixture uses distinct tones to verify the two state-specific layers, muting within the destination, silence during the bridge, and the four-slot music quota. Seven score regression scenarios were checked with mock nodes before native CI.
 
 At 2d5614b native ducking recovered 9.11866/9.11863 dB in Chromium/WebKit, consistent with the configured gain 0.35. Both browsers passed, including the 4096-source stress test. The prior Validate health failure is resolved; remaining platform matrix checks must complete separately.
+
+### Verified authored score packages
+
+`score-pack.js` loads the version-1 graph and metrics emitted by the Forge. It selects base/detail stems by default, or original full mixes with adaptive:false, plus authored bridge assets. It checks relative asset paths, frame counts, exact 48 kHz stereo PCM16 WAV headers and SHA-256 against the supplied trusted metrics. It converts PCM to AudioBuffers at the authored 48 kHz grid even when the device AudioContext runs at 44.1 kHz. This avoids a decodeAudioData resampling round-off at bar boundaries. Requires a secure context for Web Crypto (localhost or HTTPS). The manifest and metrics themselves must come from a trusted source; hashes are integrity checks, not signatures.
+
+```js
+const score = await loadForgeScore({
+  context, graph, metrics, baseUrl: new URL('audio/score/', location.href).href,
+  maxDecodedBytes: 128*1024*1024, signal
+});
+const scene = createBudgetedAudioScene({
+  context, budget:{total:18,events:4,music:4}, families, score
+});
+await scene.music.start();
+```
+
+The loader preflights unique source PCM and two worst-case bridge composite groups before any fetch, then downloads sequentially and verifies each payload. It accepts only the Forge canonical 44-byte header, not arbitrary WAV containers or compressed formats. It does not load stingers or the offline audition mixes. It bounds retained PCM estimates, not network/decoder transient allocations or overall browser process memory. On failed or cancelled load no usable partial score is returned; caller can retry. At 394004a the actual 12-file adaptive pack has 48,143,472 bytes base PCM and 81,086,640 bytes reserved including bridge composites. A local Node 22.16 check of the exact repository loader against that downloaded CI artifact passed all 12 checks, rejected a smaller memory quota before fetching and rejected deliberately corrupted audio. The context was mocked; actual browser playback is separately tested.
+
+The browser matrix now depends on the same-run platform-smoke output and downloads its generated score artifact. A second browser test loads the actual authored score into the budgeted scene, verifies memory parity, plays peace → tension → battle → aftermath → peace, measures output RMS and checks the four-voice cap and unchanged transport clocks while varying intensity. Previous synthetic spectral tests are retained. The authored test is a technical integration proof, not a recording, artistic approval or an integration into any game. At 394004a all four primary workflows passed, including 12/12 Validate jobs, both synthetic unified composer browser checks, and all 22 authored WAV hashes.
