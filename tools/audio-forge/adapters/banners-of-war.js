@@ -95,7 +95,13 @@ export function createBannersAudioAdapter({context,destination=context?.destinat
     const tickEpoch=epoch;
     await scene.world.reconcile({listener:{x:0,y:0},sources:active?Object.entries(ambient).map(([id,buffer])=>({id,buffer,position:{x:0,y:0},volume:levels[id]})):[]});
     if(closed||tickEpoch!==epoch)return false;
-    if(!active||!playing){last=null;scene.music?.update();return true;}
+    if(!active||!playing){
+     last=null;scene.music?.update();
+     // The simulation normally stops when a public battle result appears.
+     // Keep the outcome transition/stinger alive while the result screen is visible.
+     if(active&&(outcome||result!==null))updateMusic(deriveBattleMusic({F,s,cam,audible}),t,outcome);
+     return true;
+    }
     if(scene.music&&!scene.music.state.current)await scene.music.start();
     if(closed||tickEpoch!==epoch)return false;
     const elapsed=last===null?0:t-last;
