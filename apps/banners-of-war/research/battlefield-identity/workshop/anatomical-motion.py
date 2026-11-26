@@ -47,7 +47,7 @@ audit["hands"]=hand_data
 save()
 # Source geometry inventory: hide only identified obsolete equipment, not
 # unknown body parts. This also catches a visible stale spear or its blade.
-audit["sourceObjects"]=[{"name":o.name,"type":o.type,"hidden":o.hide_render,"parent":o.parent.name if o.parent else None,"bone":o.parent_bone} for o in sc.objects]
+audit["sourceObjects"]=[{"name":o.name,"type":o.type,"hidden":o.hide_render,"parent":o.parent.name if o.parent else None,"bone":o.parent_bone,"bounds":[vec(o.matrix_world@Vector(v)) for v in o.bound_box] if o.type=="MESH" else None} for o in sc.objects]
 obsolete=[o for o in sc.objects if o.type=="MESH" and o.name.startswith(("Ash spear","Forged spear","Sword grip","Sword crossguard","Forged sword blade","Curved shield","Shield rawhide","Shield boss"))]
 for o in obsolete:o.hide_render=True
 audit["retiredEquipment"]=[o.name for o in obsolete];save()
@@ -226,6 +226,10 @@ def inspect_contacts():
     for name,q in posed_hands.items():
         for o in q["objects"]:
             tree,_,tris=bvh(o);bodies.append((tree,[name]*len(tris)))
+    for o in sc.objects:
+        if o.type!="MESH" or o.hide_render or o in core or o in swordParts or o in shieldParts or o.name.startswith("Posed leather glove"):continue
+        if o.name.startswith(("Curved forged breastplate","Kettle hat","Rolled rim")):
+            tree,_,tris=bvh(o);bodies.append((tree,["rigid armour: "+o.name]*len(tris)))
     result=[];rightNames={b.name for b in desc(R)};leftNames={b.name for b in desc(L)}
     for o in swordParts+shieldParts:
         tree,_,_=bvh(o);allowed=rightNames if o==grip else leftNames if o==handle else {LF.name} if o==strap else set()
@@ -299,7 +303,7 @@ def feet_audit():
             finally:ev.to_mesh_clear()
         a=point(upper)-point(lower);b=point(end)-point(lower)
         result.append({"kneeDegrees":math.degrees(a.angle(b)),"lowestSurfaceZ":min((v.z for v in points),default=None),"toeYRange":[min(v.y for v in points),max(v.y for v in points)] if points else None,"footVertices":len(points)})
-    return {"feet":result,"hipsZ":point(hips).z,"headZ":point(bone("Head")).z}
+    return {"feet":result,"hipsZ":point(hips).z,"headZ":point(bone("Head")).z,"sourceGroundZ":z0,"wrists":[{"hand":h.name,"forearmToPalmDegrees":math.degrees((point(h)-point(f)).angle(hand_frame(h)[0][2]))} for f,h in ((RF,R),(LF,L))]}
 def render(name,view,target=None,scale=3.4):
     t=Vector(target if target is not None else (0,0,1.02))
     offset={"front":(0,-5,1.1),"side":(5,0,1.1),"game":(0,-5,5*math.sqrt(3)),"grip":(1,-1,.35),"back":(1,1,.3)}[view]
