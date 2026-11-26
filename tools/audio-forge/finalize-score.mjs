@@ -7,6 +7,7 @@ const root=path.resolve(process.argv[2]??'.audio-score-states');
 const graph=JSON.parse(readFileSync(path.join(root,'score-graph.json'),'utf8'));
 const sr=48000,clips=new Map(),metrics=[];
 mkdirSync(path.join(root,'states'),{recursive:true});
+mkdirSync(path.join(root,'bridges'),{recursive:true});
 function write(name,pcm){
  const b=Buffer.alloc(44+pcm.length*2);
  b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(2,22);b.writeUInt32LE(sr,24);b.writeUInt32LE(sr*4,28);b.writeUInt16LE(4,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);
@@ -18,9 +19,9 @@ function write(name,pcm){
  writeFileSync(path.join(root,name),b);
  metrics.push({file:name,frames:pcm.length/2,peak,rms:Math.sqrt(sum/pcm.length),sha256:createHash('sha256').update(b).digest('hex')});
 }
-for(const [id,s] of Object.entries(graph.states)){
+for(const [id,s] of [...Object.entries(graph.states),...Object.entries(graph.bridges??{})]){
  const frames=Math.round(sr*s.duration);
- const raw=execFileSync('sox',['-R',path.join(root,'generated',id+'.wav'),'-t','raw','-e','floating-point','-b','32','-L','-c','2','-r',String(sr),'-','pad','0',frames+'s','trim','0',frames+'s'],{maxBuffer:32*1024*1024});
+ const raw=execFileSync('sox',['-R',path.join(root,'generated',(s.id??id)+'.wav'),'-t','raw','-e','floating-point','-b','32','-L','-c','2','-r',String(sr),'-','pad','0',frames+'s','trim','0',frames+'s'],{maxBuffer:32*1024*1024});
  if(raw.length!==frames*8)throw Error('Wrong musical sample grid for '+id);
  const pcm=new Float32Array(frames*2);
  for(let i=0;i<frames;i++){
@@ -48,5 +49,26 @@ for(const [index,id] of order.entries()){
  preview=joined;timeline.push({state:id,start:base/sr});
 }
 write('state-journey.wav',preview);
+const bridgeTimeline=[{state:'peace',start:0}];
+let withBridges=clips.get('peace').slice();
+function append(next,overlapFrames){
+ const base=withBridges.length/2-overlapFrames;
+ const joined=new Float32Array(withBridges.length+next.length-overlapFrames*2);
+ joined.set(withBridges);
+ for(let i=0;i<next.length/2;i++){
+  const w=overlapFrames?Math.min(1,i/Math.max(1,overlapFrames-1)):1;
+  for(let c=0;c<2;c++){const k=(base+i)*2+c;joined[k]=(1-w)*joined[k]+w*next[i*2+c];}
+ }
+ withBridges=joined;return base/sr;
+}
+for(let i=1;i<order.length;i++){
+ const id=order[i],key=order[i-1]+':'+id,bridge=clips.get(key);
+ if(!bridge)throw Error('Missing authored bridge '+key);
+ bridgeTimeline.push({bridge:key,start:append(bridge,overlap)});
+ const target=i===order.length-1?clips.get(id).slice(0,Math.round(sr*60/graph.states.peace.tempo*3*3)*2):clips.get(id);
+ bridgeTimeline.push({state:id,start:append(target,0)});
+}
+for(let i=0;i<2400;i++){const k=withBridges.length/2-1-i;for(let c=0;c<2;c++)withBridges[k*2+c]*=i/2399;}
+write('bridge-journey.wav',withBridges);
 writeFileSync(path.join(root,'score-graph.json'),JSON.stringify(graph,null,2)+'\n');
-writeFileSync(path.join(root,'score-metrics.json'),JSON.stringify({metrics,timeline,preview:'Offline sequence; three-tenths-second overlap, not runtime capture'},null,2)+'\n');
+writeFileSync(path.join(root,'score-metrics.json'),JSON.stringify({metrics,timeline,bridgeTimeline,preview:'Offline sequence; three-tenths-second overlap, not runtime capture'},null,2)+'\n');
