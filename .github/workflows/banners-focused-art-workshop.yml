@@ -12,37 +12,30 @@ concurrency:
   group: banners-focused-art-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  character:
+  static-art:
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 60
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
         include:
-          - role: sword
+          - label: hand-library
+            script: hand-library.py
             motion: static-gear
-            label: static-gear
-          - role: sword
-            motion: march
-            label: sword-march
-          - role: sword
-            motion: strike
-            label: sword-strike
-          - role: archer
+          - label: sword-static
+            script: anatomical-motion.py
+            motion: static-gear
+          - label: archer-static
+            script: archer-motion.py
             motion: anchor
-            label: archer-static
-          - role: retarget
-            motion: retarget-march
-            label: retarget
-    defaults:
-      run:
-        shell: bash
     env:
       BLENDER_VERSION: '5.2.1'
-      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/focused-${{ matrix.label }}
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/reset-${{ matrix.label }}
       BOW_MOTION_REV: '0'
-      BOW_WORKSHOP_JOB: ${{ matrix.role }}
       BOW_WORKSHOP_MOTION: ${{ matrix.motion }}
     steps:
       - uses: actions/checkout@v4
@@ -71,75 +64,46 @@ jobs:
           test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
-      - name: Verify articulated hand source
+      - name: Acquire accepted anatomical hand
         run: python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-hand-source.py
-      - name: Resolve actual research motion capture source
-        if: matrix.role == 'retarget'
+      - name: Render static candidate only
         run: |
-          python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-mocap.py
-          python3 - <<'PY'
-          import re,json,os
-          from pathlib import Path
-          raw=Path('/tmp/bow-cmu-35_01.bvh').read_text(encoding='utf8')
-          header,motion=raw.split('MOTION',1)
-          tokens=re.findall(r'[{}]|[^\s{}]+',header)
-          assert tokens[0]=='HIERARCHY' and tokens[1]=='ROOT' and 'CHANNELS' in tokens and 'Frames:' in motion
-          out=Path(os.environ['BOW_ART_OUTPUT']);(out/'bvh-format.json').write_text(json.dumps({'firstTokens':tokens[:28],'motionHeader':motion.splitlines()[:4],'tokenCount':len(tokens)},indent=2))
-          PY
-          echo "BOW_WORKSHOP_MOCAP=/tmp/bow-cmu-35_01.bvh" >> "$GITHUB_ENV"
-      - name: Single-character anatomical probe
-        run: |
-          mkdir -p "$BOW_ART_OUTPUT"
-          python3 -m py_compile apps/banners-of-war/research/battlefield-identity/workshop/{sword-motion,anatomical-motion,articulated-hand,archer-motion,retarget-walk,review-cameras,encode-probes}.py
+          python3 -m compileall -q apps/banners-of-war/research/battlefield-identity/workshop/
           source="$(find /tmp/bow-source -name spearman.blend -print -quit)"
           test -n "$source"
-          script="apps/banners-of-war/research/battlefield-identity/workshop/anatomical-motion.py"
-          if [ "$BOW_WORKSHOP_JOB" = archer ]; then script="apps/banners-of-war/research/battlefield-identity/workshop/archer-motion.py"; fi
-          "$BLENDER" --background --disable-autoexec "$source" --threads 2 --python-exit-code 1 --python "$script"
-      - name: Encode synchronized native six-view review cycles even on contact violations
-        if: always()
-        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/encode-probes.py
+          "$BLENDER" --background --disable-autoexec "$source" --threads 2 --python-exit-code 1 --python apps/banners-of-war/research/battlefield-identity/workshop/${{ matrix.script }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-iv-${{ matrix.label }}
-          path: quality-artifacts/focused-${{ matrix.label }}
+          name: reference-reset-${{ matrix.label }}
+          path: quality-artifacts/reset-${{ matrix.label }}
           if-no-files-found: error
           retention-days: 14
 
-  relief:
+  native-animation:
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 30
+    timeout-minutes: 35
     defaults:
       run:
         shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        clip: [walk, run, slash, guard, transition]
     env:
       BLENDER_VERSION: '5.2.1'
-      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/focused-relief
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/reset-motion-${{ matrix.clip }}
+      BOW_MOTION_REV: '0'
+      BOW_REFERENCE_MOTION: ${{ matrix.clip }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: 45693373840
-          artifact-ids: 15059369113
-          path: /tmp/bow-art-baseline
-      - name: Restore accepted scanned ground materials
-        run: |
-          mkdir -p "$BOW_ART_OUTPUT"
-          python3 - <<'PY'
-          import os,shutil
-          from pathlib import Path
-          root=Path('/tmp/bow-art-baseline');out=Path(os.environ['BOW_ART_OUTPUT'])
-          for n in ['grass.png','sparse.png','road.png','stone.png','terrain-provenance.json']:
-              f=list(root.rglob(n));assert len(f)==1,n;shutil.copyfile(f[0],out/n)
-          PY
-      - name: Export fixed physical terrain
-        run: node apps/banners-of-war/research/battlefield-identity/workshop/relief-patch.mjs
+          run-id: 45672121448
+          artifact-ids: 15050357382
+          path: /tmp/bow-source
       - name: Prepare verified Blender
         run: |
           apt-get update
@@ -159,26 +123,162 @@ jobs:
           test "$verified" = true
           tar -xf "$archive"
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
-      - name: Restore original rejected relief for matched review
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: 45740395351
-          artifact-ids: 15081585122
-          path: /tmp/bow-relief-control
-      - name: Verify photographic material source scans
-        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-relief-scans.py
-      - name: Render one focused landscape
+      - name: Download and hash pinned CC0 source release
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-animation-source.py
+      - name: Compare original and unarmed retarget
         run: |
-          python3 -m py_compile apps/banners-of-war/research/battlefield-identity/workshop/relief-render.py
-          "$BLENDER" --background --factory-startup --disable-autoexec --threads 4 --python-exit-code 1 --python apps/banners-of-war/research/battlefield-identity/workshop/relief-render.py
-      - name: Compare same physical patch with Workshop II original
-        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/compare-relief.py
+          source="$(find /tmp/bow-source -name spearman.blend -print -quit)"
+          test -n "$source"
+          "$BLENDER" --background --disable-autoexec "$source" --threads 2 --python-exit-code 1 --python apps/banners-of-war/research/battlefield-identity/workshop/reference-motion.py
+      - name: Encode short synchronized source comparison
+        if: always()
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/encode-reference.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-iv-historic-relief
-          path: quality-artifacts/focused-relief
+          name: reference-reset-motion-${{ matrix.clip }}
+          path: quality-artifacts/reset-motion-${{ matrix.clip }}
+          if-no-files-found: error
+          retention-days: 14
+
+  gait-history:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    env:
+      BLENDER_VERSION: '5.2.1'
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/reset-gait-history
+      BOW_MOTION_REV: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45672121448
+          artifact-ids: 15050357382
+          path: /tmp/bow-source
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45797022162
+          artifact-ids: 15109641527,15107240174
+          path: /tmp/previous-gaits
+      - name: Prepare verified Blender
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil xz-utils fonts-dejavu-core ffmpeg libgl1 libx11-6 libxi6 libxrender1
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          verified=false
+          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" blender.sha256
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          test "$verified" = true
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Read original IV gait evidence
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/review-previous-gaits.py
+      - name: Resolve original CMU capture
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-mocap.py
+      - name: Compare original capture support travel
+        run: |
+          source="$(find /tmp/bow-source -name spearman.blend -print -quit)"
+          test -n "$source"
+          "$BLENDER" --background --disable-autoexec "$source" --threads 2 --python-exit-code 1 --python apps/banners-of-war/research/battlefield-identity/workshop/cmu-source-slip.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reference-reset-gait-history
+          path: quality-artifacts/reset-gait-history
+          if-no-files-found: error
+          retention-days: 14
+
+  nature-reference:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        view: [A, B]
+    env:
+      BLENDER_VERSION: '5.2.1'
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/reset-nature-${{ matrix.view }}
+      BOW_NATURE_VIEW: ${{ matrix.view }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45693373840
+          artifact-ids: 15059369113
+          path: /tmp/bow-art-baseline
+      - name: Restore known scanned surfaces and authoritative terrain
+        run: |
+          mkdir -p "$BOW_ART_OUTPUT"
+          python3 - <<'PY'
+          import os,shutil
+          from pathlib import Path
+          root=Path('/tmp/bow-art-baseline');out=Path(os.environ['BOW_ART_OUTPUT'])
+          for n in ['grass.png','sparse.png','road.png','stone.png','terrain-provenance.json']:
+              f=list(root.rglob(n));assert len(f)==1,n;shutil.copyfile(f[0],out/n)
+          PY
+          node apps/banners-of-war/research/battlefield-identity/workshop/relief-patch.mjs
+      - name: Acquire verified CC0 scanned nature sources
+        run: |
+          python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-relief-scans.py
+          python3 apps/banners-of-war/research/battlefield-identity/workshop/fetch-nature.py
+      - name: Prepare verified Blender
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil xz-utils fonts-dejavu-core ffmpeg libgl1 libx11-6 libxi6 libxrender1
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          verified=false
+          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" blender.sha256
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          test "$verified" = true
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Produce editable artistic reference
+        run: |
+          "$BLENDER" --background --factory-startup --disable-autoexec --threads 4 --python-exit-code 1 --python apps/banners-of-war/research/battlefield-identity/workshop/reference-landscape.py
+      - name: Art Forge licensed model round trip in isolated staging
+        if: matrix.view == 'A'
+        run: python3 apps/banners-of-war/research/battlefield-identity/workshop/forge-reference-source.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reference-reset-nature-${{ matrix.view }}
+          path: |
+            quality-artifacts/reset-nature-${{ matrix.view }}/*.png
+            quality-artifacts/reset-nature-${{ matrix.view }}/*.blend
+            quality-artifacts/reset-nature-${{ matrix.view }}/*.json
+            quality-artifacts/reset-nature-${{ matrix.view }}/*.log
+            quality-artifacts/reset-nature-${{ matrix.view }}/*.glb
+            quality-artifacts/reset-nature-${{ matrix.view }}/nature/*.json
           if-no-files-found: error
           retention-days: 14
 
@@ -258,13 +358,17 @@ jobs:
             ) || echo "Runner failure for $pair" >> "$parent/runner-failures.txt"
           done
           BOW_PAIR_ROOT="$parent" python3 "$root/apps/banners-of-war/research/battlefield-identity/workshop/paired-summary.py"
+      - name: Analyze frame stages even when acceptance fails
+        if: always()
+        run: BOW_PAIR_ROOT="$(dirname "$BOW_ART_OUTPUT")" python3 apps/banners-of-war/research/battlefield-identity/workshop/profile-stages.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-iv-paired-${{ matrix.atlas }}
+          name: reference-reset-paired-${{ matrix.atlas }}
           path: |
             quality-artifacts/paired-${{ matrix.atlas }}/*/paired-result.json
             quality-artifacts/paired-${{ matrix.atlas }}/*/runtime-sha256.txt
+            quality-artifacts/paired-${{ matrix.atlas }}/*/canvas-readback-diagnostic.json
             quality-artifacts/paired-${{ matrix.atlas }}/*/source-provenance.json
             quality-artifacts/paired-${{ matrix.atlas }}/*/difference-*.png
             quality-artifacts/paired-${{ matrix.atlas }}/*summary.json
