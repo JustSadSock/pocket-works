@@ -24,6 +24,7 @@ function drape(m,body,near,style,outfit){
  for(let i=0;i<p.indices.length;i+=3)[p.indices[i+1],p.indices[i+2]]=[p.indices[i+2],p.indices[i+1]];
  return normals(p)
 }
+export {part,push,weights,normals,compact,locator,helper};
 export function humanCandidate(source,{style='historical-miniature',outfit='citizen',compactMesh=false}={}){
  let m=structuredClone(source),body=m.parts[0],near=locator(body),H=Math.max(...body.positions.filter((_,i)=>i%3===1)),wrist=m.joints.find(j=>j.name==='wrist.L')?.position??[.6,1.2,0],handX=Math.abs(wrist[0])*.97;
  let protectedVertex=v=>v[1]>H*.81||Math.abs(v[0])>handX;
