@@ -129,7 +129,55 @@ export function assertTailoredSections(sections,id,H){
  }
  return true;
 }
-function productionTorso(ctx,id,style,method,color,armored,revision=5){
+// Fit the lower skirt to the actual dressed thigh surfaces, not merely
+// the anatomical body. Interpolate both garment stations and lower-layer
+// triangle intersections at common heights. Keep the waist ring fixed.
+function fitSkirtOverTrousers(p,stations,sections,N,lower,thickness){
+ const levels=sections.slice(0,3).map(s=>s.y),ys=new Set(levels);
+ for(const q of lower)for(let i=1;i<q.positions.length;i+=3){const y=q.positions[i];if(y>levels[0]&&y<levels[2])ys.add(y)}
+ for(let i=0;i<32;i++)ys.add(levels[0]+(levels[2]-levels[0])*i/31);
+ const samples=[...ys].sort((a,b)=>a-b).map(y=>{
+   const points=[];
+   for(const q of lower){
+     const seen=new Set();
+     for(let i=0;i<q.indices.length;i+=3)for(let k=0;k<3;k++){
+       const a=q.indices[i+k],b=q.indices[i+(k+1)%3],key=a<b?a+':'+b:b+':'+a;
+       if(seen.has(key))continue;seen.add(key);
+       const v=q.positions.slice(3*a,3*a+3),w=q.positions.slice(3*b,3*b+3),dy=w[1]-v[1];
+       if(Math.abs(dy)>1e-9&&(v[1]-y)*(w[1]-y)<=0)points.push(lerp(v,w,(y-v[1])/dy));
+     }
+   }
+   return {y,points};
+ }).filter(s=>s.points.length);
+ const original=sections.slice(0,3).map(s=>s.radius.slice());
+ const margin=thickness+.009;
+ const fit=(sample)=>{
+   const i=sample.y<=levels[1]?0:1,t=(sample.y-levels[i])/(levels[i+1]-levels[i]),a=sections[i],b=sections[i+1],center=lerp(a.center,b.center,t),r=lerp(a.radius,b.radius,t),fold=(1-t)*a.foldAmplitude+t*b.foldAmplitude;
+   const effective=r.map(x=>Math.max(.01,x*Math.cos(Math.PI/N)-margin-fold));
+   const ratio=Math.max(...sample.points.map(v=>Math.hypot((v[0]-center[0])/effective[0],(v[2]-center[1])/effective[1])));
+   return {i,t,ratio,r};
+ };
+ const before=Math.max(1,...samples.map(s=>fit(s).ratio));
+ for(let pass=0;pass<4;pass++)for(const sample of samples){
+   const {i,t,ratio,r}=fit(sample);if(ratio<=1.001)continue;
+   const extra=r.map(x=>x*(ratio-1)*1.025);
+   if(i===0){for(let k=0;k<2;k++){sections[0].radius[k]+=extra[k];sections[1].radius[k]+=extra[k]}}
+   else if(1-t>.03)for(let k=0;k<2;k++)sections[1].radius[k]+=extra[k]/(1-t);
+ }
+ const after=Math.max(1,...samples.map(s=>fit(s).ratio));
+ if(after>1.01)throw Error('Skirt layer clearance cannot be achieved with fixed waist: '+after);
+ for(let i=0;i<2;i++){
+   const delta=sections[i].radius.map((v,k)=>v-original[i][k]),ring=stations[i],old=ring.rad;
+   ring.rad=a=>old(a).map((v,k)=>v+delta[k]);
+   for(let k=0;k<N;k++){
+     const a=k*2*Math.PI/N,idx=(i*N+k)*3;
+     p.positions[idx]+=delta[0]*Math.cos(a);p.positions[idx+2]-=delta[1]*Math.sin(a);
+   }
+ }
+ return {sampleCount:samples.length,points:samples.reduce((n,s)=>n+s.points.length,0),before,after,original,adjusted:sections.slice(0,3).map(s=>s.radius.slice()),note:'Conservative rest-pose section envelope including lining and fold allowance; not a dynamic or triangle-intersection proof.'};
+}
+const longGarment=id=>id==='tunic'||id==='quilted';
+function productionTorso(ctx,id,style,method,color,armored,revision=5,lower=[]){
  const {H,J,vs}=ctx,r=garmentRules[id],low=style==='low-poly',armor=id==='quilted',under=id==='shirt'&&armored,
        N=low?12:32,neck=J('neck01').position,hip=J('root').position[1],waist=J('spine03').position[1]-.04,
        shoulder=J('upperarm01.L').position[1],gap=under?.014:armor?.064:.030,
@@ -182,7 +230,7 @@ function productionTorso(ctx,id,style,method,color,armored,revision=5){
      push(p,[cx+f[0]*Math.cos(a),y+wave,cz-f[1]*Math.sin(a)],ws);
    }
  }
- if(revision===6){assertTailoredSections(sections,id,H);Object.assign(p.pattern,{revision:6,sections,ringCount:N,waistIndex:2});}
+ if(revision===6){const overlapFit=longGarment(id)&&lower.length?fitSkirtOverTrousers(p,stations,sections,N,lower,r.thickness):null;assertTailoredSections(sections,id,H);Object.assign(p.pattern,{revision:6,sections,ringCount:N,waistIndex:2,overlapFit});}
  const half=low?2:4,mod=k=>(k+N)%N,skip=new Set();
  for(const center of [0,N/2])for(let k=-half;k<half;k++)skip.add(mod(center+k));
  for(let i=0;i<levels.length-1;i++)for(let k=0;k<N;k++){
@@ -309,8 +357,9 @@ function identityBody(ctx,id){let {body,H,J}=ctx,eye=J('eye.L').position,head=J(
  p.color=id.skin??body.color;return normals(p)}
 export function draftGarments(source,{style='historical-miniature',kit='tunic',method='hybrid',identity={},surfaceRevision=4}={}){
  if(!kits[kit]||!['pattern','template','hybrid'].includes(method))throw Error('Unknown garment specification');let ctx=context(source),colors=identity.colors??{},parts=[],ids=kits[kit];
+ const lower=surfaceRevision===6&&ids.includes('trousers')?trousers(ctx,style,method,materials[colors.trousers??'charcoal'],surfaceRevision):[];
  for(let id of ids){let color=materials[colors[id]??(id==='quilted'?'charcoal':id==='cloak'?'madder':id==='trousers'?'charcoal':id==='shirt'?'linen':'wool')];if(!color)throw Error('Unknown garment material');
- if(['shirt','tunic','quilted'].includes(id))parts.push(...(surfaceRevision>=5?productionTorso(ctx,id,style,method,color,ids.includes('quilted'),surfaceRevision):torso(ctx,id,style,method,color)));else if(id==='trousers')parts.push(...trousers(ctx,style,method,color,surfaceRevision));else if(id==='boots')parts.push(...boots(ctx,style,surfaceRevision));else if(id==='cloak')parts.push(cape(ctx,style,color))}
+ if(['shirt','tunic','quilted'].includes(id))parts.push(...(surfaceRevision>=5?productionTorso(ctx,id,style,method,color,ids.includes('quilted'),surfaceRevision,lower):torso(ctx,id,style,method,color)));else if(id==='trousers')parts.push(...(lower.length?lower:trousers(ctx,style,method,color,surfaceRevision)));else if(id==='boots')parts.push(...boots(ctx,style,surfaceRevision));else if(id==='cloak')parts.push(cape(ctx,style,color))}
  if(ids.includes('belt'))parts.push(...waist(ctx,parts,ids.includes('bag'),surfaceRevision));parts.push(...headwear(ctx,style,identity,ids.includes('helmet'),surfaceRevision));return parts
 }
 // Bind one authored source template to stable anatomical indices, then
