@@ -2,12 +2,12 @@
 import {watersMaterial} from './genesis-waters.mjs';
 const C=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),L=(a,b,t)=>a+(b-a)*t,S=t=>{t=C(t);return t*t*(3-2*t)},mix=(a,b,t)=>a.map((v,i)=>L(v,b[i],C(t)));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-export function reachRibbons(g,bounds,{vertical,threshold=25,allow=null,overview=false}={}){
+export function reachRibbons(g,bounds,{vertical,threshold=25,allow=null,overview=false,continuous=false}={}){
  const [x0,y0,x1,y1]=bounds,r=g.detail,w=g.width,h=g.height,tiles=new Map(),nodes=new Map(),edges=new Map(),incoming=new Map(),pad=3;
  const allowed=i=>i>=0&&i<w*h&&(!allow||allow(i%w/r,Math.floor(i/w)/r));
  const wet=i=>!!g.lakeWater?.[i]||!g.land[i],flow=i=>g.flow[i]/(r*r);
  const get=i=>{let p=nodes.get(i);if(p)return p;const x=i%w/r,y=Math.floor(i/w)/r,bed=g.bed[i],level=g.lakeId?.[i]?g.lakeLevels[g.lakeId[i]]:!g.land[i]?.12:bed;p={i,x,y,bed,z:vertical(level)+.028,q:flow(i)};nodes.set(i,p);return p;};
- const width=q=>C(.013+.014*Math.log2(Math.max(25,q)/25),.013,.105);
+ const width=q=>continuous?C(.012+.012*Math.log2(Math.max(25,q)/25),.012,.087):C(.013+.014*Math.log2(Math.max(25,q)/25),.013,.105);
  for(let y=Math.max(0,Math.floor((y0-pad)*r));y<=Math.min(h-1,Math.ceil((y1+pad)*r));y++)for(let x=Math.max(0,Math.floor((x0-pad)*r));x<=Math.min(w-1,Math.ceil((x1+pad)*r));x++){
  const i=y*w+x;if(!allowed(i)||!g.land[i]||flow(i)<threshold)continue;const j=g.down[i];if(!allowed(j)||i===j||wet(i)&&wet(j))continue;edges.set(i,j);const inc=incoming.get(j)??[];inc.push(i);incoming.set(j,inc);get(i);get(j);}
  const paths=[],used=new Set(),start=i=>wet(i)||(incoming.get(i)?.length??0)!==1;
@@ -30,7 +30,7 @@ export function reachRibbons(g,bounds,{vertical,threshold=25,allow=null,overview
  const sections=[];for(let k=0;k<samples.length;k++){const p=samples[k],a=samples[Math.max(0,k-1)],b=samples[Math.min(samples.length-1,k+1)],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;sections.push({p,nx:-dy/len,ny:dx/len,width:width(p.q)});}
  // Shared cross sections are reused by adjacent quads, so reach turns have
  // no independent edge normals. Junction disks cover divergent tributaries.
- const pair=(s,expand=1)=>[-1,1].map(side=>{const taper=s.p.water?.72:1,x=s.p.x+side*s.nx*s.width*expand*taper,y=s.p.y+side*s.ny*s.width*expand*taper,z=s.p.water?s.p.z-.018:Math.max(s.p.z,vertical(bedAt(x,y))+.028);return {x,y,z,...(s.p.water?{color:g.land[s.p.i]?[.31,.44,.45]:[.25,.37,.40]}:{})};});
+ const pair=(s,expand=1)=>[-1,1].map(side=>{const taper=s.p.water?(continuous?.86:.72):1;let x=s.p.x+side*s.nx*s.width*expand*taper,y=s.p.y+side*s.ny*s.width*expand*taper;if(continuous&&allow&&!allow(x,y)){x=s.p.x;y=s.p.y;}const z=s.p.water?s.p.z-.018:Math.max(s.p.z,vertical(bedAt(x,y))+(continuous&&expand>1?.010:.028));if(!continuous)return {x,y,z,...(s.p.water?{color:g.land[s.p.i]?[.31,.44,.45]:[.25,.37,.40]}:{})};const moisture=g.rain?.[s.p.i]??.5,patch=noise(s.p.x*1.5,s.p.y*1.5),riverTint=.035*(patch-.5),bankTone=mix([.45,.40,.29],[.26,.39,.26],S((moisture-.25)/.5));return {x,y,z,color:s.p.water?(g.land[s.p.i]?[.31,.44,.45]:[.25,.37,.40]):expand>1?bankTone:color.map(v=>v+riverTint)};});
  for(let k=1;k<sections.length;k++){const a=sections[k-1],b=sections[k];if(!inBounds(a.p)&&!inBounds(b.p)||overview&&Math.max(a.p.q,b.p.q)<58)continue;const tile=tileFor(a.p),[p,q]=pair(a),[u,v]=pair(b);tri(tile,p,q,u,color);tri(tile,q,v,u,color);if(k%2===1)drawnEdges++;if(!overview){const [ap,aq]=pair(a,1.28),[bu,bv]=pair(b,1.28);tri(tile,ap,p,bu,bank);tri(tile,p,u,bu,bank);tri(tile,q,aq,v,bank);tri(tile,aq,bv,v,bank);}}
  for(const k of [0,sections.length-1]){const s=sections[k],p=s.p;if(!inBounds(p)||wet(p.i)||overview&&p.q<58)continue;const t=tileFor(p),radius=s.width;for(let j=0;j<8;j++){const ring=i=>{const x=p.x+Math.cos(i*Math.PI/4)*radius,y=p.y+Math.sin(i*Math.PI/4)*radius;return {x,y,z:Math.max(p.z,vertical(bedAt(x,y))+.028)};};tri(t,p,ring(j),ring(j+1),color);}junctions++;}
  }

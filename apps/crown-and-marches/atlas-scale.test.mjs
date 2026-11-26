@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {overviewMaterial,fineNormal} from './atlas-material-fields.mjs';
 import {scaleTerrainSource,clearScaleTiles} from './genesis-contours.mjs';
 const W=64,H=32,r=4,w=W*r+1,h=H*r+1,n=w*h,bed=new Float32Array(n),land=new Uint8Array(n),rain=new Float32Array(n).fill(.55);
 for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;bed[i]=.12+(x/r-8+Math.sin(y/r*.3))*.005;land[i]=+(bed[i]>.12);}
@@ -8,3 +9,5 @@ assert.equal(a.stats.tileMisses,2);assert.equal(b.stats.tileHits,1);assert.equal
 for(let y=0;y<b.rows;y++)for(let x=0;x<b.cols;x++){const i=y*b.cols+x,j=y*a.cols+x+64;for(let k=0;k<9;k++)assert.equal(b.vertices[i*9+k],a.vertices[j*9+k]);}
 clearScaleTiles(g);const again=await scaleTerrainSource(s,{}, {...options,bounds:[32,0,64,32]});assert.equal(again.stats.tileMisses,1);assert.deepEqual(b.vertices,again.vertices);assert.deepEqual(b.contours.chunks,again.contours.chunks);
 await assert.rejects(()=>scaleTerrainSource({...s,autonomous:false},{},{...options,bounds:[0,0,32,32]}));
+
+assert.ok(a.normalField.every(Number.isFinite));for(let i=0;i<a.normalField.length;i+=3)assert.ok(Math.abs(Math.hypot(a.normalField[i],a.normalField[i+1],a.normalField[i+2])-1)<1e-5);assert.deepEqual(b.normalField,again.normalField);const point={x:12,y:8,H:.48,wet:.6,fert:.5,forest:.4,slope:.4,curvature:0};assert.ok(overviewMaterial(point,.1).every(Number.isFinite));assert.notDeepEqual(overviewMaterial(point,.1),overviewMaterial({...point,slope:.01},.1));assert.ok(Math.abs(Math.hypot(...fineNormal(g,30,15,x=>x))-1)<1e-6);
