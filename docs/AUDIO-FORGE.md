@@ -308,3 +308,20 @@ A v2 manifest may contain a `samples` catalog, with paths relative to the manife
 A hybrid job can also be declared directly with type hybrid, model, sampleId and sampleMix. SoX decodes local WAV/OGG/FLAC to stereo 48 kHz float PCM; samples are trimmed or zero-padded to the procedural clip duration. The sample is RMS-matched to the synthesis before mixing (0 = all synthesis, 1 = all sample), with short boundary fades and peak protection. Ratios are coefficients, not perceived loudness percentages. Catalog paths are confined by realpath and sample hashes are checked before rendering. Search supports case-insensitive terms across title, creator, ID and tags. This is an in-memory manifest catalog, not yet a persistent global database, semantic index, or asset vault. All variants of a hybrid family currently reuse the same source sample.
 
 CI generates an original synthetic explosion fixture and renders 0/25/50/75/100% sample ratios; it uploads the source, manifest and resulting WAVs separately from musical probes. This tests the pipeline, not the naturalness of field recordings. No external recording has been acquired or independently cleared yet.
+
+### Persistent Pocket Sound Library and field recording auditions
+
+Node 22's built-in SQLite/FTS5 provides a local vault with no service or database subscription. Use a directory outside the repository for ordinary production storage.
+
+```sh
+node tools/audio-forge/library-cli.mjs /path/to/vault import /path/to/source-manifest.json
+node tools/audio-forge/library-cli.mjs /path/to/vault search rain weather
+node tools/audio-forge/library-cli.mjs /path/to/vault resolve stockholm-rain
+node tools/audio-forge/library-cli.mjs /path/to/vault export /path/to/vault/manifest.json
+```
+
+Imports use the rights and SHA-256 checks above, content-addressed objects and an SQLite transaction for the index. Identical file bytes with the same extension share storage; source bytes are verified again on resolution. IDs are immutable. FTS searches token prefixes with AND semantics across title, creator and tags. Export preserves relative object paths and does not overwrite an existing manifest. The vault is not a remote service, and an interrupted import can leave an unindexed object; garbage collection is not yet implemented.
+
+The independent field-recording-audition CI job imports three specifically reviewed public-domain Wikimedia Commons recordings. Source records are pinned to the reviewed revision, exact download URL, byte count and published SHA-1; SHA-256 is computed after retrieval and checked on vault resolution. Sources: Fg2's Nikko festival explosion recordings (revisions 1237586287 and 1151334253) and Caesar's rain/thunder recording (revision 1129569613). The importer fails closed on unavailable or changed bytes. No credentials or external AI. The field recording archive includes originals, catalog, manifest and seven dry/hybrid render WAVs. A successful import does not imply artistic acceptance.
+
+The opt-in `compensateRms: true` field reduces the level dip when mixing independent sources, with a maximum 2x gain and peak ceiling; default mixing remains unchanged. New opt-in physical models `sword-v2`, `glass-v2`, `gear`, `chain` target metallic brightness, brittle fragments and distinct mechanisms. The previous models remain as controls. Foundation CI now renders 23 files. Real recording comparisons and new effects require human listening.
