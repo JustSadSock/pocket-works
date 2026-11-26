@@ -45,3 +45,34 @@ if files:
             a=src.resize((s,s),Image.Resampling.LANCZOS);im.paste(a,(x,y+(row-s)//2),a);alpha=a.getchannel("A");metrics.append({"frame":p.stem,"size":s,"alphaBounds":alpha.getbbox(),"occupiedPixels":sum(1 for v in alpha.getdata() if v>127)})
     im.save(out/"actual-size-readability.png");(out/"readability-metrics.json").write_text(json.dumps(metrics,indent=2))
 (out/"raster-v4.json").write_text(json.dumps({"rasterMs":rasterMs,"svgCount":len(list(out.rglob("*.svg")))},indent=2))
+
+# V5 focused production candidates. No generated illustration; compose the
+# actual rasterized source meshes, preserving requested pixel sizes.
+for kit in ("tunic","warrior"):
+    board(["v5-"+kit+"-"+s+"-"+v for v in ("front","side","three-quarter") for s in ("low-poly","historical-miniature")],"v5-"+kit+"-styles.png",2)
+board(["v5-variation-"+n+"-three-quarter" for n in ("base","young-woman","older-woman","older-man","tall-heavy","short-light")],"v5-variations.png",3)
+board(["v5-component-tunic-tunic","v5-component-tunic-trousers-L","v5-component-warrior-shirt","v5-component-warrior-trousers-L"],"v5-components.png",2)
+if (out/"v5-scene-citizen-0.png").exists():
+    start=time.perf_counter();sizes=(18,32,64,128);names=("citizen","infantry","rider","elephant")
+    canvas=Image.new("RGB",(850,710),"#b3b5a3");draw=ImageDraw.Draw(canvas);metrics=[]
+    for i,size in enumerate(sizes):
+        y=18+i*170;draw.text((14,y+66),str(size)+" px",fill="#29332c")
+        for j,name in enumerate(names):
+            for frame in (0,1):
+                x=90+j*185+frame*70
+                a=Image.open(out/("v5-scene-"+name+"-"+str(frame)+".png")).convert("RGBA")
+                a=a.resize((size,size),Image.Resampling.LANCZOS);canvas.paste(a,(x,y+(145-size)//2),a)
+                alpha=a.getchannel("A");metrics.append({"type":name,"size":size,"frame":frame,"alphaBounds":alpha.getbbox(),"occupiedPixels":sum(v>127 for v in alpha.getdata())})
+            if i==0:draw.text((92+j*185,4),name,fill="#29332c")
+    # At 128 px, use separate rows for the two temporal states; avoid
+    # overlap from the compact top strips.
+    full=Image.new("RGB",(850,2*148*4+28),"#b3b5a3");d=ImageDraw.Draw(full)
+    for j,name in enumerate(names):d.text((160+j*170,5),name,fill="#29332c")
+    for i,size in enumerate(sizes):
+        for frame in (0,1):
+            y=28+(i*2+frame)*148;d.text((12,y+65),str(size)+" px / "+str(frame),fill="#29332c")
+            for j,name in enumerate(names):
+                a=Image.open(out/("v5-scene-"+name+"-"+str(frame)+".png")).convert("RGBA").resize((size,size),Image.Resampling.LANCZOS)
+                full.paste(a,(160+j*170+(128-size)//2,y+(148-size)//2),a)
+    full.save(out/"v5-tactical-scene.png")
+    (out/"v5-tactical-scene.json").write_text(json.dumps({"rasterMs":rasterMs,"compositionMs":(time.perf_counter()-start)*1000,"samples":metrics,"note":"Same declared profile, actual pixel boxes; native rider and elephant controls, no game integration."},indent=2))
