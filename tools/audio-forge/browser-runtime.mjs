@@ -183,10 +183,10 @@ try{
         check(world.stats.failures===0,'Dense activation failed');
         scene.destroy();armyAnalyser.disconnect();
         check(scene.stats.allocated===0,'Scene cleanup failed');
-        scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:2},
-          families:{impact:{variants:['impact']}},fetcher:async()=>new Response(wav),maxEventDecodedBytes:65536,maxScoreDecodedBytes:2097152,
+        scene=createBudgetedAudioScene({context:c,budget:{total:18,events:4,music:4},
+          families:{impact:{variants:['impact']}},fetcher:async()=>new Response(wav),maxEventDecodedBytes:65536,maxScoreDecodedBytes:4194304,
           stingers:{victory:{url:'victory',cooldown:2,states:['peace'],duckGain:.35,duckHold:.4}},score:{graph:{initial:'peace',states:{peace:{tempo:120,beatsPerBar:2,bars:1},battle:{tempo:90,beatsPerBar:3,bars:1}},edges:{peace:['battle'],battle:['peace']},bridges:{'peace:battle':{file:'fixture.wav'}}},
-          buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)},bridgeBuffers:{'peace:battle':make(c,sr*.5,330)}}});
+          buffers:{peace:make(c,sr,220),battle:make(c,sr*2,440)},bridgeBuffers:{'peace:battle':make(c,sr*.5,330)},layers:{peace:[{id:'peace-detail',buffer:make(c,sr,660),threshold:.1,width:.8}],battle:[{id:'battle-detail',buffer:make(c,sr*2,880),threshold:.1,width:.8}]}}});
         director=scene.music;
         const scoreBus=scene.mixer.bus('music'),scoreAnalyser=c.createAnalyser();
         scoreAnalyser.fftSize=4096;scoreAnalyser.smoothingTimeConstant=0;scoreBus.connect(scoreAnalyser);
@@ -196,7 +196,7 @@ try{
         const stingerAccepted=await scene.playStinger('victory');
         check(stingerAccepted&&!await scene.playStinger('victory'),'Stinger decode or cooldown failed');
         const memory={events:scene.stats.eventDecodedBytes,score:scene.stats.scoreReservedBytes};
-        check(memory.events>0&&memory.events<=65536&&memory.score>0&&memory.score<=2097152,'Decoded budget exceeded');
+        check(memory.events>0&&memory.events<=65536&&memory.score>0&&memory.score<=4194304,'Decoded budget exceeded');
         check(scene.stats.allocated<=18&&director.state.startTime===peaceStart,'Stinger broke music transport');
         const waitClock=async t=>{const deadline=performance.now()+3000;while(c.currentTime<t&&performance.now()<deadline)await new Promise(r=>setTimeout(r,20));check(c.currentTime>=t,'Horizontal audio clock stalled')};
         await waitClock(peaceStart+.2);
@@ -211,19 +211,30 @@ try{
         const peaceBefore=scoreBand(220),battleBefore=scoreBand(440);
         check(peaceBefore-ducked>6,'Rendered music ducking did not recover');
         check(peaceBefore>-50&&battleBefore<peaceBefore-15,'Peace spectrum invalid');
+        const quietDetail=scoreBand(660);
+        director.setIntensity(1,{fadeSeconds:.08});
+        await waitClock(c.currentTime+.25);
+        const loudDetail=scoreBand(660);
+        check(loudDetail>-50&&quietDetail<loudDetail-15&&director.state.startTime===peaceStart&&director.state.voices===2,'Peace vertical adaptation failed');
         check(director.request('battle',{quantize:'beat',fadeSeconds:.12}),'Horizontal request failed');
         const transition=director.state.transitionAt,end=director.state.transitionEnd;
-        check(scene.stats.music===2&&scene.stats.allocated<=18&&director.state.voices===2&&Math.abs((transition-peaceStart)/.5-Math.round((transition-peaceStart)/.5))<1e-6,'Horizontal scheduling invalid');
+        check(scene.stats.music===4&&scene.stats.allocated<=18&&director.state.voices===4&&Math.abs((transition-peaceStart)/.5-Math.round((transition-peaceStart)/.5))<1e-6,'Horizontal scheduling invalid');
         const bridgeUntil=director.state.bridgeUntil;
         await waitClock(end+.15);director.update();
         const bridgeDuring=scoreBand(330);
-        check(bridgeDuring>-50&&scoreBand(440)<bridgeDuring-15,'Authored bridge not audible before destination');
+        check(bridgeDuring>-50&&scoreBand(440)<bridgeDuring-15&&scoreBand(880)<bridgeDuring-15,'Authored bridge not audible before destination');
         await waitClock(bridgeUntil+.2);director.update();
         const peaceAfter=scoreBand(220),battleAfter=scoreBand(440);
-        check(director.state.current==='battle'&&director.state.voices===1&&battleAfter>-50&&peaceAfter<battleAfter-15,'Horizontal clip replacement invalid');
+        check(director.state.current==='battle'&&director.state.voices===2&&battleAfter>-50&&peaceAfter<battleAfter-15,'Horizontal clip replacement invalid');
+        const battleDetail=scoreBand(880),battleClock=director.state.startTime;
+        check(battleDetail>-50&&scoreBand(660)<battleDetail-15,'State-specific layer replacement failed');
+        director.setIntensity(0,{fadeSeconds:.08});
+        await waitClock(c.currentTime+.25);
+        const battleDetailMuted=scoreBand(880);
+        check(battleDetailMuted<battleDetail-15&&scoreBand(440)>-50&&director.state.startTime===battleClock,'Battle vertical adaptation restarted base');
         await waitClock(bridgeUntil+2.2);const bridgeAfterLoop=scoreBand(330);check(scoreBand(440)>-50&&bridgeAfterLoop<scoreBand(440)-15,'Bridge repeated inside destination loop');
         check(!await scene.playStinger('victory'),'Incompatible state accepted stinger');
-        const horizontal={stingerAccepted,memory,ducked,duckRecoveryDb:peaceBefore-ducked,bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
+        const horizontal={unified:{quietDetail:Number.isFinite(quietDetail)?quietDetail:null,loudDetail,battleDetail,battleDetailMuted:Number.isFinite(battleDetailMuted)?battleDetailMuted:null,requiredVoices:director.state.requiredVoices},stingerAccepted,memory,ducked,duckRecoveryDb:peaceBefore-ducked,bridgeDuring,bridgeAfterLoop:Number.isFinite(bridgeAfterLoop)?bridgeAfterLoop:null,bridgeUntil,peaceBefore:Number.isFinite(peaceBefore)?peaceBefore:null,battleBefore:Number.isFinite(battleBefore)?battleBefore:null,peaceAfter:Number.isFinite(peaceAfter)?peaceAfter:null,battleAfter:Number.isFinite(battleAfter)?battleAfter:null,transition,fadeSeconds:.12};
         scene.destroy();scoreAnalyser.disconnect();check(director.state.voices===0&&scene.stats.allocated===0,'Horizontal cleanup failed');
         check(!source.active&&!musicPlayer.state.active,'Stop failed');
         check(await source.start()&&await musicPlayer.start(),'Restart failed');
