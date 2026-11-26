@@ -17,6 +17,7 @@ const queues = { photo: [], video: [], smart: [], pack: [], unpack: [] };
 const messages = { photo: 'Добавь фотографии, чтобы начать.', video: 'Добавь видео, чтобы начать.', smart: 'Выбери файлы любых типов.', pack: 'Выбери файлы для архива.', unpack: 'Выбери один ZIP-архив.' };
 let mode = 'photo', busy = false, controller = null, serial = 0;
 let packed = null, unpacked = [], bundle = null;
+let activePreview = null;
 const cached = (() => { try { return JSON.parse(localStorage.getItem('pocket-works:press:prefs') || '{}'); } catch { return {}; } })();
 $('quality').value = ['high', 'balanced', 'small'].includes(cached.quality) ? cached.quality : 'balanced';
 $('format').value = ['jpeg', 'webp'].includes(cached.format) ? cached.format : 'webp';
@@ -68,7 +69,122 @@ function download(blob, name) {
 function extension(name) {
   return (name.split('.').pop() || 'FILE').toUpperCase().slice(0,4);
 }
-function fileRow({ title, sub, detail, label, error = false, onDownload, onRemove }) {
+const PREVIEW_TYPES = {
+  wav: ['audio', 'audio/wav'], wave: ['audio', 'audio/wav'], mp3: ['audio', 'audio/mpeg'],
+  m4a: ['audio', 'audio/mp4'], aac: ['audio', 'audio/aac'], flac: ['audio', 'audio/flac'],
+  ogg: ['audio', 'audio/ogg'], oga: ['audio', 'audio/ogg'], opus: ['audio', 'audio/ogg'],
+  aif: ['audio', 'audio/aiff'], aiff: ['audio', 'audio/aiff'],
+  mp4: ['video', 'video/mp4'], m4v: ['video', 'video/mp4'], mov: ['video', 'video/quicktime'],
+  webm: ['video', 'video/webm'], ogv: ['video', 'video/ogg'], mkv: ['video', 'video/x-matroska'],
+  jpg: ['image', 'image/jpeg'], jpeg: ['image', 'image/jpeg'], png: ['image', 'image/png'],
+  gif: ['image', 'image/gif'], webp: ['image', 'image/webp'], avif: ['image', 'image/avif'],
+  bmp: ['image', 'image/bmp'], heic: ['image', 'image/heic'], heif: ['image', 'image/heif'],
+  txt: ['text', 'text/plain'], md: ['text', 'text/plain'], csv: ['text', 'text/csv'],
+  tsv: ['text', 'text/tab-separated-values'], json: ['text', 'application/json'],
+  log: ['text', 'text/plain'], xml: ['text', 'application/xml'], html: ['text', 'text/plain'],
+  htm: ['text', 'text/plain'], svg: ['text', 'text/plain'], css: ['text', 'text/plain'],
+  js: ['text', 'text/plain'], yaml: ['text', 'text/plain'], yml: ['text', 'text/plain'],
+  pdf: ['other', 'application/pdf'],
+  docx: ['other', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  xlsx: ['other', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+};
+function previewType(name) {
+  const ext = name.split('/').pop().split('.').pop().toLowerCase();
+  return Object.hasOwn(PREVIEW_TYPES, ext) ? PREVIEW_TYPES[ext] : ['other', 'application/octet-stream'];
+}
+function typedBlob(item) {
+  return item.blob.slice(0, item.blob.size, previewType(item.name)[1]);
+}
+function closePreview(restoreFocus = false) {
+  const preview = activePreview;
+  if (!preview) return;
+  activePreview = null;
+  if (preview.media) {
+    preview.media.pause();
+    preview.media.removeAttribute('src');
+    preview.media.load();
+  }
+  if (preview.url) URL.revokeObjectURL(preview.url);
+  preview.panel.remove();
+  preview.button.setAttribute('aria-expanded', 'false');
+  preview.button.textContent = 'Просмотр';
+  if (restoreFocus && preview.button.isConnected) preview.button.focus();
+}
+async function openPreview(item, row, button) {
+  const alreadyOpen = activePreview?.button === button;
+  closePreview();
+  if (alreadyOpen) return;
+  const [kind, mime] = previewType(item.name);
+  const panel = element('div', 'archive-preview');
+  panel.id = 'archive-preview-content';
+  panel.setAttribute('role', 'region');
+  panel.setAttribute('aria-label', 'Предпросмотр ' + item.name);
+  const head = element('div', 'preview-head');
+  head.append(element('strong', '', 'ПРЕДПРОСМОТР · ' + extension(item.name)));
+  addButton(head, 'Закрыть', 'preview-close', () => closePreview(true));
+  const body = element('div', 'preview-body');
+  const status = element('p', 'preview-status', 'Загрузка…');
+  status.setAttribute('role', 'status');
+  const actions = element('div', 'preview-tools');
+  addButton(actions, 'Скачать файл', '', () => download(typedBlob(item), item.name.split('/').pop()));
+  const file = new File([item.blob], item.name.split('/').pop(), { type: mime });
+  try {
+    if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+      addButton(actions, 'Поделиться / открыть', '', () => {
+        navigator.share({ files: [file] }).catch(error => {
+          if (activePreview?.panel === panel && error?.name !== 'AbortError') {
+            status.textContent = 'Не удалось открыть меню устройства. Скачай файл.';
+            status.hidden = false;
+          }
+        });
+      });
+    }
+  } catch {}
+  panel.append(head, body, status, actions);
+  row.append(panel);
+  button.setAttribute('aria-expanded', 'true');
+  button.textContent = 'Скрыть';
+  const preview = activePreview = { panel, button, media: null, url: null };
+  const ready = () => { if (activePreview === preview) { status.hidden = true; } };
+  const failed = () => {
+    if (activePreview !== preview) return;
+    body.replaceChildren();
+    status.hidden = false;
+    status.textContent = 'Устройство не смогло открыть этот формат. Скачай файл или используй меню устройства.';
+    if (preview.url) { URL.revokeObjectURL(preview.url); preview.url = null; }
+  };
+  if (kind === 'other') {
+    status.textContent = 'Встроенный просмотр этого формата недоступен. Скачай файл или открой через меню устройства.';
+    return;
+  }
+  try {
+    if (kind === 'text') {
+      const limit = 128 * 1024;
+      const text = await item.blob.slice(0, limit).text();
+      if (activePreview !== preview) return;
+      body.append(element('pre', 'preview-text', text || '(Пустой файл)'));
+      if (item.blob.size > limit) status.textContent = 'Показаны первые 128 КБ. Скачай файл для полного просмотра.';
+      else ready();
+      return;
+    }
+    preview.url = URL.createObjectURL(typedBlob(item));
+    const content = element(kind === 'image' ? 'img' : kind, 'preview-media');
+    content.addEventListener('error', failed, { once: true });
+    if (kind === 'image') {
+      content.alt = item.name;
+      content.addEventListener('load', ready, { once: true });
+    } else {
+      preview.media = content;
+      content.controls = true;
+      content.preload = 'metadata';
+      if (kind === 'video') content.playsInline = true;
+      content.addEventListener('loadedmetadata', ready, { once: true });
+    }
+    body.append(content);
+    content.src = preview.url;
+  } catch { failed(); }
+}
+function fileRow({ title, sub, detail, label, error = false, onDownload, onRemove, previewItem }) {
   const row = element('li', 'file-row' + (onDownload ? ' is-done' : error ? ' is-error' : ''));
   row.append(element('span', 'file-glyph', label || extension(title)));
   const middle = element('div', 'file-detail'), nameEl = element('div', 'file-name', title);
@@ -78,12 +194,18 @@ function fileRow({ title, sub, detail, label, error = false, onDownload, onRemov
   if (detail) middle.append(element('div', 'file-sub', detail));
   row.append(middle);
   const actions = element('div', 'file-actions');
+  if (previewItem) {
+    const button = addButton(actions, 'Просмотр', 'preview-toggle', () => openPreview(previewItem, row, button), busy);
+    button.setAttribute('aria-label', 'Предпросмотр ' + title);
+    button.setAttribute('aria-expanded', 'false');
+  }
   if (onDownload) addButton(actions, '↓', 'download', onDownload).setAttribute('aria-label', 'Скачать ' + title);
   if (onRemove) addButton(actions, '×', '', onRemove, busy).setAttribute('aria-label', 'Убрать ' + title);
   row.append(actions);
   return row;
 }
 function renderQueue() {
+  closePreview();
   const items = current();
   $('queue').replaceChildren();
   $('queueCount').textContent = items.length + (items.length === 1 ? ' ФАЙЛ' : ' ФАЙЛОВ');
@@ -106,14 +228,15 @@ function renderQueue() {
       } : null
     }));
   }
+  $('archiveEntries').replaceChildren();
   $('archiveBox').classList.toggle('hidden', mode !== 'unpack' || unpacked.length === 0);
   if (mode === 'unpack' && unpacked.length) {
     $('archiveCount').textContent = unpacked.length + ' ФАЙЛОВ';
-    $('archiveEntries').replaceChildren();
     for (const item of unpacked) {
       $('archiveEntries').append(fileRow({
         title: item.name, sub: prettyBytes(item.blob.size) + ' · CRC32 ✓', label: extension(item.name),
-        onDownload: () => download(item.blob, item.name.split('/').pop())
+        previewItem: item,
+        onDownload: () => download(typedBlob(item), item.name.split('/').pop())
       }));
     }
   }
@@ -198,7 +321,9 @@ async function handleAction() {
   if (busy || !current().length) return;
   controller = new AbortController();
   const activeMode = mode, items = current();
+  closePreview();
   setBusy(true);
+  $('archiveEntries').querySelectorAll('.preview-toggle').forEach(button => button.disabled = true);
   $('actionBtn').disabled = true;
   message('Подготовка к обработке…');
   indicate(0);
@@ -293,7 +418,7 @@ $('allBtn').addEventListener('click', () => {
   if (mode === 'pack' && packed) download(packed.blob, packed.name);
   else if (mode === 'unpack' && unpacked.length) {
     if (canShareFiles() && typeof navigator.share === 'function') {
-      const files = unpacked.map(item => new File([item.blob], item.name.split('/').pop(), { type:'application/octet-stream' }));
+      const files = unpacked.map(item => new File([item.blob], item.name.split('/').pop(), { type:previewType(item.name)[1] }));
       navigator.share({ files, title:'Распакованные файлы' }).catch(error => { if (error?.name !== 'AbortError') message('Не получилось поделиться: ' + error.message); });
     } else if (typeof window.showDirectoryPicker === 'function') {
       (async () => {
@@ -311,8 +436,9 @@ $('allBtn').addEventListener('click', () => {
   }
   else if (bundle) download(bundle.blob, bundle.name);
 });
+window.addEventListener('pagehide', () => closePreview());
 createWorkshopMode({
-  appName: 'Пресс', version: '1.1.0', cachePrefix: 'press-', storageNamespace: 'pocket-works:press',
+  appName: 'Пресс', version: '1.2.0', cachePrefix: 'press-', storageNamespace: 'pocket-works:press',
   onReset() { try { localStorage.removeItem('pocket-works:press:prefs'); } catch {} location.reload(); }
 });
 render();
