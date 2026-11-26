@@ -20,15 +20,15 @@ const palette={skin:[.60,.36,.23],mail:[.27,.33,.36],iron:[.48,.55,.57],bronze:[
 const finite=(v,min,max,n)=>{if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw Error('Invalid '+n);return v};
 export function validate(spec){
  if(!spec||![1,2].includes(spec.version)||!Object.hasOwn(recipes,spec.recipe)||(spec.version===1?!Object.hasOwn(profiles,spec.profile):!Object.hasOwn(styles,spec.style)||!Object.hasOwn(lods,spec.lod)))throw Error('Unknown version, recipe or profile');
- const r=recipes[spec.recipe],m=spec.morphology??{},allowed=['height','build','head','limb','age'];
+ const r=recipes[spec.recipe],m=spec.morphology??{},allowed=['height','build','head','limb','age','neck','chest','muzzle','ear','tail','trunk','tusk'];
  if(Object.keys(m).some(k=>!allowed.includes(k)))throw Error('Unknown morphology');
  if(spec.seed!==undefined&&(!Number.isInteger(spec.seed)||spec.seed<0||spec.seed>4294967295))throw Error('Invalid seed');
- const morph={height:finite(m.height??r.height,r.height*.65,r.height*1.4,'height'),build:finite(m.build??r.build,.65,1.5,'build'),head:finite(m.head??1,.8,1.25,'head'),limb:finite(m.limb??1,.85,1.15,'limb'),age:finite(m.age??.45,0,1,'age')};
+ const morph={height:finite(m.height??r.height,r.height*.65,r.height*1.4,'height'),build:finite(m.build??r.build,.65,1.5,'build'),head:finite(m.head??1,.8,1.25,'head'),limb:finite(m.limb??1,.85,1.15,'limb'),age:finite(m.age??.45,0,1,'age'),...Object.fromEntries(['neck','chest','muzzle','ear','tail','trunk','tusk'].map(k=>[k,finite(m[k]??1,.65,1.35,k)]))};
  const actions=spec.actions??['idle','walk','run','turn'];if(!Array.isArray(actions)||!actions.length||new Set(actions).size!==actions.length||actions.some(a=>!['idle','walk','run','turn','guard','interact','fly'].includes(a)))throw Error('Unsupported action');
  if(spec.format!==undefined&&spec.format!=='glb')throw Error('Unsupported target format');
  const budget={maxTriangles:spec.budget?.maxTriangles??100000,maxJoints:spec.budget?.maxJoints??128,maxBytes:spec.budget?.maxBytes??16000000};
  for(const [k,v] of Object.entries(budget))if(!Number.isSafeInteger(v)||v<1||v>100000000)throw Error('Invalid budget '+k);
- return {version:spec.version,recipe:spec.recipe,family:r.family,profile:spec.version===1?spec.profile:undefined,...(spec.version===2?{style:spec.style,lod:spec.lod,surface:spec.surface??'transported',composite:spec.composite??['rider','elephant'].includes(spec.recipe),modules:spec.modules??[],contactCorrection:spec.contactCorrection===true}:{}),seed:spec.seed??17,morphology:morph,actions,budget,format:'glb',provenance:[{author:'Pocket Works',license:'original',origin:'Character Forge research geometry'}]};
+ return {version:spec.version,recipe:spec.recipe,family:r.family,profile:spec.version===1?spec.profile:undefined,...(spec.version===2?{style:spec.style,lod:spec.lod,surface:spec.surface??'transported',composite:spec.composite??['rider','elephant'].includes(spec.recipe),modules:spec.modules??[],contactCorrection:spec.contactCorrection===true,anatomy:spec.anatomy??'v2'}:{}),seed:spec.seed??17,morphology:morph,actions,budget,format:'glb',provenance:[{author:'Pocket Works',license:'original',origin:'Character Forge research geometry'}]};
 }
 function rng(seed){let x=seed>>>0;return ()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296}}
 class Builder{
@@ -113,6 +113,7 @@ function bird(b){if(b.spec.version===2)return avian(b);let h=b.spec.morphology.h
  b.components.push({name:'bird',family:'avian',root,template:'avian-v1'})}
 export function build(spec){let s=validate(spec),b=new Builder(s),t=performance.now();
  if(s.version===2&&(!Array.isArray(s.modules)||s.modules.some(x=>!['unarmed','no-headwear','no-bag'].includes(x))))throw Error('Unknown equipment option');
+ if(s.version===2&&!['v2','v3'].includes(s.anatomy))throw Error('Unknown anatomy revision');
  if(s.version===2&&!['transported','legacy-rings','implicit'].includes(s.surface))throw Error('Unsupported surface');
  if(s.family==='humanoid')human(b,'',[0,0,0],-1,s.morphology.height,recipes[s.recipe].outfit);
  else if(s.family==='bird')bird(b);else if(s.version===2)animal(b,s.family,human);else quadruped(b,s.family);
