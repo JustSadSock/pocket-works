@@ -512,6 +512,25 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Import pinned VCSL dedicated release assets and render ocarina
+        id: dedicated_release
+        if: ${{ !cancelled() && steps.recorded_release.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/dedicated-release-lab.mjs .audio-dedicated-release
+          test "$(find .audio-dedicated-release/sources -name '*.wav' | wc -l)" -eq 8
+          test "$(find .audio-dedicated-release -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+          test -s .audio-dedicated-release/clay-and-wind-AB.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.dedicated_release.outcome == 'success' }}
+        with:
+          name: sound-forge-dedicated-release-${{ github.run_id }}
+          path: .audio-dedicated-release/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
