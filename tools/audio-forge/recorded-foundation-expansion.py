@@ -1,5 +1,5 @@
 """Pinned CC0 foundation-source expansion for The Weight of a Crown."""
-import hashlib,json,math,pathlib,sys,time,urllib.parse,urllib.request,wave,io
+import hashlib,json,math,pathlib,sys,time,urllib.parse,urllib.request,wave,io,subprocess
 import numpy as np
 HF_REV='3a12d6961bb4e1c3111c68cf1624c45bb49c97dd'
 VCSL_REV='c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e'
@@ -42,10 +42,9 @@ def wav_info(b):
 def measure_midi(b,expected):
     with wave.open(io.BytesIO(b),'rb') as w:
         rate=w.getframerate();channels=w.getnchannels();width=w.getsampwidth();raw=w.readframes(w.getnframes())
-    if width!=2:raise ValueError('double bass source must be PCM16')
-    x=np.frombuffer(raw,dtype='<i2').astype(np.float64)
-    if channels>1:x=x.reshape(-1,channels).mean(axis=1)
-    x/=32768
+    decoded=subprocess.check_output(['sox','-R','-t','wav','-','-t','raw','-e','floating-point','-b','32','-L','-c','1','-r','48000','-'],input=b)
+    x=np.frombuffer(decoded,dtype='<f4').astype(np.float64)
+    rate=48000
     lo=int(rate*.20);hi=min(len(x),int(rate*2.20));x=x[lo:hi]
     if len(x)<rate:raise ValueError('short double bass sample')
     x=x-np.mean(x);x*=np.hanning(len(x))
