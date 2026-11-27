@@ -110,19 +110,52 @@ def stats(v,expected,colliders):
  hem=[i for i,p in enumerate(initial) if p[1]<min(x[1] for x in initial)+.035];center0=center([initial[i] for i in hem]);center1=center([v[i] for i in hem]);radius=lambda vv,c:sum(math.hypot(vv[i][0]-c[0],vv[i][2]-c[2]) for i in hem)/len(hem)
  t=tree(v,freeFaces);hits={name:len(t.overlap(tree(vs,fs))) for name,vs,fs in colliders}
  return {'p95Stretch':percentile(ratio,.95),'maxStretch':max(ratio),'collapsedEdges':sum(x<.5 for x in ratio),'pinErrorMetres':seam,'hemRadiusRatio':radius(v,center1)/radius(initial,center0),'hemHeightMetres':center1[1],'nonSeamTrianglePairs':hits,'maxDeviationMetres':max(math.dist(x,y) for x,y in zip(v,expected))}
+# v12: keep the accepted static baseline; isolate the moving colliders.
+# Actual trousers/boots are sewn double surfaces. Build a closed outer-only
+# collision volume, with deterministic boundary caps, without changing art.
+from collections import Counter,defaultdict
+def topology(v,fs):
+ es=Counter(tuple(sorted((f[k],f[(k+1)%3]))) for f in fs for k in range(3))
+ volume=sum(Vector(v[f[0]]).dot(Vector(v[f[1]]).cross(Vector(v[f[2]]))) for f in fs)/6
+ return {'vertices':len(v),'triangles':len(fs),'boundaryEdges':sum(n==1 for n in es.values()),'nonManifoldEdges':sum(n>2 for n in es.values()),'signedVolume':volume}
+def outer_proxy(item):
+ vs=raw(item['staticPositions']);boot=item['name'].startswith('boot');n=(len(vs)-int(boot))//2
+ fs=[tuple(item['indices'][k:k+3]) for k in range(0,len(item['indices']),3) if max(item['indices'][k:k+3])<n]
+ ec=Counter(tuple(sorted((f[k],f[(k+1)%3]))) for f in fs for k in range(3));boundary=[(a,b) for f in fs for a,b in zip(f,f[1:]+f[:1]) if ec[tuple(sorted((a,b)))]==1]
+ by={a:b for a,b in boundary};assert len(by)==len(boundary)
+ loops=[]
+ while by:
+  start=next(iter(by));loop=[start];j=by.pop(start)
+  while j!=start:loop.append(j);j=by.pop(j)
+  loops.append(loop)
+ for i,loop in enumerate(loops):
+  for a,b in zip(loop,loop[1:]+loop[:1]):fs.append((b,a,n+i))
+ def convert(v):
+  v=[list(p) for p in v[:n]]
+  for loop in loops:v.append([sum(v[j][k] for j in loop)/len(loop) for k in range(3)])
+  return v
+ vv=convert(vs);t=topology(vv,fs)
+ if t['signedVolume']<0:fs=[(a,c,b) for a,b,c in fs];t=topology(vv,fs)
+ if t['boundaryEdges'] or t['nonManifoldEdges'] or t['signedVolume']<=0:raise RuntimeError('Invalid outer collision proxy '+item['name'])
+ return fs,convert,t
 results=[]
-for stage in [1,2,3]:
- if stage>1 and not results[-1]['passed']:break
+experiments=[('static',1,1,6,None),('A',2,1,6,['trousers R']),('B',2,3,18,['trousers R']),('C',2,1,18,['trousers R']),('D',2,1,18,['trousers L','trousers R']),('E',2,1,18,None),('world',3,1,18,None)]
+for label,stage,slow,ramp,allowed in experiments:
+ if stage==2 and not results[0]['passed']:break
+ if stage==3 and not all(r['passed'] for r in results):break
  bpy.ops.wm.read_factory_settings(use_empty=True);scene=bpy.context.scene;scene.render.fps=spec['fps'];scene.gravity=(0,0,-9.81)
  # Static settling first, then local leg motion. Stage 3 replays the same
  # local simulation and explicitly applies measured root translation on export.
- warm=24;count=49 if stage==1 else warm+spec['frameCount'];scene.frame_start=1;scene.frame_end=count
- times=[-1 if stage==1 or i<warm-6 else max(0,min(spec['frameCount']-1,i-warm)) for i in range(count)]
+ warm=24 if stage==1 else 24+ramp;count=49 if stage==1 else warm+(spec['frameCount']-1)*slow+1;scene.frame_start=1;scene.frame_end=count
+ times=[-1 if stage==1 or label=='A' or i<warm-ramp else max(0,min(spec['frameCount']-1,(i-warm)/slow)) for i in range(count)]
  def frame_positions(item,idx,t):
-  neutral=raw(item['staticPositions']);moving=raw(item['frames'][max(0,t)])
+  neutral=raw(item['staticPositions'])
   if t<0:return neutral
-  blend=max(0,min(1,(idx-(warm-6))/6))
-  return [[a+(b-a)*blend for a,b in zip(p,local(q,t))] for p,q in zip(neutral,moving)]
+  a=int(t);b=min(spec['frameCount']-1,a+1);u=t-a
+  va=[local(p,a) for p in raw(item['frames'][a])];vb=[local(p,b) for p in raw(item['frames'][b])]
+  moving=[[x+(y-x)*u for x,y in zip(p,q)] for p,q in zip(va,vb)]
+  blend=max(0,min(1,(idx-(warm-ramp))/ramp));blend=blend*blend*(3-2*blend)
+  return [[a+(b-a)*blend for a,b in zip(p,q)] for p,q in zip(neutral,moving)]
  expected=[[frame_positions(g,idx,t)[j] for j in unique] for idx,t in enumerate(times)]
  for row in expected:
   for j in range(len(row)):
@@ -130,12 +163,26 @@ for stage in [1,2,3]:
  cloth=object_mesh('MerchantRobeWelded',initial,faces)
  if stage>1:keys(cloth,expected,set(wpins))
  group=cloth.vertex_groups.new(name='PinnedSeam');group.add(wpins,1,'REPLACE')
- colliders=[];collider_data=[]
+ colliders=[];collider_data=[];topologies={}
  for item in spec['colliders']:
+  if allowed is not None and item['name'] not in allowed:continue
   fs=[tuple(item['indices'][k:k+3]) for k in range(0,len(item['indices']),3)];frames=[frame_positions(item,idx,t) for idx,t in enumerate(times)]
+  sourceTopology=topology(frames[0],fs)
+  if stage>1 and item['name']!='tunic':
+   fs,convert,proxyTopology=outer_proxy(item);frames=[convert(v) for v in frames]
+  else:proxyTopology=sourceTopology
   ob=object_mesh('Collider_'+item['name'],frames[0],fs)
-  if stage>1:keys(ob,frames)
-  cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.004;cm.settings.thickness_inner=.004;colliders.append(ob);collider_data.append((item['name'],frames,fs))
+  if stage>1 and label!='A':keys(ob,frames)
+  cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.004;cm.settings.thickness_inner=.004;colliders.append(ob);collider_data.append((item['name'],frames,fs,ob))
+  topologies[item['name']]={'original':sourceTopology,'evaluatedProxy':proxyTopology,'outerThickness':.004,'innerThickness':.004}
+ # For the local experiments, compare to a truly stationary pinned seam.
+ # Only E/world include the full actual animated seam.
+ if label in ['A','B','C','D']:
+  for row in expected:
+   for j in wpins:row[j]=initial[j][:]
+  if cloth.data.shape_keys:
+   for key in list(cloth.data.shape_keys.key_blocks)[1:]:
+    for j in wpins:key.data[j].co=cv(initial[j])
  mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=16;s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1
  # Firm woven wool, not default stretchy fabric; no dynamic rest shape.
  for name,val in [('tension_stiffness',35),('compression_stiffness',35),('shear_stiffness',22),('bending_stiffness',1.0),('tension_damping',8),('compression_damping',8),('shear_damping',5),('bending_damping',.7),('use_dynamic_mesh',False)]:
@@ -144,27 +191,38 @@ for stage in [1,2,3]:
  cache=mod.point_cache;cache.frame_start=1;cache.frame_end=count
  if hasattr(cache,'use_disk_cache'):cache.use_disk_cache=False
  bpy.context.view_layer.objects.active=cloth;cloth.select_set(True);scene.frame_set(1);bpy.context.view_layer.update()
- rows=[];samples=[]
+ rows=[];samples=[];prev={};firstDefect=None;priorSamples=[]
  # Sequential evaluation deliberately measures initial and settled state.
  # No all-vertex animated shape keys are applied to the free cloth.
  for frame in range(1,count+1):
   scene.frame_set(frame);bpy.context.view_layer.update();v=evaluated(cloth)
   if len(v)!=len(initial) or not all(math.isfinite(x) for p in v for x in p):raise RuntimeError('Invalid cloth surface')
   i=frame-1
-  if frame==1 or frame%6==1 or frame==count:
-   cs=[(name,fs[i],idx) for name,fs,idx in collider_data];row=stats(v,expected[i],cs);rows.append({'frame':frame,**row})
-   root=offsets[times[i]] if stage==3 and times[i]>=0 else [0,0,0]
-   samples.append({'frame':frame,'sourceFrame':times[i],'root':root,'positions':[[x+y for x,y in zip(p,root)] for p in v]})
+  cs=[];audit={}
+  for name,fs,idx,ob in collider_data:
+   actual=evaluated(ob);assert len(actual)==len(fs[i])
+   err=max(math.dist(a,b) for a,b in zip(actual,fs[i]));vel=max((math.dist(a,b)*spec['fps'] for a,b in zip(actual,prev.get(name,actual))),default=0)
+   prev[name]=actual;top=topology(actual,idx);audit[name]={'maxEvaluatedMismatchMetres':err,'maxSurfaceSpeedMetresPerSecond':vel,'signedVolume':top['signedVolume'],'boundaryEdges':top['boundaryEdges'],'nonManifoldEdges':top['nonManifoldEdges']}
+   cs.append((name,actual,idx))
+  row=stats(v,expected[i],cs);row={'frame':frame,**row,'colliderAudit':audit};rows.append(row)
+  root=offsets[int(times[i])] if stage==3 and times[i]>=0 else [0,0,0]
+  sample={'frame':frame,'sourceFrame':times[i],'root':root,'positions':[[x+y for x,y in zip(p,root)] for p in v],'colliders':[{'name':name,'positions':vv,'faces':ff} for name,vv,ff in cs]}
+  bad=sum(row['nonSeamTrianglePairs'].values())>0 or row['maxStretch']>1.6 or row['collapsedEdges']>0
+  if bad and firstDefect is None:
+   firstDefect=frame;samples.extend(priorSamples);samples.append(sample)
+  if frame==1 or frame==warm or frame==warm+1 or frame==count or (firstDefect is not None and frame<=firstDefect+2 and frame>firstDefect):samples.append(sample)
+  priorSamples=(priorSamples+[sample])[-3:]
  # Require all settled samples to preserve weave and hem, anchor, and avoid
  # new non-seam intersections. Initial contacts are reported, not ignored.
- settled=[r for r in rows if r['frame']>=warm+1];initialPairs=sum(rows[0]['nonSeamTrianglePairs'].values())
+ settled=[r for r in rows if r['frame']>= (warm+1 if stage==1 else 25)];initialPairs=sum(rows[0]['nonSeamTrianglePairs'].values())
  gates={'stretch':all(r['p95Stretch']<=1.15 and r['maxStretch']<=1.6 and not r['collapsedEdges'] for r in settled),'pin':all(r['pinErrorMetres']<=.006 for r in settled),'shape':all(.78<=r['hemRadiusRatio']<=1.22 and r['maxDeviationMetres']<=.15 for r in settled),'collision':all(sum(r['nonSeamTrianglePairs'].values())<=initialPairs and sum(r['nonSeamTrianglePairs'].values())<=10 for r in settled)}
- results.append({'stage':stage,'passed':all(gates.values()),'gates':gates,'frames':rows,'sampleFrames':len(samples)})
- (out/('v11-cloth-stage-%d.json'%stage)).write_text(json.dumps({'stage':stage,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'faces':faces,'pinIndices':wpins,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
- (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':'passed' if len(results)==3 and results[-1]['passed'] else 'blocked at stage '+str(stage)},indent=2))
+ gates['evaluatedColliderAgreement']=all(x['maxEvaluatedMismatchMetres']<=1e-5 for r in rows for x in r['colliderAudit'].values())
+ results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'frames':rows,'sampleFrames':len(samples)})
+ (out/('v12-cloth-'+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'faces':faces,'pinIndices':wpins,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
+ (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':'passed' if len(results)==7 and all(r['passed'] for r in results) else 'blocked or incomplete at '+label},indent=2))
  print(json.dumps({'stage':stage,'gates':gates,'last':rows[-1]}),flush=True)
  if stage==3 and all(gates.values()):
   # The existing verified cache format remains available; no production cache
   # is published for a failed experiment.
   (out/'v11-cloth-approved-candidate.json').write_text(json.dumps({'status':'technical candidate only','source':'v11-cloth-stage-3.json','requiresArtApproval':True}))
-if not (len(results)==3 and results[-1]['passed']):raise RuntimeError('Cloth recovery gate rejected; dependent stages intentionally not run')
+if not (len(results)==7 and all(r['passed'] for r in results)):raise RuntimeError('Cloth local experiment gate rejected; world-root stage intentionally blocked')
