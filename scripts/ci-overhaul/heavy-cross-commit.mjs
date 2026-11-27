@@ -52,7 +52,7 @@ export function costObservation(prior,current,durations,gateMs){
  if(!Array.isArray(durations)||durations.length!==2||durations.some((x,i)=>!Number.isSafeInteger(x)||x<0||x>[prior,current][i].executionWallMs)||!Number.isSafeInteger(gateMs)||gateMs<0)fail('Invalid execution or audit duration');
  return {freshExecutionMs:durations,preparationMs:[prior.preparationMs,current.preparationMs],postVerificationMs:[prior.postVerificationMs,current.postVerificationMs],independentReconstructionMs:gateMs,observations:2,admission:economicDecision(null),note:'No measured signed reuse path or three comparable samples; no net savings claim'};
 }
-function audit(repo,kind,root,ctx){
+export function auditHeavyPair(repo,kind,root,ctx){
  const started=Date.now();
  const c=CASES[kind],target=controlledCommit(repo,c.source),scope=compareScope(repo,c.source,target,c.app);
  const negative=compareScope(repo,c.source,controlledCommit(repo,c.source,'scripts/pw-heavy-cross-commit-control.txt'),c.app);
@@ -90,7 +90,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   }else if(mode==='gate'){
    const names=Object.keys(CASES).flatMap(k=>['prior','current'].map(s=>'heavy-'+ctx.attempt+'-'+k+'-'+s)).sort();
    if(!eq(readdirSync(root).sort(),names))fail('Incomplete or stale heavy matrix');
-   const results=Object.keys(CASES).map(k=>audit(repo,k,root,ctx));
+   const results=Object.keys(CASES).map(k=>auditHeavyPair(repo,k,root,ctx));
    const report={schema:1,...ctx,results,expected:4,passed:4,success:results.every(r=>r.semanticMatch&&r.mountMatch&&r.controlled),...flags};
    console.log(JSON.stringify(report,null,2));if(!report.success)process.exitCode=1;
   }else fail('Unknown operation');
