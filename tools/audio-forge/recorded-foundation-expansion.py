@@ -21,7 +21,9 @@ PERC=[
  ('timpani','hit',.65,'Membranophones/Struck Membranophones/Timpani 1/Hit/Timpani1_Hit_v4_rr1_Sum.wav'),
  ('timpani','hit',.65,'Membranophones/Struck Membranophones/Timpani 1/Hit/Timpani1_Hit_v4_rr2_Sum.wav'),
  ('timpani','roll',.65,'Membranophones/Struck Membranophones/Timpani 1/Roll/Timpani1_Roll_v3_rr1_Sum.wav'),
- ('timpani','roll',.95,'Membranophones/Struck Membranophones/Timpani 1/Roll/Timpani1_Roll_v5_rr1_Sum.wav')]
+ ('timpani','roll',.95,'Membranophones/Struck Membranophones/Timpani 1/Roll/Timpani1_Roll_v5_rr1_Sum.wav'),
+ ('bass-drum','crescendo',.65,'Membranophones/Struck Membranophones/Bass Drum 2/bassdrum_cresc_med.wav'),
+ ('bass-drum','crescendo',.85,'Membranophones/Struck Membranophones/Bass Drum 2/bassdrum_cresc_short.wav')]
 def get(url):
     last=None
     for attempt in range(4):
@@ -59,7 +61,7 @@ def measure_midi(b,expected):
     return round(midi,3),round(freq,3)
 def self_test():
     assert len(BASS)==7 and all(len(v)==2 for v in BASS.values())
-    assert len(PERC)==8 and len({x[3] for x in PERC})==8
+    assert len(PERC)==10 and len({x[3] for x in PERC})==10
     assert len({h for pair in BASS.values() for h in pair})==14
     print('foundation source manifest self-test passed')
 def run(out):
