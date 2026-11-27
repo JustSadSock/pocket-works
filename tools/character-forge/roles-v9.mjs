@@ -79,10 +79,10 @@ function shield(m,roman){
 function bascinet(m){
  const h=J(m,'head'),head=m.parts[0],pts=[];
  for(let i=0;i<head.positions.length;i+=3){const v=head.positions.slice(i,i+3);if(Math.abs(v[1]-h.position[1])<.15&&Math.abs(v[0]-h.position[0])<.11)pts.push(v)}
- const rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.22,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.18,base=h.position[1]+.015,centerZ=h.position[2]-.005,N=24,p=addPart(m,'rounded bascinet skull',[.30,.34,.35],'metal','head armour');
- const rows=[[base,1.08],[base+.025,1.04],[base+.065,.91],[base+.105,.68],[base+.135,.34],[base+.145,.03]];
+ const top=Math.max(...pts.map(v=>v[1])),rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.22,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.18,base=top-.086,centerZ=h.position[2]-.005,N=24,p=addPart(m,'rounded bascinet skull',[.30,.34,.35],'metal','head armour');
+ const rows=[[base,1.08],[base+.025,1.04],[base+.065,.91],[base+.078,.68],[base+.098,.34],[base+.108,.03]];
  for(const [y,s] of rows)for(let k=0;k<=N;k++){const a=tau*k/N;push(p,[h.position[0]+rx*s*Math.cos(a),y,centerZ+rz*s*Math.sin(a)],[[h.id,1]])}
- grid(p,rows.length,N+1);finish(p,.004);
+ grid(p,rows.length,N+1);const cap=push(p,[h.position[0],rows.at(-1)[0]+.003,typeof centerZ==='number'?centerZ:h.position[2]],[[h.id,1]]);for(let k=0;k<N;k++)p.indices.push((rows.length-1)*(N+1)+k,(rows.length-1)*(N+1)+k+1,cap);finish(p,.004);
  const z=centerZ+rz*.86,visor=addPart(m,'bascinet brow and visor',[.27,.30,.31],'metal','face protection');
  for(const [x,y] of [[-.060,base+.025],[.060,base+.025],[.055,base+.066],[-.055,base+.066]])push(visor,[h.position[0]+x,y,z],[[h.id,1]]);
  visor.indices=[0,1,2,0,2,3];finish(visor,.003);
@@ -96,8 +96,8 @@ function bascinet(m){
 }
 function imperialHelmet(m){
  const h=J(m,'head'),head=m.parts[0],pts=[];for(let i=0;i<head.positions.length;i+=3){const v=head.positions.slice(i,i+3);if(Math.abs(v[1]-h.position[1])<.15)pts.push(v)}
- const rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.18,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.16,base=h.position[1]+.012,N=24,p=addPart(m,'imperial Gallic helmet bowl',[.36,.38,.38],'metal','head armour');
- const rows=[[base,1.10],[base+.025,1.08],[base+.065,.96],[base+.105,.72],[base+.135,.36],[base+.145,.025]];
+ const top=Math.max(...pts.map(v=>v[1])),rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.18,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.16,base=top-.078,N=24,p=addPart(m,'imperial Gallic helmet bowl',[.36,.38,.38],'metal','head armour');
+ const rows=[[base,1.10],[base+.025,1.08],[base+.065,.96],[base+.072,.72],[base+.088,.36],[base+.098,.025]];
  for(const [y,s] of rows)for(let k=0;k<=N;k++){const a=tau*k/N;push(p,[h.position[0]+rx*s*Math.cos(a),y,h.position[2]+rz*s*Math.sin(a)],[[h.id,1]])}
  grid(p,rows.length,N+1);finish(p,.004);
  tube(m,'imperial helmet brow',[{p:[h.position[0]-rx,base+.026,h.position[2]+rz*.52],r:.010,ws:[[h.id,1]]},{p:[h.position[0],base+.030,h.position[2]+rz*1.04],r:.010,ws:[[h.id,1]]},{p:[h.position[0]+rx,base+.026,h.position[2]+rz*.52],r:.010,ws:[[h.id,1]]}],[.55,.39,.16],'metal',8,.002);
@@ -206,16 +206,16 @@ export const roleMorphs=roleProfiles;
 export function produceRoleV9(source,id,identityOverride=null,{style='historical-miniature'}={}){
  if(!roleProfiles[id])throw Error('Unknown role '+id);
  const m=produceRole(source,id,identityOverride,'historical-miniature'),start=performance.now();
- m.parts=m.parts.filter(p=>!['iron breastplate','iron conical helmet','iron nasal','heater shield','iron shield rim','iron shield boss','leather shield forearm strap'].includes(p.name)&&!p.name.startsWith('quilted padded rib'));
+ m.parts=m.parts.filter(p=>!['iron breastplate','iron conical helmet','iron nasal','iron imperial helmet','iron cheek guard -1','iron cheek guard 1','red curved scutum','heater shield','iron shield rim','iron shield boss','leather shield forearm strap'].includes(p.name)&&!p.name.startsWith('quilted padded rib')&&!p.name.startsWith('iron segmented cuirass')&&!p.name.startsWith('iron shoulder guard')&&!(id==='legionary'&&p.name==='leather sheathed sidearm'));
  m.spec.artRole=id;m.spec.artRevision='v9';m.spec.miniaturePose='v9';m.spec.motionRevision='v9';m.spec.contactCorrection='path-v9';m.spec.actions=id==='artisan'?['idle','walk']:['idle'];
  let role;
  if(id==='artisan')role=artisanKit(m);
  if(id==='merchant')role=merchantKit(m);
  if(id==='infantry')role=infantryKit(m);
  if(id==='legionary')role=legionaryKit(m);
- if(style==='low-poly')lowPolyTransform(m);else m.spec.style='historical-miniature';
+ if(style==='low-poly')lowPolyTransform(m);else if(style==='anatomical-realism'){m.spec.style=style;for(const p of m.parts){p.color=p.color.map(v=>Math.max(0,Math.min(1,v*.88+.035)));if(p.material?.kind==='skin')p.material.roughness=.57;if(p.material?.kind==='cloth')p.material.roughness=.96;}}else m.spec.style='historical-miniature';
  contacts(m);
- m.spec.artHistoricalReference=id==='infantry'?'late-14th-century coat-of-plates, mail and bascinet':id==='legionary'?'2nd-century CE lorica segmentata and scutum':'medieval civilian craft/trade clothing';
+ m.spec.artHistoricalReferences=['https://isaw.nyu.edu/exhibitions/edge-of-empires/highlights/shield','https://www.metmuseum.org/art/collection/search/35771','https://fashionhistory.fitnyc.edu/chaperon/'];m.spec.artHistoricalReference=id==='infantry'?'late-14th-century coat-of-plates, mail and bascinet':id==='legionary'?'2nd-century CE lorica segmentata and scutum':'medieval civilian craft/trade clothing';
  m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'v0.9 role-specific cut, equipment and material construction'}];
  m.statistics={...m.statistics,triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),roleV9Ms:performance.now()-start};
  m.roleDiagnostics=role;return m;
