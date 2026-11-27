@@ -1,0 +1,100 @@
+name: Crown Performance Split
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci-overhaul/crown-performance-split*'
+      - '.github/workflows/crown-performance-split.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/crown-performance-split.test.mjs
+  split:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/crown-performance-split'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download original completed Crown evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/$GITHUB_REPOSITORY/actions/runs/46041911559 > source-run.json
+          jq -e '.id==46041911559 and .run_attempt==1 and .head_sha=="45360e6f55cc06775fd66a87cf782b96707dbafc" and .status=="completed" and .conclusion=="success" and .path==".github/workflows/crown-signed-simulation.yml" and .head_repository.full_name=="JustSadSock/pocket-works"' source-run.json
+          gh run download 46041911559 --name crown-source-receipt-1 --dir source
+          for side in prior current; do gh run download 46041911559 --name "heavy-1-crown-$side" --dir "$side"; done
+          mkdir split
+          for side in prior current; do node scripts/ci-overhaul/crown-performance-split.mjs split "$side" source/crown-receipt.json "$side" "split/$side.json"; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crown-performance-separated-${{ github.run_attempt }}
+          path: split
+          if-no-files-found: error
+  independent_gate:
+    needs: split
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: crown-performance-separated-${{ github.run_attempt }}
+          path: split
+      - name: Independently rejoin every original measurement and gameplay field
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 46041911559 --name crown-source-receipt-1 --dir source
+          for side in prior current; do
+            gh run download 46041911559 --name "heavy-1-crown-$side" --dir "$side"
+            node scripts/ci-overhaul/crown-performance-split.mjs verify "$side" source/crown-receipt.json "$side" "split/$side.json" > "$side-verdict.json"
+            jq -e '.success and .scenarios==18 and .measurements==1638 and .freshForFutureTarget==false and .productionAuthorization==false' "$side-verdict.json"
+          done
+          jq -e -s '.[0].semantic | map(.semanticDigest)' split/prior.json >/dev/null
+          jq -e -s '(.[0].semantic|map(.semanticDigest)) == (.[1].semantic|map(.semanticDigest))' split/prior.json split/current.json
+          jq 'del(.performance[0].measurements[0])' split/prior.json > tampered.json
+          if node scripts/ci-overhaul/crown-performance-split.mjs verify prior source/crown-receipt.json prior tampered.json; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crown-performance-split-gate-${{ github.run_attempt }}
+          path: '*-verdict.json'
+          if-no-files-found: error
+  required_gate:
+    if: always()
+    needs: [contract,split,independent_gate]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          CONTRACT: ${{ needs.contract.result }}
+          SPLIT: ${{ needs.split.result }}
+          GATE: ${{ needs.independent_gate.result }}
+        run: |
+          set -euo pipefail
+          test "$CONTRACT" = success
+          if jq -e '.pull_request.head.repo.full_name == .repository.full_name and .pull_request.head.ref == "infra/crown-performance-split"' "$GITHUB_EVENT_PATH"; then
+            test "$SPLIT" = success
+            test "$GATE" = success
+          else
+            test "$SPLIT" = skipped
+            test "$GATE" = skipped
+          fi
