@@ -120,6 +120,44 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
    maxJointAngularSpeedDifferenceDegreesPerSecond:Math.max(...v.rotations[0].map((q,k)=>Math.abs(angle(q,v.rotations[1][k])-angle(v.rotations[n-1][k],q))*n/ref.durationSeconds))};
   return {...v,trace,velocitySeam};
  }
+ // Match actual upper-arm and forearm segment directions from KinemIQ.
+ // Do not touch pelvis or leg channels. Keep source wrist orientation via
+ // the pre-existing full-frame retarget, then retain relaxed finger motion.
+ function upperStudy(v){
+  const n=v.rotations.length-1,copy=structuredClone(v),rows=[];
+  const armMap=['L','R'].flatMap(s=>[
+   ['clavicle.'+s,'upperarm01.'+s,'clavicle.'+s,'upperarm.'+s],
+   ['upperarm01.'+s,'lowerarm01.'+s,'upperarm.'+s,'lowerarm.'+s],
+   ['lowerarm01.'+s,'wrist.'+s,'lowerarm.'+s,'hand.'+s]]);
+  const sourcePoint=(t,name)=>{const f=t*N,i=Math.floor(f),j=Math.min(N,i+1),u=f-i;return add(mul(ref.frames[i].points[name],1-u),mul(ref.frames[j].points[name],u))};
+  const swing=(a,b)=>{const d=clamp(dot(a,b),-1,1);return d<-.99999?quat(unit(cross(a,Math.abs(a[1])>.9?[1,0,0]:[0,1,0])),Math.PI):unit([...cross(a,b),1+d])};
+  const direction=(w,a,b)=>unit(sub(w[J(b).id].p,w[J(a).id].p));
+  const dirError=(a,b)=>Math.acos(clamp(dot(a,b),-1,1))*180/Math.PI;
+  for(let i=0;i<n;i++){
+   const t=i/n,q=copy.rotations[i],before=poseFrom(m,q),source=sample(author,t),srcW=poseFrom(m,source.q);
+   for(const [a,b,c,d] of armMap){
+    const j=J(a),w=poseFrom(m,q),target=unit(sub(sourcePoint(t,d),sourcePoint(t,c))),current=direction(w,a,b);
+    const delta=swing(current,target),a0=angle([0,0,0,1],delta);
+    const limited=slerp([0,0,0,1],delta,Math.min(1,20/Math.max(1e-8,a0)));
+    q[j.id]=qmul(inv(w[j.parent].q),qmul(limited,w[j.id].q));
+   }
+   for(const side of ['L','R']){
+    const j=J('wrist.'+side),w=poseFrom(m,q);
+    q[j.id]=qmul(inv(w[j.parent].q),srcW[j.id].q);
+   }
+   // Blend upper correction down near the seam to preserve the cyclic solve.
+   const u=clamp(Math.min(t,1-t)/.083333,0,1),blend=u*u*(3-2*u);
+   for(const id of [...armMap.map(a=>J(a[0]).id),...['L','R'].map(s=>J('wrist.'+s).id)])q[id]=slerp(v.rotations[i][id],q[id],blend);
+   const after=poseFrom(m,q);
+   rows.push({phase:t,segments:armMap.map(([a,b,c,d])=>{const target=unit(sub(sourcePoint(t,d),sourcePoint(t,c)));return {joint:a,beforeDegrees:dirError(direction(before,a,b),target),afterDegrees:dirError(direction(after,a,b),target)}})});
+  }
+  copy.rotations[n]=copy.rotations[0].map(q=>q.slice());
+  const legIds=['L','R'].flatMap(s=>['upperleg01','lowerleg01','foot'].map(k=>J(k+'.'+s).id));
+  const changedLegChannels=copy.rotations.some((q,i)=>legIds.some(k=>angle(q[k],v.rotations[i][k])>.001));
+  if(changedLegChannels)throw Error('Upper-body study changed leg channels');
+  const mean=(field)=>rows.flatMap(r=>r.segments).reduce((s,r)=>s+r[field],0)/rows.flatMap(r=>r.segments).length;
+  return {v:copy,report:{rows,beforeMeanDegrees:mean('beforeDegrees'),afterMeanDegrees:mean('afterDegrees'),changedLegChannels}};
+ }
  function readGLB(bin){
   const len=bin.readUInt32LE(12),d=JSON.parse(bin.subarray(20,20+len)),offset=28+len,clip=d.animations.find(a=>a.name==='walk');
   const acc=id=>{const a=d.accessors[id],view=d.bufferViews[a.bufferView],n=a.type==='SCALAR'?1:a.type==='VEC3'?3:4,base=offset+(view.byteOffset??0)+(a.byteOffset??0);return Array.from({length:a.count},(_,i)=>Array.from({length:n},(_,j)=>bin.readFloatLE(base+i*(view.byteStride??n*4)+4*j)))};
@@ -140,14 +178,18 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   return {keyCount:v.rotations.length,additionalAuditSamples:n+1,counts,max,loop,maxRootSpeedMetresPerSecond:maxRate,gate,rows};
  }
  const models={},reports={};
- const variants=[25,49,97,'cyclic49','cyclic97'];
- const cyclicDiagnostics={};
+ const variants=[25,49,97,'cyclic49','cyclic97','cyclic49Upper'];
+ const cyclicDiagnostics={};let cyclic49,upperReport;
  for(const count of variants){
-  const v=String(count).startsWith('cyclic')?cyclic(Number(String(count).slice(6))):generate(count),c=structuredClone(m);
+  let v;
+  if(count==='cyclic49Upper'){const upper=upperStudy(cyclic49);v=upper.v;upperReport=upper.report;}
+  else v=String(count).startsWith('cyclic')?cyclic(Number(String(count).slice(6))):generate(count);
+  if(count==='cyclic49')cyclic49=structuredClone(v);
+  const c=structuredClone(m);
   if(v.trace)cyclicDiagnostics[count]={trace:v.trace,velocitySeam:v.velocitySeam};c.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};c.spec.actions=['walk'];c.spec.walkDuration=ref.durationSeconds;c.spec.motionRevision='v9';
   const bin=glb(c);write('v15-walk-'+count+'.glb',bin);json('v15-walk-'+count+'-spec.json',{spec:c.spec,sampledWalk:c.sampledWalk});reports[count]=audit(bin,c);models[count]=c;
  }
- const choose=Object.keys(reports).sort((a,b)=>{const score=r=>Math.max(r.max.drift/10,r.max.vertical/10,r.max.penetration/3,r.loop.rootResidualMm/10,r.loop.maxJointDegrees/10);return score(reports[a])-score(reports[b])||reports[a].keyCount-reports[b].keyCount||a.localeCompare(b)})[0];
+ const choose=Object.keys(reports).sort((a,b)=>{const score=r=>Math.max(r.max.drift/10,r.max.vertical/10,r.max.penetration/3,r.loop.rootResidualMm/10,r.loop.maxJointDegrees/10);return score(reports[a])-score(reports[b])||reports[a].keyCount-reports[b].keyCount||((upperReport?.afterMeanDegrees<upperReport?.beforeMeanDegrees)?Number(b==='cyclic49Upper')-Number(a==='cyclic49Upper'):0)||a.localeCompare(b)})[0];
  const selected=models[choose];
  // Same camera for all densities, separate neutral anatomy and dressed.
  function frame(model,t,cycle=0,bodyOnly=false){const q=animation(model,'walk',t),o=add(rootOffset(model,'walk',t),[0,0,cycle*stride]),w=poseFrom(model,q).map(b=>({...b,p:add(b.p,o)}));const parts=(bodyOnly?skin.parts:model.parts).map(p=>{const x=structuredClone(p);x.positions=deform(model,p,w).flat();normals(x);return x});return {parts}}
@@ -165,7 +207,7 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   const current=sourceMarks[i].L.toe,previous=sourceMarks[Math.max(0,i-1)].L.toe,next=sourceMarks[Math.min(N,i+1)].L.toe;
   phaseAudit.push({phase:i/N,sourceToe:current,sourceHeel:sourceMarks[i].L.heel,sourceToeSpeed:dist(next,previous)/((Math.min(N,i+1)-Math.max(0,i-1))*ref.durationSeconds/N),classification:sourceSupport[i].L});
  }
- json('v16-motion-diagnostics.json',{phaseAudit,cyclicDiagnostics,classificationChanged:false,selected:choose,comparison:Object.fromEntries(Object.entries(reports).map(([k,r])=>[k,{max:r.max,loop:r.loop,gate:r.gate,phase29:r.rows[112]}]))});
+ json('v16-motion-diagnostics.json',{phaseAudit,cyclicDiagnostics,upperReport,classificationChanged:false,selected:choose,comparison:Object.fromEntries(Object.entries(reports).map(([k,r])=>[k,{max:r.max,loop:r.loop,gate:r.gate,phase29:r.rows[112]}]))});
  json('v15-continuous-report.json',{sourceSeam,retargetSeam:seam(author),verticalSeam:seam(vertical),baselineSeam:seam(baseline),reports,selected:choose,sourceRigMatches:sameRig,groundY,stride,duration:ref.durationSeconds,qualification:{contactGate:reports[choose].gate,artApproved:false},limits:['Uniform 25/49/97 keys solve the same constraints; 385 exact exported interpolated samples each.','Seam blend and correction measured independently. Actual loop frames reset clip plus accumulated intended stride.','Native comparison of deformed landmark points and minimum actual sole vertex; independent Blender evaluation separate.']});
  console.log(JSON.stringify({selected:choose,reports:Object.fromEntries(Object.entries(reports).map(([k,v])=>[k,{max:v.max,loop:v.loop,gate:v.gate}]))}));
 }

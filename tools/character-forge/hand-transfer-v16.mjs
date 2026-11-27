@@ -33,11 +33,16 @@ for(const pose of ref.poses){
  }
  const w=poseFrom(m,q),v=deform(m,p,w),vertices=a.selected.map(i=>v[i]);
  const mesh={...p,positions:vertices.flat(),indices:a.faces.flat()};normals(mesh);
- const rmesh={...pose.parts[0]};normals(rmesh);
+ const baselineName=pose.name==='open'?'rest':pose.name==='opposition'?'thumb-1':pose.name==='closed'?'coupled-1':pose.name;
+ const control=a.rows.find(r=>r.name===baselineName);
+ const amesh=control?{...p,positions:control.vertices.flat(),indices:a.faces.flat()}:null;
+ if(amesh)normals(amesh);
  for(const view of ['front','side','three-quarter']){
-  write('v16-hand-B-'+pose.name+'-'+view+'.png',raster({parts:[mesh]},{view,size:512,mode:'A'}).png);
+  const bounds=commonBounds([{parts:[mesh]},...(amesh?[{parts:[amesh]}]:[])],view);
+  write('v16-hand-B-'+pose.name+'-'+view+'.png',raster({parts:[mesh]},{view,bounds,size:512,mode:'A'}).png);
+  if(amesh)write('v16-hand-A-'+pose.name+'-'+view+'.png',raster({parts:[amesh]},{view,bounds,size:512,mode:'A'}).png);
  }
- rows.push({name:pose.name,source:pose.source,rotations:q,vertices});
+ rows.push({name:pose.name,source:pose.source,baselineName:control?.name??null,rotations:q,vertices});
 }
 const c=structuredClone(m);c.spec.actions=['walk'];c.spec.motionRevision='v9';c.spec.walkDuration=2.75;c.sampledWalk={rotations:rows.map(r=>r.rotations),offsets:rows.map(()=>[0,0,0])};
 write('v16-hand-B.glb',glb(c));

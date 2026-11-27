@@ -256,6 +256,8 @@ jobs:
           node --check tools/character-forge/qualification-v10.mjs
           node --check tools/character-forge/hand-reference-v15.mjs
           node --check tools/character-forge/motion-continuous-v15.mjs
+          node --check tools/character-forge/hand-transfer-v16.mjs
+          python3 -m py_compile tools/character-forge/hand-audit-v16.py tools/character-forge/cloth-coupon-v16.py
           python3 -m py_compile tools/character-forge/hand-bind-v15.py tools/character-forge/hand-source-v15.py tools/character-forge/motion-independent-v15.py
       - name: Required native CC0 reference motion (skinless GLB channels)
         id: kinemiq
@@ -273,7 +275,7 @@ jobs:
         run: |
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
           for view in side front; do
-            for variant in Original 25 49 97 cyclic49 cyclic97; do
+            for variant in Original 25 49 97 cyclic49 cyclic97 cyclic49Upper; do
               ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-$variant-$view-1x.mp4"
             done
             ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-25-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-97-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-1x.mp4"
@@ -282,7 +284,7 @@ jobs:
             if [ -d "$CHARACTER_EVIDENCE/v15-anatomy-$view" ]; then
               ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-anatomy-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-anatomy-$view.mp4"
             fi
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49-$view-1x.mp4" -filter_complex hstack=inputs=3 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v16-walk-cyclic-comparison-$view.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49Upper-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v16-walk-cyclic-comparison-$view.mp4"
           done
       - name: Enforce continuous exported contact qualification
         if: ${{ !cancelled() }}

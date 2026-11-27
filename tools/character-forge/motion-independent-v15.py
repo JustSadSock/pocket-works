@@ -60,7 +60,7 @@ def kdt(v):
 # measurements separate. Do not rely on importer primitive ordering.
 rows=[]
 duration=report['duration']
-for phase in sorted(set([i/16 for i in range(17)]+[1/384,17/24,69/96,383/384])):
+for phase in sorted(set([i/16 for i in range(17)]+[1/384,111/384,7/24,113/384,17/24,69/96,383/384])):
  raw=evaluate(phase*duration);flat=np.concatenate([v for _,v in raw],0);bv=blender(phase);bt=kdt(bv);rt=kdt(flat)
  forward=np.array([bt.find(Vector(p))[2] for p in flat]);reverse=np.array([rt.find(Vector(p))[2] for p in bv]);boot={}
  for n,v in raw:
