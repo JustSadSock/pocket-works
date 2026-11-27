@@ -20,7 +20,9 @@ export function validateRecordedGestures(gestures,seconds){
   if(!g||!validId(g.id)||ids.has(g.id))throw Error('Invalid or duplicate shared gesture');
   ids.add(g.id);
   if(!Number.isFinite(g.start)||!Number.isFinite(g.end)||g.start<0||g.end<=g.start||g.end>seconds)throw Error('Invalid shared gesture range');
-  return {id:g.id,start:g.start,end:g.end,curve:curve(g.curve,'shared gesture')};
+  const normalized={id:g.id,start:g.start,end:g.end,curve:curve(g.curve,'shared gesture')};
+  if(g.technique!==undefined)normalized.technique=g.technique;
+  return normalized;
  }).sort((a,b)=>a.start-b.start);
  for(let i=1;i<out.length;i++)if(Math.round(out[i].start*SR)<Math.round(out[i-1].end*SR))throw Error('Overlapping shared gestures');
  return out;
