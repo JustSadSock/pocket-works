@@ -6,6 +6,7 @@ import path from 'node:path';
 import {findSustainLoop} from './recorded-sustain.mjs';
 import {renderRecordedEnsemble} from './recorded-ensemble.mjs';
 import {renderEnsembleRoom} from './ensemble-room.mjs';
+import reference from './evening-standard-reference.json' with {type:'json'};
 const root=path.resolve(process.argv[2]??'.audio-recorded-ensemble'),base=path.resolve(process.argv[3]??'.audio-recorded-dynamics'),sr=48000;
 mkdirSync(root,{recursive:true});
 const source=readFileSync(path.join(base,'metrics.json')),manifest=JSON.parse(source),sha=b=>createHash('sha256').update(b).digest('hex');
@@ -64,6 +65,17 @@ for(const [id,x] of Object.entries(morph.stems))write('evening-standard-'+id+'.w
 const target=Math.min(a.rms,b.rms),gap=Math.round(sr*.7)*2,ab=new Float32Array(control.mix.length+morph.mix.length+gap);
 for(const [i,p] of [control,morph].entries()){const gain=target/[a,b][i].rms;for(let j=0;j<p.mix.length;j++)ab[(i?control.mix.length+gap:0)+j]=p.mix[j]*gain;}
 write('evening-standard-AB.wav',ab);
+
+// Golden-master admission: the original six Evening Standard WAV files are
+// immutable. New spatial and stem renders may extend the package, never
+// silently replace the approved original composition or its mastering.
+if(reference.sourceManifestSha256!==sha(source))throw Error('Evening Standard source manifest changed');
+if(Object.keys(reference.files).length!==metrics.length)throw Error('Evening Standard reference inventory mismatch');
+for(const m of metrics){
+ const expected=reference.files[m.file];
+ if(!expected||m.sha256!==expected.sha256||m.frames!==expected.frames||m.channels!==expected.channels)
+  throw Error('Original Evening Standard audio changed: '+m.file);
+}
 
 // Keep the original six audition files and their mastering unchanged.
 // Expanded outputs use the same performances, not a new score or source bank.
