@@ -117,6 +117,19 @@ for node in m['nodes']:
   assert all(abs(sum(w)-1)<.001 for w in weights)
   color=m['materials'][p['material']]['pbrMetallicRoughness']['baseColorFactor'][:3]
   parts.append((node['name'],skin,ib,pos,joints,weights,indices,color))
+# Stable original surface vertex groups for heel and toe, selected once in
+# bind geometry. Their actual skinned positions (including toe articulation)
+# are evaluated below, rather than invented foot offsets.
+landmarks={}
+for pi,(name,skin,ib,pos,joints,weights,indices,color) in enumerate(parts):
+ if name!='SuperHero_Male':continue
+ sn=[m['nodes'][j]['name'] for j in skin['joints']]
+ for side in ['l','r']:
+  ids=[i for i,(js,ws) in enumerate(zip(joints,weights)) if sum(w for j,w in zip(js,ws) if sn[j] in ('foot_'+side,'ball_'+side))>.65]
+  floor=min(pos[i][1] for i in ids);sole=[i for i in ids if pos[i][1]<floor+.018]
+  lo=min(pos[i][2] for i in sole);hi=max(pos[i][2] for i in sole)
+  landmarks[side.upper()]={'part':pi,'heel':[i for i in sole if pos[i][2]<lo+.25*(hi-lo)],'toe':[i for i in sole if pos[i][2]>hi-.25*(hi-lo)]}
+assert len(landmarks)==2 and all(g[k] for g in landmarks.values() for k in ['heel','toe'])
 samples=[]
 for k in range(25):
  t=start+(end-start)*k/24;_,w=evaluate(merged['nodes'],mt,t);meshes=[]
@@ -132,3 +145,11 @@ for k in range(25):
   meshes.append({'name':name,'color':color,'positions':v,'indices':indices})
  samples.append({'phase':k/24,'parts':meshes})
 (out/'v11-native-mesh-frames.json').write_text(json.dumps(samples,separators=(',',':')))
+
+source_surface=[]
+for row in samples:
+ entry={}
+ for side,g in landmarks.items():
+  p=row['parts'][g['part']]['positions'];entry[side]={k:[sum(p[3*i+j] for i in g[k])/len(g[k]) for j in range(3)] for k in ['heel','toe']}
+ source_surface.append(entry)
+(out/'v12-source-foot-surface.json').write_text(json.dumps({'landmarkIndices':landmarks,'frames':source_surface,'method':'Bind-selected original low foot/ball weighted vertices, evaluated using actual full skinning'},indent=2))
