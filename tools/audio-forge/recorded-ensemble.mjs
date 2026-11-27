@@ -3,7 +3,7 @@
 import {renderRecordedPerformance} from './recorded-performance.mjs';
 import {validateRecordedGestures} from './recorded-phrasing.mjs';
 const SR=48000;
-export function renderRecordedEnsemble({zones,tracks,seconds,mode='morph',includeTrackStems=false,gestures=[]}={}){
+export function renderRecordedEnsemble({zones,tracks,seconds,mode='morph',includeTrackStems=false,gestures=[],releaseBank=[]}={}){
  if(typeof includeTrackStems!=='boolean'||!Array.isArray(zones)||!zones.length||zones.length>256||!Array.isArray(tracks)||!tracks.length||tracks.length>16||!Number.isFinite(seconds)||seconds<.15||seconds>90||!['morph','discrete'].includes(mode))throw Error('Invalid recorded ensemble');
  const sharedGestures=validateRecordedGestures(gestures,seconds),gestureMap=new Map(sharedGestures.map(g=>[g.id,g])),participants=new Map();
  const frames=Math.round(seconds*SR),stems={},trackStems=Object.create(null),choices={},ids=new Set(),mix=new Float32Array(frames*2);
@@ -22,7 +22,7 @@ export function renderRecordedEnsemble({zones,tracks,seconds,mode='morph',includ
     return {...g,technique:t.phrasingTechnique};
    });
   }
-  const r=renderRecordedPerformance({zones,instrument:t.instrument,notes:t.notes,seconds,mode,phrases});
+  const r=renderRecordedPerformance({zones,instrument:t.instrument,notes:t.notes,seconds,mode,phrases,releaseBank});
   if(r.samples.length!==frames)throw Error('Ensemble frame mismatch');
   const a=stems[t.group]??(stems[t.group]=new Float32Array(frames*2));
   const l=Math.sqrt((1-t.pan)/2)*t.gain,rr=Math.sqrt((1+t.pan)/2)*t.gain;

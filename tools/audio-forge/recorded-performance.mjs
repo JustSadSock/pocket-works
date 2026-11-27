@@ -2,6 +2,7 @@
 // qualified sustain loops, pressure-driven real layers, legato and pitch expression.
 import {compileRecordedExpression} from './recorded-expression.mjs';
 import {compileRecordedPhrasing,compileRecordedReattack} from './recorded-phrasing.mjs';
+import {compileRecordedRelease} from './recorded-release.mjs';
 const SR=48000,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function read(a,p){const k=Math.floor(p),f=p-k;if(k<0||k+1>=a.length)throw Error('Recorded performance source exhausted');return a[k]*(1-f)+a[k+1]*f;}
 function voice(z,midi,offset,sustain){
@@ -22,7 +23,7 @@ function curveFor(n){
  if(!Array.isArray(c)||c.length<2||c.length>64||c[0].at!==0||c.at(-1).at!==1||c.some((p,i)=>!Number.isFinite(p.at)||!Number.isFinite(p.value)||p.value<.1||p.value>1||i>0&&p.at<=c[i-1].at))throw Error('Invalid performance pressure curve');
  return c;
 }
-export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='morph',transitionSeconds=.055,phrases=[]}={}){
+export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='morph',transitionSeconds=.055,phrases=[],releaseBank=[]}={}){
  if(!Array.isArray(zones)||!zones.length||zones.length>256||!Array.isArray(notes)||!notes.length||notes.length>512||!Number.isFinite(seconds)||seconds<.15||seconds>90||!['morph','discrete'].includes(mode)||!Number.isFinite(transitionSeconds)||transitionSeconds<.015||transitionSeconds>.12)throw Error('Invalid recorded performance');
  const groups=new Map(),cursors=new Map(),ids=new Set(),hashes=new Set();
  for(const z of zones){
@@ -46,6 +47,7 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
   const g=candidates[0];if(!g||Math.abs(g.root-n.midi)>5)throw Error('Unrecorded performance articulation or pitch');
   const layers=[...g.layers].sort((a,b)=>a[0]-b[0]);
   if(n.morph===true&&layers.length<2)throw Error('No paired performance layers');
+  if(n.release!==undefined&&(n.release!=='recorded'||n.articulation==='pizzicato'))throw Error('Invalid recorded release request');
   if(n.articulation==='pizzicato'&&(n.connected===true||n.sustain===true||n.morph===true))throw Error('Pizzicato is a finite attack');
   const chosen=mode==='morph'&&n.morph===true?[layers[0],layers.at(-1)]:[layers.reduce((a,b)=>Math.abs(a[0]-curve[0].value)<=Math.abs(b[0]-curve[0].value)?a:b)];
   const selected=chosen.map(([v,takes])=>{
@@ -65,6 +67,7 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
  for(const [i,e] of events.entries()){
   const {n,start,end,curve,selected,expression,phrase,reattack}=e,len=end-start,connected=n.connected===true,nextConnected=events[i+1]?.n.connected===true;
   const fade=Math.min(Math.round(transitionSeconds*SR),Math.floor(len/3)),attack=Math.min(240,Math.floor(len/4)),release=Math.min(3840,Math.floor(len/3));
+  if(n.release==='recorded'&&nextConnected)throw Error('Recorded ending cannot precede a connected note');
   const offset=connected&&!reattack?Math.round(.16*SR):0;
   let alignment={correlation:0,delay:0};
   if(selected.length===2){
@@ -100,9 +103,16 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
    if(reattack)x*=reattack.gainAt(j/SR);
    if(connected&&j<fade){const w=.5-.5*Math.cos(Math.PI*j/(fade-1));x=previous.next(previous.pressure)*(1-w)+x*w;}
    else if(!connected)x*=Math.min(1,j/attack);
-   if(!nextConnected)x*=Math.min(1,(len-1-j)/release);
+   if(!nextConnected&&n.release!=='recorded')x*=Math.min(1,(len-1-j)/release);
    if(!Number.isFinite(x)||Math.abs(x)>=.999)throw Error('Invalid unified performance PCM');
    out[start+j]=x;peak=Math.max(peak,Math.abs(x));if(start+j)maxStep=Math.max(maxStep,Math.abs(out[start+j]-out[start+j-1]));
+  }
+  if(n.release==='recorded'){
+   const plan=compileRecordedRelease({selected,releaseBank,midi:n.midi,pressure,correlation:alignment.correlation,availableFrames:(events[i+1]?.start??frames)-end});
+   const ending=plan.render(next);
+   out.set(ending.samples,end);
+   meta.release={...ending.receipt,startFrame:end,boundaryStep:Math.abs(out[end]-out[end-1])};
+   for(let k=0;k<ending.samples.length;k++){const v=out[end+k];peak=Math.max(peak,Math.abs(v));maxStep=Math.max(maxStep,Math.abs(v-out[end+k-1]));}
   }
   meta.boundaryStep=start?Math.abs(out[start]-out[start-1]):0;
   choices.push(meta);previous={next,pressure,voices,meta};
