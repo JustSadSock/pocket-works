@@ -1,7 +1,6 @@
 """Pinned CC0 foundation-source expansion for The Weight of a Crown."""
 import hashlib,json,math,pathlib,sys,time,urllib.parse,urllib.request,wave,io
 import numpy as np
-from scipy.signal import find_peaks
 HF_REV='3a12d6961bb4e1c3111c68cf1624c45bb49c97dd'
 VCSL_REV='c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e'
 HF='https://huggingface.co/AEmotionStudio/stringstudio-double-bass-samples/resolve/'+HF_REV+'/'
