@@ -1,5 +1,10 @@
 name: Banners Cross Commit Economic Qualification
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ci-overhaul/banners-cross-commit-economic-qualification*'
+      - '.github/workflows/banners-cross-commit-economic-qualification.yml'
   pull_request:
     paths:
       - 'scripts/ci-overhaul/banners-cross-commit-economic-qualification*'
@@ -210,7 +215,7 @@ jobs:
           if-no-files-found: error
   replay_economics:
     needs: contract
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/banners-cross-commit-economic-qualification'
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/banners-cross-commit-economic-qualification')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -232,9 +237,53 @@ jobs:
           name: recovered-economic-qualification-${{ github.run_attempt }}
           path: economics.json
           if-no-files-found: error
+  attest_economics:
+    needs: replay_economics
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: recovered-economic-qualification-${{ github.run_attempt }}
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: economics.json
+  verify_economics:
+    needs: [replay_economics,attest_economics]
+    if: always() && needs.replay_economics.result == 'success' && (github.ref != 'refs/heads/main' || needs.attest_economics.result == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: recovered-economic-qualification-${{ github.run_attempt }}
+      - name: Authenticate protected issuer and recompute economics from independent evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            gh attestation verify economics.json --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/banners-cross-commit-economic-qualification.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
+          fi
+          node scripts/ci-overhaul/banners-cross-commit-economic-qualification.mjs replay unused independently-rebuilt.json
+          cmp economics.json independently-rebuilt.json
   required_gate:
     if: always()
-    needs: [contract,prepare,execute,independent_gate,economics,replay_economics]
+    needs: [contract,prepare,execute,independent_gate,economics,replay_economics,attest_economics,verify_economics]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -245,11 +294,18 @@ jobs:
           GATE: ${{ needs.independent_gate.result }}
           ECONOMICS: ${{ needs.economics.result }}
           REPLAY: ${{ needs.replay_economics.result }}
+          ATTEST: ${{ needs.attest_economics.result }}
+          VERIFY: ${{ needs.verify_economics.result }}
         run: |
           set -euo pipefail
           test "$CONTRACT" = success
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            test "$REPLAY" = success; test "$ATTEST" = success; test "$VERIFY" = success
+            exit 0
+          fi
           if jq -e '.pull_request.head.repo.full_name == .repository.full_name and .pull_request.head.ref == "infra/banners-cross-commit-economic-qualification"' "$GITHUB_EVENT_PATH"; then
             test "$REPLAY" = success
+            test "$ATTEST" = skipped; test "$VERIFY" = success
             if [[ "$PREPARE" == success ]]; then
               test "$EXECUTE" = success; test "$GATE" = success; test "$ECONOMICS" = success
             else
@@ -260,5 +316,5 @@ jobs:
             test "$EXECUTE" = skipped
             test "$GATE" = skipped
             test "$ECONOMICS" = skipped
-            test "$REPLAY" = skipped
+            test "$REPLAY" = skipped; test "$ATTEST" = skipped; test "$VERIFY" = skipped
           fi

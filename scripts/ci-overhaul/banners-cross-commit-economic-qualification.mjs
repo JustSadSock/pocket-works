@@ -75,8 +75,15 @@ function historicalFresh(){
  validateHistoricalFresh(g);
  const gate=qa.jobs.find(j=>j.id===140515695701);
  duration(gate);
- const log=gh(['run','view','46000572518','--repo',REPO,'--job','140515695701','--log']);
- if(!log.includes('qa-summary-46000572518-1 (ID: 15197928969')||!log.includes('46db020484156e74185837e6abd1a5acc562b5e059a91d951ccedac0def9bb58')||!log.includes('"tree":"1e450f71ba0f02b69c9b481e6ef033baa2795d3e"')||!log.includes('"planDigest":"2faf1fc0906bdaa157de4895b9660af381d0a1fc3af8720e297b57e3562d626e"')||!log.includes('"expected":21,"finalPassed":21')||!log.includes('"route":"legacy","count":21,"success":true,"coverage":"all-original-app-suites"'))fail('Independent original gate identity differs');
+ // The legacy summary lacks source identity. Pin the original archive and
+ // the independently completed gate job in the exact attempt, rather than
+ // relying on the presentation format of gh run view --log.
+ const artifacts=api('actions/runs/46000572518/artifacts?name=qa-summary-46000572518-1&per_page=100');
+ const match=artifacts.artifacts.filter(a=>a.name==='qa-summary-46000572518-1');
+ if(match.length!==1||match[0].id!==15197928969||match[0].expired!==false||match[0].size_in_bytes!==1677)fail('Original gate artifact identity differs');
+ const archive=execFileSync('gh',['api','repos/'+REPO+'/actions/artifacts/15197928969/zip'],{timeout:60000,maxBuffer:8*1024*1024,stdio:['ignore','pipe','pipe']});
+ if(hash(archive)!=='46db020484156e74185837e6abd1a5acc562b5e059a91d951ccedac0def9bb58')fail('Original gate archive digest differs');
+ if(gate.id!==140515695701||gate.run_id!==46000572518||(gate.run_attempt!==undefined&&gate.run_attempt!==1))fail('Original independent gate job differs');
  const commit=api('git/commits/'+SOURCE);if(commit.sha!==SOURCE||commit.tree?.sha!=='1e450f71ba0f02b69c9b481e6ef033baa2795d3e'||commit.parents?.[1]?.sha!==qa.r.head_sha)fail('Historical source commit differs');
  const baseline=matrix(qa.jobs,i=>'cpu (banners-of-war-completion-lab-'+i+', banners-of-war, completion-lab, node, '+i+', false)');
  const renewal=run(45996361840,'.github/workflows/gameplay-receipt-renewal.yml',ISSUER,2);
