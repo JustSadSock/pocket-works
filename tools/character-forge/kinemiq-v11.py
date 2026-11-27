@@ -104,3 +104,31 @@ rest={k:bind[v][12:15] for k,v in aliases.items()}
 report={'source':'GLB/Walk_forwards.glb','action':a['name'],'axis':'glTF Y-up','license':'CC0-1.0','archiveSha256':hashlib.sha256(archive.read_bytes()).hexdigest(),'durationSeconds':end-start,'rest':rest,'bindMatrices':{k:bind[v] for k,v in aliases.items()},'frames':frames,'sourceNodes':len(c['nodes']),'mannequinNodes':len(m['nodes']),'channels':len(tracks),'maxWorldMatrixDifference':err,'rootTravel': [y-x for x,y in zip(frames[0]['points']['root'],frames[-1]['points']['root'])],'pelvisTravel':[y-x for x,y in zip(frames[0]['points']['pelvis'],frames[-1]['points']['pelvis'])]}
 (out/'v10-reference-trajectory.json').write_text(json.dumps(report,indent=2))
 print(json.dumps({k:v for k,v in report.items() if k not in ['frames','rest','bindMatrices']}))
+
+# Actual original skinned geometry, not a skeleton illustration. Use the
+# mannequin's weights and inverse bind matrices, unchanged.
+def point(a,p):return [sum(a[k*4+r]*p[k] for k in range(3))+a[12+r] for r in range(3)]
+parts=[]
+for node in m['nodes']:
+ if 'mesh' not in node:continue
+ skin=m['skins'][node['skin']];ib=acc(m,binm,skin['inverseBindMatrices'])
+ for p in m['meshes'][node['mesh']]['primitives']:
+  at=p['attributes'];pos=acc(m,binm,at['POSITION']);joints=acc(m,binm,at['JOINTS_0']);weights=acc(m,binm,at['WEIGHTS_0']);indices=[i[0] for i in acc(m,binm,p['indices'])]
+  assert all(abs(sum(w)-1)<.001 for w in weights)
+  color=m['materials'][p['material']]['pbrMetallicRoughness']['baseColorFactor'][:3]
+  parts.append((node['name'],skin,ib,pos,joints,weights,indices,color))
+samples=[]
+for k in range(25):
+ t=start+(end-start)*k/24;_,w=evaluate(merged['nodes'],mt,t);meshes=[]
+ for name,skin,ib,pos,joints,weights,indices,color in parts:
+  matrix=[mul(w[j],b) for j,b in zip(skin['joints'],ib)];v=[]
+  for p,js,ws in zip(pos,joints,weights):
+   x=[0,0,0]
+   for j,weight in zip(js,ws):
+    if weight:
+     a=point(matrix[j],p)
+     x=[z+weight*y for z,y in zip(x,a)]
+   v.extend(x)
+  meshes.append({'name':name,'color':color,'positions':v,'indices':indices})
+ samples.append({'phase':k/24,'parts':meshes})
+(out/'v11-native-mesh-frames.json').write_text(json.dumps(samples,separators=(',',':')))
