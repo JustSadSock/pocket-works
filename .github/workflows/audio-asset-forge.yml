@@ -330,7 +330,13 @@ jobs:
         with:
           node-version: 22
       - name: Install audio decoder
-        run: sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Microsoft’s preinstalled runner feed is unrelated to SoX and may
+          # return 403. Restrict package metadata refresh to Ubuntu’s signed feed.
+          sudo apt-get update -o Acquire::Retries=3 -o Dir::Etc::sourcelist="sources.list.d/ubuntu.sources" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0"
+          sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
       - name: Import pinned original recordings and render matched timbre studies
         shell: bash
         run: |
@@ -438,6 +444,7 @@ jobs:
           test "$(find .audio-recorded-ensemble -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
           test -s .audio-recorded-ensemble/evening-standard-AB.wav
           test "$(find .audio-recorded-ensemble/expanded -maxdepth 1 -name '*.wav' | wc -l)" -eq 11
+          test "$(find .audio-recorded-ensemble -type f -name '*.wav' | wc -l)" -eq 17
           test -s .audio-recorded-ensemble/expanded/evening-standard-room-ABC.wav
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.recorded_ensemble.outcome == 'success' }}
