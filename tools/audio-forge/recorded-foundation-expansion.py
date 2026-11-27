@@ -42,23 +42,28 @@ def wav_info(b):
         if x[0] not in (44100,48000) or x[1] not in (1,2) or x[2] not in (2,3,4) or x[3]<1000:raise ValueError('invalid source WAV '+str(x))
         return dict(sampleRate=x[0],channels=x[1],sampleWidth=x[2],frames=x[3],seconds=round(x[3]/x[0],4))
 def measure_midi(b,expected):
-    with wave.open(io.BytesIO(b),'rb') as w:
-        rate=w.getframerate();channels=w.getnchannels();width=w.getsampwidth();raw=w.readframes(w.getnframes())
     decoded=subprocess.check_output(['sox','-R','-t','wav','-','-t','raw','-e','floating-point','-b','32','-L','-c','1','-r','48000','-'],input=b)
     x=np.frombuffer(decoded,dtype='<f4').astype(np.float64)
-    rate=48000
-    lo=int(rate*.20);hi=min(len(x),int(rate*2.20));x=x[lo:hi]
+    # Box-decimate to 12 kHz; the bass fundamental remains while upper partials are attenuated.
+    x=x[:(len(x)//4)*4].reshape(-1,4).mean(axis=1);rate=12000
+    lo=int(rate*.12);hi=min(len(x),int(rate*2.25));x=x[lo:hi]
     if len(x)<rate:raise ValueError('short double bass sample')
-    x=x-np.mean(x);x*=np.hanning(len(x))
+    x-=np.mean(x)
     nfft=1
-    while nfft<len(x):nfft*=2
-    spec=np.abs(np.fft.rfft(x,n=nfft*2))
-    freqs=np.fft.rfftfreq(nfft*2,1/rate)
-    target=440*2**((expected-69)/12);mask=(freqs>=target*.78)&(freqs<=target*1.22)
-    if not np.any(mask):raise ValueError('pitch search range empty')
-    ids=np.flatnonzero(mask);peak=ids[int(np.argmax(spec[mask]))];freq=float(freqs[peak])
-    midi=69+12*math.log2(freq/440)
-    return round(midi,3),round(freq,3)
+    while nfft<2*len(x):nfft*=2
+    spec=np.fft.rfft(x,n=nfft)
+    corr=np.fft.irfft(spec*np.conjugate(spec),n=nfft)[:len(x)]
+    corr/=np.maximum(1,len(x)-np.arange(len(x)))
+    target=rate/(440*2**((expected-69)/12))
+    low=max(2,int(target*.88));high=min(len(corr)-2,int(target*1.12))
+    if high<=low:raise ValueError('autocorrelation search range empty')
+    lag=low+int(np.argmax(corr[low:high]))
+    y0,y1,y2=corr[lag-1:lag+2];den=y0-2*y1+y2
+    shift=float(np.clip(.5*(y0-y2)/den,-.5,.5)) if abs(den)>1e-15 else 0.
+    period=lag+shift;freq=rate/period;midi=69+12*math.log2(freq/440)
+    confidence=float(corr[lag]/max(corr[0],1e-12))
+    return round(midi,3),round(freq,3),round(confidence,5)
+
 def self_test():
     assert len(BASS)==7 and all(len(v)==2 for v in BASS.values())
     assert len(PERC)==10 and len({x[3] for x in PERC})==10
@@ -80,11 +85,11 @@ def run(out):
             zone=manifest_zones.get(name)
             if not zone or zone.get('sha256')!=digest or zone.get('sizeBytes')!=360044 or zone.get('rootPitch')!=root or zone.get('lowVelocity')!=vel[0] or zone.get('highVelocity')!=vel[1]:raise ValueError('double bass pinned manifest zone mismatch '+name)
             if len(b)!=360044 or hashlib.sha256(b).hexdigest()!=digest:raise ValueError('double bass bytes/hash mismatch '+name)
-            info=wav_info(b);midi,freq=measure_midi(b,root)
+            info=wav_info(b);midi,freq,confidence=measure_midi(b,root)
             if abs(midi-root)>.75:raise ValueError(f'double bass pitch rejected {name}: {midi:.3f} != {root}')
             sha=digest;eid=f'vsco-double-bass-{root}-v{layer+1}';path=f'objects/{sha}.wav';(out/'library'/path).write_bytes(b)
             e=dict(id=eid,path=path,title=f'Solo contrabass recorded root {root} velocity {vel[0]}-{vel[1]}',creator='Versilian Studios — Sam Gossner and Simon Dalzell',license='CC0-1.0',redistribution=True,provenance='VSCO 2 CE BKCtbss Solo Contrabass; pinned AEmotionStudio String Studio repack',sourceUrl='https://github.com/sgossner/VSCO-2-CE',rightsEvidence='https://huggingface.co/AEmotionStudio/stringstudio-double-bass-samples/blob/'+HF_REV+'/manifest.json (CC0-1.0; source library VSCO 2 CE)',sha256=sha,tags=['instrument','recorded','double-bass','sustain','research-only'],approval='research-only',pin=dict(revision=HF_REV,blob='huggingface-xet-sha256:'+sha,bytes=len(b)),instrument='double-bass',articulation='sustain',expectedMidi=root,measuredMidi=midi,velocity=(vel[0]+vel[1])/254,recipe=dict(instrument='double-bass',articulation='sustain',velocity=(vel[0]+vel[1])/254,variant=1,midi=root,lowVelocity=vel[0],highVelocity=vel[1]))
-            entries.append(e);receipts.append(dict(id=eid,sha256=sha,bytes=len(b),**info,expectedMidi=root,measuredMidi=midi,fundamentalHz=freq,velocity=vel))
+            entries.append(e);receipts.append(dict(id=eid,sha256=sha,bytes=len(b),**info,expectedMidi=root,measuredMidi=midi,fundamentalHz=freq,pitchConfidence=confidence,velocity=vel))
     for inst,art,velocity,path in PERC:
         encoded=urllib.parse.quote(path,safe='/')
         url=VCSL+encoded;b=get(url);info=wav_info(b);sha=hashlib.sha256(b).hexdigest();eid=f'vcsl-{inst}-{art}-{len([e for e in entries if e["instrument"]==inst and e["articulation"]==art])+1}'
