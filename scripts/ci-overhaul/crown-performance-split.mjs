@@ -2,10 +2,19 @@
 import {readFileSync,writeFileSync,lstatSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {canonical,digest} from './verified-results.mjs';
+import {digest} from './verified-results.mjs';
 import {projectCrown} from './full-simulation-repeatability.mjs';
 const flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 export const REPORTS=Object.freeze(['balance-3.json','balance-8.json','balance-targeted-3.json','discovery-3.json','society-3.json','society-300-4-legacy-audit.json']);
+// Simulation outputs contain finite floating-point values; use the original
+// full-simulation canonicalization, not the integer-only receipt canonicalizer.
+function stable(x){
+ if(x===null||typeof x==='string'||typeof x==='boolean'||typeof x==='number'&&Number.isFinite(x))return x;
+ if(Array.isArray(x))return x.map(stable);
+ if(x&&Object.getPrototypeOf(x)===Object.prototype)return Object.fromEntries(Object.keys(x).sort().map(k=>[k,stable(x[k])]));
+ throw Error('Non-JSON simulation value');
+}
+const canonical=x=>JSON.stringify(stable(x));
 const SINGLE='society-300-4-legacy-audit.json',eq=(a,b)=>canonical(a)===canonical(b),hash=x=>digest(canonical(x));
 const fail=s=>{throw Error(s);};
 const raw=p=>{const s=lstatSync(p);if(!s.isFile()||s.size>128*1024*1024)fail('Unsafe original report');return readFileSync(p);};
