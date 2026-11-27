@@ -8,7 +8,7 @@ from mathutils.bvhtree import BVHTree
 out=Path(os.environ['CHARACTER_EVIDENCE']);spec=json.loads((out/'morph/v9-cloth-input.json').read_text())
 g=spec['garment'];N=g['outerVertexCount'];raw=lambda a:[a[i:i+3] for i in range(0,len(a),3)] if a and isinstance(a[0],(float,int)) else a
 cv=lambda p:(p[0],-p[2],p[1]);gltf=lambda p:[p.x,p.z,-p.y]
-base=raw(g['frames'][0]);pins=set(g['pinIndices']);remap={};unique=[];lookup={}
+base=raw(g['staticPositions']);pins=set(g['pinIndices']);remap={};unique=[];lookup={}
 # Weld only coincident pattern vertices. Keep explicit original-to-welded mapping.
 for i,p in enumerate(base):
  key=tuple(round(x,7) for x in p)
@@ -17,7 +17,7 @@ for i,p in enumerate(base):
 faces=[tuple(remap[i] for i in g['indices'][k:k+3]) for k in range(0,len(g['indices']),3)]
 assert all(len(set(f))==3 for f in faces)
 wpins=sorted({remap[i] for i in pins});edges=sorted({tuple(sorted((f[k],f[(k+1)%3]))) for f in faces for k in range(3)})
-initial=[base[i] for i in unique];lengths=[math.dist(initial[a],initial[b]) for a,b in edges];assert min(lengths)>1e-6
+initial=[base[i][:] for i in unique];original=[p[:] for p in initial]
 # Forward root path is known from the existing skeletal input; leave vertical
 # bob and lateral body motion intact. If explicit root offsets are supplied,
 # use those instead of inferring world travel from the anchored seam.
@@ -48,6 +48,61 @@ def evaluated(ob):
 def percentile(a,p):return sorted(a)[min(len(a)-1,int((len(a)-1)*p))]
 def tree(v,f):return BVHTree.FromPolygons([Vector(x) for x in v],f,all_triangles=True,epsilon=1e-6)
 freeFaces=[f for f in faces if not any(i in wpins for i in f)]
+staticColliders=[(i['name'],raw(i['staticPositions']),[tuple(i['indices'][k:k+3]) for k in range(0,len(i['indices']),3)]) for i in spec['colliders']]
+def initial_overlap(v):
+ t=tree(v,freeFaces);return {name:len(t.overlap(tree(vs,fs))) for name,vs,fs in staticColliders}
+beforeFit=initial_overlap(initial)
+# The actual neutral leg/boot sections determine the clearance. No blanket
+# translation or scaling of the garment. The attachment seam stays fixed.
+def hull(pts):
+ pts=sorted(set(pts))
+ if len(pts)<3:return pts
+ def cross(a,b,c):return (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])
+ def half(pts):
+  h=[]
+  for p in pts:
+   while len(h)>=2 and cross(h[-2],h[-1],p)<=0:h.pop()
+   h.append(p)
+  return h
+ return half(pts)[:-1]+half(pts[::-1])[:-1]
+def section(y):
+ pts=[]
+ for name,v,fs in staticColliders:
+  if name=='tunic':continue
+  for f in fs:
+   for k in range(3):
+    a,b=v[f[k]],v[f[(k+1)%3]]
+    if (a[1]-y)*(b[1]-y)>0 or abs(a[1]-b[1])<1e-9:continue
+    t=(y-a[1])/(b[1]-a[1]);pts.append((a[0]+t*(b[0]-a[0]),a[2]+t*(b[2]-a[2])))
+ return pts
+def radial_exit(poly,o,d):
+ best=0.0
+ for i,a in enumerate(poly):
+  b=poly[(i+1)%len(poly)];e=[b[0]-a[0],b[1]-a[1]];q=[a[0]-o[0],a[1]-o[1]];det=d[0]*e[1]-d[1]*e[0]
+  if abs(det)<1e-10:continue
+  t=(q[0]*e[1]-q[1]*e[0])/det;u=(q[0]*d[1]-q[1]*d[0])/det
+  if t>=0 and -1e-8<=u<=1+1e-8:best=max(best,t)
+ return best
+center=[sum(initial[i][k] for i in wpins)/len(wpins) for k in (0,2)]
+for i,p in enumerate(initial):
+ if i in wpins:continue
+ poly=hull([v for y in [p[1]-.008,p[1],p[1]+.008] for v in section(y)])
+ dx,dz=p[0]-center[0],p[2]-center[1];r=math.hypot(dx,dz)
+ if r<1e-8 or len(poly)<3:continue
+ d=[dx/r,dz/r];needed=radial_exit(poly,center,d)+.012
+ if needed>r:
+  shift=min(.06,needed-r);p[0]+=shift*d[0];p[2]+=shift*d[1]
+afterFit=initial_overlap(initial)
+fitDelta=max(math.dist(a,b) for a,b in zip(initial,original))
+lengths=[math.dist(initial[a],initial[b]) for a,b in edges];assert min(lengths)>1e-6
+area=sum((Vector(initial[b])-Vector(initial[a])).cross(Vector(initial[c])-Vector(initial[a])).length*.5 for a,b,c in faces)
+# Blender mass is PER VERTEX, not whole garment mass. Woven-wool density
+# is a declared experiment parameter (kg/m^2); use the actual mesh area.
+density=.38;vertexMass=area*density/len(initial)
+preflight={'before':beforeFit,'after':afterFit,'maxFitCorrectionMetres':fitDelta,'areaSquareMetres':area,'arealDensityKgM2':density,'totalMassKg':area*density,'vertexMassKg':vertexMass}
+(out/'v11-cloth-preflight.json').write_text(json.dumps(preflight,indent=2))
+print(json.dumps({'clothPreflight':preflight}),flush=True)
+if sum(afterFit.values())>0:raise RuntimeError('Neutral cloth initial intersection gate rejected; no simulation advanced')
 def stats(v,expected,colliders):
  ratio=[math.dist(v[a],v[b])/d for (a,b),d in zip(edges,lengths)]
  seam=max(math.dist(v[j],expected[j]) for j in wpins)
@@ -62,18 +117,26 @@ for stage in [1,2,3]:
  # Static settling first, then local leg motion. Stage 3 replays the same
  # local simulation and explicitly applies measured root translation on export.
  warm=24;count=49 if stage==1 else warm+spec['frameCount'];scene.frame_start=1;scene.frame_end=count
- times=[0 if stage==1 else max(0,min(spec['frameCount']-1,i-warm)) for i in range(count)]
- expected=[[local(raw(g['frames'][i])[j],i) for j in unique] for i in times]
+ times=[-1 if stage==1 or i<warm-6 else max(0,min(spec['frameCount']-1,i-warm)) for i in range(count)]
+ def frame_positions(item,idx,t):
+  neutral=raw(item['staticPositions']);moving=raw(item['frames'][max(0,t)])
+  if t<0:return neutral
+  blend=max(0,min(1,(idx-(warm-6))/6))
+  return [[a+(b-a)*blend for a,b in zip(p,local(q,t))] for p,q in zip(neutral,moving)]
+ expected=[[frame_positions(g,idx,t)[j] for j in unique] for idx,t in enumerate(times)]
+ for row in expected:
+  for j in range(len(row)):
+   row[j]=[a+b-c for a,b,c in zip(row[j],initial[j],original[j])]
  cloth=object_mesh('MerchantRobeWelded',initial,faces)
  if stage>1:keys(cloth,expected,set(wpins))
  group=cloth.vertex_groups.new(name='PinnedSeam');group.add(wpins,1,'REPLACE')
  colliders=[];collider_data=[]
  for item in spec['colliders']:
-  fs=[tuple(item['indices'][k:k+3]) for k in range(0,len(item['indices']),3)];frames=[[local(p,i) for p in raw(item['frames'][i])] for i in times]
+  fs=[tuple(item['indices'][k:k+3]) for k in range(0,len(item['indices']),3)];frames=[frame_positions(item,idx,t) for idx,t in enumerate(times)]
   ob=object_mesh('Collider_'+item['name'],frames[0],fs)
   if stage>1:keys(ob,frames)
   cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.004;cm.settings.thickness_inner=.004;colliders.append(ob);collider_data.append((item['name'],frames,fs))
- mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=12;s.mass=.32;s.vertex_group_mass=group.name;s.pin_stiffness=1
+ mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=16;s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1
  # Firm woven wool, not default stretchy fabric; no dynamic rest shape.
  for name,val in [('tension_stiffness',35),('compression_stiffness',35),('shear_stiffness',22),('bending_stiffness',1.0),('tension_damping',8),('compression_damping',8),('shear_damping',5),('bending_damping',.7),('use_dynamic_mesh',False)]:
   if hasattr(s,name):setattr(s,name,val)
@@ -90,7 +153,7 @@ for stage in [1,2,3]:
   i=frame-1
   if frame==1 or frame%6==1 or frame==count:
    cs=[(name,fs[i],idx) for name,fs,idx in collider_data];row=stats(v,expected[i],cs);rows.append({'frame':frame,**row})
-   root=offsets[times[i]] if stage==3 else [0,0,0]
+   root=offsets[times[i]] if stage==3 and times[i]>=0 else [0,0,0]
    samples.append({'frame':frame,'sourceFrame':times[i],'root':root,'positions':[[x+y for x,y in zip(p,root)] for p in v]})
  # Require all settled samples to preserve weave and hem, anchor, and avoid
  # new non-seam intersections. Initial contacts are reported, not ignored.
@@ -98,7 +161,7 @@ for stage in [1,2,3]:
  gates={'stretch':all(r['p95Stretch']<=1.15 and r['maxStretch']<=1.6 and not r['collapsedEdges'] for r in settled),'pin':all(r['pinErrorMetres']<=.006 for r in settled),'shape':all(.78<=r['hemRadiusRatio']<=1.22 and r['maxDeviationMetres']<=.15 for r in settled),'collision':all(sum(r['nonSeamTrianglePairs'].values())<=initialPairs and sum(r['nonSeamTrianglePairs'].values())<=10 for r in settled)}
  results.append({'stage':stage,'passed':all(gates.values()),'gates':gates,'frames':rows,'sampleFrames':len(samples)})
  (out/('v11-cloth-stage-%d.json'%stage)).write_text(json.dumps({'stage':stage,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'faces':faces,'pinIndices':wpins,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
- (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'stage3Method':'local cloth simulation + measured world root translation; no double application','status':'passed' if len(results)==3 and results[-1]['passed'] else 'blocked at stage '+str(stage)},indent=2))
+ (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':'passed' if len(results)==3 and results[-1]['passed'] else 'blocked at stage '+str(stage)},indent=2))
  print(json.dumps({'stage':stage,'gates':gates,'last':rows[-1]}),flush=True)
  if stage==3 and all(gates.values()):
   # The existing verified cache format remains available; no production cache
