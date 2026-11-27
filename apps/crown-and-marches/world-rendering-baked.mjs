@@ -2,6 +2,7 @@
 // retained; expensive material/normal/shadow evaluation is not per-frame.
 import {prepareTerrain} from './world-rendering-gl.mjs';
 import {ResidentWorldSurface} from './atlas-resident-surface.mjs';
+import {bakeMaterialTiles} from './atlas-material-tiles.mjs';
 import {contourSource,chartedContourSource,scaleTerrainSource} from './genesis-contours.mjs';
 import {model} from './geography-review.mjs';
 import {overviewMaterial,identityBiome,atlasPaper} from './atlas-material-fields.mjs';
@@ -13,15 +14,15 @@ function hash(x,y){let n=Math.imul(x+631,374761393)^Math.imul(y+289,668265263);n
 function noise(x,y){const i=Math.floor(x),j=Math.floor(y),u=S(x-i),v=S(y-j);return L(L(hash(i,j),hash(i+1,j),u),L(hash(i,j+1),hash(i+1,j+1),u),v);}
 const sleep=()=>new Promise(r=>setTimeout(r,0));
 function budget(){let last=performance.now(),max=0;return {async yield(){const now=performance.now();if(now-last>=6){max=Math.max(max,now-last);await sleep();last=performance.now();}},get max(){return Math.max(max,performance.now()-last);}};}
-export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=false,closeLOD=false,auditFields=false,check=()=>{}}={}){
+export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=false,closeLOD=false,auditFields=false,check=()=>{},materialCache=null,materialVisible=null,onMaterialTile=()=>{}}={}){
  const started=performance.now(),source=sourceOverride||await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),{vertices:v,elevations:z,cols:w,rows:h,detail:res}=source,b=budget(),pixels=new Uint8Array(w*h*4),normals=auditFields?new Float32Array(w*h*3):null,lighting=auditFields?new Float32Array(w*h*2):null,materials=auditFields?new Float32Array(w*h*3):null,detailMask=source.scaleSurface?new Uint8Array(w*h*4):null,overview=source.scaleSurface&&res<=2;
  // Normal and horizon fields are reconstructed from the actual height mesh.
  // Bilinear horizon lookup removes nearest-texel shadow striping.
  const at=(x,y)=>z[C(y,0,h-1)*w+C(x,0,w-1)],sample=(x,y)=>{const i=Math.floor(x),j=Math.floor(y),u=x-i,t=y-j;return L(L(at(i,j),at(i+1,j),u),L(at(i,j+1),at(i+1,j+1),u),t);};
  const light=[-.62,-.49,.61],len=Math.hypot(light[0],light[1]),scale=1/res;
- for(let y=0;y<h;y++){for(let x=0;x<w;x++){const k=y*w+x,o=k*9,wx=v[o],wy=v[o+1],H=v[o+3],wet=v[o+4],fert=v[o+5],forest=v[o+6],land=v[o+7],river=v[o+8],height=z[k];let col=[216,205,178];const ink=source.ink?.[k]??1,paper=source.identity&&source.ink?atlasPaper(wx,wy):[216,205,178];
- if(source.diagnostic){const i=k*4;pixels.set([203,196,177,255],i);continue;}
- if(geology==='waters'&&source.water?.kind[k]&&!auditFields){const water=watersMaterial({x:wx,y:wy},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]}),i=k*4;pixels[i]=C(L(paper[0],water[0],ink),0,255);pixels[i+1]=C(L(paper[1],water[1],ink),0,255);pixels[i+2]=C(L(paper[2],water[2],ink),0,255);pixels[i+3]=255;continue;}
+ const shade=(x,y)=>{const k=y*w+x,o=k*9,wx=v[o],wy=v[o+1],H=v[o+3],wet=v[o+4],fert=v[o+5],forest=v[o+6],land=v[o+7],river=v[o+8],height=z[k];let col=[216,205,178];const ink=source.ink?.[k]??1,paper=source.identity&&source.ink?atlasPaper(wx,wy):[216,205,178];
+ if(source.diagnostic){const i=k*4;pixels.set([203,196,177,255],i);return;}
+ if(geology==='waters'&&source.water?.kind[k]&&!auditFields){const water=watersMaterial({x:wx,y:wy},{kind:source.water.kind[k],depth:source.water.depth[k],shore:source.water.shore[k]}),i=k*4;pixels[i]=C(L(paper[0],water[0],ink),0,255);pixels[i+1]=C(L(paper[1],water[1],ink),0,255);pixels[i+2]=C(L(paper[2],water[2],ink),0,255);pixels[i+3]=255;return;}
  if(river<=1.5){
  const dx=(at(x+1,y)-at(x-1,y))/(2*scale),dy=(at(x,y+1)-at(x,y-1))/(2*scale),norm=Math.hypot(dx,dy,1),nx=source.normalField?.[k*3]??-dx/norm,ny=source.normalField?.[k*3+1]??-dy/norm,nz=source.normalField?.[k*3+2]??1/norm,diff=Math.max(0,nx*light[0]+ny*light[1]+nz*light[2]),slope=1-nz;
  let shadow=0;for(const step of (overview?[.7,2.8,5.6]:[.35,.7,1.2,1.9,2.8,4,5.6,7.4])){const q=sample(x+light[0]/len*step*res,y+light[1]/len*step*res),occ=q-height-step*light[2]/len;shadow=Math.max(shadow,S((occ-.035)/.36));}
@@ -45,13 +46,15 @@ export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=fal
  if(river<.014){const opacity=1-S((river+.010)/.024);col=mix(col,mix([49,93,108],[111,144,120],S((river+.06)/.07)),opacity);}}}
  }
  const i=k*4;if(detailMask){const known=river<=1.5?ink:0,rock=S((H-.29)/.25)*S((Math.abs(at(x+1,y)-at(x-1,y))+Math.abs(at(x,y+1)-at(x,y-1)))*res*.8);const canopy=source.identity?forest*(.65+.55*noise(wx*.32+11,wy*.32))*S((forest+.15*noise(wx*1.2,wy*1.2))/.35):forest;detailMask[i]=Math.round(C(canopy*(1-rock))*255);detailMask[i+1]=Math.round(rock*255);detailMask[i+2]=Math.round(C(wet)*255);detailMask[i+3]=Math.round(known*255);}pixels[i]=C(L(paper[0],col[0],ink),0,255);pixels[i+1]=C(L(paper[1],col[1],ink),0,255);pixels[i+2]=C(L(paper[2],col[2],ink),0,255);pixels[i+3]=255;
- }await b.yield();check();}
+ };
+ const materialStats=materialCache&&!auditFields&&source.scaleSurface&&source.identity&&source.water&&!source.ink&&!source.diagnostic&&geology==='waters'?await bakeMaterialTiles({source,cache:materialCache,visible:materialVisible,pixels,detailMask,shade,budget:b,check,onTile:onMaterialTile}):null;
+ if(!materialStats)for(let y=0;y<h;y++){for(let x=0;x<w;x++)shade(x,y);await b.yield();check();}
  const bakeMs=performance.now()-started-(sourceOverride?0:source.stats.ms),bakeSlice=b.max,meshStart=performance.now();
  // Two independent index/vertex buffers share one pre-baked material field.
  // Source sampling is 8/cell; mesh is 2 or 4/cell and remains resident.
  const lods=[];for(const stride of (source.contours?[8,4,2,1]:closeLOD?[4,2,1]:[4,2]).filter(stride=>(w-1)%stride===0&&(h-1)%stride===0)){const cols=(w-1)/stride+1,rows=(h-1)/stride+1,vertices=new Float32Array(cols*rows*3),indices=new Uint32Array((cols-1)*(rows-1)*6);for(let y=0;y<rows;y++){for(let x=0;x<cols;x++){const i=(y*stride*w+x*stride)*9,o=(y*cols+x)*3;vertices[o]=v[i];vertices[o+1]=v[i+1];vertices[o+2]=v[i+2];if(x<cols-1&&y<rows-1){const a=y*cols+x,k=(y*(cols-1)+x)*6;indices.set([a,a+1,a+cols+1,a,a+cols+1,a+cols],k);}}await b.yield();check();}lods.push({vertices,indices,cols,rows});}
  const bytes=pixels.byteLength+(detailMask?.byteLength??0)+lods.reduce((n,l)=>n+l.vertices.byteLength+l.indices.byteLength,0);
- return {detailMask,contours:source.contours,bounds:source.bounds,center:source.center,width:w,height:h,detail:res,pixels,lods,audit:auditFields?{normals,lighting,materials}:undefined,stats:{...source.stats,ms:performance.now()-started+(sourceOverride?source.stats.ms:0),sourceMs:source.stats.ms,bakeMs,bakeSlice,meshMs:performance.now()-meshStart,maxSlice:Math.max(source.stats.maxSlice,b.max),triangles:lods.map(l=>l.indices.length/3),bytes:bytes+(source.contours?.stats.bytes??0),peakSourceBytes:source.stats.bytes}};
+ return {detailMask,contours:source.contours,bounds:source.bounds,center:source.center,width:w,height:h,detail:res,pixels,lods,audit:auditFields?{normals,lighting,materials}:undefined,stats:{...source.stats,ms:performance.now()-started+(sourceOverride?source.stats.ms:0),sourceMs:source.stats.ms,bakeMs,bakeSlice,materialTiles:materialStats,meshMs:performance.now()-meshStart,maxSlice:Math.max(source.stats.maxSlice,b.max),triangles:lods.map(l=>l.indices.length/3),bytes:bytes+(source.contours?.stats.bytes??0),peakSourceBytes:source.stats.bytes}};
 }
 const VS=`#version 300 es
 precision highp float;
@@ -156,10 +159,10 @@ export class BakedTerrainGL{
 }
 
 // Integration guard: never access full fine geography for a charted-only map.
-export async function prepareGeographicCandidate(s,cam,{bounds,detail=8,contourDetail=8,vertical,diagnostic=false,polish=false,surfaceScale=false,identity=false,check=()=>{}}={}){
+export async function prepareGeographicCandidate(s,cam,{bounds,detail=8,contourDetail=8,vertical,diagnostic=false,polish=false,surfaceScale=false,identity=false,check=()=>{},materialCache=null,materialVisible=null,onMaterialTile=()=>{}}={}){
  check();const yieldRow=async()=>{check();await sleep();check();};
  if(polish&&s.mapVersion===3&&s.discovery?.fullMap&&!s.autonomous)s={...s,autonomous:true};
  if(s.mapVersion===3&&!s.autonomous&&s.map.geography?.lakeId){const snapshot=model(s),source=await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true,omitRivers:polish});await chartedContourSource(s,source,snapshot.known,{contourDetail,vertical,polish,yieldRow,continuous:surfaceScale,identity});source.scaleSurface=surfaceScale;source.identity=identity;return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true,check});}
  if(s.mapVersion!==3||!s.autonomous){const terrain=await prepareBakedTerrain(s,cam,{sourceOverride:await prepareTerrain(s,cam,{boundsOverride:bounds,detail,heightStyle:'smooth',textureOnly:true}),geology:'living',closeLOD:true});return {...terrain,stats:{...terrain.stats,fogFallback:true}};}
- const source=surfaceScale&&!diagnostic&&s.map.geography?.lakeId?await scaleTerrainSource(s,cam,{bounds,detail,contourDetail,vertical,yieldRow,identity}):await contourSource(s,cam,{bounds,detail,contourDetail,vertical,diagnostic,polish,yieldRow});source.identity=identity;return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true,check});
+ const source=surfaceScale&&!diagnostic&&s.map.geography?.lakeId?await scaleTerrainSource(s,cam,{bounds,detail,contourDetail,vertical,yieldRow,identity}):await contourSource(s,cam,{bounds,detail,contourDetail,vertical,diagnostic,polish,yieldRow});source.identity=identity;return prepareBakedTerrain(s,cam,{sourceOverride:source,geology:'waters',closeLOD:true,check,materialCache,materialVisible,onMaterialTile});
 }

@@ -29,7 +29,8 @@
         "atlas-resident-math.test.mjs",
         "atlas-qa-admission.test.mjs",
         "atlas-presentation-evidence.test.mjs",
-        "atlas-streaming-plan.test.mjs"
+        "atlas-streaming-plan.test.mjs",
+        "atlas-material-tiles.test.mjs"
       ],
       "tier": "smoke"
     },
