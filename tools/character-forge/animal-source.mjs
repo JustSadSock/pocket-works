@@ -158,9 +158,29 @@ function compositionProbe(source){
  }
  m.modules=m.parts.map(p=>({part:p.name,kind:p.component,binding:p.binding,slot:p.slot??null}));m.statistics={triangleCount:m.parts.reduce((a,p)=>a+p.indices.length/3,0),vertices:m.parts.reduce((a,p)=>a+p.positions.length/3,0),joints:m.joints.length};
  function measure(q){const p=q.parts[skinIndex],v=q.parts[blanketIndex].positions,gaps=[];for(let i=0;i<padCount;i++){const x=v[i*3],y=v[i*3+1],z=v[i*3+2],t=sampleTop(p,x,z);if(t)gaps.push(y-t.y)}return {samples:gaps.length,expected:padCount,minGap:gaps.length?Math.min(...gaps):null,maxGap:gaps.length?Math.max(...gaps):null,meanGap:gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:null}}
+ // Independent fit audit of the actual deformed rigid and flexible
+ // component surfaces. No edits to the previously approved pad/skin.
+ function attachmentAudit(q){
+  const p=q.parts[skinIndex],pad=q.parts[blanketIndex],floor=q.parts[floorIndex],pts=p=>Array.from({length:p.positions.length/3},(_,i)=>p.positions.slice(i*3,i*3+3)),avg=v=>v.reduce((a,b)=>add(a,mul(b,1/v.length)),[0,0,0]),round=v=>Number.isFinite(v)?v:null;
+  const support=q.parts.filter(p=>p.name.startsWith('howdah fitted support ')).map(p=>{
+   const v=pts(p),a=avg(v.slice(0,4)),b=avg(v.slice(4,8)),hit=sampleTop(pad,a[0],a[2]),top=sampleTop(floor,b[0],b[2]),gap=hit?a[1]-hit.y:null,floorPts=pts(floor),bottom=Math.min(...floorPts.map(p=>p[1])),high=Math.max(...floorPts.map(p=>p[1]));
+   return {name:p.name,lower:a,upper:b,padGapMetres:gap,upperEndInsideFloorVertical:b[1]>=bottom-.005&&b[1]<=high+.005,upperFloorSurfaceGapMetres:top?b[1]-top.y:null,footprintSupported:!!top&&!!hit};
+  });
+  const straps=q.parts.filter(p=>p.name.startsWith('tack fitted girth')).map(p=>{
+   const v=pts(p),mid=[];for(let i=0;i<v.length;i+=2)mid.push(avg(v.slice(i,i+2)));
+   const upper=mid.slice().sort((a,b)=>b[1]-a[1]).slice(0,8),padGaps=upper.map(v=>{const t=sampleTop(pad,v[0],v[2]);return t?v[1]-t.y:null});
+   return {name:p.name,upperPadGapsMetres:padGaps,missingPadSamples:padGaps.filter(v=>v===null).length,maxSegmentMetres:Math.max(...mid.map((v,i)=>norm(sub(v,mid[(i+1)%mid.length]))))};
+  });
+  const crew=q.parts.filter(p=>/^crew\/[LR]-shoe$/.test(p.name)).map(p=>{
+   const v=pts(p),lo=Math.min(...v.map(x=>x[1])),sole=v.filter(v=>v[1]<lo+.025),gaps=sole.map(v=>{const t=sampleTop(floor,v[0],v[2]);return t?v[1]-t.y:null}),valid=gaps.filter(x=>x!==null);
+   return {name:p.name,soleSamples:sole.length,supportedSamples:valid.length,minGap:valid.length?Math.min(...valid):null,maxGap:valid.length?Math.max(...valid):null};
+  });
+  return {supports:support,straps,crew,notes:'Vertical ray tests on actual deformed triangles and geometric connection measurements; not a full triangle intersection/fastener proof.'};
+ }
  const frames=[],rows=[],dir='v12-elephant-source-crew';mkdirSync(join(out,dir),{recursive:true});
- for(let i=0;i<=12;i++){const phase=i/12,w=pose(m,'walk',phase),q=structuredClone(m);for(let j=0;j<q.parts.length;j++){q.parts[j].positions=deform(m,m.parts[j],w).flat();normals(q.parts[j])}frames.push(q);rows.push({phase,saddle:measure(q),seat:w[seat.id].p,crew:w[m.joints.find(j=>j.name.startsWith('crew/')&&j.role==='pelvis').id].p})}
+ for(let i=0;i<=12;i++){const phase=i/12,w=pose(m,'walk',phase),q=structuredClone(m);for(let j=0;j<q.parts.length;j++){q.parts[j].positions=deform(m,m.parts[j],w).flat();normals(q.parts[j])}frames.push(q);rows.push({phase,saddle:measure(q),attachments:attachmentAudit(q),seat:w[seat.id].p,crew:w[m.joints.find(j=>j.name.startsWith('crew/')&&j.role==='pelvis').id].p})}
  const bounds=commonBounds(frames,'side');for(let i=0;i<frames.length;i++)writeFileSync(join(out,dir,String(i).padStart(2,'0')+'.png'),raster(frames[i],{view:'side',size:640,bounds}).png);
  writeFileSync(join(out,'v12-elephant-source-crew-three-quarter.png'),raster(frames[0],{view:'three-quarter',size:768}).png);for(const view of ['side','three-quarter']){const equipment={parts:frames[0].parts.filter(p=>/saddle|howdah|tack|crew\//.test(p.name))},bounds=commonBounds([equipment],view);writeFileSync(join(out,'v13-elephant-platform-'+view+'.png'),raster(frames[0],{view,bounds,size:768}).png)}
+ writeFileSync(join(out,'v14-elephant-attachments.json'),JSON.stringify({frames:rows.map(r=>({phase:r.phase,...r.attachments})),sourceGeometryUnchanged:source.parts.every((p,i)=>JSON.stringify(p.positions)===JSON.stringify(m.parts[i].positions)),approval:false},null,2));
  writeFileSync(join(out,'v12-elephant-source-crew.glb'),glb(m));writeFileSync(join(out,'v12-elephant-source-crew.json'),JSON.stringify({sharedJoints:n,sourceGeometryUnchanged:source.parts.every((p,i)=>JSON.stringify(p.positions)===JSON.stringify(m.parts[i].positions)&&JSON.stringify(p.indices)===JSON.stringify(m.parts[i].indices)),equipmentParts:equipment.map(p=>p.name),before,seatHeightCorrection:shift,padGrid:[nx,nz],supportEnds,strapReports,after:measure(m),frames:rows,approval:false,limitations:'Measured back-conforming pad and skin-bound girths; rigid support lower ends still need independent dynamic attachment/collision qualification.'},null,2));
 }
