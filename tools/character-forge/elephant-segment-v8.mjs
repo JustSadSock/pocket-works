@@ -76,14 +76,14 @@ function segmented(source,{passes=4,selfWeight=.45,neighborWeight=.55,geoScale=.
  m.spec.sourceAdapter='v9 semantic region + mesh geodesic segmentation; experimental';return {m,regions,vertexRegions,forbidden};
 }
 function compare(m,vertexRegions){
- return phases.map(phase=>{const w=pose(m,'walk',phase),ratios=[],heat=[],regional={};
+ return phases.map(phase=>{const w=pose(m,'walk',phase),ratios=[],heat=[],regional={},hot=[];
    for(let pi=0;pi<m.parts.length;pi++){const p=m.parts[pi],v=deform(m,p,w),s=new Float32Array(v.length),labels=vertexRegions[pi]??[];
      for(let i=0;i<p.indices.length;i+=3)for(let k=0;k<3;k++){const a=p.indices[i+k],b=p.indices[i+(k+1)%3],d=len(sub(pos(p,a),pos(p,b)));if(d<=1e-5)continue;const r=len(sub(v[a],v[b]));const ratio=r/d;ratios.push(ratio);const q=Math.min(1,Math.abs(Math.log(Math.max(1e-8,ratio)))/Math.log(4));s[a]=Math.max(s[a],q);s[b]=Math.max(s[b],q);
-       const ra=labels[a]??'body',rb=labels[b]??'body',region=ra===rb?ra:ra==='body'?rb:rb==='body'?ra:'transition';(regional[region]??=[]).push(ratio);
+       const ra=labels[a]??'body',rb=labels[b]??'body',region=ra===rb?ra:ra==='body'?rb:rb==='body'?ra:'transition';(regional[region]??=[]).push(ratio);if(ratio>2||ratio<.35){hot.push({part:p.name,vertices:[a,b],region,labels:[ra,rb],ratio,restLength:d,posedLength:r,midpoint:pos(p,a).map((x,k)=>(x+pos(p,b)[k])/2),weights:[a,b].map(i=>weights(p,i).map(([j,w])=>[m.joints[j].name,w]))})}
      }heat.push(s);
    }
    ratios.sort((a,b)=>a-b);const stats=x=>{x.sort((a,b)=>a-b);return {samples:x.length,max:x.at(-1),p95:x[Math.floor((x.length-1)*.95)],collapsed:x.filter(v=>v<.5).length}};
-   return {phase,max:ratios.at(-1),p95:ratios[Math.floor((ratios.length-1)*.95)],collapsed:ratios.filter(x=>x<.5).length,regions:Object.fromEntries(Object.entries(regional).map(([k,v])=>[k,stats(v)])),heat};
+   return {phase,max:ratios.at(-1),p95:ratios[Math.floor((ratios.length-1)*.95)],collapsed:ratios.filter(x=>x<.5).length,regions:Object.fromEntries(Object.entries(regional).map(([k,v])=>[k,stats(v)])),hotEdges:hot.sort((a,b)=>Math.abs(Math.log(Math.max(b.ratio,1e-8)))-Math.abs(Math.log(Math.max(a.ratio,1e-8)))).slice(0,50),heat};
  });
 }
 const worst=rows=>({max:Math.max(...rows.map(x=>x.max)),p95:Math.max(...rows.map(x=>x.p95)),collapsed:Math.max(...rows.map(x=>x.collapsed))});
