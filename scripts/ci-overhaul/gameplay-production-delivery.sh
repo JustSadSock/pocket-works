@@ -8,6 +8,10 @@ evidence="$3"
 output="$4"
 outer="$PWD"
 tool="$outer/scripts/ci-overhaul/gameplay-production-delivery.mjs"
+# Bind every later phase to the real checkout, never the webhook's possibly stale GITHUB_SHA.
+actual_source="$(git -C "$root" rev-parse HEAD)" || exit 75
+[[ "$actual_source" =~ ^[a-f0-9]{40}$ ]] || exit 75
+export ACTUAL_QA_SOURCE="$actual_source"
 status=0
 node "$tool" eligible "$root" || status=$?
 if [[ "$status" = 75 ]]; then exit 75; elif [[ "$status" != 0 ]]; then exit "$status"; fi
@@ -23,7 +27,7 @@ export ACTUAL_QA_CONTROLLER_TREE="$(git -C "$controller" rev-parse HEAD^{tree})"
 temp="$(mktemp -d "$RUNNER_TEMP/production-delivery.XXXXXX")"
 trap 'rm -rf "$temp"' EXIT
 git clone --quiet --shared --no-checkout "$root" "$temp/source" || exit 75
-git -C "$temp/source" checkout --quiet --detach "$GITHUB_SHA" || exit 75
+git -C "$temp/source" checkout --quiet --detach "$actual_source" || exit 75
 export SHARD="$(jq -er '.seed' <<< "$PW_QA_TASK")"
 export PW_QA_PRODUCTION_HIT_ONLY=1
 status=0

@@ -1,8 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {describePlan,selectDeliveryRoute,assertDelivery,verifyLegacy} from './delivery-gate.mjs';
+import {describePlan,selectDeliveryRoute,assertDelivery,verifyLegacy,isApprovedBannersPullRequest} from './delivery-gate.mjs';
 const policy={schema:1,enabled:true,allowResultReuse:false,allowImpactSkipping:false};
 const request={policy,request:'sharded',eventName:'pull_request',sameRepo:true,count:2};
+test('approved Banners production PR is pinned to mandatory legacy delivery',()=>{
+ const repo='JustSadSock/pocket-works';
+ const event={pull_request:{number:1355,head:{ref:'app/banners-of-war',repo:{full_name:repo}},base:{ref:'main',repo:{full_name:repo}}}};
+ assert.equal(isApprovedBannersPullRequest(event,repo),true);
+ assert.equal(selectDeliveryRoute({...request,forceLegacy:true}),'legacy');
+ assert.equal(selectDeliveryRoute({...request,forceLegacy:false}),'sharded');
+ for(const p of [
+  {...event,pull_request:{...event.pull_request,number:1356}},
+  {...event,pull_request:{...event.pull_request,head:{...event.pull_request.head,ref:'other'}}},
+  {...event,pull_request:{...event.pull_request,head:{...event.pull_request.head,repo:{full_name:'fork/repo'}}}},
+  {...event,pull_request:{...event.pull_request,base:{...event.pull_request.base,ref:'release'}}}
+ ])assert.equal(isApprovedBannersPullRequest(p,repo),false);
+ assert.equal(isApprovedBannersPullRequest(event,'other/repo'),false);
+});
+
 test('default legacy, explicit disabled policy, fork and manual requests cannot choose sharded',()=>{
  assert.equal(selectDeliveryRoute(request),'sharded');
  for(const p of [{policy:null},{policy:{...policy,enabled:false}},{policy:{...policy,allowResultReuse:true}},{policy:{...policy,allowImpactSkipping:true}},{request:'legacy'},{sameRepo:false},{eventName:'workflow_dispatch'}])assert.equal(selectDeliveryRoute({...request,...p}),'legacy');
