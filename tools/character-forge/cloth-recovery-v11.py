@@ -302,7 +302,9 @@ v20config={}
 if os.getenv('CHARACTER_V20_CLOTH_CONFIG'):
  v20config=json.loads(Path(os.environ['CHARACTER_V20_CLOTH_CONFIG']).read_text())
  if not v20config.get('diagnosticOnly') or v20config.get('collider')!='trousers R':raise RuntimeError('v0.20 time-resolution probe must remain diagnostic-only and scoped to trousers R')
- if int(v20config.get('timeResolution',0)) not in (1,2,4):raise RuntimeError('Unsupported v0.20 time-resolution multiplier')
+ factor=int(v20config.get('timeResolution',0))
+ if factor not in (1,2,4):raise RuntimeError('Unsupported v0.20 time-resolution multiplier')
+ if abs(float(v20config.get('timeScale',0))-1.0/factor)>1e-9:raise RuntimeError('v0.20 Blender cloth time_scale must compensate scene FPS as 1/timeResolution')
  experiments=[('remesh-static',1,1,6,None),('remesh',2,1,18,None)]
 v19DecompositionReport=None
 chosen=None

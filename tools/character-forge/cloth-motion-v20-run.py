@@ -28,7 +28,7 @@ for name,factor in experiments:
         proc=subprocess.run(cmd,env=env,stdout=log,stderr=subprocess.STDOUT)
     report=out/"v11-cloth-recovery.json"
     if not report.exists():
-        summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,"clothTimeScale":1.0/factor,"effectiveSimulationFps":spec["fps"],
+        summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,"sceneFps":spec["fps"]*factor,"clothTimeScale":1.0/factor,"effectiveSimulationFps":spec["fps"],
                         "exit":proc.returncode,"status":"missing-recovery-report"})
         continue
     data=json.loads(report.read_text())
@@ -86,6 +86,8 @@ if baseline:
             "relativeTangentialSpeedDelta":row.get("maxRelativeTangentialSpeed",0)-baseline.get("maxRelativeTangentialSpeed",0),
             "colliderMismatchDelta":row.get("maxColliderMismatchMetres",0)-baseline.get("maxColliderMismatchMetres",0)}
 matrix={"version":"v0.20","diagnosticOnly":True,"productionAllowed":False,
+    "priorUncompensatedTrialValidForComparison":False,
+    "priorUncompensatedTrialReason":"Scene FPS was increased without inverse Blender cloth time_scale compensation; simulation time and pinned-target travel changed.",
     "method":"same source and material; 24/48/96 scene FPS; Blender cloth time_scale compensated as 1/factor; equal simulation duration and pin-target travel",
     "sourceSha256":hashlib.sha256(source.read_bytes()).hexdigest(),
     "experiments":summary,"comparisonsAgainst24Fps":comparisons}
