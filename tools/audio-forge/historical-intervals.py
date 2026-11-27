@@ -1,5 +1,6 @@
 """Research-only interval acquisition. Real source transitions, not synthetic note joins."""
 import hashlib, json, pathlib, subprocess, sys, wave
+from urllib.parse import urlsplit
 import numpy as np
 from historical_interval_phrase import render_interval_phrase
 SR=48000
@@ -76,17 +77,18 @@ def recorder_candidate(root):
     page='https://commons.wikimedia.org/wiki/File:SopranoRecorder.ogg'
     url='https://upload.wikimedia.org/wikipedia/commons/6/69/SopranoRecorder.ogg'
     api='https://commons.wikimedia.org/w/api.php?action=query&titles=File%3ASopranoRecorder.ogg&prop=imageinfo&iiprop=sha1%7Csize%7Curl%7Ctimestamp&format=json'
-    receipt=dict(source=page,author='Thparkth',rights='PD-user',expectedBytes=244296,expectedTimestamp='2012-03-15T07:00:00Z',approval='candidate-only',admitted=0)
+    receipt=dict(source=page,author='Thparkth',rights='PD-user',expectedBytes=244296,expectedTimestamp='2012-03-15T07:00:55Z',expectedSha1='b8be21e7edda3493feece8c97a1d64929befa368',approval='candidate-only',admitted=0)
     try:
         evidence=json.loads(fetch(api,100000)); info=next(iter(evidence['query']['pages'].values()))['imageinfo'][0]
         receipt['observedImageInfo']={k:info.get(k) for k in ('url','size','timestamp','sha1')}
         (root/'recorder-imageinfo.json').write_text(json.dumps(evidence,indent=2)+'\n')
-        # The public history displays minute precision, not the seconds field.
-        if info['url']!=url or info['size']!=244296 or not info['timestamp'].startswith('2012-03-15T07:00:'):raise ValueError('file revision differs from documented source')
+        # Ignore tracking query only; fetch the immutable expected URL, not API-supplied URL.
+        observed=urlsplit(info['url']); expected=urlsplit(url)
+        if (observed.scheme,observed.netloc,observed.path)!=(expected.scheme,expected.netloc,expected.path) or info['size']!=receipt['expectedBytes'] or info['timestamp']!=receipt['expectedTimestamp'] or info['sha1']!=receipt['expectedSha1']:raise ValueError('file revision differs from documented source')
         b=fetch(url,300000)
         # MediaWiki returns SHA-1 in hexadecimal or base36 depending on endpoint.
         digest=hashlib.sha1(b).hexdigest(); h=info['sha1']
-        if len(b)!=244296 or not b.startswith(b'OggS') or not (h==digest or int(h,36)==int(digest,16)):raise ValueError('source identity mismatch')
+        if len(b)!=244296 or not b.startswith(b'OggS') or digest!=receipt['expectedSha1']:raise ValueError('source identity mismatch')
         f=root/'sources/SopranoRecorder.ogg';f.write_bytes(b);a=decode(f);mono=a.mean(axis=1);rows=pitch_track(mono)
         receipt.update(sourceSha256=sha(b),upstreamSha1=h,sourceFile='sources/SopranoRecorder.ogg',track=rows)
         # Identify candidate connected adjacent pitch regions; never admit these as dedicated legato
