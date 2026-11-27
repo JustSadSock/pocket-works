@@ -112,8 +112,8 @@ function bird(b){if(b.spec.version===2)return avian(b);let h=b.spec.morphology.h
  for(let s of [-1,1]){let a=b.joint('wing-'+s,root,p(s*.17,.65,.04),'wing',[0,0,1],85),tip=b.joint('wing-tip-'+s,a,p(s*.54,.58,-.18),'wing.tip',[0,0,1],60);b.limb('wing'+s,[p(s*.17,.65,.04),p(s*.54,.58,-.18),p(s*.82,.51,-.31)],[.15*h,.12*h,.012*h],[a,tip,tip],'feather');let f=b.joint('foot-'+s,root,p(s*.12,.07,0),'foot',[1,0,0],40);b.bar('leg'+s,p(s*.12,.36,0),p(s*.12,.07,0),.026*h,'bronze',f);b.contacts.push({joint:f,role:'sole',local:[0,-.07*h,0],phase:s<0?0:.5})}
  b.components.push({name:'bird',family:'avian',root,template:'avian-v1'})}
 export function build(spec){let s=validate(spec),b=new Builder(s),t=performance.now();
- if(s.version===2&&(!Array.isArray(s.modules)||s.modules.some(x=>!['unarmed','no-headwear','no-bag'].includes(x))))throw Error('Unknown equipment option');
- if(s.version===2&&!['v2','v3','v4','v5'].includes(s.anatomy))throw Error('Unknown anatomy revision');
+ if(s.version===2&&(!Array.isArray(s.modules)||s.modules.some(x=>!['unarmed','no-headwear','no-bag','animal-tack','no-rider'].includes(x))))throw Error('Unknown equipment option');
+ if(s.version===2&&!['v2','v3','v4','v5','v10'].includes(s.anatomy))throw Error('Unknown anatomy revision');
  if(s.version===2&&!['transported','legacy-rings','implicit'].includes(s.surface))throw Error('Unsupported surface');
  if(s.family==='humanoid')human(b,'',[0,0,0],-1,s.morphology.height,recipes[s.recipe].outfit);
  else if(s.family==='bird')bird(b);else if(s.version===2)animal(b,s.family,human);else quadruped(b,s.family);
