@@ -202,8 +202,9 @@ function lowPolyTransform(m){
  for(const j of m.joints){j.position=transform(j.position);j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position)}
  m.spec.style='low-poly';
 }
+function miniatureStyleV10(m){const hip=J(m,'root').position[1],neck=J(m,'neck01').position[1],head=J(m,'head').position,transform=v=>{const t=clamp((v[1]-neck)/.10,0,1),upper=clamp((v[1]-hip)/.30,0,1)*(1-t);return [v[0]*(1+.065*upper+.09*t),v[1]<hip?v[1]*.96:hip*.96+(v[1]-hip)*(1+.07*t),head[2]+(v[2]-head[2])*(1+.05*t)]};for(const p of m.parts){for(let i=0;i<p.positions.length;i+=3)p.positions.splice(i,3,...transform(p.positions.slice(i,i+3)));normals(p)}for(const j of m.joints){j.position=transform(j.position);j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position)}}
 export const roleMorphs=roleProfiles;
-export function produceRoleV9(source,id,identityOverride=null,{style='historical-miniature'}={}){
+export function produceRoleV9(source,id,identityOverride=null,{style='historical-miniature',styleRevision=9}={}){
  if(!roleProfiles[id])throw Error('Unknown role '+id);
  const m=produceRole(source,id,identityOverride,'historical-miniature'),start=performance.now();
  m.parts=m.parts.filter(p=>!['iron breastplate','iron conical helmet','iron nasal','iron imperial helmet','iron cheek guard -1','iron cheek guard 1','red curved scutum','heater shield','iron shield rim','iron shield boss','leather shield forearm strap'].includes(p.name)&&!p.name.startsWith('quilted padded rib')&&!p.name.startsWith('iron segmented cuirass')&&!p.name.startsWith('iron shoulder guard')&&!(id==='legionary'&&p.name==='leather sheathed sidearm'));
@@ -213,8 +214,8 @@ export function produceRoleV9(source,id,identityOverride=null,{style='historical
  if(id==='merchant')role=merchantKit(m);
  if(id==='infantry')role=infantryKit(m);
  if(id==='legionary')role=legionaryKit(m);
- if(style==='low-poly')lowPolyTransform(m);else if(style==='anatomical-realism'){m.spec.style=style;for(const p of m.parts){p.color=p.color.map(v=>Math.max(0,Math.min(1,v*.88+.035)));if(p.material?.kind==='skin')p.material.roughness=.57;if(p.material?.kind==='cloth')p.material.roughness=.96;}}else m.spec.style='historical-miniature';
- contacts(m);
+ if(style==='low-poly')lowPolyTransform(m);else if(style==='anatomical-realism'){m.spec.style=style;for(const p of m.parts){p.color=p.color.map(v=>Math.max(0,Math.min(1,v*.88+.035)));if(p.material?.kind==='skin')p.material.roughness=.57;if(p.material?.kind==='cloth')p.material.roughness=.96;}}else {m.spec.style='historical-miniature';if(styleRevision===10)miniatureStyleV10(m);}
+ m.spec.styleRevision=styleRevision;contacts(m);
  m.spec.artHistoricalReferences=['https://isaw.nyu.edu/exhibitions/edge-of-empires/highlights/shield','https://www.metmuseum.org/art/collection/search/35771','https://fashionhistory.fitnyc.edu/chaperon/'];m.spec.artHistoricalReference=id==='infantry'?'late-14th-century coat-of-plates, mail and bascinet':id==='legionary'?'2nd-century CE lorica segmentata and scutum':'medieval civilian craft/trade clothing';
  m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'v0.9 role-specific cut, equipment and material construction'}];
  m.statistics={...m.statistics,triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),roleV9Ms:performance.now()-start};
