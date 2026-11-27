@@ -183,12 +183,22 @@ function sliceDistrict(c,x,y,d,dev,i){
 }
 
 export class Camera{
- constructor(w,h){this.w=w;this.h=h;this.x=w/2;this.y=h/2;this.zoom=1;this.s=1;this.ox=0;this.oy=0}
- layout(w,h){const {left=0,right=0,top=0,bottom=0}=this.insets||{},vw=Math.max(100,w-left-right),vh=Math.max(100,h-top-bottom);this.s=(this.cover?Math.max(vw/this.w,vh/this.h):Math.min(vw/this.w,vh/this.h))*this.zoom;this.ox=left+vw/2-this.x*this.s;this.oy=top+vh/2-this.y*this.s}
+ constructor(w,h){this.w=w;this.h=h;this.x=w/2;this.y=h/2;this.zoom=1;this.s=1;this.ox=0;this.oy=0;this.viewport=null}
+ layout(w,h){
+  const raw=this.insets||{},left=clamp(Number(raw.left)||0,0,Math.max(0,w-1)),right=clamp(Number(raw.right)||0,0,Math.max(0,w-left-1)),top=clamp(Number(raw.top)||0,0,Math.max(0,h-1)),bottom=clamp(Number(raw.bottom)||0,0,Math.max(0,h-top-1)),vw=Math.max(1,w-left-right),vh=Math.max(1,h-top-bottom),rightEdge=left+vw,bottomEdge=top+vh;
+  this.viewport={coordinateSpace:'canvas-css',origin:'top-left',left,right,top,bottom,rightEdge,bottomEdge,width:vw,height:vh,centerX:left+vw/2,centerY:top+vh/2,canvasWidth:w,canvasHeight:h};
+  this.s=(this.cover?Math.max(vw/this.w,vh/this.h):Math.min(vw/this.w,vh/this.h))*this.zoom;this.ox=this.viewport.centerX-this.x*this.s;this.oy=this.viewport.centerY-this.y*this.s;return this.viewport;
+ }
+ visibleBounds({tilt=0,minZ=0,maxZ=0,datum=0,rect=null}={}){
+  const v=this.viewport;if(!v||!this.s)return [0,0,0,0];
+  const left=rect?.left??v.left,top=rect?.top??v.top,right=rect?.right??v.rightEdge,bottom=rect?.bottom??v.bottomEdge,cs=Math.sqrt(Math.max(1e-9,1-tilt*tilt));
+  const x0=(left-this.ox)/this.s,x1=(right-this.ox)/this.s,y0=this.y+((top-v.centerY)/this.s+(minZ-datum)*tilt)/cs,y1=this.y+((bottom-v.centerY)/this.s+(maxZ-datum)*tilt)/cs;
+  return [Math.min(x0,x1),Math.min(y0,y1),Math.max(x0,x1),Math.max(y0,y1)];
+ }
  screen(x,y){const a=(x-this.ox)/this.s,b=(y-this.oy)/this.s;return this.projection?this.projection.unproject(a,b):[a,b]}
  point(x,y){const p=this.projection?this.projection.project(x,y):[x,y];return [this.ox+p[0]*this.s,this.oy+p[1]*this.s]}
  pan(dx,dy){this.x=clamp(this.x-dx/this.s,0,this.w);this.y=clamp(this.y-dy/(this.s*(this.projection?.cs??1)),0,this.h)}
- zoomAt(f,x,y,w,h){let [a,b]=this.screen(x,y);this.zoom=clamp(this.zoom*f,this.cover?.28:.75,24);this.layout(w,h);let [c,d]=this.screen(x,y);this.x=clamp(this.x+a-c,0,this.w);this.y=clamp(this.y+b-d,0,this.h)}
+ zoomAt(f,x,y,w,h){let [a,b]=this.screen(x,y);this.zoom=clamp(this.zoom*f,this.cover?.28:.75,24);this.layout(w,h);let [c,d]=this.screen(x,y);this.x=clamp(this.x+a-c,0,this.w);this.y=clamp(this.y+b-d,0,this.h);this.layout(w,h)}
 }
 export class Atlas{
  constructor(canvas){this.canvas=canvas;this.ctx=canvas.getContext('2d');this.land=document.createElement('canvas');this.land.width=W;this.land.height=H;this.relief=document.createElement('canvas');this.relief.width=W*3;this.relief.height=H*3;this.cache='';this.terrain=document.createElement('canvas');this.terrain.width=1000;this.terrain.height=640;this.lastBattle=null;this.baseMap=null;this.baseColors=null;this.fast=false;this.metrics={texture:0,map:0}}

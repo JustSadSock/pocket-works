@@ -18,6 +18,7 @@
         "genesis-hydrography.test.mjs",
         "genesis-atlas-visual.test.mjs",
         "atlas-projection.test.mjs",
+        "atlas-camera-geometry.test.mjs",
         "atlas-scale.test.mjs",
         "atlas-surface-requests.test.mjs",
         "atlas-human-layout.test.mjs",
