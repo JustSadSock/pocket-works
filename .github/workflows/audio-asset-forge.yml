@@ -802,6 +802,41 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Acquire and qualify pinned CC0 low strings and orchestral percussion
+        id: foundation_expansion
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' && steps.recorded_dynamics.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/recorded-foundation-expansion.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/recorded-foundation-expansion.py .audio-foundation-expansion
+          test "$(find .audio-foundation-expansion/library/objects -name '*.wav' | wc -l)" -eq 22
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('.audio-foundation-expansion')
+          idx=json.loads((p/'library/index.json').read_text())
+          report=json.loads((p/'metrics.json').read_text())
+          assert idx['approval']=='research-only' and len(idx['entries'])==22
+          assert report['doubleBassZones']==14 and report['percussionZones']==8
+          assert report['doubleBassCoverage']==[28,30,33,37,40,44,47]
+          for e in idx['entries']:
+              f=p/'library'/e['path']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              assert e['license']=='CC0-1.0' and e['approval']=='research-only'
+          for e in report['receipts']:
+              if 'expectedMidi' in e: assert abs(e['expectedMidi']-e['measuredMidi'])<=.75
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.foundation_expansion.outcome == 'success' }}
+        with:
+          name: sound-forge-foundation-expansion-${{ github.run_id }}
+          path: .audio-foundation-expansion/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Render historical score-first composition The Last Pilgrim
         id: historical_score
         if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' && steps.recorded_dynamics.outcome == 'success' }}
