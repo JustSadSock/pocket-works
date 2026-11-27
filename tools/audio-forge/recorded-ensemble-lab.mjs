@@ -89,8 +89,17 @@ for(let i=0;i<morph.mix.length;i++){
 }
 if(reconstructionError>1e-6)throw Error('Individual stem reconstruction failed');
 for(const [id,x] of Object.entries(morph.trackStems))expanded('evening-standard-track-'+id+'.wav',x);
-const chamber=renderEnsembleRoom({stems:morph.stems,preset:'chamber',tailSeconds:3});
-const hall=renderEnsembleRoom({stems:morph.stems,preset:'hall',tailSeconds:3});
+
+const instrumentStage={
+ bass:{x:-3.6,y:8.2,z:1.2,gain:1,width:.68},
+ melody:{x:-2.2,y:5.5,z:1.3,gain:1,width:.68},
+ counterline:{x:-.6,y:8.1,z:1.5,gain:1,width:.42},
+ highline:{x:2.5,y:7.0,z:1.6,gain:1,width:.46},
+ harmony:{x:-2.0,y:11.8,z:1.6,gain:1,width:.64},
+ signal:{x:2.0,y:12.4,z:1.6,gain:1,width:.58}
+};
+const chamber=renderEnsembleRoom({stems:morph.trackStems,stage:instrumentStage,preset:'chamber',tailSeconds:3});
+const hall=renderEnsembleRoom({stems:morph.trackStems,stage:instrumentStage,preset:'hall',tailSeconds:3});
 for(const r of [chamber,hall]){
  if(r.frames!==morph.frames+sr*3||r.wetRms<=0)throw Error('Invalid recorded room');
  let error=0;for(let i=0;i<r.mix.length;i++)error=Math.max(error,Math.abs(r.mix[i]-r.direct[i]-r.wet[i]));
