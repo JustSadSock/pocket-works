@@ -596,6 +596,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Expand historical bank with alto recorder and tambourine
+        id: historical_expansion_ii
+        if: ${{ !cancelled() && steps.historical_spatial.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-expansion-ii.mjs .audio-historical-expansion-ii .audio-historical-expansion .audio-historical-spatial
+          test "$(find .audio-historical-expansion-ii/sources -name '*.wav' | wc -l)" -eq 11
+          test "$(find .audio-historical-expansion-ii/library/objects -name '*.wav' | wc -l)" -eq 28
+          test "$(find .audio-historical-expansion-ii -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
+          test -s .audio-historical-expansion-ii/market-at-dusk.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion_ii.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-expansion-ii-${{ github.run_id }}
+          path: .audio-historical-expansion-ii/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion_ii.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-ii-rejected-${{ github.run_id }}
+          path: .audio-historical-expansion-ii/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
