@@ -101,9 +101,9 @@ jobs:
           CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v9.test.mjs
       - name: Required exact skeletal cloth driver
         run: node tools/character-forge/research-v11-input.mjs
-      - name: Required isolated digit anatomy (numerical gate enforced independently in Bridge)
+      - name: Required source-local hand/Core matrix input (qualification enforced in Bridge)
         continue-on-error: true
-        run: node tools/character-forge/grip-study-v11.mjs
+        run: node tools/character-forge/hand-reference-v15.mjs
       - name: Retrieve licensed KinemIQ archive with exact digest
         run: |
           curl -fL --retry 3 --connect-timeout 20 --max-time 240 -o "$CHARACTER_EVIDENCE/v9-cc0-motions.zip" https://huggingface.co/datasets/Kinemiq/free-game-animations/resolve/main/KinemIQ_Free_Animations_CC0_GLB.zip
@@ -210,13 +210,22 @@ jobs:
       - name: v9 garment collision audit (explicit full suite only)
         if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study-v9.py'
-      - name: Required gated local cloth recovery
+      - name: Independent original MakeHuman bind and evaluated skin comparison
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/hand-bind-v15.py'
+      - name: Independent licensed reference hand and authored pose library
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/hand-source-v15.py'
+      - name: Render evaluated external hand reference
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: node tools/character-forge/hand-reference-render-v15.mjs
+      - name: Required gated physical garment reference and remesh recovery
         id: recovery
         if: ${{ !cancelled() && env.BLENDER != '' }}
-        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-recovery-v11.py'
+        run: 'CHARACTER_V15_CLOTH=1 "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-recovery-v11.py'
       - name: Render local cloth experiment evidence even after a rejected gate
         if: ${{ !cancelled() && env.BLENDER != '' }}
-        run: node tools/character-forge/cloth-evidence-v12.mjs
+        run: CHARACTER_V15_CLOTH=1 node tools/character-forge/cloth-evidence-v12.mjs
       - name: Full cloth bake and standalone playback after recovery gate
         id: cloth
         if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
@@ -236,25 +245,39 @@ jobs:
           node --check tools/character-forge/motion-study-v10.mjs
           node --check tools/character-forge/motion-study-v12.mjs
           node --check tools/character-forge/qualification-v10.mjs
+          node --check tools/character-forge/hand-reference-v15.mjs
+          node --check tools/character-forge/motion-continuous-v15.mjs
+          python3 -m py_compile tools/character-forge/hand-bind-v15.py tools/character-forge/hand-source-v15.py tools/character-forge/motion-independent-v15.py
       - name: Required native CC0 reference motion (skinless GLB channels)
         id: kinemiq
-        if: ${{ !cancelled() && env.BLENDER != '' }}
+        if: ${{ !cancelled() }}
         run: python3 tools/character-forge/kinemiq-v11.py
-      - name: Required v14 bilateral contact and actual exported intermediate samples
-        id: reference
+      - name: Required v15 continuous contact 25/49/97 exported key states
+        id: continuous
         if: ${{ !cancelled() && steps.kinemiq.outcome == 'success' }}
+        run: CHARACTER_V15_MOTION=1 node tools/character-forge/motion-study-v12.mjs
+      - name: Independent imported Blender walk playback
+        if: ${{ !cancelled() && env.BLENDER != '' && steps.continuous.outcome == 'success' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/motion-independent-v15.py'
+      - name: Publish matched continuous motion and three-loop diagnostic videos
+        if: ${{ !cancelled() && steps.continuous.outcome == 'success' }}
         run: |
-          node tools/character-forge/motion-study-v12.mjs
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
           for view in side front; do
-            for variant in Original A B C; do
-              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v14-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-$variant-$view-1x.mp4"
-              ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v14-walk-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-$variant-$view-05x.mp4"
+            for variant in Original 25 49 97; do
+              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-$variant-$view-1x.mp4"
             done
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v14-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v14-walk-A-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v14-walk-B-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v14-walk-C-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-comparison-$view-1x.mp4"
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v14-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-comparison-$view-05x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-25-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-97-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-1x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-05x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-loop-$view/%02d.png" -frames:v 72 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-loop-$view.mp4"
+            if [ -d "$CHARACTER_EVIDENCE/v15-anatomy-$view" ]; then
+              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-anatomy-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-anatomy-$view.mp4"
+            fi
           done
-          node -e 'const old=require(process.env.CHARACTER_EVIDENCE+"/v12-motion-report.json"),r=require(process.env.CHARACTER_EVIDENCE+"/v14-contact-report.json");if(!old.qualification.contactGate||!r.qualification.contactGate)throw Error("Bilateral exported contact gate rejected: "+JSON.stringify({horizontal:r.variants.C.exported.maxDriftMm,vertical:r.variants.C.exported.maxVerticalErrorMm,groundPenetration:r.variants.C.exported.maxGroundPenetrationMm,seam:r.variants.C.rootCorrectionSeamMm}))'
+      - name: Enforce continuous exported contact qualification
+        if: ${{ !cancelled() }}
+        run: |
+          node -e 'const r=require(process.env.CHARACTER_EVIDENCE+"/v15-continuous-report.json"),a=require(process.env.CHARACTER_EVIDENCE+"/v15-motion-independent.json");if(!r.qualification.contactGate||!a.agreement)throw Error("Continuous contact gate rejected: "+JSON.stringify(r.reports[r.selected].max))'
       - name: Native animal and mounted composition comparisons (explicit full suite only)
         if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
@@ -275,7 +298,7 @@ jobs:
       - name: Enforce independent isolated grip result (no shield production)
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
-          node -e 'const a=require(process.env.CHARACTER_EVIDENCE+"/morph/v14-hand-anatomy.json"),r=require(process.env.CHARACTER_EVIDENCE+"/morph/v11-grip-report.json");if(!a.gripAllowed||!r.accepted){console.error("Independent hand anatomy / isolated grip gate rejected: "+r.reason);process.exit(1)}'
+          node -e 'const a=require(process.env.CHARACTER_EVIDENCE+"/v15-hand-independent.json"),r=require(process.env.CHARACTER_EVIDENCE+"/morph/v11-grip-report.json"),s=require(process.env.CHARACTER_EVIDENCE+"/v15-reference-poses.json");if(!a.agreement||!s.poses.length||!r.accepted){console.error("Independent reference / anatomy / isolated grip gate rejected: "+r.reason);process.exit(1)}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -294,6 +317,7 @@ jobs:
             quality-artifacts/character-bridge/v12-*
             quality-artifacts/character-bridge/v13-*
             quality-artifacts/character-bridge/v14-*
+            quality-artifacts/character-bridge/v15-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
