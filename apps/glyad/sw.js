@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'glyad-';
-const CACHE_NAME = 'glyad-v1.0.0';
-const APP_VERSION = '1.0.0';
-const RELEASE_DATE = '2026-11-20';
+const CACHE_NAME = 'glyad-v1.0.1';
+const APP_VERSION = '1.0.1';
+const RELEASE_DATE = '2026-11-21';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Редактор рельефа с плавной кистью, ластиком, отменой и тремя фигурами.","Синтез стереограмм с двумя цветовыми схемами, генератором узоров и PNG-экспортом.","Локальное сохранение рисунка, адаптивный интерфейс и офлайн-режим."];
+const RELEASE_NOTES = ["Исправлена индикация ластика и непрерывность быстрых мазков."];
 const APP_SHELL = [
   './',
   './index.html',
