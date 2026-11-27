@@ -158,6 +158,68 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   const mean=(field)=>rows.flatMap(r=>r.segments).reduce((s,r)=>s+r[field],0)/rows.flatMap(r=>r.segments).length;
   return {v:copy,report:{rows,beforeMeanDegrees:mean('beforeDegrees'),afterMeanDegrees:mean('afterDegrees'),changedLegChannels}};
  }
+ // Signed angular velocity vector, not merely difference of speed magnitudes.
+ const qlog=q=>{q=unit(q);if(q[3]<0)q=mul(q,-1);const l=Math.hypot(...q.slice(0,3));return l<1e-10?[0,0,0]:mul(q.slice(0,3),2*Math.atan2(l,q[3])/l)};
+ const qexp=v=>{const l=Math.hypot(...v);return l<1e-10?[0,0,0,1]:quat(mul(v,1/l),l)};
+ const qdelta=(a,b)=>qlog(qmul(inv(a),b));
+ function seamVelocity(v){
+  const n=v.rotations.length-1,dt=ref.durationSeconds/n,rootIncoming=mul(sub(v.offsets[n],v.offsets[n-1]),1/dt),rootOutgoing=mul(sub(v.offsets[1],v.offsets[0]),1/dt);
+  const joints=v.rotations[0].map((q,i)=>{
+   // Both tangents expressed at the seam orientation in its local frame.
+   const incoming=mul(qdelta(v.rotations[n][i],v.rotations[n-1][i]),-1/dt),outgoing=mul(qdelta(q,v.rotations[1][i]),1/dt);
+   return {name:m.joints[i].name,incoming,outgoing,vectorDifferenceDegPerSecond:dist(incoming,outgoing)*180/Math.PI,speedMagnitudeDifferenceDegPerSecond:Math.abs(Math.hypot(...incoming)-Math.hypot(...outgoing))*180/Math.PI};
+  });
+  return {rootIncoming,rootOutgoing,rootMmPerSecond:dist(rootIncoming,rootOutgoing)*1000,maxJointVectorDegreesPerSecond:Math.max(...joints.map(j=>j.vectorDifferenceDegPerSecond)),maxJointSpeedMagnitudeDegreesPerSecond:Math.max(...joints.map(j=>j.speedMagnitudeDifferenceDegPerSecond)),joints};
+ }
+ function velocityRegularize(base,strength){
+  const v=structuredClone(base),n=v.rotations.length-1,band=4;
+  const o=v.offsets[0],end=v.offsets[n],incoming=sub(end,v.offsets[n-1]),outgoing=sub(v.offsets[1],o),mean=mul(add(incoming,outgoing),.5);
+  const rightRoot=sub(mean,outgoing),leftRoot=sub(incoming,mean);
+  const right=[],left=[];
+  for(let j=0;j<v.rotations[0].length;j++){
+   const q=v.rotations[0][j],qe=v.rotations[n][j],inc=mul(qdelta(qe,v.rotations[n-1][j]),-1),out=qdelta(q,v.rotations[1][j]),avg=mul(add(inc,out),.5);
+   right.push(sub(avg,out));left.push(sub(inc,avg));
+  }
+  // Cubic taper over the first/last four keys, preserving endpoint and stride.
+  for(let k=1;k<=band;k++){
+   const u=(k-1)/band,f=strength*(1-u)*(1-u)*(1+2*u);
+   v.offsets[k]=add(v.offsets[k],mul(rightRoot,f));v.offsets[n-k]=add(v.offsets[n-k],mul(leftRoot,f));
+   for(let j=0;j<right.length;j++){
+    const q=v.rotations[0][j],qe=v.rotations[n][j];
+    v.rotations[k][j]=qmul(q,qexp(add(qdelta(q,v.rotations[k][j]),mul(right[j],f))));
+    v.rotations[n-k][j]=qmul(qe,qexp(add(qdelta(qe,v.rotations[n-k][j]),mul(left[j],f))));
+   }
+  }
+  v.trace=undefined;v.velocitySeam=seamVelocity(v);return v;
+ }
+ function elbowStudy(base){
+  const v=structuredClone(base),n=v.rotations.length-1,rows=[];
+  const sourcePoint=(t,name)=>{const f=t*N,i=Math.floor(f),j=Math.min(N,i+1),u=f-i;return add(mul(ref.frames[i].points[name],1-u),mul(ref.frames[j].points[name],u))};
+  const flex=(a,b)=>Math.acos(clamp(dot(unit(a),unit(b)),-1,1))*180/Math.PI;
+  for(let i=0;i<n;i++){
+   const t=i/n,q=v.rotations[i],items=[];
+   for(const side of ['L','R']){
+    const shoulder=J('upperarm01.'+side),elbow=J('lowerarm01.'+side),wrist=J('wrist.'+side),w=poseFrom(m,q);
+    const up=sub(w[elbow.id].p,w[shoulder.id].p),lo=sub(w[wrist.id].p,w[elbow.id].p),srcUp=sub(sourcePoint(t,'lowerarm.'+side),sourcePoint(t,'upperarm.'+side)),srcLo=sub(sourcePoint(t,'hand.'+side),sourcePoint(t,'lowerarm.'+side));
+    const target=flex(srcUp,srcLo),before=flex(up,lo),axis=cross(unit(up),unit(lo));
+    // Do not correct already matching elbow angles. Isolate wrist neutralization
+    // as an artistic alternative, not a source-exact correction.
+    if(Math.hypot(...axis)>1e-5&&Math.abs(before-target)>2){
+     const d=clamp((target-before)*Math.PI/180,-.22,.22);
+     q[elbow.id]=qmul(inv(w[elbow.parent].q),qmul(quat(unit(axis),d),w[elbow.id].q));
+    }
+    const wristBefore=angle(q[wrist.id],[0,0,0,1]);
+    q[wrist.id]=slerp(q[wrist.id],[0,0,0,1],.3);
+    const a=poseFrom(m,q),after=flex(sub(a[elbow.id].p,a[shoulder.id].p),sub(a[wrist.id].p,a[elbow.id].p));
+    items.push({side,sourceElbowFlexDeg:target,beforeElbowFlexDeg:before,afterElbowFlexDeg:after,wristLocalBeforeDeg:wristBefore,wristLocalAfterDeg:angle(q[wrist.id],[0,0,0,1]),sourceArmSwing:sub(sourcePoint(t,'hand.'+side),sourcePoint(t,'upperarm.'+side)),targetArmSwing:sub(a[wrist.id].p,a[shoulder.id].p)});
+   }
+   rows.push({phase:t,items});
+  }
+  v.rotations[n]=v.rotations[0].map(q=>q.slice());v.trace=undefined;
+  const legs=['L','R'].flatMap(side=>['upperleg01','lowerleg01','foot'].map(name=>J(name+'.'+side).id));
+  if(v.rotations.some((q,i)=>legs.some(j=>dist(q[j],base.rotations[i][j])>1e-8)))throw Error('Elbow study modified accepted leg channels');
+  return {v,report:{rows,legChannelsUnchanged:true}};
+ }
  function readGLB(bin){
   const len=bin.readUInt32LE(12),d=JSON.parse(bin.subarray(20,20+len)),offset=28+len,clip=d.animations.find(a=>a.name==='walk');
   const acc=id=>{const a=d.accessors[id],view=d.bufferViews[a.bufferView],n=a.type==='SCALAR'?1:a.type==='VEC3'?3:4,base=offset+(view.byteOffset??0)+(a.byteOffset??0);return Array.from({length:a.count},(_,i)=>Array.from({length:n},(_,j)=>bin.readFloatLE(base+i*(view.byteStride??n*4)+4*j)))};
@@ -175,21 +237,28 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
    if(prev)maxRate=Math.max(maxRate,dist(o,prev)*n/ref.durationSeconds);prev=o;rows.push({phase:t,offset:o,feet});
   }
   const loop=seam(v),gate=max.drift<=10&&max.vertical<=10&&max.penetration<=3&&loop.rootResidualMm<=10&&loop.maxJointDegrees<=10&&max.nativeVertexLandmarkError<.1;
-  return {keyCount:v.rotations.length,additionalAuditSamples:n+1,counts,max,loop,maxRootSpeedMetresPerSecond:maxRate,gate,rows};
+  return {keyCount:v.rotations.length,additionalAuditSamples:n+1,counts,max,loop,velocity:seamVelocity(v),maxRootSpeedMetresPerSecond:maxRate,gate,rows};
  }
  const models={},reports={};
- const variants=[25,49,97,'cyclic49','cyclic97','cyclic49Upper'];
- const cyclicDiagnostics={};let cyclic49,upperReport;
+ const variants=[25,49,97,'cyclic49','cyclic97','cyclic49Upper','velocity49half','velocity49','elbow49'];
+ const cyclicDiagnostics={};let cyclic49,upperReport,elbowReport;
  for(const count of variants){
   let v;
-  if(count==='cyclic49Upper'){const upper=upperStudy(cyclic49);v=upper.v;upperReport=upper.report;}
+  if(count==='velocity49half'||count==='velocity49')v=velocityRegularize(cyclic49,count==='velocity49half'?.5:1);
+  else if(count==='elbow49'){const e=elbowStudy(cyclic49);v=e.v;elbowReport=e.report;}
+  else if(count==='cyclic49Upper'){const upper=upperStudy(cyclic49);v=upper.v;upperReport=upper.report;}
   else v=String(count).startsWith('cyclic')?cyclic(Number(String(count).slice(6))):generate(count);
   if(count==='cyclic49')cyclic49=structuredClone(v);
   const c=structuredClone(m);
   if(v.trace)cyclicDiagnostics[count]={trace:v.trace,velocitySeam:v.velocitySeam};c.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};c.spec.actions=['walk'];c.spec.walkDuration=ref.durationSeconds;c.spec.motionRevision='v9';
   const bin=glb(c);write('v15-walk-'+count+'.glb',bin);json('v15-walk-'+count+'-spec.json',{spec:c.spec,sampledWalk:c.sampledWalk});reports[count]=audit(bin,c);models[count]=c;
  }
- const choose=Object.keys(reports).sort((a,b)=>{const score=r=>Math.max(r.max.drift/10,r.max.vertical/10,r.max.penetration/3,r.loop.rootResidualMm/10,r.loop.maxJointDegrees/10);return score(reports[a])-score(reports[b])||reports[a].keyCount-reports[b].keyCount||((upperReport?.afterMeanDegrees<upperReport?.beforeMeanDegrees)?Number(b==='cyclic49Upper')-Number(a==='cyclic49Upper'):0)||a.localeCompare(b)})[0];
+ const accepted=reports.cyclic49;
+ const noRegression=r=>r.gate&&['drift','vertical','penetration'].every(k=>r.max[k]<=accepted.max[k]+1e-6)&&r.loop.maxJointDegrees<=accepted.loop.maxJointDegrees+1e-6;
+ const velocityImproved=r=>r.velocity.rootMmPerSecond<accepted.velocity.rootMmPerSecond&&r.velocity.maxJointVectorDegreesPerSecond<accepted.velocity.maxJointVectorDegreesPerSecond;
+ const ranked=['velocity49half','velocity49'].filter(k=>noRegression(reports[k])&&velocityImproved(reports[k])).sort((a,b)=>reports[a].velocity.rootMmPerSecond+reports[a].velocity.maxJointVectorDegreesPerSecond-reports[b].velocity.rootMmPerSecond-reports[b].velocity.maxJointVectorDegreesPerSecond);
+ const choose=ranked[0]??'cyclic49';
+ const productionSelection={baseline:'cyclic49',selected:choose,baselineGate:accepted.gate,velocityCandidates:Object.fromEntries(['velocity49half','velocity49'].map(k=>[k,{noRegression:noRegression(reports[k]),velocityImproved:velocityImproved(reports[k])}])),artApproved:false};
  const selected=models[choose];
  // Same camera for all densities, separate neutral anatomy and dressed.
  function frame(model,t,cycle=0,bodyOnly=false){const q=animation(model,'walk',t),o=add(rootOffset(model,'walk',t),[0,0,cycle*stride]),w=poseFrom(model,q).map(b=>({...b,p:add(b.p,o)}));const parts=(bodyOnly?skin.parts:model.parts).map(p=>{const x=structuredClone(p);x.positions=deform(model,p,w).flat();normals(x);return x});return {parts}}
@@ -200,6 +269,10 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   const bounds=commonBounds(Object.values(renders).flat(),view);
   for(const [name,frames] of Object.entries(renders)){const dir='v15-walk-'+name+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<frames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(frames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
   const loops=Array.from({length:73},(_,i)=>frame(selected,(i%24)/24,Math.floor(i/24))),dir='v15-loop-'+view;mkdirSync(join(out,dir),{recursive:true});const loopBounds=commonBounds(loops,view);for(let i=0;i<loops.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(loops[i],{view,bounds:loopBounds,size:640,mode:'B',groundLine:true}).png);
+  for(const label of ['cyclic49','velocity49','elbow49']){
+   const loopFrames=Array.from({length:73},(_,i)=>frame(models[label],(i%24)/24,Math.floor(i/24))),loopDir='v17-loop-'+label+'-'+view;mkdirSync(join(out,loopDir),{recursive:true});const lb=commonBounds(loopFrames,view);for(let i=0;i<loopFrames.length;i++)write(loopDir+'/'+String(i).padStart(2,'0')+'.png',raster(loopFrames[i],{view,bounds:lb,size:640,mode:'B',groundLine:true}).png);
+   if(sameRig){const bodyFrames=Array.from({length:25},(_,i)=>frame(models[label],i/24,0,true)),dir='v17-anatomy-'+label+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<bodyFrames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(bodyFrames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
+  }
   if(sameRig){const rows=Array.from({length:25},(_,i)=>frame(selected,i/24,0,true)),dir='v15-anatomy-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<rows.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(rows[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
  }
  const phaseAudit=[];
@@ -207,7 +280,8 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   const current=sourceMarks[i].L.toe,previous=sourceMarks[Math.max(0,i-1)].L.toe,next=sourceMarks[Math.min(N,i+1)].L.toe;
   phaseAudit.push({phase:i/N,sourceToe:current,sourceHeel:sourceMarks[i].L.heel,sourceToeSpeed:dist(next,previous)/((Math.min(N,i+1)-Math.max(0,i-1))*ref.durationSeconds/N),classification:sourceSupport[i].L});
  }
+ json('v17-motion-diagnostics.json',{productionSelection,elbowReport,comparison:Object.fromEntries(Object.entries(reports).map(([k,r])=>[k,{max:r.max,loop:r.loop,velocity:r.velocity,gate:r.gate}]))});
  json('v16-motion-diagnostics.json',{phaseAudit,cyclicDiagnostics,upperReport,classificationChanged:false,selected:choose,comparison:Object.fromEntries(Object.entries(reports).map(([k,r])=>[k,{max:r.max,loop:r.loop,gate:r.gate,phase29:r.rows[112]}]))});
- json('v15-continuous-report.json',{sourceSeam,retargetSeam:seam(author),verticalSeam:seam(vertical),baselineSeam:seam(baseline),reports,selected:choose,sourceRigMatches:sameRig,groundY,stride,duration:ref.durationSeconds,qualification:{contactGate:reports[choose].gate,artApproved:false},limits:['Uniform 25/49/97 keys solve the same constraints; 385 exact exported interpolated samples each.','Seam blend and correction measured independently. Actual loop frames reset clip plus accumulated intended stride.','Native comparison of deformed landmark points and minimum actual sole vertex; independent Blender evaluation separate.']});
+ json('v15-continuous-report.json',{sourceSeam,retargetSeam:seam(author),verticalSeam:seam(vertical),baselineSeam:seam(baseline),reports,selected:choose,sourceRigMatches:sameRig,groundY,stride,duration:ref.durationSeconds,qualification:{contactGate:reports[choose].gate&&accepted.gate,artApproved:false},limits:['Uniform 25/49/97 keys solve the same constraints; 385 exact exported interpolated samples each.','Seam blend and correction measured independently. Actual loop frames reset clip plus accumulated intended stride.','Native comparison of deformed landmark points and minimum actual sole vertex; independent Blender evaluation separate.']});
  console.log(JSON.stringify({selected:choose,reports:Object.fromEntries(Object.entries(reports).map(([k,v])=>[k,{max:v.max,loop:v.loop,gate:v.gate}]))}));
 }
