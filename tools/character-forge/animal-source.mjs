@@ -1,4 +1,4 @@
-import {readFileSync,writeFileSync} from 'node:fs';import {join} from 'node:path';import {build,pose,deform} from './core.mjs';import {part,push,normals,weights} from './hybrid-human.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {resolveProfile} from './morphology.mjs';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';import {join} from 'node:path';import {build,pose,deform} from './core.mjs';import {part,push,normals,weights} from './hybrid-human.mjs';import {glb} from './glb.mjs';import {preview} from './preview.mjs';import {raster,commonBounds} from './material-study.mjs';import {resolveProfile} from './morphology.mjs';
 import {repairElephant} from './elephant-strain-v7.mjs';
 import {segmentElephant} from './elephant-segment-v8.mjs';
 const out=process.env.CHARACTER_EVIDENCE,reg=JSON.parse(readFileSync(new URL('animal-morphs.json',import.meta.url))),provenance=JSON.parse(readFileSync(join(out,'animal-source-provenance.json'))),report=[];
@@ -77,7 +77,7 @@ for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','el
     const r=segmentElephant(m,{name,out,write:(file,data)=>writeFileSync(join(out,file),data)});
     writeFileSync(join(out,'source-v9-elephant-'+name+'-segmentation.json'),JSON.stringify(r.report,null,2));
     writeFileSync(join(out,'source-v9-elephant-'+name+'-segmented.glb'),glb(r.model));
-    if(name==='base'){writeFileSync(join(out,'source-v9-elephant-active.glb'),glb(r.active));writeFileSync(join(out,'source-v10-elephant-active.model.json'),JSON.stringify(r.active));}
+    if(name==='base'){writeFileSync(join(out,'source-v9-elephant-active.glb'),glb(r.active));writeFileSync(join(out,'source-v10-elephant-active.model.json'),JSON.stringify(r.active));;if(process.env.CHARACTER_V12_COMPOSITE==='1')compositionProbe(r.active);}
     console.log(JSON.stringify({name,surfaceContacts:m.surfaceContacts,before:r.report.before,after:r.report.after,forbidden:r.report.forbidden,accepted:r.report.approvedTechnical,selectedConfig:r.report.selectedConfig}));
   }else if(family==='elephant'){
     // Keep B's original source topology; C is a bounded, procedural
@@ -109,3 +109,25 @@ for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','el
  }
 }
 writeFileSync(join(out,'animal-source-study.json'),JSON.stringify({report,limitations:'Original source geometry retained; candidate shape uses bounded template deformation and approximate nearest-segment skinning. No source-derived animation acceptance or calibrated anatomical rig.'},null,2));console.log(JSON.stringify(report));
+
+function compositionProbe(source){
+ const native=build({...source.spec,composite:true,modules:['animal-tack']}),n=source.joints.length;
+ if(!source.joints.every((j,i)=>native.joints[i]?.name===j.name&&native.joints[i].parent===j.parent&&norm(sub(native.joints[i].position,j.position))<1e-8))throw Error('Source composite shared rig mismatch');
+ const equipment=native.parts.filter(p=>/^(saddle |howdah |tack )/.test(p.name)||Array.from({length:p.positions.length/3},(_,i)=>weights(p,i)).some(ws=>ws.some(([j])=>j>=n)));
+ if(!equipment.some(p=>p.name.includes('howdah floor'))||!equipment.some(p=>p.name.startsWith('tack')))throw Error('Missing composite modules');
+ const m=structuredClone(native);m.parts=[...structuredClone(source.parts),...structuredClone(equipment)];m.contacts=structuredClone(source.contacts);m.surfaceContacts=structuredClone(source.surfaceContacts);m.spec={...native.spec,...source.spec,composite:true,modules:['animal-tack']};m.spec.sourceAdapter+=' + existing Native equipment and crew, experimental fit';m.statistics={triangleCount:m.parts.reduce((a,p)=>a+p.indices.length/3,0),vertices:m.parts.reduce((a,p)=>a+p.positions.length/3,0),joints:m.joints.length};
+ const skinIndex=source.parts.findIndex(p=>p.name.includes('Continuous anatomical skin')),floorIndex=m.parts.findIndex(p=>p.name==='howdah floor'),blanketIndex=m.parts.findIndex(p=>p.name==='saddle blanket'),seat=m.joints.find(j=>j.name==='saddle');if(skinIndex<0||floorIndex<0||blanketIndex<0||!seat)throw Error('Composition markers');
+ function topAt(p,x,z){let best=-Infinity;for(let i=0;i<p.indices.length;i+=3){const [a,b,c]=p.indices.slice(i,i+3).map(j=>p.positions.slice(3*j,3*j+3)),d=(b[2]-c[2])*(a[0]-c[0])+(c[0]-b[0])*(a[2]-c[2]);if(Math.abs(d)<1e-9)continue;const u=((b[2]-c[2])*(x-c[0])+(c[0]-b[0])*(z-c[2]))/d,v=((c[2]-a[2])*(x-c[0])+(a[0]-c[0])*(z-c[2]))/d;if(u>=-1e-7&&v>=-1e-7&&u+v<=1+1e-7)best=Math.max(best,u*a[1]+v*b[1]+(1-u-v)*c[1])}return Number.isFinite(best)?best:null}
+ function measure(q){const skin=q.parts[skinIndex],blanket=q.parts[blanketIndex],v=Array.from({length:blanket.positions.length/3},(_,i)=>blanket.positions.slice(i*3,i*3+3)),min=Math.min(...v.map(p=>p[1])),bottom=v.filter(p=>p[1]<min+.035),gaps=bottom.map(p=>{const y=topAt(skin,p[0],p[2]);return y===null?null:p[1]-y}).filter(x=>x!==null);return {samples:gaps.length,minGap:gaps.length?Math.min(...gaps):null,maxGap:gaps.length?Math.max(...gaps):null,meanGap:gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:null}}
+ const before=measure(m),shift=before.minGap===null?0:clamp(.008-before.minGap,-.15,.15);
+ // Shift only the independent saddle/crew subtree. Keep source body and
+ // root-bound girths unchanged; their fit is measured, never asserted.
+ for(const j of m.joints.slice(n))j.position[1]+=shift;
+ for(const j of m.joints.slice(n))j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position);
+ for(const p of m.parts.slice(source.parts.length))if(!p.name.startsWith('tack girth'))for(let i=1;i<p.positions.length;i+=3)p.positions[i]+=shift;
+ const frames=[],rows=[],dir='v12-elephant-source-crew';mkdirSync(join(out,dir),{recursive:true});
+ for(let i=0;i<=12;i++){const phase=i/12,w=pose(m,'walk',phase),q=structuredClone(m);for(let j=0;j<q.parts.length;j++){q.parts[j].positions=deform(m,m.parts[j],w).flat();normals(q.parts[j])}frames.push(q);rows.push({phase,saddle:measure(q),seat:w[seat.id].p,crew:w[m.joints.find(j=>j.name.startsWith('crew/')&&j.role==='pelvis').id].p})}
+ const bounds=commonBounds(frames,'side');for(let i=0;i<frames.length;i++)writeFileSync(join(out,dir,String(i).padStart(2,'0')+'.png'),raster(frames[i],{view:'side',size:640,bounds}).png);
+ writeFileSync(join(out,'v12-elephant-source-crew-three-quarter.png'),raster(frames[0],{view:'three-quarter',size:768}).png);
+ writeFileSync(join(out,'v12-elephant-source-crew.glb'),glb(m));writeFileSync(join(out,'v12-elephant-source-crew.json'),JSON.stringify({sharedJoints:n,sourceGeometryUnchanged:source.parts.every((p,i)=>JSON.stringify(p.positions)===JSON.stringify(m.parts[i].positions)&&JSON.stringify(p.indices)===JSON.stringify(m.parts[i].indices)),equipmentParts:equipment.map(p=>p.name),before,seatHeightCorrection:shift,after:measure(m),frames:rows,approval:false,limitations:'Vertical saddle clearance samples only; girth attachment and complete collision audit not yet accepted.'},null,2));
+}
