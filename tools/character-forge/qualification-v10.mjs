@@ -29,9 +29,9 @@ if(process.env.CHARACTER_V10_ANIMALS!=='1'){
   crop(q,w[head.id].p,.19,'three-quarter','v10-'+id+'-face');for(const [s,j] of [['L',left],['R',right]])crop(q,w[j.id].p,.15,'three-quarter','v10-'+id+'-hand-'+s);
   reports.push({id,grip:g,parts:m.parts.length,triangles:m.statistics.triangleCount});
  }
- const styles=['low-poly','historical-miniature','anatomical-realism'],styleModels=styles.map(style=>produceRoleV9(read('makehuman-base.json'),'artisan',null,{style})),view='three-quarter',atPhase=.25,models=styleModels.map(m=>posed(m,'walk',atPhase).q),bounds=commonBounds(models,view);
+ const styles=['low-poly','historical-miniature','anatomical-realism'],styleModels=styles.map(style=>produceRoleV9(read('makehuman-base.json'),'artisan',null,{style,styleRevision:10})),view='three-quarter',atPhase=.25,models=styleModels.map(m=>posed(m,'walk',atPhase).q),bounds=commonBounds(models,view);
  for(let i=0;i<styles.length;i++){write('v10-style-'+styles[i]+'.glb',glb(styleModels[i]));write('v10-style-'+styles[i]+'.png',raster(models[i],{view,bounds,size:640,mode:'C',maps}).png)}
- json('v10-character-qualification.json',{roles:reports,stylePhase:atPhase,styles:styleModels.map(m=>({style:m.spec.style,lod:m.spec.lod,triangles:m.statistics.triangleCount,joints:m.joints.length})),limits:['No human art approval. Grip distances are measured against actual skinned finger vertices. Anatomical realism is an initial palette/material profile, not yet a full geometry-level art direction.']});
+ json('v10-character-qualification.json',{roles:reports,stylePhase:atPhase,styles:styleModels.map(m=>({style:m.spec.style,lod:m.spec.lod,triangles:m.statistics.triangleCount,joints:m.joints.length})),limits:['No human art approval. Grip distances are measured against actual skinned finger vertices. Realism retains source proportions; historical miniature and low-poly use different geometric exaggeration. Realistic fabric and face treatment remain preliminary.']});
 }else{
  for(const [name,recipe,composite] of [['horse','horse',false],['rider','rider',true],['elephant-crew','elephant',true]]){
   const m=build({version:2,recipe,style:'historical-miniature',lod:'medium',anatomy:'v10',motionRevision:'v4',actions:['idle','walk'],composite,modules:composite?['animal-tack']:[]}),dir='v10-'+name+'-motion',frames=[],diagnostics=[];mkdirSync(join(out,dir),{recursive:true});
