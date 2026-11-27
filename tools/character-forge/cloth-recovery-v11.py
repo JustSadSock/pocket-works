@@ -181,7 +181,7 @@ def defect_detail(v,old,cs,previous_cs):
    co,normal,fi,distance=t.find_nearest(mid)
    if co is None:continue
    ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*simulationFps/3 for k in range(3)]
-   clothVelocity=[sum((v[j][k]-old[j][k])*spec['fps'] for j in (a,b))*.5 for k in range(3)]
+   clothVelocity=[sum((v[j][k]-old[j][k])*simulationFps for j in (a,b))*.5 for k in range(3)]
    relative=Vector(clothVelocity)-Vector(velocity);normalUnit=normal.normalized();normalSpeed=relative.dot(normalUnit);tangentialSpeed=(relative-normalUnit*normalSpeed).length
    nearest.append({'name':name,'face':fi,'faceVertices':ids,'distanceMetres':distance,'normal':list(normal),'surfaceVelocity':velocity,'clothEdgeVelocity':clothVelocity,'relativeVelocity':list(relative),'relativeNormalSpeed':normalSpeed,'relativeTangentialSpeed':tangentialSpeed})
   details.append({'edge':[a,b],'ratio':ratio,'previousRatio':math.dist(old[a],old[b])/d,'restLength':d,'midpoint':list(mid),'edgeDirection':list((Vector(v[b])-Vector(v[a])).normalized()),'pinDistancesMetres':[min(math.dist(initial[j],initial[k]) for k in wpins) for j in (a,b)],'nearestCollider':min(nearest,key=lambda x:x['distanceMetres']) if nearest else None})
@@ -455,7 +455,7 @@ for label,stage,slow,ramp,allowed in experiments:
    cs=[];audit={};previous_cs=dict(prev)
    for name,fs,idx,ob,useWorld in collider_data:
     actual=world_vertices_gltf(ob) if useWorld else evaluated(ob);assert len(actual)==len(fs[i])
-    err=max(math.dist(a,b) for a,b in zip(actual,fs[i]));vel=max((math.dist(a,b)*spec['fps'] for a,b in zip(actual,prev.get(name,actual))),default=0)
+    err=max(math.dist(a,b) for a,b in zip(actual,fs[i]));vel=max((math.dist(a,b)*simulationFps for a,b in zip(actual,prev.get(name,actual))),default=0)
     prev[name]=actual;top=topology(actual,idx);audit[name]={'maxEvaluatedMismatchMetres':err,'maxSurfaceSpeedMetresPerSecond':vel,'signedVolume':top['signedVolume'],'boundaryEdges':top['boundaryEdges'],'nonManifoldEdges':top['nonManifoldEdges']}
     cs.append((name,actual,idx))
    row=stats(v,expected[i],cs);row={'frame':frame,**row,'colliderAudit':audit};rows.append(row)
@@ -464,7 +464,7 @@ for label,stage,slow,ramp,allowed in experiments:
     selfPairs=[(a,b) for a,b in selfTree.overlap(selfTree) if a<b and not set(faces[a])&set(faces[b])]
     row['selfOverlapPairs']=len(selfPairs)
     row['selfOverlapIndices']=selfPairs
-    row['maxPinTargetSpeed']=max((math.dist(expected[i][j],expected[max(0,i-1)][j])*spec['fps'] for j in wpins),default=0)
+    row['maxPinTargetSpeed']=max((math.dist(expected[i][j],expected[max(0,i-1)][j])*simulationFps for j in wpins),default=0)
     if 44<=frame<=46:
      row['edgeStrainMap']=[math.dist(v[a],v[b])/d for (a,b),d in zip(edges,lengths)]
      row['edgeIndices']=edges
@@ -479,7 +479,7 @@ for label,stage,slow,ramp,allowed in experiments:
    if stage>1 and (40<=frame<=48 or (bad and firstDefect is None) or (firstDefect is not None and frame<=firstDefect+2)):
     detail=defect_detail(v,prevCloth,cs,previous_cs)
     edge=(10,42);a,b=edge
-    detail['pinBoundary']={'edge':list(edge),'originalEdgeExists':edge in edges,'vertexPositions':[v[a],v[b]],'vertexVelocity':[[ (x-y)*spec['fps'] for x,y in zip(v[j],prevCloth[j])] for j in edge],'targetPositions':[expected[i][j] for j in edge],'targetVelocity':[[ (x-y)*spec['fps'] for x,y in zip(expected[i][j],expected[max(0,i-1)][j])] for j in edge],'restDistance':math.dist(initial[a],initial[b]),'distance':math.dist(v[a],v[b]),'neighborStrain':[{'edge':[j,k],'ratio':math.dist(v[j],v[k])/l} for (j,k),l in zip(edges,lengths) if j in edge or k in edge]}
+    detail['pinBoundary']={'edge':list(edge),'originalEdgeExists':edge in edges,'vertexPositions':[v[a],v[b]],'vertexVelocity':[[ (x-y)*simulationFps for x,y in zip(v[j],prevCloth[j])] for j in edge],'targetPositions':[expected[i][j] for j in edge],'targetVelocity':[[ (x-y)*simulationFps for x,y in zip(expected[i][j],expected[max(0,i-1)][j])] for j in edge],'restDistance':math.dist(initial[a],initial[b]),'distance':math.dist(v[a],v[b]),'neighborStrain':[{'edge':[j,k],'ratio':math.dist(v[j],v[k])/l} for (j,k),l in zip(edges,lengths) if j in edge or k in edge]}
     defects.append({'frame':frame,**detail})
    prevCloth=v
    if bad and firstDefect is None:
