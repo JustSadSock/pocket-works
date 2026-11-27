@@ -45,7 +45,7 @@ export class AtlasCampaignSurface{
  const epoch=this.epoch,key=regionKey(r),job=r,task={job,cancelled:false};let cached=this.cache.get(key),cacheKey=key,region=bounds;
  if(!cached){for(const [k,item] of this.cache.items){const t=item.value;if(k.startsWith(revision+'|')&&covers(t.bounds,visible)){cached=this.cache.get(k);cacheKey=k;region=t.bounds;break;}}}
  this.pending=task;this.inFlight++;this.maxInFlight=Math.max(this.maxInFlight,this.inFlight);this.status='loading';const started=performance.now(),check=()=>{if(task.cancelled||epoch!==this.epoch||!this.requests.accepts(job,region))throw new DOMException('Superseded region','AbortError');};
- const install=(terrain,key,rev)=>{check();const old=this.active?.renderer,renderer=new BakedTerrainGL(this.canvas,terrain,{chunked:true,adaptive:true,sharedPrograms:true,preserveDrawingBuffer:this.preserveDrawingBuffer});if(renderer.programReuse)this.reusedGPU++;old?.dispose();this.active={key,revision:rev,knowledge,bounds:terrain.bounds,renderer,terrain};};
+ const install=(terrain,key,rev)=>{check();const old=this.active?.renderer,renderer=new BakedTerrainGL(this.canvas,terrain,{chunked:true,adaptive:true,sharedPrograms:true,preserveDrawingBuffer:this.preserveDrawingBuffer});if(renderer.programReuse)this.reusedGPU++;if(this.composition==='resident'&&this.residentOptions)renderer.configureResident(this.residentOptions);old?.dispose();this.active={key,revision:rev,knowledge,bounds:terrain.bounds,renderer,terrain};};
  task.promise=(async()=>{const opts={bounds,detail,contourDetail,vertical,polish:true,surfaceScale,identity,check};
  // Cold local regions need only one bake. A covering previous region is
  // already a useful preview; do not pay for a second local GPU upload.
