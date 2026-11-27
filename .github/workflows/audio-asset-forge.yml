@@ -709,6 +709,24 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Render seven-player historical consort in native stereo
+        id: historical_consort
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-consort.py .audio-psaltery-harmonics .audio-historical-consort
+          test "$(find .audio-historical-consort -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
+          test -s .audio-historical-consort/pilgrims-crossing.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_consort.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-consort-${{ github.run_id }}
+          path: .audio-historical-consort/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
