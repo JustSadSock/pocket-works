@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#27312b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FLICKYARD">
+  <title>FLICKYARD — мастерская меткости</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="yard-shell" data-app-shell data-keyboard-aware>
+    <header class="masthead" data-ui>
+      <a class="library-link" href="../../" data-app-control aria-label="Вернуться в Pocket Works">← <span>POCKET WORKS</span></a>
+      <div class="brand-lockup" aria-label="Flickyard">
+        <span class="brand-glyph" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div><strong>FLICKYARD</strong><small>МАСТЕРСКАЯ МЕТКОСТИ</small></div>
+      </div>
+      <div class="masthead-tools">
+        <span class="network-state" id="networkState"><i></i> ЛОКАЛЬНЫЙ ТИР</span>
+        <button class="tool-button" id="historyButton" type="button" data-native-press>Результаты</button>
+        <button class="tool-button" id="settingsButton" type="button" data-native-press>Настройки</button>
+        <button class="tool-button icon-tool" id="soundButton" type="button" aria-label="Выключить звук" aria-pressed="true" data-native-press>♫</button>
+        <button class="tool-button icon-tool" id="fullscreenButton" type="button" aria-label="Полноэкранный режим" data-native-press>⛶</button>
+        <button class="tool-button icon-tool workshop-trigger" type="button" data-workshop-trigger aria-label="Диагностика" data-native-press>⋯</button>
+      </div>
+    </header>
+
+    <div class="yard-layout">
+      <aside class="station-rail" data-ui>
+        <div class="rail-kicker"><span>СТАНЦИЯ 01</span><span class="rail-led"></span></div>
+        <h2>Выбери<br>упражнение</h2>
+        <nav class="mode-list" id="modeList" aria-label="Режим тренировки">
+          <button class="mode-button is-active" type="button" data-mode="flick" aria-pressed="true">
+            <span class="mode-index">01</span><span class="mode-copy"><strong>Щелчок</strong><small>Flick · точность</small></span><span class="mode-mark">↗</span>
+          </button>
+          <button class="mode-button" type="button" data-mode="track" aria-pressed="false">
+            <span class="mode-index">02</span><span class="mode-copy"><strong>Ведение</strong><small>Track · контроль</small></span><span class="mode-mark">∿</span>
+          </button>
+          <button class="mode-button" type="button" data-mode="switch" aria-pressed="false">
+            <span class="mode-index">03</span><span class="mode-copy"><strong>Смена целей</strong><small>Switch · перенос</small></span><span class="mode-mark">⇢</span>
+          </button>
+          <button class="mode-button" type="button" data-mode="reflex" aria-pressed="false">
+            <span class="mode-index">04</span><span class="mode-copy"><strong>Реакция</strong><small>Reflex · тайминг</small></span><span class="mode-mark">!</span>
+          </button>
+          <button class="mode-button circuit-button" type="button" data-mode="circuit" aria-pressed="false">
+            <span class="mode-index">05</span><span class="mode-copy"><strong>Триатлон</strong><small>3 × 30 секунд</small></span><span class="mode-mark">⌁</span>
+          </button>
+        </nav>
+        <div class="rail-divider"></div>
+        <div class="rail-record">
+          <span class="mini-label">ЛИЧНЫЙ РЕКОРД</span>
+          <strong id="modeBest">—</strong>
+          <small id="modeBestLabel">в режиме «Щелчок»</small>
+        </div>
+        <div class="rail-bottom">
+          <span class="rail-dot"></span>
+          <span>МЫШЬ · 100% ЛОКАЛЬНО</span>
+        </div>
+      </aside>
+
+      <section class="range-column" aria-label="Тренировочный полигон">
+        <div class="range-toolbar" data-ui>
+          <div class="range-heading">
+            <span class="range-overline">ПОЛИГОН / <b id="rangeModeCode">F-01</b></span>
+            <h1 id="rangeTitle">Щелчок</h1>
+            <p id="rangeSubtitle">Flick / точность первого выстрела</p>
+          </div>
+          <div class="range-options">
+            <label class="compact-select"><span>ВРЕМЯ</span>
+              <select id="durationSelect">
+                <option value="30">30 сек</option>
+                <option value="45" selected>45 сек</option>
+                <option value="60">60 сек</option>
+                <option value="90">90 сек</option>
+              </select>
+            </label>
+            <label class="compact-select"><span>НАГРУЗКА</span>
+              <select id="difficultySelect">
+                <option value="relaxed">Спокойно</option>
+                <option value="standard" selected>Стандарт</option>
+                <option value="hard">Жёстко</option>
+              </select>
+            </label>
+            <button class="start-button" id="launchButton" type="button" data-native-press><span>НАЧАТЬ</span><b>↗</b></button>
+          </div>
+        </div>
+
+        <div class="range-frame" id="rangeFrame">
+          <canvas id="rangeCanvas" aria-label="Игровой полигон. Двигайте мышь для наведения, нажимайте левую кнопку для выстрела."></canvas>
+          <div class="home-overlay" id="homeOverlay">
+            <div class="home-copy">
+              <span class="home-kicker"><i></i> ГОТОВ К ИСПЫТАНИЮ</span>
+              <h2 id="homeTitle">Один щелчок.<br><em>Одна цель.</em></h2>
+              <p id="homeDescription">Поймай ритм, перенеси прицел и попади в центр. Скорость без контроля здесь не спасает.</p>
+              <div class="home-controls"><span><b>ЛКМ</b> выстрел</span><span><b>ESC</b> пауза</span><span><b>R</b> заново</span></div>
+              <button class="launch-secondary" id="homeLaunchButton" type="button" data-native-press>ВЫЙТИ НА РУБЕЖ <span>→</span></button>
+            </div>
+            <div class="hero-stamp" aria-hidden="true">
+              <div class="stamp-ring stamp-ring-outer"></div><div class="stamp-ring stamp-ring-inner"></div><div class="stamp-core"></div>
+              <span class="stamp-top">PRECISION TEST</span><span class="stamp-bottom">NO SHORTCUTS · 01</span>
+            </div>
+            <div class="home-foot"><span>МЕХАНИЧЕСКИЕ МИШЕНИ · СЕРИЯ 01</span><span>OFFLINE READY</span></div>
+          </div>
+
+          <div class="run-hud" id="runHud" hidden>
+            <div class="hud-topline">
+              <div class="hud-status"><span class="live-dot"></span><span id="hudModeName">ЩЕЛЧОК</span><small id="hudStage">УПРАЖНЕНИЕ 01</small></div>
+              <div class="hud-numbers">
+                <div><small>ВРЕМЯ</small><strong id="hudTime">45.0</strong></div>
+                <div><small>ОЧКИ</small><strong id="hudScore">0000</strong></div>
+                <div><small>ПОПАДАНИЯ</small><strong id="hudHits">0</strong></div>
+                <div><small>СЕРИЯ</small><strong id="hudStreak">0×</strong></div>
+              </div>
+              <button class="hud-pause" id="pauseButton" type="button" data-native-press aria-label="Пауза">Ⅱ</button>
+            </div>
+            <div class="hud-progress"><span id="hudProgress"></span></div>
+            <div class="hud-bottomline"><span id="hudHint">ЛКМ — выстрел</span><span id="hudAccuracy">ТОЧНОСТЬ —</span></div>
+          </div>
+
+          <div class="pause-overlay" id="pauseOverlay" hidden>
+            <div class="pause-panel">
+              <span class="panel-kicker">ПОЛИГОН ОСТАНОВЛЕН</span>
+              <h2>Пауза</h2>
+              <p id="pauseReason">Прицел остаётся на месте. Можно продолжить в любой момент.</p>
+              <button class="primary-action" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ <span>→</span></button>
+              <div class="pause-secondary"><button id="pauseRestartButton" type="button" data-native-press>Заново</button><button id="pauseExitButton" type="button" data-native-press>Выйти в меню</button></div>
+            </div>
+          </div>
+
+          <div class="results-overlay" id="resultsOverlay" hidden>
+            <div class="results-panel">
+              <div class="results-head"><span class="panel-kicker">ЗАЕЗД ЗАВЕРШЁН</span><span class="result-rank" id="resultRank">ЗАПИСАНО</span></div>
+              <h2 id="resultTitle">Хороший темп.</h2>
+              <div class="result-score"><strong id="resultScore">0</strong><span>ОЧКОВ</span><small id="resultBest">Личный рекорд не побит</small></div>
+              <div class="result-grid">
+                <div><small>ТОЧНОСТЬ</small><strong id="resultAccuracy">0%</strong></div>
+                <div><small>ПОПАДАНИЯ</small><strong id="resultHits">0</strong></div>
+                <div><small>СР. РЕАКЦИЯ</small><strong id="resultReaction">—</strong></div>
+                <div><small>ЛУЧШАЯ СЕРИЯ</small><strong id="resultStreak">0×</strong></div>
+              </div>
+              <div class="result-actions"><button class="primary-action" id="resultAgainButton" type="button" data-native-press>ЕЩЁ РАЗ <span>↻</span></button><button class="secondary-action" id="resultHomeButton" type="button" data-native-press>В МЕНЮ</button></div>
+            </div>
+          </div>
+          <div class="range-toast" id="rangeToast" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="range-footer" data-ui>
+          <span id="controlHint">ЛКМ — выстрел · мышь — прицел · ESC — пауза</span>
+          <span><i></i> <b>60 FPS TARGET</b> · <span id="pointerState">CURSOR READY</span></span>
+        </div>
+      </section>
+
+      <aside class="score-ledger" data-ui>
+        <div class="ledger-head"><span>ЛИЧНЫЙ ЖУРНАЛ</span><span class="ledger-mark">№ 01</span></div>
+        <div class="ledger-main">
+          <span class="mini-label">ЛУЧШИЙ РЕЗУЛЬТАТ</span>
+          <strong class="ledger-score" id="globalBest">0</strong>
+          <span class="ledger-caption">очков за тренировку</span>
+        </div>
+        <div class="ledger-rule"></div>
+        <div class="ledger-metrics">
+          <div><span>ЗАЕЗДОВ</span><strong id="sessionsCount">0</strong></div>
+          <div><span>СР. ТОЧНОСТЬ</span><strong id="quickAccuracy">—</strong></div>
+          <div><span>СР. РЕАКЦИЯ</span><strong id="quickReaction">—</strong></div>
+        </div>
+        <div class="ledger-insight" id="quickInsight">
+          <span class="insight-pin"></span>
+          <div><b>Пока тихо.</b><p>Первый заезд создаст отправную точку для сравнения.</p></div>
+        </div>
+        <button class="ledger-history" id="ledgerHistoryButton" type="button" data-native-press>ОТКРЫТЬ ЖУРНАЛ <span>↗</span></button>
+        <div class="ledger-foot"><span>ДАННЫЕ ХРАНЯТСЯ</span><strong>НА ЭТОМ УСТРОЙСТВЕ</strong></div>
+      </aside>
+    </div>
+  </main>
+
+  <dialog class="yard-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dialog-header"><div><span class="panel-kicker">КОНФИГУРАЦИЯ</span><h2 id="settingsTitle">Настройки прицела</h2></div><button class="dialog-close" id="closeSettings" type="button" aria-label="Закрыть" data-native-press>×</button></div>
+    <div class="settings-body">
+      <label class="range-setting"><span><b>Чувствительность мыши</b><small>Множитель движения внутри полигона</small></span><output id="sensitivityValue">1.00×</output><input id="sensitivity" type="range" min="0.5" max="2" step="0.05" value="1"></label>
+      <label class="range-setting"><span><b>Размер прицела</b><small>Влияет только на отображение</small></span><output id="reticleValue">1.0×</output><input id="reticleSize" type="range" min="0.7" max="1.5" step="0.05" value="1"></label>
+      <label class="toggle-setting"><span><b>Адаптивная сложность</b><small>После серии выстрелов корректирует размер мишени</small></span><input id="adaptiveSetting" type="checkbox" checked></label>
+      <label class="toggle-setting"><span><b>Звуковая механика</b><small>Металл, эмаль и короткий резонанс попаданий</small></span><input id="soundSetting" type="checkbox" checked></label>
+      <label class="toggle-setting"><span><b>Осколки и следы</b><small>Визуальная отдача попаданий</small></span><input id="effectsSetting" type="checkbox" checked></label>
+    </div>
+    <div class="dialog-footer"><span>Настройки сохраняются автоматически.</span><button class="primary-action" id="closeSettingsDone" type="button" data-native-press>ГОТОВО</button></div>
+  </dialog>
+
+  <dialog class="yard-dialog history-dialog" id="historyDialog" aria-labelledby="historyTitle">
+    <div class="dialog-header"><div><span class="panel-kicker">ЛИЧНЫЙ ЖУРНАЛ</span><h2 id="historyTitle">История тренировок</h2></div><button class="dialog-close" id="closeHistory" type="button" aria-label="Закрыть" data-native-press>×</button></div>
+    <div class="history-summary"><div><small>ВСЕГО ЗАЕЗДОВ</small><strong id="historyTotal">0</strong></div><div><small>ЛУЧШИЙ СЧЁТ</small><strong id="historyTopScore">0</strong></div></div>
+    <ol class="history-list" id="historyList"><li class="history-empty">Здесь появятся завершённые тренировки.</li></ol>
+    <div class="dialog-footer"><button class="text-action" id="exportHistoryButton" type="button" data-native-press>Экспортировать JSON</button><button class="text-action danger-action" id="resetStatsButton" type="button" data-native-press>Сбросить результаты</button><button class="primary-action" id="closeHistoryDone" type="button" data-native-press>ЗАКРЫТЬ</button></div>
+  </dialog>
+
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FLICKYARD" data-app-version="0.1.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
