@@ -151,12 +151,12 @@ const fluteExpressionNotes=[69,72,72,69,81,72,69,72].map((midi,i)=>({
 }));
 const fluteVibrato={vibrato:{depthCents:16,rateHz:5.1,delaySeconds:.10,fadeInSeconds:.14,releaseSeconds:.10}};
 const fluteOrnamented={...fluteVibrato,attackBend:{cents:-16,durationSeconds:.065}};
-const dryExpression=render('flute-expression-dry',fluteExpressionNotes,5.3,'morph','flute');
-const vibratoExpression=render('flute-expression-vibrato',fluteExpressionNotes.map(n=>({...n,expression:fluteVibrato})),5.3,'morph','flute');
-const ornamentedExpression=render('flute-expression-ornamented',fluteExpressionNotes.map(n=>({...n,expression:fluteOrnamented})),5.3,'morph','flute');
+const dryExpression=render('expression/flute-expression-dry',fluteExpressionNotes,5.3,'morph','flute');
+const vibratoExpression=render('expression/flute-expression-vibrato',fluteExpressionNotes.map(n=>({...n,expression:fluteVibrato})),5.3,'morph','flute');
+const ornamentedExpression=render('expression/flute-expression-ornamented',fluteExpressionNotes.map(n=>({...n,expression:fluteOrnamented})),5.3,'morph','flute');
 if(dryExpression.samples.every((x,i)=>x===vibratoExpression.samples[i])||
  vibratoExpression.samples.every((x,i)=>x===ornamentedExpression.samples[i])||
- choices['flute-expression-ornamented'].some(x=>x.expression?.maxDeviationCents!==32))
+ choices['expression/flute-expression-ornamented'].some(x=>x.expression?.maxDeviationCents!==32))
  throw Error('Recorded expression was not exercised');
 const expressionGap=Math.round(sr*.7),expressionTarget=Math.min(dryExpression.metric.rms,ornamentedExpression.metric.rms);
 const expressionAB=new Float32Array(dryExpression.samples.length*2+expressionGap);
