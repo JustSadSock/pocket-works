@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "flickyard",
+  "direction": {
+    "premise": "An industrial precision range where the targets are physical enamel-and-steel mechanisms, not abstract dots or simulated enemies.",
+    "composition": "The horizontal training world fills the main viewport; a narrow equipment rail chooses drills on the left, while the live range remains unobstructed and its ledger sits outside the playfield.",
+    "shapeLanguage": "Target plates use concentric hard circles, four visible rivets and short rail-mounted silhouettes; the interface uses square cuts, thin measurement rules and restrained mechanical marks.",
+    "surfaceAndMaterial": "The arena is charcoal-painted steel with brushed rails, warm ceramic faces and small brass fasteners; the surrounding controls are dry parchment and dark green enamel.",
+    "paletteLogic": "Deep green-black recedes behind the reticle, parchment carries all readable text, rust marks active targets and hit response, and brass is reserved for the central scoring rings.",
+    "typography": "Georgia carries the workshop's measured editorial voice, while compact monospace labels identify drill codes, times and scores without competing with the live target.",
+    "signature": "A hit spins the target plate off its axis and releases a short spray of enamel and steel fragments; the impact ring remains briefly where the target was.",
+    "distinction": "Unlike Press's file ledger, Pereves's suspended balance sculpture, Echolot's sonar instrument, Emergent Kingdoms's map and Folkarium's notation spread, Flickyard is a mouse-first open range with moving physical targets. It also avoids Petlya 17's 3D cockpit, road perspective and vehicle telemetry."
+  },
+  "architecture": {
+    "spatialLayout": "full-bleed-world",
+    "controlLocation": "side-rail",
+    "navigation": "none",
+    "chromeTopology": "diegetic-tools",
+    "dominantMotion": "rotational-inertia",
+    "primaryVerb": "Move the mouse to acquire a moving plate, make one deliberate correction and click when the reticle settles inside its center.",
+    "physicalFeedback": "A successful shot rotates the plate away from its rail, sheds a few hard fragments and produces a short ceramic-metal impact; a miss gives a quieter felt-backed knock.",
+    "spatialRationale": "The range must preserve broad horizontal mouse travel and a stable 16:9 target field; the left rail stays outside the canvas, while mobile collapses it into a compact drill selector above the scene.",
+    "comparisons": [
+      {
+        "slug": "press",
+        "spatialDifference": "Press is a split file-processing workspace with a permanent operation rail and a measurable file ledger; Flickyard gives most of the screen to one continuous target field.",
+        "interactionDifference": "Press selects files and runs discrete conversion jobs; Flickyard continuously samples mouse movement and resolves each shot against a live moving target."
+      },
+      {
+        "slug": "pereves",
+        "spatialDifference": "Pereves presents a light gallery wall and a suspended sculpture with a separate object table; Flickyard is a wide dark range with targets mounted on horizontal steel tracks.",
+        "interactionDifference": "Pereves places physical weights to solve static torque; Flickyard moves a reticle directly and times clicks against targets with changing trajectories."
+      },
+      {
+        "slug": "echolot",
+        "spatialDifference": "Echolot centers a circular sonar instrument with its own perimeter controls; Flickyard keeps an open rectangular range and places the drill selector outside the playable area.",
+        "interactionDifference": "Echolot spends oxygen to scan and reveal hidden geography; Flickyard uses continuous pointer control, timed shots and on-target tracking time."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "Emergent Kingdoms is a cartographic study with a persistent chronology and side journal; Flickyard has no map, timeline or data layers, only a live target range.",
+        "interactionDifference": "Emergent Kingdoms advances autonomous yearly simulation and branches history; Flickyard responds to millisecond mouse input and immediate target contact."
+      },
+      {
+        "slug": "folkarium",
+        "spatialDifference": "Folkarium is a landscape manuscript spread with instrument columns and an editable staff; Flickyard is a full-bleed arena with a small external drill rail.",
+        "interactionDifference": "Folkarium edits pitches and auditions musical parts; Flickyard tracks mouse coordinates, target timing and hit registration."
+      },
+      {
+        "slug": "petlya-17",
+        "spatialDifference": "Petlya 17 uses a 3D coastal racetrack viewed from a cockpit with perimeter telemetry; Flickyard uses a flat 2D target range, an equipment side rail and a separate score ledger.",
+        "interactionDifference": "Petlya 17 continuously steers, accelerates and brakes a vehicle; Flickyard moves a reticle directly and registers discrete shots or continuous tracking time."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Canvas 2D owns the high-frequency range, target motion and impact particles; semantic DOM and CSS keep settings, results and drill navigation sharp and accessible.",
+    "focalAsset": "The focal object is an original concentric enamel target plate with four rivets, a dark steel backing and a rust-red center, drawn from vector geometry in Canvas."
+  },
+  "motion": {
+    "character": "Target motion is mechanical and legible: rails carry steady travel, direction changes have a brief angular correction, and impact rotation carries inertia rather than a soft UI bounce.",
+    "action": "The player moves a reticle with the mouse, fires once with the left button or holds it during the tracking drill, and immediately sees the result at the contact point.",
+    "anticipation": "The active switching target gains a restrained rust outline and a small outer pulse before the player transfers aim; no full-screen warning or flashing effect is used.",
+    "response": "On the first hit frame the plate turns, the score increments, a small ring expands from the impact and a few fragments inherit the target's outward velocity.",
+    "followThrough": "Fragments fall and lose speed while the target is replaced; the score remains stable in the HUD and the next target appears without a scene transition.",
+    "interruption": "A new shot is processed immediately, pause cancels the animation loop and releases pointer capture, and Escape never queues movement or delayed firing.",
+    "reducedMotion": "The target position and hit result remain immediate and readable; reduced motion removes fragment spray, pulsing rings and nonessential settling transitions."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#launchButton"
+    },
+    "expectedChange": "The menu overlay disappears, the live HUD appears and a target becomes available for direct mouse aiming in the range.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
