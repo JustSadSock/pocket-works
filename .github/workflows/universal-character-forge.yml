@@ -230,24 +230,27 @@ jobs:
           python3 -m py_compile tools/character-forge/cloth-study-v9.py tools/character-forge/cloth-settle-v9.py tools/character-forge/kinemiq-v11.py tools/character-forge/cloth-recovery-v11.py
           node --check tools/character-forge/grip-study-v11.mjs
           node --check tools/character-forge/motion-study-v10.mjs
+          node --check tools/character-forge/motion-study-v12.mjs
           node --check tools/character-forge/qualification-v10.mjs
       - name: Required native CC0 reference motion (skinless GLB channels)
         id: kinemiq
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: python3 tools/character-forge/kinemiq-v11.py
-      - name: Required short reference and hybrid walk comparison
+      - name: Required v12 full-orientation reference and heel/toe contact comparison
+        id: reference
         if: ${{ !cancelled() && steps.kinemiq.outcome == 'success' }}
         run: |
-          node tools/character-forge/motion-study-v10.mjs
+          node tools/character-forge/motion-study-v12.mjs
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
-          for variant in Original A B C; do
-            ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v10-walk-$variant-side/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4"
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-05x.mp4"
+          for view in side front; do
+            for variant in Original A B C; do
+              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v12-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-$variant-$view-1x.mp4"
+              ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v12-walk-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-$variant-$view-05x.mp4"
+            done
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v12-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v12-walk-A-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v12-walk-B-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v12-walk-C-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-comparison-$view-1x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v12-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-comparison-$view-05x.mp4"
           done
-          ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v11-original-native-side/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-original-native.mp4"
-          ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v11-original-native.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-original-native-05x.mp4"
-          ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v10-walk-Original-1x.mp4" -i "$CHARACTER_EVIDENCE/v10-walk-A-1x.mp4" -i "$CHARACTER_EVIDENCE/v10-walk-B-1x.mp4" -i "$CHARACTER_EVIDENCE/v10-walk-C-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-walk-comparison.mp4"
-          ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v11-walk-comparison.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-walk-comparison-05x.mp4"
+          node -e 'const r=require(process.env.CHARACTER_EVIDENCE+"/v12-motion-report.json");if(!r.qualification.contactGate)throw Error("Reference contact gate rejected: "+r.variants.C.maxDriftMm+" mm")'
       - name: Native animal and mounted composition comparisons (explicit full suite only)
         if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
@@ -283,6 +286,7 @@ jobs:
             quality-artifacts/character-bridge/v9-*
             quality-artifacts/character-bridge/v10-*
             quality-artifacts/character-bridge/v11-*
+            quality-artifacts/character-bridge/v12-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
