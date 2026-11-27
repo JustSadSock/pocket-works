@@ -139,22 +139,32 @@ export async function chartedContourSource(s,source,known,{contourDetail=8,verti
 // Revealed-only fixed spatial sample tiles. A 32-cell tile is keyed by
 // immutable geography and density, shared across overlapping camera regions.
 // No old lake clipping, duplicate channel raster, or double bed interpolation.
-const scaleTiles=new WeakMap();
+const scaleTiles=new WeakMap(),materialSourceTiles=new WeakMap(),materialTileIds=new WeakMap();let nextMaterialTileId=1;
+function materialTileId(data){let id=materialTileIds.get(data);if(id===undefined){if(nextMaterialTileId>=Number.MAX_SAFE_INTEGER)throw Error('Material source identity exhausted');id=nextMaterialTileId++;materialTileIds.set(data,id);}return id;}
+export function materialSourceIdentity(source,rect){
+ const entry=materialSourceTiles.get(source);if(!entry||!source.scaleSurface||source.diagnostic||source.ink)return null;
+ const [x0,y0,x1,y1]=rect,size=entry.tileSize,eps=1e-9;if(!(x1>=x0&&y1>=y0))return null;
+ const tx0=Math.floor(x0/size)*size,ty0=Math.floor(y0/size)*size,tx1=Math.floor((x1-eps)/size)*size,ty1=Math.floor((y1-eps)/size)*size,map=entry.byKey,tokens=[size,source.detail];
+ for(let ty=ty0;ty<=ty1;ty+=size)for(let tx=tx0;tx<=tx1;tx+=size){const tile=map.get(tx+':'+ty),left=Math.max(x0,tx),right=Math.min(x1,tx+size),top=Math.max(y0,ty),bottom=Math.min(y1,ty+size);if(!tile||tile.tx>left+eps||tile.ty>top+eps||tile.ex<right-eps||tile.ey<bottom-eps)return null;tokens.push(tile.tx,tile.ty,tile.ex,tile.ey,tile.stride,materialTileId(tile.data));}
+ return Float64Array.from(tokens);
+}
 export function clearScaleTiles(g){scaleTiles.get(g)?.clear();scaleTiles.delete(g);}
 export async function scaleTerrainSource(s,cam,{bounds,detail=2,contourDetail=2,vertical,yieldRow=async()=>{},identity=false}){
  if(s.mapVersion!==3||!s.autonomous||!s.map.geography.lakeId)throw Error('Revealed Genesis 3.4 required');
  const start=clock(),m=s.map,g=m.geography,r=g.detail,f=contourField(m,{polish:true}),W=f.W,H=f.H,[x0,y0,x1,y1]=bounds,cols=(x1-x0)*detail+1,rows=(y1-y0)*detail+1,n=cols*rows,vertices=new Float32Array(n*9),elevations=new Float32Array(n),water={kind:new Uint8Array(n),depth:new Float32Array(n),shore:new Float32Array(n)},cache=scaleTiles.get(g)??new SpatialLRU(48*1024*1024);scaleTiles.set(g,cache);
- const tileSize=detail>=8?16:32,normalField=detail<=2?new Float32Array(n*3):null;let tileHits=0,tileMisses=0,maxSlice=0,last=clock(),minH=Infinity,maxH=-Infinity;
+ const tileSize=detail>=8?16:32,normalField=detail<=2?new Float32Array(n*3):null,materialTiles=[];let tileHits=0,tileMisses=0,maxSlice=0,last=clock(),minH=Infinity,maxH=-Infinity;
  for(let ty=Math.floor(y0/tileSize)*tileSize;ty<y1;ty+=tileSize)for(let tx=Math.floor(x0/tileSize)*tileSize;tx<x1;tx+=tileSize){
  const ex=Math.min(W,tx+tileSize),ey=Math.min(H,ty+tileSize),tw=(ex-tx)*detail+1,th=(ey-ty)*detail+1,stride=detail<=2?13:10,key=[tx,ty,detail].join(':'),hit=cache.get(key);let data=hit;
  if(hit)tileHits++;else{tileMisses++;data=new Float32Array(tw*th*stride);for(let y=0;y<th;y++){for(let x=0;x<tw;x++){const X=tx+x/detail,Y=ty+y/detail,j=(y*tw+x)*stride,p=f.sample(X,Y),fx=Math.min(g.width-1,Math.round(X*r)),fy=Math.min(g.height-1,Math.round(Y*r)),i=fy*g.width+fx,wet=g.rain[i],k=Math.min(H-1,Math.floor(Y))*W+Math.min(W-1,Math.floor(X)),z=p.coast<0?-(Math.max(0,.12-p.bed)*3.1+.025):vertical(p.bed),forest=smooth((wet-.45)/.24)*(1-smooth((p.bed-.46)/.24));
  data[j]=X;data[j+1]=Y;data[j+2]=z;data[j+3]=p.bed;data[j+4]=wet;data[j+5]=m.fert[k];data[j+6]=forest;data[j+7]=1;data[j+8]=g.land[i]&&g.flow[i]/(r*r)>58?.045:1;data[j+9]=Math.max(.00001,Math.min(Math.abs(p.coast),Math.abs(p.lake)));if(normalField){const N=fineNormal(g,X,Y,vertical);data[j+10]=N[0];data[j+11]=N[1];data[j+12]=N[2];}
  }const now=clock();if(now-last>6){maxSlice=Math.max(maxSlice,now-last);await yieldRow();last=clock();}}cache.put(key,data,data.byteLength);}
+ materialTiles.push({tx,ty,ex,ey,tw,th,stride,data});
  const ax=Math.max(tx,x0),ay=Math.max(ty,y0),bx=Math.min(ex,x1),by=Math.min(ey,y1);
  for(let y=(ay-y0)*detail;y<=(by-y0)*detail;y++)for(let x=(ax-x0)*detail;x<=(bx-x0)*detail;x++){const i=y*cols+x,j=((y+(y0-ty)*detail)*tw+x+(x0-tx)*detail)*stride,o=i*9;for(let k=0;k<9;k++)vertices[o+k]=data[j+k];elevations[i]=data[j+2];water.shore[i]=data[j+9];if(normalField){normalField[i*3]=data[j+10];normalField[i*3+1]=data[j+11];normalField[i*3+2]=data[j+12];}minH=Math.min(minH,data[j+3]);maxH=Math.max(maxH,data[j+3]);}
  await yieldRow();
  }
  const sampleMs=clock()-start,contours={chunks:[],stats:{detail:contourDetail,bytes:0,maxSlice:0,ms:0}},contourStart=clock();let contourHits=0,contourMisses=0;
  for(let ty=Math.floor(y0/tileSize)*tileSize;ty<y1;ty+=tileSize)for(let tx=Math.floor(x0/tileSize)*tileSize;tx<x1;tx+=tileSize){const rect=[Math.max(x0,tx),Math.max(y0,ty),Math.min(x1,tx+tileSize),Math.min(y1,ty+tileSize)],key='water:'+rect.join(':')+':'+contourDetail+':'+(+identity);let tile=cache.get(key);if(tile)contourHits++;else{contourMisses++;tile=await buildContours(m,rect,{detail:contourDetail,vertical,yieldRow,polish:true,skipGlobalScan:true,identity});cache.put(key,tile,tile.stats.bytes);}contours.chunks.push(...tile.chunks);for(const [k,v] of Object.entries(tile.stats))if(typeof v==='number'&&!['detail','maxSlice','ms'].includes(k))contours.stats[k]=(contours.stats[k]??0)+v;contours.stats.maxSlice=Math.max(contours.stats.maxSlice,tile.stats.maxSlice);await yieldRow();}const contourMs=clock()-contourStart;contours.stats.ms=contourMs;const ribbons=reachRibbons(g,bounds,{vertical,threshold:25,overview:contourDetail<=4,continuous:true,identity});contours.chunks.push(...ribbons.chunks);contours.stats.rivers=ribbons.stats;contours.stats.bytes+=ribbons.stats.bytes;
- return {normalField,vertices,elevations,water,contours,indices:new Uint32Array(0),cols,rows,detail,bounds,center:0,polish:true,scaleSurface:true,stats:{ms:clock()-start,maxSlice:Math.max(maxSlice,contours.stats.maxSlice),minH,maxH,contours:contours.stats,sampleMs,contourMs,ribbonMs:clock()-start-sampleMs-contourMs,tileHits,tileMisses,contourHits,contourMisses,tileBytes:cache.bytes,bytes:vertices.byteLength+elevations.byteLength+water.kind.byteLength+water.depth.byteLength+water.shore.byteLength+(normalField?.byteLength??0)+contours.stats.bytes}};
+ const result={normalField,vertices,elevations,water,contours,indices:new Uint32Array(0),cols,rows,detail,bounds,center:0,polish:true,scaleSurface:true,stats:{ms:clock()-start,maxSlice:Math.max(maxSlice,contours.stats.maxSlice),minH,maxH,contours:contours.stats,sampleMs,contourMs,ribbonMs:clock()-start-sampleMs-contourMs,tileHits,tileMisses,contourHits,contourMisses,tileBytes:cache.bytes,bytes:vertices.byteLength+elevations.byteLength+water.kind.byteLength+water.depth.byteLength+water.shore.byteLength+(normalField?.byteLength??0)+contours.stats.bytes}};
+ materialSourceTiles.set(result,{tileSize,tiles:materialTiles,byKey:new Map(materialTiles.map(t=>[t.tx+':'+t.ty,t]))});return result;
 }
