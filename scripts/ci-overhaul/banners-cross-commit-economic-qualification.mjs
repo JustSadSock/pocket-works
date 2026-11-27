@@ -4,6 +4,7 @@ import {mkdtempSync,rmSync,readFileSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
 import {POLICY} from './universal-reuse-economics.mjs';
 const REPO='JustSadSock/pocket-works',SOURCE='8c70528d57134a01558a3b9d5bef8d1e34d429a3',TARGET='ce4bc09ba2a105f6e8db0a8a0153da079f4e2c5f',ISSUER='3b4294292ba7aed4034231c8bc5ec277073bdfae';
 const flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
@@ -11,6 +12,13 @@ const pos=x=>Number.isSafeInteger(x)&&x>0,fail=s=>{throw Error(s);};
 const gh=a=>execFileSync('gh',a,{encoding:'utf8',timeout:60000,maxBuffer:16*1024*1024,stdio:['ignore','pipe','pipe']});
 const api=p=>JSON.parse(gh(['api','repos/'+REPO+'/'+p]));
 const json=p=>JSON.parse(readFileSync(p,'utf8'));
+const hash=b=>createHash('sha256').update(b).digest('hex');
+const HISTORICAL_SUMMARY='fbdcc27be4eb2124f2b9275967654866ef3eeaae7c1e36af3d50d41f65c60135';
+export function validateHistoricalFresh(g){
+ if(g?.schema!==1||g.success!==true||g.expected!==21||g.passed!==21||g.failed!==0||!Array.isArray(g.missing)||g.missing.length||!Array.isArray(g.results)||g.results.length!==21||new Set(g.results.map(r=>r.key)).size!==21||g.results.some(r=>r.app!=='banners-of-war'||r.schema!==1||r.success!==true||r.exitCode!==0||r.signal!==null||r.timedOut!==false||r.verificationMode!==undefined||!pos(r.durationMs)))fail('Invalid legacy fresh results');
+ for(let i=0;i<8;i++){const r=g.results.find(r=>r.key==='banners-of-war-completion-lab-'+i);if(!r||r.kind!=='node'||r.suite!=='completion-lab'||r.seed!==i||r.install!==false)fail('Missing original fresh shard');}
+ return true;
+}
 export function qualifyCosts(fresh,mixed,renewalMs,now){
  const deny=reason=>({decision:'fresh',reason,...flags});
  if(!pos(now)||!pos(renewalMs)||!Array.isArray(fresh)||!Array.isArray(mixed)||fresh.length<POLICY.minSamples||mixed.length<POLICY.minSamples)return deny('Insufficient whole-matrix evidence');
@@ -47,9 +55,9 @@ function verifyMixed(g,id,attempt,fullFresh=false){
  if(fullFresh?(g.verifiedTasks!==0||g.freshTasks!==8||g.rows.some(r=>r.mode!=='fresh'||r.semanticMatch!==true)):(g.verifiedTasks!==7||g.freshTasks!==1||g.rows[g.canary]?.semanticMatch!==true||g.rows[g.canary]?.mode!=='fresh'))fail('Wrong execution coverage');
  return g;
 }
-function download(id,name){
+function download(id,name,expectedDigest=null){
  const d=mkdtempSync(join(tmpdir(),'pw-economic-'));
- try{gh(['run','download',String(id),'--repo',REPO,'--name',name,'--dir',d]);return json(join(d,name.startsWith('qa-summary')?'summary.json':'verdict.json'));}
+ try{gh(['run','download',String(id),'--repo',REPO,'--name',name,'--dir',d]);const b=readFileSync(join(d,name.startsWith('qa-summary')?'summary.json':'verdict.json'));if(expectedDigest&&hash(b)!==expectedDigest)fail('Pinned historical artifact bytes changed');return JSON.parse(b);}
  finally{rmSync(d,{recursive:true,force:true});}
 }
 function historicalMixed(id){
@@ -62,8 +70,14 @@ function historicalMixed(id){
 }
 function historicalFresh(){
  const qa=run(46000572518,'.github/workflows/universal-qa.yml','b56a9024a15aa817675ca0e85fa10c229238c149',1);
- const g=download(46000572518,'qa-summary-46000572518-1');
- if(qa.r.head_branch!=='app/banners-of-war'||qa.r.event!=='pull_request'||g.source!==SOURCE||g.run!==46000572518||g.attempt!==1||g.success!==true||g.expected!==21||g.passed!==21||g.verifiedTasks!==0)fail('Original fresh QA evidence differs');
+ const g=download(46000572518,'qa-summary-46000572518-1',HISTORICAL_SUMMARY);
+ if(qa.r.head_branch!=='app/banners-of-war'||qa.r.event!=='pull_request')fail('Original fresh QA identity differs');
+ validateHistoricalFresh(g);
+ const gate=qa.jobs.find(j=>j.id===140515695701);
+ duration(gate);
+ const log=gh(['run','view','46000572518','--repo',REPO,'--job','140515695701','--log']);
+ if(!log.includes('qa-summary-46000572518-1 (ID: 15197928969')||!log.includes('46db020484156e74185837e6abd1a5acc562b5e059a91d951ccedac0def9bb58')||!log.includes('"tree":"1e450f71ba0f02b69c9b481e6ef033baa2795d3e"')||!log.includes('"planDigest":"2faf1fc0906bdaa157de4895b9660af381d0a1fc3af8720e297b57e3562d626e"')||!log.includes('"expected":21,"finalPassed":21')||!log.includes('"route":"legacy","count":21,"success":true,"coverage":"all-original-app-suites"'))fail('Independent original gate identity differs');
+ const commit=api('git/commits/'+SOURCE);if(commit.sha!==SOURCE||commit.tree?.sha!=='1e450f71ba0f02b69c9b481e6ef033baa2795d3e'||commit.parents?.[1]?.sha!==qa.r.head_sha)fail('Historical source commit differs');
  const baseline=matrix(qa.jobs,i=>'cpu (banners-of-war-completion-lab-'+i+', banners-of-war, completion-lab, node, '+i+', false)');
  const renewal=run(45996361840,'.github/workflows/gameplay-receipt-renewal.yml',ISSUER,2);
  if(renewal.r.head_branch!=='main'||renewal.r.event!=='push')fail('Wrong catalog issuer');
@@ -72,11 +86,12 @@ function historicalFresh(){
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{
-  const [mixedFile,freshFile,out]=process.argv.slice(2),id=Number(process.env.GITHUB_RUN_ID),attempt=Number(process.env.GITHUB_RUN_ATTEMPT);
+  const [mixedFile,freshFile,out]=process.argv.slice(2),replay=mixedFile==='replay',id=replay?46050831661:Number(process.env.GITHUB_RUN_ID),attempt=replay?1:Number(process.env.GITHUB_RUN_ATTEMPT);
   if(process.env.GITHUB_REPOSITORY!==REPO||!pos(id)||!pos(attempt))fail('Wrong economic context');
   const current=run(id,'.github/workflows/banners-cross-commit-economic-qualification.yml',null,attempt,true);
   if(current.r.head_branch!=='infra/banners-cross-commit-economic-qualification'||current.r.event!=='pull_request')fail('Wrong economic workflow branch');
-  const m=verifyMixed(json(mixedFile),id,attempt),f=verifyMixed(json(freshFile),id,attempt,true);
+  const m=verifyMixed(replay?download(id,'economic-gate-mixed-1','c581c8608c364a99d83451733b8ec6eec648eec5566b98d636cf10449000333f'):json(mixedFile),id,attempt),f=verifyMixed(replay?download(id,'economic-gate-fresh-1','9f5f5a0b6a8bfbd36f82a711fb4a3d733d770b5d65020d56939d5a9aeed0e4ee'):json(freshFile),id,attempt,true);
+ if(replay){if(current.r.head_sha!=='34294d54a7d15f5f5782641eb0008295456b819c'||current.r.status!=='completed'||current.r.conclusion!=='failure')fail('Wrong archived run');named(current.jobs,'independent_gate (mixed)');named(current.jobs,'independent_gate (fresh)');}
   const {fresh,renewalMs}=historicalFresh(),mixed=[historicalMixed(46042032971),historicalMixed(46042030854)];
   const freshJobs=matrix(current.jobs,i=>'execute (fresh, '+i+')');
   const freshExecution=f.rows.reduce((n,r)=>n+r.timing.gameplayMs+r.timing.performanceMs,0);

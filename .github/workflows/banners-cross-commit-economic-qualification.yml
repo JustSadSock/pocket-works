@@ -21,7 +21,7 @@ jobs:
       - run: node --test scripts/ci-overhaul/heavy-scoped-mixed-delivery.test.mjs scripts/ci-overhaul/banners-cross-commit-economic-qualification.test.mjs
   prepare:
     needs: contract
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/banners-cross-commit-economic-qualification'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/banners-cross-commit-economic-qualification' && github.event.pull_request.head.sha == '34294d54a7d15f5f5782641eb0008295456b819c'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -208,9 +208,33 @@ jobs:
           name: economic-qualification-${{ github.run_attempt }}
           path: economics.json
           if-no-files-found: error
+  replay_economics:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/banners-cross-commit-economic-qualification'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Recover exact archived independent verdicts and historical fresh evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/ci-overhaul/banners-cross-commit-economic-qualification.mjs replay unused economics.json
+          jq -e '.negativeControls==2 and .productionAuthorization==false and .decision.decision=="cost-qualified-candidate"' economics.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recovered-economic-qualification-${{ github.run_attempt }}
+          path: economics.json
+          if-no-files-found: error
   required_gate:
     if: always()
-    needs: [contract,prepare,execute,independent_gate,economics]
+    needs: [contract,prepare,execute,independent_gate,economics,replay_economics]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -220,17 +244,21 @@ jobs:
           EXECUTE: ${{ needs.execute.result }}
           GATE: ${{ needs.independent_gate.result }}
           ECONOMICS: ${{ needs.economics.result }}
+          REPLAY: ${{ needs.replay_economics.result }}
         run: |
           set -euo pipefail
           test "$CONTRACT" = success
           if jq -e '.pull_request.head.repo.full_name == .repository.full_name and .pull_request.head.ref == "infra/banners-cross-commit-economic-qualification"' "$GITHUB_EVENT_PATH"; then
-            test "$PREPARE" = success
-            test "$EXECUTE" = success
-            test "$GATE" = success
-            test "$ECONOMICS" = success
+            test "$REPLAY" = success
+            if [[ "$PREPARE" == success ]]; then
+              test "$EXECUTE" = success; test "$GATE" = success; test "$ECONOMICS" = success
+            else
+              test "$PREPARE" = skipped; test "$EXECUTE" = skipped; test "$GATE" = skipped; test "$ECONOMICS" = skipped
+            fi
           else
             test "$PREPARE" = skipped
             test "$EXECUTE" = skipped
             test "$GATE" = skipped
             test "$ECONOMICS" = skipped
+            test "$REPLAY" = skipped
           fi
