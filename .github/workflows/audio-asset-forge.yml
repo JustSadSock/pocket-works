@@ -727,6 +727,35 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Preserve Pilgrims Crossing and qualify stereo balance
+        id: historical_consort_stereo
+        if: ${{ !cancelled() && steps.historical_consort.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-consort-stereo.py .audio-historical-consort .audio-historical-consort-stereo
+          test "$(find .audio-historical-consort-stereo -maxdepth 1 -name '*.wav' | wc -l)" -eq 10
+          test -s .audio-historical-consort-stereo/pilgrims-crossing-stereo-AB.wav
+          test -s .audio-historical-consort-stereo/pilgrims-crossing-mono.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_consort_stereo.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-consort-stereo-${{ github.run_id }}
+          path: .audio-historical-consort-stereo/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_consort_stereo.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-consort-stereo-rejected-${{ github.run_id }}
+          path: .audio-historical-consort-stereo/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
