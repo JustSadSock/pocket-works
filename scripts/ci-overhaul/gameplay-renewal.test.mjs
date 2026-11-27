@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {resolveCandidate,buildCatalog,catalogCandidate,RENEWAL_WORKFLOW,REPO,APP_BRANCH} from './gameplay-renewal.mjs';
-import {PLAN} from './verified-gameplay-receipt.mjs';
+import {PLAN,SOURCE_SCOPE_VERSION} from './verified-gameplay-receipt.mjs';
 const sha='a'.repeat(40),tree='b'.repeat(40),controller='c'.repeat(40),auditTree='d'.repeat(40),h='e'.repeat(64),repo={full_name:REPO};
 const merge='f'.repeat(40),base='1'.repeat(40),pr={number:1355,state:'open',merged:false,mergeable:true,merge_commit_sha:merge,head:{sha,ref:APP_BRANCH,repo},base:{sha:base,ref:'main',repo}};
 test('only exact approved app PR or merged main is selected',()=>{
@@ -15,12 +15,13 @@ const mount={schema:1,digest:h,files:10,directories:2,bytes:100,productionAuthor
 const environment={contract:'banners-offline-phase-v1',image:'be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb',config:h,node:'v22.23.5',arch:'x64',toolchain:h,kernel:h,cpu:h,uid:1001,gid:1001};
 const rows=()=>Array.from({length:8},(_,i)=>{const perf=[0,4,5,6,7].includes(i)?1:0;return {schema:1,kind:'renewable-banners-gameplay-v1',manifest:{schema:1,...ctx,shard:i,workflow:RENEWAL_WORKFLOW,repository:REPO,role:'source',sourceMount:mount,auditMount:mount,environment,productionAuthorization:false},planDigest:PLAN,gameplayCases:i<4?234:233,sourceMeasurements:[4,5].includes(i)?428:430,freshPerformanceCases:perf,freshPerformanceMeasurements:perf*2,gameplaySemanticDigest:h,gameplayRecordsDigest:h,gameplayPhaseDigest:h,performanceRecordsDigest:h,performancePhaseDigest:h,issuedAt:1000,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};});
 test('complete renewable catalog never authorizes production or inherits portability',()=>{
- const c=buildCatalog(rows(),ctx,2000);assert.equal(c.gameplayCases,1868);assert.equal(c.freshPerformanceCases,5);assert.equal(c.productionAuthorization,false);
+ const c=buildCatalog(rows(),ctx,2000);assert.equal(c.sourceScopeVersion,SOURCE_SCOPE_VERSION);assert.equal(c.gameplayCases,1868);assert.equal(c.freshPerformanceCases,5);assert.equal(c.productionAuthorization,false);
  const target={...ctx,shard:0,planDigest:PLAN,sourceMount:mount,auditMount:mount,environment};
  assert.equal(catalogCandidate(c,target,2001).decision,'candidate-only');
  for(const t of [{...target,source:'f'.repeat(40)},{...target,environment:{...environment,image:'f'.repeat(64)}},{...target,environment:{...environment,toolchain:'f'.repeat(64)}},{...target,environment:{...environment,uid:1002}},{...target,sourceMount:{...mount,digest:'f'.repeat(64)}}])assert.equal(catalogCandidate(c,t,2001).decision,'execute');
  for(const env of [{...environment,kernel:'f'.repeat(64)},{...environment,cpu:'f'.repeat(64)}])assert.equal(catalogCandidate(c,{...target,environment:env},2001).decision,'candidate-only');
  const legacy={...c,compatibility:'exact-environment-only'};
+ assert.equal(catalogCandidate({...c,sourceScopeVersion:undefined},target,2001).decision,'execute');
  assert.equal(catalogCandidate(legacy,{...target,environment:{...environment,kernel:'f'.repeat(64)}},2001).decision,'execute');
  const varied=rows();varied[1].manifest.environment={...environment,kernel:'f'.repeat(64),cpu:'a'.repeat(64)};assert.equal(buildCatalog(varied,ctx,2000).compatibility,'pinned-runtime-gameplay-v1');
  const drift=rows();drift[1].manifest.environment={...environment,image:'f'.repeat(64)};assert.throws(()=>buildCatalog(drift,ctx,2000));

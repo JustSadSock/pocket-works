@@ -14,10 +14,10 @@ prepare_gameplay() {
   test "$(git -C audit-source rev-parse HEAD)" = "$source_sha"
   test "$(git -C audit-source rev-parse HEAD^{tree})" = "$source_tree"
   mkdir "$out" "$src" "$audit"
-  git -C audit-source archive HEAD apps/banners-of-war shared scripts package.json package-lock.json | tar -xf - -C "$src"
+  git -C audit-source archive HEAD apps/banners-of-war shared package.json package-lock.json | tar -xf - -C "$src"
   git archive HEAD scripts/ci-overhaul | tar -xf - -C "$audit"
   tool=scripts/ci-overhaul/gameplay-renewal.mjs
-  node "$tool" normalize "$PWD/audit-source" "$source_sha" "$src" source > "$RUNNER_TEMP/gameplay-source-before.json"
+  node "$tool" normalize "$PWD/audit-source" "$source_sha" "$src" renewalSource > "$RUNNER_TEMP/gameplay-source-before.json"
   node "$tool" normalize "$PWD" "$(git rev-parse HEAD)" "$audit" audit > "$RUNNER_TEMP/gameplay-audit-before.json"
   image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
   docker pull "$image"

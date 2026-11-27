@@ -8,6 +8,7 @@ import {catalogCandidate,issueRenewal,validateRenewalManifest,REPO,RENEWAL_WORKF
 import {verifyDiscoveredCatalog} from './gameplay-receipt-discovery.mjs';
 import {validatePlan,validatePhase,PLAN} from './verified-gameplay-receipt.mjs';
 import {digest} from './verified-results.mjs';
+import {reconstructScopedEvidence,validScopedEquivalence} from './gameplay-scoped-production.mjs';
 import {projectVerifiedRows} from '../universal-qa/verified-split.mjs';
 const flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 const SHA=/^[a-f0-9]{40}$/,pos=n=>Number.isSafeInteger(n)&&n>0,fail=s=>{throw Error(s);};
@@ -23,7 +24,7 @@ export function proveMergeEquivalence(c,target,pr,commit){
 }
 function equivalent(c,target,ctx){
  const p=ctx.equivalence;
- return !!c&&c.sourceTree===target.sourceTree&&(c.source===target.source||p?.source===c.source&&p.checkout===target.source&&p.tree===target.sourceTree&&p.pr===1355&&SHA.test(p.base));
+ return !!c&&(c.sourceTree===target.sourceTree&&(c.source===target.source||p?.source===c.source&&p.checkout===target.source&&p.tree===target.sourceTree&&p.pr===1355&&SHA.test(p.base))||validScopedEquivalence(p,c,target));
 }
 export function decideRenewable(catalog,receipt,target,plan,ctx,now=Date.now()){
  const fresh=reason=>({decision:'execute',reason,...flags});
@@ -32,11 +33,12 @@ export function decideRenewable(catalog,receipt,target,plan,ctx,now=Date.now()){
   validateRenewalManifest(target,target,false);validatePlan(plan,target);
   if(!catalog||!receipt)fail('No authenticated evidence');
   if(!equivalent(catalog,target,ctx))return fresh('Actual checkout differs from signed source');
-  const r=catalogCandidate(catalog,{...target,source:catalog.source,planDigest:PLAN},now);
+  const scoped=validScopedEquivalence(ctx.equivalence,catalog,target);
+  const r=catalogCandidate(catalog,{...target,source:catalog.source,...(scoped?{sourceTree:catalog.sourceTree}:{}),planDigest:PLAN},now);
   if(r.decision!=='candidate-only')return fresh(r.reason);
   if(receipt.manifest.shard!==target.shard||r.receiptDigest!==digest(JSON.stringify(receipt))||catalog.shards[target.shard].gameplaySemanticDigest!==receipt.gameplaySemanticDigest)fail('Receipt binding differs');
   if(target.shard===(ctx.run+ctx.attempt)%8)return fresh('Mandatory rotating fresh canary');
-  return {decision:'reuse-shadow',reason:null,identity:catalog.source===target.source?'exact-commit':'exact-tree-merge',receiptDigest:r.receiptDigest,sourceRun:catalog.run,sourceAttempt:catalog.attempt,...flags};
+  return {decision:'reuse-shadow',reason:null,identity:scoped?'scoped-cross-commit':catalog.source===target.source?'exact-commit':'exact-tree-merge',receiptDigest:r.receiptDigest,sourceRun:catalog.run,sourceAttempt:catalog.attempt,...(scoped?{scopeVersion:ctx.equivalence.scopeVersion,scopeDigest:ctx.equivalence.scopeDigest,economicDigest:ctx.equivalence.economic.digest}:{}),...flags};
  }catch(e){return fresh(e.message);}
 }
 function phase(root,name,plan,m){
@@ -71,7 +73,7 @@ function authenticated(dir,target,now){
  for(const n of ['catalog.json','receipt-'+target.shard+'.json'])gh(['attestation','verify',join(p,n),'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',run.head_sha,'--deny-self-hosted-runners']);
  const receipt=receipts[target.shard],bundle=join(p,'bundles','renewal-bundle-'+run.run_attempt+'-'+target.shard);
  if(!eq(receipt,issueRenewal(bundle,receipt.manifest,receipt.issuedAt,true)))fail('Receipt changed since discovery');
- const equivalence=catalog.source===target.source?null:proveMergeEquivalence(catalog,target,api('repos/'+REPO+'/pulls/1355'),api('repos/'+REPO+'/git/commits/'+target.source));
+ const equivalence=catalog.source===target.source?null:catalog.sourceTree===target.sourceTree?proveMergeEquivalence(catalog,target,api('repos/'+REPO+'/pulls/1355'),api('repos/'+REPO+'/git/commits/'+target.source)):reconstructScopedEvidence(catalog,target,p,now);
  return {catalog,receipt,bundle,equivalence};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
@@ -97,7 +99,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    const actual=assembleRenewable(root,e.bundle,e.receipt,e.catalog,target,plan,ctx,expected.admission,out);
    if(!eq(actual,expected))fail('Independent report reconstruction differs');
    for(const name of ['verified-gameplay.jsonl','fresh-measurements.jsonl','historical-measurements.jsonl'])if(!read(join(out,name)).equals(read(join(decisionPath,name))))fail('Projected evidence differs: '+name);
-   const verdict={schema:1,run:ctx.run,attempt:ctx.attempt,shard:ctx.shard,source:ctx.checkout,sourceTree:target.sourceTree,controller:ctx.controller,controllerTree:target.auditTree,independentlyVerified:true,reusedGameplayCases:actual.reusedGameplayCases,freshGameplayCases:actual.freshGameplayCases,freshPerformanceCases:actual.freshPerformanceCases,freshPerformanceMeasurements:actual.freshPerformanceMeasurements,identity:actual.admission.identity??null,...flags};
+   const verdict={schema:1,run:ctx.run,attempt:ctx.attempt,shard:ctx.shard,source:ctx.checkout,sourceTree:target.sourceTree,controller:ctx.controller,controllerTree:target.auditTree,independentlyVerified:true,reusedGameplayCases:actual.reusedGameplayCases,freshGameplayCases:actual.freshGameplayCases,freshPerformanceCases:actual.freshPerformanceCases,freshPerformanceMeasurements:actual.freshPerformanceMeasurements,identity:actual.admission.identity??null,...(actual.admission.identity==='scoped-cross-commit'?{scopeVersion:actual.equivalence.scopeVersion,scopeDigest:actual.equivalence.scopeDigest,economicDigest:actual.equivalence.economic.digest,sourceRun:actual.admission.sourceRun,sourceAttempt:actual.admission.sourceAttempt}:{}),...flags};
    writeFileSync(join(out,'gate-candidate.json'),JSON.stringify(verdict,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(verdict));
   }else fail('Unknown admission command');
  }catch(e){console.error(e.message);process.exitCode=1;}

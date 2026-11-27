@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {proveScope,validScopedEquivalence,scopedEnabled,checkEconomicReport} from './gameplay-scoped-production.mjs';
+import {qualifyCosts} from './banners-cross-commit-economic-qualification.mjs';
+const sha=c=>c.repeat(40),repo='JustSadSock/pocket-works';
+const catalog={source:sha('a'),sourceTree:sha('b'),sourcePR:1355,sourceRef:'refs/pull/1355/merge',sourceScopeVersion:'banners-runtime-v2',auditCommit:sha('c')};
+const target={source:sha('d'),sourceTree:sha('e')};
+const pr={number:1355,state:'open',mergeable:true,merge_commit_sha:target.source,base:{repo:{full_name:repo},ref:'main',sha:sha('f')},head:{repo:{full_name:repo},ref:'app/banners-of-war',sha:sha('1')}};
+const commit={sha:target.source,tree:{sha:target.sourceTree},parents:[{sha:pr.base.sha},{sha:pr.head.sha}]};
+const tree=(path,sha,type='tree')=>({path,sha,mode:type==='tree'?'040000':'100644',type});
+const entries=[tree('apps',sha('2')),tree('scripts',sha('3')),tree('shared',sha('4')),tree('package.json',sha('5'),'blob'),tree('package-lock.json',sha('6'),'blob')];
+const getTree=id=>({sha:id,truncated:false,tree:id===sha('2')?[tree('banners-of-war',sha('7'))]:id===target.sourceTree?entries.map(x=>x.path==='scripts'?{...x,sha:sha('9')}:x):entries});
+test('different immutable trees with identical execution roots qualify only for real application merge',()=>{
+ const p=proveScope(catalog,target,pr,commit,getTree);
+ assert.equal(p.kind,'scoped-cross-commit');assert.equal(p.scopeVersion,'banners-runtime-v2');assert.equal(p.productionAuthorization,false);
+ assert.equal(validScopedEquivalence({...p,economic:{run:1,attempt:1,issuer:sha('8'),digest:'9'.repeat(64)}},catalog,target),true);
+ assert.equal(validScopedEquivalence({...p,scopeVersion:'old',economic:{run:1,attempt:1,issuer:sha('8'),digest:'9'.repeat(64)}},catalog,target),false);
+ for(const t of [{...pr,merge_commit_sha:sha('0')},{...pr,head:{...pr.head,repo:{full_name:'fork/repo'}}},{...pr,mergeable:false}])assert.throws(()=>proveScope(catalog,target,t,commit,getTree));
+ assert.doesNotThrow(()=>proveScope(catalog,target,pr,commit,id=>id===target.sourceTree?{...getTree(id),tree:entries.map(x=>x.path==='scripts'?{...x,sha:sha('9')}:x)}:getTree(id)));
+ assert.throws(()=>proveScope(catalog,target,pr,commit,id=>({...getTree(id),truncated:true})));
+ assert.throws(()=>proveScope(catalog,target,pr,commit,id=>({...getTree(id),tree:[...getTree(id).tree,tree('.gitattributes',sha('9'),'blob')]})));
+ assert.throws(()=>proveScope(catalog,target,pr,commit,id=>id===target.sourceTree?{...getTree(id),tree:getTree(id).tree.map(x=>x.path==='shared'?{...x,sha:sha('8')}:x)}:getTree(id)));
+});
+test('scoped admission opt-in is confined to real Banners production context',()=>{
+ const e={PW_QA_SCOPED_CROSS_COMMIT:'1',PW_QA_PRODUCTION_VERIFIED:'1',GITHUB_REPOSITORY:repo,GITHUB_EVENT_NAME:'pull_request',GITHUB_REF:'refs/pull/1355/merge',QA_PR_NUMBER:'1355',QA_HEAD_REPO:repo,QA_HEAD_REF:'app/banners-of-war'};
+ assert.equal(scopedEnabled(e),true);assert.equal(scopedEnabled({...e,PW_QA_SCOPED_CROSS_COMMIT:'0'}),false);assert.equal(scopedEnabled({...e,GITHUB_REF:'refs/pull/2/merge'}),false);
+ assert.throws(()=>checkEconomicReport(null,catalog,Date.now()));
+ const now=Date.now(),source='8c70528d57134a01558a3b9d5bef8d1e34d429a3',issuer='3b4294292ba7aed4034231c8bc5ec277073bdfae',targetSha='ce4bc09ba2a105f6e8db0a8a0153da079f4e2c5f';
+ const fresh=[1,2,3].map(n=>({id:'fresh-'+n,costMs:1000000+n*10000,observedAt:now-1000,source,target:targetSha,issuer}));
+ const mixed=[1,2,3].map(n=>({id:'mixed-'+n,costMs:100000+n*1000,observedAt:now-1000,source,target:targetSha,issuer}));
+ const report={schema:1,source,target:targetSha,issuer,run:46050831661,attempt:1,negativeControls:2,fresh,mixed,decision:qualifyCosts(fresh,mixed,10000,now),productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+ assert.equal(checkEconomicReport(report,{sourceScopeVersion:'banners-runtime-v2'},now).decision,'cost-qualified-candidate');
+ for(const bad of [{...report,run:1},{...report,attempt:2},{...report,target:sha('7')},{...report,issuer:sha('8')},{...report,negativeControls:1}])assert.throws(()=>checkEconomicReport(bad,{sourceScopeVersion:'banners-runtime-v2'},now));
+});

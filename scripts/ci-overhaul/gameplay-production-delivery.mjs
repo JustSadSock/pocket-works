@@ -11,7 +11,9 @@ import {taskDigest,canonical,digest} from './verified-results.mjs';
 import {loadSuites,resolveTasks} from '../universal-qa/plan.mjs';
 import {selectSplit} from '../universal-qa/fresh-split.mjs';
 import {REPO} from './gameplay-renewal.mjs';
-const SHA=/^[a-f0-9]{40}$/,pos=n=>Number.isSafeInteger(n)&&n>0,fail=s=>{throw Error(s);};
+import {scopedEnabled,auditScopedCanary} from './gameplay-scoped-production.mjs';
+import {POLICY} from './universal-reuse-economics.mjs';
+const SHA=/^[a-f0-9]{40}$/,HEX=/^[a-f0-9]{64}$/,pos=n=>Number.isSafeInteger(n)&&n>0,fail=s=>{throw Error(s);};
 const flags=['productionAuthorization','allowResultReuse','allowImpactSkipping'];
 const json=p=>{const st=lstatSync(p);if(!st.isFile()||st.size>4_000_000)fail('Invalid delivery evidence');return JSON.parse(readFileSync(p,'utf8'));};
 export function eligibleTask(t){
@@ -20,9 +22,40 @@ export function eligibleTask(t){
 export function eligibleDelivery(env){
  return env.GITHUB_REPOSITORY===REPO&&env.GITHUB_EVENT_NAME==='pull_request'&&env.GITHUB_REF==='refs/pull/1355/merge'&&env.QA_PR_NUMBER==='1355'&&env.QA_HEAD_REPO===REPO&&env.QA_HEAD_REF==='app/banners-of-war'&&env.PW_QA_PRODUCTION_VERIFIED==='1';
 }
+function validIdentity(p,ctx){
+ return ['exact-commit','exact-tree-merge'].includes(p?.identity)||ctx.scopedEnabled===true&&p?.identity==='scoped-cross-commit'&&p.scopeVersion==='banners-runtime-v2'&&HEX.test(p.scopeDigest)&&HEX.test(p.economicDigest)&&pos(p.sourceRun)&&pos(p.sourceAttempt);
+}
+export function scopedCanaryFailures(summary,ctx){
+ const hits=summary.rows.filter(r=>r.identity==='scoped-cross-commit');
+ if(!hits.length)return summary.scopedCanary===undefined?[]:['unexpected-canary'];
+ const c=summary.scopedCanary,shard=(ctx.run+ctx.attempt)%8,task='banners-of-war-completion-lab-'+shard,perf=[0,4,5,6,7].includes(shard)?1:0,t=c?.timingsMs,e=c?.economics;
+ const nonnegative=n=>Number.isSafeInteger(n)&&n>=0;
+ const checks={
+  scopedEnabled:ctx.scopedEnabled===true,schema:c?.schema===1,scopeVersion:c?.scopeVersion==='banners-runtime-v2',
+  task:c?.task===task,shard:c?.shard===shard,run:c?.run===ctx.run,attempt:c?.attempt===ctx.attempt,
+  source:c?.source===ctx.source,tree:c?.tree===ctx.tree,semanticMatch:c?.semanticMatch===true,
+  gameplayDigest:HEX.test(c?.gameplaySemanticDigest??''),gameplayCases:c?.gameplayCases===(shard<4?234:233),
+  performanceCases:c?.freshPerformanceCases===perf,performanceMeasurements:c?.freshPerformanceMeasurements===perf*2,
+  discoveryMs:nonnegative(t?.discoveryMs),scopeProofMs:nonnegative(t?.scopeProofMs),runListMs:nonnegative(t?.runListMs),
+  downloadMs:nonnegative(t?.economicDownloadMs),economicVerifyMs:nonnegative(t?.economicVerificationMs),canaryAuditMs:nonnegative(t?.canaryAuditMs),
+  grossSavings:pos(e?.grossSavingsMs),freshLower:pos(e?.freshLowerMs),overhead:nonnegative(e?.overheadMs),
+  netSavings:Number.isSafeInteger(e?.netSavingsMs)&&e.netSavingsMs===e.grossSavingsMs-e.overheadMs,
+  overheadBreakdown:e?.overheadMs===t?.discoveryMs+t?.canaryAuditMs,
+  netSavingsBasisPoints:e?.netSavingsBasisPoints===Math.floor(e?.netSavingsMs/e?.freshLowerMs*10000),
+  savingsThreshold:e?.netSavingsMs>=POLICY.minSavingsMs&&e?.netSavingsBasisPoints>=POLICY.minSavingsBasisPoints,
+  authorizationFlags:flags.every(k=>c?.[k]===false),
+  freshCanary:summary.rows.some(r=>r.key===task&&r.mode==='fresh'),
+  hitIdentity:hits.every(r=>validIdentity(r,ctx)&&['scopeVersion','scopeDigest','economicDigest','sourceRun','sourceAttempt'].every(k=>r[k]===c[k]))
+ };
+ return Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
+}
+export function validateScopedCanary(summary,ctx){
+ const failures=scopedCanaryFailures(summary,ctx);
+ if(failures.length)fail('Missing, uneconomic or incompatible independently reconstructed scoped canary: '+failures.join(', '));
+}
 export function validateHit(t,p,ctx,hit){
  const n=t.seed<4?234:233,perf=[0,4,5,6,7].includes(t.seed)?1:0;
- if(!eligibleTask(t)||!ctx.enabled||!SHA.test(ctx.source)||!SHA.test(ctx.tree)||!pos(ctx.run)||!pos(ctx.attempt)||p?.schema!==1||p.independentlyVerified!==true||p.run!==ctx.run||p.attempt!==ctx.attempt||p.source!==ctx.source||p.sourceTree!==ctx.tree||!SHA.test(p.controller)||!SHA.test(p.controllerTree)||p.controller!==hit?.controller||p.controllerTree!==hit?.controllerTree||p.shard!==t.seed||p.reusedGameplayCases!==n||p.freshGameplayCases!==0||p.freshPerformanceCases!==perf||p.freshPerformanceMeasurements!==perf*2||!['exact-commit','exact-tree-merge'].includes(p.identity)||flags.some(k=>p[k]!==false)||t.seed===(ctx.run+ctx.attempt)%8)fail('Verified task did not qualify: '+t.key);
+ if(!eligibleTask(t)||!ctx.enabled||!SHA.test(ctx.source)||!SHA.test(ctx.tree)||!pos(ctx.run)||!pos(ctx.attempt)||p?.schema!==1||p.independentlyVerified!==true||p.run!==ctx.run||p.attempt!==ctx.attempt||p.source!==ctx.source||p.sourceTree!==ctx.tree||!SHA.test(p.controller)||!SHA.test(p.controllerTree)||p.controller!==hit?.controller||p.controllerTree!==hit?.controllerTree||p.shard!==t.seed||p.reusedGameplayCases!==n||p.freshGameplayCases!==0||p.freshPerformanceCases!==perf||p.freshPerformanceMeasurements!==perf*2||!validIdentity(p,ctx)||flags.some(k=>p[k]!==false)||t.seed===(ctx.run+ctx.attempt)%8)fail('Verified task did not qualify: '+t.key);
  return n;
 }
 export function verifyMixed(raw,ctx,readTask,auditTask){
@@ -39,7 +72,7 @@ export function verifyMixed(raw,ctx,readTask,auditTask){
    if(!ctx.enabled||!eligibleTask(t)||hit.schema!==1||hit.mode!=='production-verified-gameplay-v1'||!eq(hit.task,t)||hit.taskDigest!==taskDigest(t)||hit.run!==ctx.run||hit.attempt!==ctx.attempt||hit.source!==ctx.source||hit.tree!==ctx.tree||!SHA.test(hit.controller)||!SHA.test(hit.controllerTree))fail('Unapproved verified task envelope');
    const proof=auditTask(t,hit);
    const n=validateHit(t,proof,ctx,hit);reused+=n;verified++;
-   rows.push({key:t.key,mode:'verified-gameplay',reusedGameplayCases:n,identity:proof.identity,controller:proof.controller,controllerTree:proof.controllerTree,freshPerformanceCases:proof.freshPerformanceCases,freshPerformanceMeasurements:proof.freshPerformanceMeasurements});
+   rows.push({key:t.key,mode:'verified-gameplay',reusedGameplayCases:n,identity:proof.identity,controller:proof.controller,controllerTree:proof.controllerTree,freshPerformanceCases:proof.freshPerformanceCases,freshPerformanceMeasurements:proof.freshPerformanceMeasurements,...(proof.identity==='scoped-cross-commit'?{scopeVersion:proof.scopeVersion,scopeDigest:proof.scopeDigest,economicDigest:proof.economicDigest,sourceRun:proof.sourceRun,sourceAttempt:proof.sourceAttempt}:{})});
   }
   passed.push(taskDigest(t));
  }
@@ -59,12 +92,13 @@ export function verifyGateSummary(raw,summary,ctx){
   else if(r.mode==='verified-gameplay'){
    const n=t.seed<4?234:233;
    const perf=[0,4,5,6,7].includes(t.seed)?1:0;
-   if(!ctx.enabled||!eligibleTask(t)||!['exact-commit','exact-tree-merge'].includes(r.identity)||!SHA.test(r.controller)||!SHA.test(r.controllerTree)||r.reusedGameplayCases!==n||r.freshPerformanceCases!==perf||r.freshPerformanceMeasurements!==perf*2||t.seed===(ctx.run+ctx.attempt)%8)fail('Unapproved mandatory summary hit');
+   if(!ctx.enabled||!eligibleTask(t)||!validIdentity(r,ctx)||!SHA.test(r.controller)||!SHA.test(r.controllerTree)||r.reusedGameplayCases!==n||r.freshPerformanceCases!==perf||r.freshPerformanceMeasurements!==perf*2||t.seed===(ctx.run+ctx.attempt)%8)fail('Unapproved mandatory summary hit');
    if((controller&&controller!==r.controller)||(controllerTree&&controllerTree!==r.controllerTree))fail('Mandatory summary mixes controllers');
    controller=r.controller;controllerTree=r.controllerTree;verified++;reused+=n;
   }else fail('Unknown mandatory summary mode');
  }
  if(summary.verifiedTasks!==verified||summary.freshTasks!==p.count-verified||summary.reusedGameplayCases!==reused||summary.productionAuthorization!==(verified>0)||summary.controller!==controller||summary.controllerTree!==controllerTree)fail('Mandatory summary totals differ');
+ validateScopedCanary(summary,ctx);
  return {success:true,expected:p.count,planDigest:p.planDigest,verifiedTasks:verified,reusedGameplayCases:reused};
 }
 function checkTask(root,t){
@@ -75,7 +109,7 @@ function checkTask(root,t){
  }catch{return false;}
 }
 const git=(root,args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
-const context=root=>({enabled:eligibleDelivery(process.env),source:git(root,['rev-parse','HEAD']),tree:git(root,['rev-parse','HEAD^{tree}']),run:Number(process.env.GITHUB_RUN_ID),attempt:Number(process.env.GITHUB_RUN_ATTEMPT)});
+const context=root=>({enabled:eligibleDelivery(process.env),scopedEnabled:scopedEnabled(process.env),source:git(root,['rev-parse','HEAD']),tree:git(root,['rev-parse','HEAD^{tree}']),run:Number(process.env.GITHUB_RUN_ID),attempt:Number(process.env.GITHUB_RUN_ATTEMPT)});
 const rawFromEnv=e=>'cpu_matrix='+e.QA_CPU_MATRIX+'\nbrowser_matrix='+e.QA_BROWSER_MATRIX+'\nexpected='+e.QA_EXPECTED+'\n';
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{
@@ -85,7 +119,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    if(!ctx.enabled||!checkTask(root,t))process.exitCode=75;
   }else if(mode==='seal'){
    const t=JSON.parse(process.env.PW_QA_TASK),r=json(join(arg,'admission-report.json'));
-   if(!ctx.enabled||!checkTask(root,t)||r.source!==ctx.source||r.sourceTree!==ctx.tree||r.run!==ctx.run||r.attempt!==ctx.attempt||r.shard!==t.seed||r.admission?.decision!=='reuse-shadow'||r.controller!==process.env.ACTUAL_QA_CONTROLLER||r.controllerTree!==process.env.ACTUAL_QA_CONTROLLER_TREE||!SHA.test(r.controller)||!SHA.test(r.controllerTree)||flags.some(k=>r[k]!==false))fail('Cannot seal non-reuse output');
+   if(!ctx.enabled||!checkTask(root,t)||r.source!==ctx.source||r.sourceTree!==ctx.tree||r.run!==ctx.run||r.attempt!==ctx.attempt||r.shard!==t.seed||r.admission?.decision!=='reuse-shadow'||r.controller!==process.env.ACTUAL_QA_CONTROLLER||r.controllerTree!==process.env.ACTUAL_QA_CONTROLLER_TREE||!SHA.test(r.controller)||!SHA.test(r.controllerTree)||flags.some(k=>r[k]!==false)||r.admission.identity==='scoped-cross-commit'&&!ctx.scopedEnabled)fail('Cannot seal non-reuse output');
    writeFileSync(join(arg,'verified-delivery.json'),JSON.stringify({schema:1,mode:'production-verified-gameplay-v1',task:t,taskDigest:taskDigest(t),run:ctx.run,attempt:ctx.attempt,source:ctx.source,tree:ctx.tree,controller:r.controller,controllerTree:r.controllerTree},null,2)+'\n',{flag:'wx'});
   }else if(mode==='mixed'){
    if(!SHA.test(ctx.source)||!SHA.test(ctx.tree))fail('Wrong delivery checkout');
@@ -102,8 +136,10 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
      return json(join(temp,'gate-candidate.json'));
     }finally{rmSync(temp,{recursive:true,force:true});}
    });
+   if(result.rows.some(r=>r.identity==='scoped-cross-commit'))result.scopedCanary=auditScopedCanary(arg,resolve(extra),{source:ctx.source,sourceTree:ctx.tree},ctx);
+   validateScopedCanary(result,ctx);
    writeFileSync(join(arg,'summary.json'),JSON.stringify(result,null,2)+'\n',{flag:'wx'});
-   const md='## Pocket Works Universal QA — mandatory mixed delivery\n\n'+result.passed+'/'+result.expected+' tasks passed; '+result.verifiedTasks+' verified tasks; '+result.reusedGameplayCases+' reused gameplay cases.\n';
+   const md='## Pocket Works Universal QA — mandatory mixed delivery\n\n'+result.passed+'/'+result.expected+' tasks passed; '+result.verifiedTasks+' verified tasks; '+result.reusedGameplayCases+' reused gameplay cases.\n'+(result.scopedCanary?'\nScoped cross-commit: '+result.scopedCanary.economics.netSavingsMs+' ms net savings after '+result.scopedCanary.economics.overheadMs+' ms measured admission overhead ('+result.scopedCanary.economics.netSavingsBasisPoints+' bp).\n':'');
    writeFileSync(join(arg,'SUMMARY.md'),md,{flag:'wx'});if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,md);console.log(JSON.stringify(result,null,2));
   }else if(mode==='gate-report'){
    if(!SHA.test(ctx.source)||!SHA.test(ctx.tree))fail('Wrong final gate checkout');
