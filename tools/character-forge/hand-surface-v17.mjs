@@ -92,6 +92,15 @@ for(const i of [0,2,4]){
  for(const view of ['front','side','three-quarter']){
   const bounds=commonBounds(meshes,view);
   for(let j=0;j<cases.length;j++)write('v17-hand-'+cases[j].name+'-'+phases[i]+'-'+view+'.png',raster(meshes[j],{view,bounds,size:640,mode:'A'}).png);
+  const close=cases.map((c,j)=>{
+   const local=c.indices.map((x,k)=>region.has(x)||x>=oldCount?k:-1).filter(k=>k>=0),set=new Set(local);
+   const mesh=structuredClone(meshes[j].parts[0]);mesh.indices=c.faces.filter(f=>f.some(k=>set.has(k))).flat();
+   const map=new Map();for(const k of mesh.indices)if(!map.has(k))map.set(k,map.size);
+   mesh.positions=[...map.keys()].flatMap(k=>c.rows[i].vertices[k]);mesh.indices=mesh.indices.map(k=>map.get(k));normals(mesh);
+   return {parts:[mesh]};
+  });
+  const cb=commonBounds(close,view);
+  for(let j=0;j<cases.length;j++)write('v17-index-PIP-'+cases[j].name+'-'+phases[i]+'-'+view+'.png',raster(close[j],{view,bounds:cb,size:640,mode:'A'}).png);
  }
 }
 const regionRows=[...region].map(([i,r])=>({vertex:i,...r,delta:delta.slice(i*3,i*3+3)}));
