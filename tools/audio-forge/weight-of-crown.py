@@ -267,7 +267,7 @@ def render(dyn,hist,exp,out):
                 ref[q:,1]+=mono[:-q]*amount*(1 if k%2 else .72)
         a+=ref*wet
         groups[group]+=a
-    mix=sum(groups.values());peak=float(np.max(abs(mix)));gain=min(1.,.90/max(peak,1e-9))
+    mix=sum(groups.values());peak=max(float(np.max(abs(mix))),*(float(np.max(abs(v))) for v in groups.values()));gain=min(1.,.90/max(peak,1e-9))
     quantized={k:np.rint(v*gain*32767).astype(np.int32) for k,v in groups.items()}
     master32=sum(quantized.values());pcm_error=int(np.max(abs(sum(quantized.values())-master32)))
     if np.max(abs(master32))>32767:raise ValueError('master clipping after stem sum')
