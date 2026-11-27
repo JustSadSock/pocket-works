@@ -1,6 +1,7 @@
 // Offline unified recorded performance: independently advancing recorded voices,
 // qualified sustain loops, pressure-driven real layers, legato and pitch expression.
 import {compileRecordedExpression} from './recorded-expression.mjs';
+import {compileRecordedPhrasing,compileRecordedReattack} from './recorded-phrasing.mjs';
 const SR=48000,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function read(a,p){const k=Math.floor(p),f=p-k;if(k<0||k+1>=a.length)throw Error('Recorded performance source exhausted');return a[k]*(1-f)+a[k+1]*f;}
 function voice(z,midi,offset,sustain){
@@ -21,7 +22,7 @@ function curveFor(n){
  if(!Array.isArray(c)||c.length<2||c.length>64||c[0].at!==0||c.at(-1).at!==1||c.some((p,i)=>!Number.isFinite(p.at)||!Number.isFinite(p.value)||p.value<.1||p.value>1||i>0&&p.at<=c[i-1].at))throw Error('Invalid performance pressure curve');
  return c;
 }
-export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='morph',transitionSeconds=.055}={}){
+export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='morph',transitionSeconds=.055,phrases=[]}={}){
  if(!Array.isArray(zones)||!zones.length||zones.length>256||!Array.isArray(notes)||!notes.length||notes.length>512||!Number.isFinite(seconds)||seconds<.15||seconds>90||!['morph','discrete'].includes(mode)||!Number.isFinite(transitionSeconds)||transitionSeconds<.015||transitionSeconds>.12)throw Error('Invalid recorded performance');
  const groups=new Map(),cursors=new Map(),ids=new Set(),hashes=new Set();
  for(const z of zones){
@@ -55,11 +56,16 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
   });
   events.push({n,start,end,curve,selected,expression});last=end;
  }
+ const phraseMap=compileRecordedPhrasing(phrases,notes,seconds);
+ for(const [i,e] of events.entries()){
+  e.phrase=e.n.phraseId?phraseMap.get(e.n.phraseId):null;
+  e.reattack=compileRecordedReattack(e.n,notes[i-1],e.phrase);
+ }
  let previous=null,maxStep=0,peak=0;
  for(const [i,e] of events.entries()){
-  const {n,start,end,curve,selected,expression}=e,len=end-start,connected=n.connected===true,nextConnected=events[i+1]?.n.connected===true;
+  const {n,start,end,curve,selected,expression,phrase,reattack}=e,len=end-start,connected=n.connected===true,nextConnected=events[i+1]?.n.connected===true;
   const fade=Math.min(Math.round(transitionSeconds*SR),Math.floor(len/3)),attack=Math.min(240,Math.floor(len/4)),release=Math.min(3840,Math.floor(len/3));
-  const offset=connected?Math.round(.16*SR):0;
+  const offset=connected&&!reattack?Math.round(.16*SR):0;
   let alignment={correlation:0,delay:0};
   if(selected.length===2){
    const [a,b]=selected.map(x=>x.z),rates=[a,b].map(z=>2**((n.midi-z.measuredMidi)/12));
@@ -84,11 +90,14 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
    const c=clamp(alignment.correlation,0,1),correction=Math.min(1.35,1/Math.sqrt((1-t)**2+t*t+2*c*t*(1-t)));
    return (x*(1-t)+y*t)*p*correction;
   }
-  const meta={midi:n.midi,articulation:n.articulation,startFrame:start,frames:len,connected,sustain:n.sustain===true,sourceIds:voices.map(v=>v.id),sourceHashes:voices.map(v=>v.hash),variants:selected.map(x=>x.z.variant),layers:selected.map(x=>x.v),boundaryStep:0,wraps:[],alignment,expression:expression?.metadata??null};
+  const meta={midi:n.midi,articulation:n.articulation,startFrame:start,frames:len,connected,sustain:n.sustain===true,sourceIds:voices.map(v=>v.id),sourceHashes:voices.map(v=>v.hash),variants:selected.map(x=>x.z.variant),layers:selected.map(x=>x.v),boundaryStep:0,wraps:[],alignment,expression:expression?.metadata??null,sourceOffsetFrames:offset,phrasing:phrase?{id:phrase.id,technique:phrase.technique,startFrame:phrase.startFrame,endFrame:phrase.endFrame,curve:phrase.curve,firstMultiplier:phrase.valueAt(start/SR),lastMultiplier:phrase.valueAt((end-1)/SR)}:null,reattack:reattack?.metadata??null};
   for(let j=0;j<len;j++){
    const u=j/(len-1);while(point+1<curve.length-1&&u>curve[point+1].at)point++;
-   const l=curve[point],r=curve[point+1];pressure=l.value+(r.value-l.value)*(u-l.at)/(r.at-l.at);
+   const l=curve[point],r=curve[point+1],notePressure=l.value+(r.value-l.value)*(u-l.at)/(r.at-l.at);
+   const phraseMultiplier=phrase?phrase.valueAt((start+j)/SR):1;
+   pressure=clamp(notePressure*phraseMultiplier,.1,1);
    let x=next(pressure);
+   if(reattack)x*=reattack.gainAt(j/SR);
    if(connected&&j<fade){const w=.5-.5*Math.cos(Math.PI*j/(fade-1));x=previous.next(previous.pressure)*(1-w)+x*w;}
    else if(!connected)x*=Math.min(1,j/attack);
    if(!nextConnected)x*=Math.min(1,(len-1-j)/release);
