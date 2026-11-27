@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {prepareRecordedRelease,compileRecordedRelease} from './recorded-release.mjs';
+import {prepareRecordedRelease,compileRecordedRelease,prepareDedicatedRelease} from './recorded-release.mjs';
 import {renderRecordedPerformance} from './recorded-performance.mjs';
 const SR=48000;
 function fixture(id='fixture',velocity=.6){
@@ -46,4 +46,23 @@ test('paired dynamic layers retain separate original ending provenance',()=>{
  assert.equal(out.receipt.sourceSegments[0].sha256,a.z.sourceSha256);
  assert.equal(out.receipt.sourceSegments[1].sha256,b.z.sourceSha256);
  assert.ok(out.samples.every(x=>Number.isFinite(x)&&Math.abs(x)<.999));
+});
+
+test('dedicated assets retain a separate hash and paired body identity',()=>{
+ const {z}=fixture(),pcm=z.samples.slice(2*SR);
+ const source={id:'release-a4',expectedMidi:z.expectedMidi,instrument:z.instrument,articulation:z.articulation,bodySha256:z.sourceSha256,sha256:'c'.repeat(64)};
+ const r=prepareDedicatedRelease(pcm,z,source);
+ assert.equal(r.kind,'dedicated-release-asset');
+ assert.equal(r.bodySha256,z.sourceSha256);
+ assert.equal(r.sourceSha256,source.sha256);
+ assert.deepEqual(r.samples,pcm.slice(r.sourceStartFrame,r.sourceEndFrame));
+ const opts={zones:[z],instrument:'fixture',notes:[{midi:69,start:0,duration:.6,pressure:.7,articulation:'arco',release:'recorded'}],seconds:2,releaseBank:[r]};
+ const result=renderRecordedPerformance(opts),receipt=result.choices[0].release;
+ assert.equal(receipt.kind,'dedicated-release-asset');
+ assert.equal(receipt.sourceSegments[0].sha256,source.sha256);
+ assert.equal(receipt.sourceSegments[0].bodySha256,z.sourceSha256);
+ assert.throws(()=>renderRecordedPerformance({...opts,releaseBank:[{...r,bodySha256:'0'.repeat(64)}]}),/Missing or mismatched/);
+ assert.throws(()=>prepareDedicatedRelease(pcm,z,{...source,expectedMidi:72}),/pairing/);
+ assert.throws(()=>prepareDedicatedRelease(pcm,z,{...source,sha256:z.sourceSha256}),/pairing/);
+ assert.throws(()=>prepareDedicatedRelease(new Float32Array(SR),z,source),/Silent/);
 });
