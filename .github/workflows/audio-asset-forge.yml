@@ -568,6 +568,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Preserve Lantern Road golden masters and render historical spatial ensemble
+        id: historical_spatial
+        if: ${{ !cancelled() && steps.historical_expansion.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-spatial-lab.mjs --self-test
+          node tools/audio-forge/historical-spatial-lab.mjs .audio-historical-expansion .audio-historical-spatial
+          test "$(find .audio-historical-spatial -maxdepth 1 -name '*.wav' | wc -l)" -eq 5
+          test "$(find .audio-historical-spatial/library/objects -name '*.wav' | wc -l)" -eq 17
+          test -s .audio-historical-spatial/library/catalog.sqlite
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_spatial.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-spatial-${{ github.run_id }}
+          path: .audio-historical-spatial/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_spatial.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-spatial-rejected-${{ github.run_id }}
+          path: .audio-historical-spatial/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
