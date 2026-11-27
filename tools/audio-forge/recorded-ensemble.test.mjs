@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {prepareModulatedNote} from './recorded-modulated.mjs';
 import {renderRecordedEnsemble} from './recorded-ensemble.mjs';
+import {renderEnsembleRoom} from './ensemble-room.mjs';
 test('tremolo pitch uses independent energetic windows and rejects wrong labels',()=>{
  const a=new Float32Array(144000);
  for(let i=480;i<a.length;i++){const t=(i-480)/48000,p=2*Math.PI*440*t;a[i]=.24*(.18+.82*Math.sin(Math.PI*7*t)**2)*(Math.sin(p)+.17*Math.sin(2*p));}
@@ -42,4 +43,28 @@ test('opt-in individual stems preserve the approved dry mix and reconstruct shar
   assert.ok(Math.abs(a[i]+b[i]+c[i]-r.mix[i])<1e-6);
  }
  assert.throws(()=>renderRecordedEnsemble({...opts,includeTrackStems:1}),/Invalid recorded ensemble/);
+});
+
+test('six recorded musicians retain independent stage positions in both room presets',()=>{
+ const ids=['bass','melody','counterline','highline','harmony','signal'];
+ const stage={
+  bass:{x:-3.6,y:8.2,z:1.2,gain:1,width:.68},
+  melody:{x:-2.2,y:5.5,z:1.3,gain:1,width:.68},
+  counterline:{x:-.6,y:8.1,z:1.5,gain:1,width:.42},
+  highline:{x:2.5,y:7,z:1.6,gain:1,width:.46},
+  harmony:{x:-2,y:11.8,z:1.6,gain:1,width:.64},
+  signal:{x:2,y:12.4,z:1.6,gain:1,width:.58}
+ };
+ const stems=Object.fromEntries(ids.map((id,k)=>{
+  const a=new Float32Array(96000),f=180+k*73;
+  for(let i=0;i<48000;i++){const x=.08*Math.sin(2*Math.PI*f*i/48000);a[i*2]=x;a[i*2+1]=x*.82;}
+  return [id,a];
+ }));
+ for(const preset of ['chamber','hall']){
+  const r=renderEnsembleRoom({stems,stage,preset,tailSeconds:.5});
+  assert.deepEqual(Object.keys(r.layout).sort(),ids.slice().sort());
+  assert.ok(r.wetRms>0);assert.equal(r.frames,72000);
+  assert.notEqual(r.layout.bass.pan,r.layout.signal.pan);
+  assert.ok(r.mix.every(Number.isFinite));
+ }
 });
