@@ -5,6 +5,7 @@ import {vertical} from './world-rendering-gl.mjs';
 import {SpatialLRU,clearContourCache,clearScaleTiles} from './genesis-contours.mjs';
 import {SurfaceRequests,covers,regionKey} from './atlas-surface-requests.mjs';
 import {PresentationEvidence} from './atlas-presentation-evidence.mjs';
+import {chooseStreamJob,samePreparationKnowledge,eligibleTerrain,findCoveringTerrain} from './atlas-streaming-plan.mjs';
 const C=(x,a,b)=>Math.max(a,Math.min(b,x));
 const heightRanges=new WeakMap();
 function surfaceHeightRange(s){
@@ -15,7 +16,7 @@ function surfaceHeightRange(s){
  const range={minZ:-.035,maxZ:Math.max(.018,vertical(max)+.018)};heightRanges.set(key,range);return range;
 }
 export class AtlasCampaignSurface{
- constructor(){this.cache=new SpatialLRU(64*1024*1024);this.canvas=document.createElement('canvas');this.composition='copy';this.preserveDrawingBuffer=true;this.directVisible=false;this.pair=null;this.frameReceipt=null;this.needsRedraw=false;this.requests=new SurfaceRequests();this.pending=null;this.active=null;this.state=null;this.status='';this.epoch=0;this.firstUsefulMs=null;this.requestStart=0;this.notified=false;this.cancelled=0;this.reusedGPU=0;this.gpuDraws=0;this.gpuReuses=0;this.lastGPU=null;this.inFlight=0;this.maxInFlight=0;this.evidence=new PresentationEvidence();}
+ constructor(){this.cache=new SpatialLRU(64*1024*1024);this.canvas=document.createElement('canvas');this.composition='copy';this.preserveDrawingBuffer=true;this.directVisible=false;this.pair=null;this.frameReceipt=null;this.needsRedraw=false;this.requests=new SurfaceRequests();this.pending=null;this.active=null;this.state=null;this.status='';this.epoch=0;this.firstUsefulMs=null;this.requestStart=0;this.notified=false;this.cancelled=0;this.reusedGPU=0;this.gpuDraws=0;this.gpuReuses=0;this.lastGPU=null;this.inFlight=0;this.maxInFlight=0;this.evidence=new PresentationEvidence();this.streaming='control';this.streamEvents=[];this.streamOverflow=0;this.streamPrevious=null;this.streamJobSeq=0;}
  configure(mode='copy',preserve=true){
  if(!['copy','direct','resident'].includes(mode))throw Error('Unknown surface composition');
  preserve=mode==='copy'||preserve;if(mode===this.composition&&preserve===this.preserveDrawingBuffer)return;
@@ -37,8 +38,11 @@ export class AtlasCampaignSurface{
  const receipt=this.requests.presented;if(receipt?.id===request.id)record('opportunity',{inputId,requestId:request.id,frame,token:complete,receipt,currentRequestId:this.requests.current.id,currentFrame:Number(host.dataset.atlasFrame)});
  });
  }
- cancelPending(){if(this.pending&&!this.pending.cancelled){this.pending.cancelled=true;this.cancelled++;}}
- invalidate(){this.hideDirect();this.cancelPending();const intent=this.requests.invalidate();this.firstUsefulMs=null;this.requestStart=performance.now();this.status='loading';if(this.host){this.host.dataset.atlasSurface='loading';this.host.dataset.atlasReadyId='';this.host.dataset.atlasReceipt='';this.host.dataset.atlasIntent=String(intent);}return intent;}
+ streamEvent(kind,data={}){if(this.streaming==='control'&&kind!=='policy')return;if(this.streamEvents.length>=1024){this.streamEvents.shift();this.streamOverflow++;}this.streamEvents.push({kind,at:performance.now(),...data});}
+ streamReport(){return {policy:this.streaming,events:this.streamEvents.slice(),overflow:this.streamOverflow,inFlight:this.inFlight,maxInFlight:this.maxInFlight,cacheBytes:this.cache.bytes,cacheLimit:this.cache.limit};}
+ configureStreaming(policy){if(!['control','predictive'].includes(policy))throw Error('Unknown streaming policy');this.cancelPending();this.streaming=policy;this.streamEvents=[];this.streamOverflow=0;this.streamPrevious=null;this.streamEvent('policy',{policy});this.needsRedraw=true;}
+ cancelPending(reason='invalidate'){if(this.pending&&!this.pending.cancelled){this.pending.cancelled=true;this.cancelled++;this.streamEvent('cancel',{jobId:this.pending.streamId??null,reason});}}
+ invalidate(){this.streamReady=null;this.streamPrevious=null;this.hideDirect();this.cancelPending();const intent=this.requests.invalidate();this.firstUsefulMs=null;this.requestStart=performance.now();this.status='loading';if(this.host){this.host.dataset.atlasSurface='loading';this.host.dataset.atlasReadyId='';this.host.dataset.atlasReceipt='';this.host.dataset.atlasIntent=String(intent);}return intent;}
  reset(s=null,{keepCache=false}={}){this.invalidate();this.epoch++;if(!keepCache||this.state!==s){this.active?.renderer.dispose();this.active=null;this.lastGPU=null;this.heightSampler=null;this.cache.clear();if(this.state?.map?.geography){clearContourCache(this.state.map.geography);clearScaleTiles(this.state.map.geography);}}this.state=s;this.notified=false;this.error='';}
  paint(atlas,s,cam,c,w,h,quality){
  this.host=atlas.canvas;this.needsRedraw=false;this.frameReceipt=null;this.pair=null;if(this.state!==s)this.reset(s);if(this.composition!=='copy')this.attachDirect();
@@ -49,6 +53,30 @@ export class AtlasCampaignSurface{
  const inputId=this.evidence.enabled?this.evidence.latest:null,requestEvent=inputId==null?null:this.evidence.add('request',{inputId,request:r});
  this.host.dataset.atlasRequestId=String(r.id);this.host.dataset.atlasIntent=String(r.intent);this.host.dataset.atlasRequest=JSON.stringify(r);this.host.dataset.atlasViewport=JSON.stringify(viewport);this.host.dataset.atlasVisibleBounds=JSON.stringify(visible);this.host.dataset.atlasLegacyVisibleBounds=JSON.stringify(legacyVisible);this.host.dataset.atlasWorldBounds=JSON.stringify([0,0,W,H]);this.host.dataset.atlasHeightRange=JSON.stringify({minZ,maxZ,datum:0,tilt});this.host.dataset.atlasPreparedBounds=JSON.stringify(bounds);this.host.dataset.atlasLegacyPreparedBounds=JSON.stringify(legacyBounds);this.host.dataset.atlasPreparedArea=String(preparedArea);this.host.dataset.atlasLegacyPreparedArea=String(legacyArea);this.host.dataset.atlasPreparedAreaReductionPct=String(areaReductionPct);
  const usable=a=>a&&a.revision===revision&&covers(a.bounds,visible),preview=a=>a&&a.knowledge===knowledge&&covers(a.bounds,visible);
+ const streaming=this.streaming==='predictive'&&full&&s.autonomous&&surfaceScale&&identity;
+ // Retain the existing fog-safe path for all restricted knowledge.
+ if(streaming){
+  if(this.pending&&(!this.pending.streaming||!samePreparationKnowledge(this.pending.job,r)))this.cancelPending('knowledge-or-intent');
+  const install=(terrain,key,job)=>{if(!eligibleTerrain(job,terrain,r))return false;const old=this.active?.renderer,started=performance.now(),renderer=new BakedTerrainGL(this.canvas,terrain,{chunked:true,adaptive:true,sharedPrograms:true,preserveDrawingBuffer:this.preserveDrawingBuffer});if(renderer.programReuse)this.reusedGPU++;old?.dispose();if(this.composition==='resident'&&this.residentOptions)renderer.configureResident(this.residentOptions);this.active={key,revision:r.revision,knowledge,bounds:terrain.bounds,renderer,terrain};this.lastGPU=null;this.streamEvent('install',{requestId:r.id,key,region:terrain.bounds,detail:r.detail,contourDetail:r.contourDetail,uploadMs:renderer.uploadMs,installMs:performance.now()-started,bytes:terrain.stats.bytes});return true;};
+  if(!usable(this.active)){const hit=findCoveringTerrain(this.cache,r);if(hit){install(hit.terrain,hit.key,r);this.streamEvent('covering-cache-hit',{requestId:r.id,key:hit.key});}}
+  if(!this.pending&&!this.error){
+   const job=chooseStreamJob(r,this.active,this.streamPrevious,{world:[W,H],quantum,margin,identity,cacheLimit:this.cache.limit});
+   if(job){const key=regionKey(job),cached=this.cache.items.get(key)?.value;
+    if(cached){if(!usable(this.active)&&eligibleTerrain(job,cached,r))install(cached,key,job);}
+    else{
+     const epoch=this.epoch,task={job,cancelled:false,streaming:true,streamId:++this.streamJobSeq},started=performance.now();this.pending=task;this.inFlight++;this.maxInFlight=Math.max(this.maxInFlight,this.inFlight);this.streamEvent('start',{jobId:task.streamId,requestId:r.id,key,bounds:job.bounds,detail:job.detail,contourDetail:job.contourDetail,reason:job.reason});
+     const check=()=>{if(task.cancelled||epoch!==this.epoch||!samePreparationKnowledge(job,this.requests.current))throw new DOMException('Superseded knowledge','AbortError');};
+     task.promise=(async()=>{const terrain=await prepareGeographicCandidate(s,job.view,{bounds:job.bounds,detail:job.detail,contourDetail:job.contourDetail,vertical,polish:true,surfaceScale,identity,check});check();const current=this.requests.current,eligible=eligibleTerrain(job,terrain,current);this.cache.put(key,terrain,terrain.stats.bytes);this.lastPrepMs=performance.now()-started;this.streamEvent('prepared',{jobId:task.streamId,key,eligible,retained:this.cache.items.has(key),region:terrain.bounds,detail:terrain.detail,ms:this.lastPrepMs,stats:{sourceMs:terrain.stats.sourceMs,sampleMs:terrain.stats.sampleMs,contourMs:terrain.stats.contourMs,ribbonMs:terrain.stats.ribbonMs,bakeMs:terrain.stats.bakeMs,meshMs:terrain.stats.meshMs,tileHits:terrain.stats.tileHits,tileMisses:terrain.stats.tileMisses,contourHits:terrain.stats.contourHits,contourMisses:terrain.stats.contourMisses,bytes:terrain.stats.bytes,peakSourceBytes:terrain.stats.peakSourceBytes}});if(eligible&&!this.cache.items.has(key)){// A demanded oversize region may be drawn, but never retained in the bounded cache.
+       this.streamReady={job,key,terrain,epoch};
+      }this.needsRedraw=true;
+     })().catch(e=>{if(e?.name==='AbortError'){this.requests.stale++;this.streamEvent('aborted',{jobId:task.streamId,ms:performance.now()-started});return;}if(this.pending===task&&epoch===this.epoch){this.error=String(e.message||e);this.status='error';this.streamEvent('error',{jobId:task.streamId,error:this.error});}}).finally(()=>{this.inFlight--;if(this.pending===task)this.pending=null;this.needsRedraw=true;});
+    }
+   }
+  }
+  if(this.streamReady){const ready=this.streamReady;this.streamReady=null;if(ready.epoch===this.epoch&&!usable(this.active))install(ready.terrain,ready.key,ready.job);}
+  this.streamPrevious={x:view.x,y:view.y,s:view.s};
+ }else{
+ this.streamReady=null;
  if(this.pending&&!this.requests.accepts(this.pending.job,this.pending.job.bounds))this.cancelPending();
  if(!usable(this.active)&&!this.pending&&!this.error){
  const epoch=this.epoch,key=regionKey(r),job=r,task={job,cancelled:false};let cached=this.cache.get(key),cacheKey=key,region=bounds;
@@ -61,7 +89,8 @@ export class AtlasCampaignSurface{
  const terrain=cached??await prepareGeographicCandidate(s,view,opts);check();if(!cached)this.cache.put(key,terrain,terrain.stats.bytes);install(terrain,cacheKey,revision);this.lastPrepMs=performance.now()-started;
  })().catch(e=>{if(e?.name==='AbortError'){this.requests.stale++;return;}if(this.pending===task&&epoch===this.epoch){this.error=String(e.message||e);this.status='error';}}).finally(()=>{this.inFlight--;if(this.pending===task)this.pending=null;});
  }
- const d=this.host.dataset;atlas.reviewPending=!!this.pending||(!usable(this.active)&&!this.error);d.atlasSurface=this.error?'error':'loading';d.atlasCacheBytes=String(this.cache.bytes);d.atlasPrepMs=String(this.lastPrepMs??0);d.atlasCacheHits=String(this.cache.hits);d.atlasCacheEvictions=String(this.cache.evictions);d.atlasCancelled=String(this.cancelled);d.atlasStale=String(this.requests.stale);d.atlasProgramReuse=String(this.reusedGPU);d.atlasInFlight=String(this.inFlight);d.atlasMaxInFlight=String(this.maxInFlight);d.atlasPendingId=this.pending?String(this.pending.job.id):'';if(this.error)d.atlasError=this.error;else delete d.atlasError;
+ }
+ const d=this.host.dataset;atlas.reviewPending=(!streaming&&!!this.pending)||(!usable(this.active)&&!this.error);d.atlasSurface=this.error?'error':'loading';d.atlasCacheBytes=String(this.cache.bytes);d.atlasPrepMs=String(this.lastPrepMs??0);d.atlasCacheHits=String(this.cache.hits);d.atlasCacheEvictions=String(this.cache.evictions);d.atlasCancelled=String(this.cancelled);d.atlasStale=String(this.requests.stale);d.atlasProgramReuse=String(this.reusedGPU);d.atlasInFlight=String(this.inFlight);d.atlasMaxInFlight=String(this.maxInFlight);d.atlasPendingId=this.pending?String(this.pending.job.id):'';if(this.error)d.atlasError=this.error;else delete d.atlasError;
  if(!usable(this.active)&&!preview(this.active)){this.hideDirect();cam.projection=null;return false;}
  if(this.canvas.width!==pw||this.canvas.height!==ph){this.canvas.width=pw;this.canvas.height=ph;}
  const active=this.active,gpuKey=JSON.stringify([view.x,view.y,view.s,dpr,pw,ph,tilt,!!atlas.fast,viewport]),probe=!!atlas.cameraGpuProbe,reuse=!probe&&this.preserveDrawingBuffer&&identity&&this.lastGPU?.renderer===active.renderer&&this.lastGPU.key===gpuKey;let drawMs=0;if(reuse)this.gpuReuses++;else{const gl=active.renderer.gl,ext=probe?gl.getExtension('EXT_disjoint_timer_query_webgl2'):null,query=ext?gl.createQuery():null;if(query)gl.beginQuery(ext.TIME_ELAPSED_EXT,query);try{drawMs=this.composition==='resident'?active.renderer.drawResident({...view,s:view.s*dpr},{tilt,motion:!!atlas.fast,allow:full&&usable(active),range:{minZ,maxZ}}):active.renderer.draw({...view,s:view.s*dpr},{tilt,motion:!!atlas.fast});}finally{if(query)gl.endQuery(ext.TIME_ELAPSED_EXT);}if(probe){atlas.cameraGpuProbe=false;this.gpuProbe={gl,ext,query,submitMs:drawMs,device:active.renderer.device,attributes:gl.getContextAttributes(),waitMs:null};}this.gpuDraws++;this.lastGPU={renderer:active.renderer,key:gpuKey};}const lod=active.renderer.lastDraw.lod;d.atlasGpuDraws=String(this.gpuDraws);d.atlasGpuReuses=String(this.gpuReuses);d.atlasFramebufferViewport=JSON.stringify(active.renderer.lastDraw.viewport);

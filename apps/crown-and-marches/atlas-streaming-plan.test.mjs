@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {samePreparationKnowledge,eligibleTerrain,chooseStreamJob,streamBounds} from './atlas-streaming-plan.mjs';
+const q={intent:1,knowledge:'k',revision:'k:8:8',detail:8,contourDetail:8,visible:[16,16,32,32],bounds:[8,8,40,40],view:{x:24,y:24,s:12}},terrain={bounds:[8,8,40,40],detail:8,stats:{contours:{detail:8}}},active={revision:q.revision,bounds:terrain.bounds},opts={world:[192,128],quantum:8,margin:5,identity:true};
+test('moving request does not invalidate immutable preparation, but cannot publish uncovered terrain',()=>{const moved={...q,visible:[40,16,56,32]};assert.ok(samePreparationKnowledge(q,moved));assert.ok(!eligibleTerrain(q,terrain,moved));assert.ok(!samePreparationKnowledge(q,{...q,intent:2}));assert.ok(!samePreparationKnowledge(q,{...q,knowledge:'fog'}));assert.ok(!eligibleTerrain(q,terrain,{...q,revision:'k:8:16',contourDetail:16}));assert.ok(eligibleTerrain(q,terrain,q));});
+test('directional reserve is bounded and current projection unchanged',()=>{const job=chooseStreamJob(q,null,{x:23,y:24,s:12},opts);assert.ok(job.bounds[2]>=q.bounds[2]);assert.equal(job.view,q.view);assert.ok(job.bounds[0]>=0&&job.bounds[2]<=192);assert.deepEqual(streamBounds([0,0,5,5],[192,128],8,5,-30,-30),[0,0,16,16]);});
+test('predicts exact adjacent scale, not an approximate receipt',()=>{const current={...q,view:{...q.view,s:57}},job=chooseStreamJob(current,active,{x:24,y:24,s:55},opts);assert.equal(job.reason,'scale-prefetch');assert.equal(job.contourDetail,16);assert.equal(job.view,current.view);assert.ok(!eligibleTerrain(job,terrain,current));});
+test('idle covered region does not prepare repeatedly',()=>assert.equal(chooseStreamJob(q,active,q.view,opts),null));

@@ -28,7 +28,8 @@
         "atlas-resident-pool.test.mjs",
         "atlas-resident-math.test.mjs",
         "atlas-qa-admission.test.mjs",
-        "atlas-presentation-evidence.test.mjs"
+        "atlas-presentation-evidence.test.mjs",
+        "atlas-streaming-plan.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -453,7 +454,11 @@
         4,
         5,
         6,
-        7
+        7,
+        8,
+        9,
+        10,
+        11
       ],
       "tier": "smoke"
     }

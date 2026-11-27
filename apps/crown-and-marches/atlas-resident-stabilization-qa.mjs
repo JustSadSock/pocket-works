@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 import {aggregatePresentation} from './atlas-presentation-evidence.mjs';
 import {loadLibrary} from './geographic-dem-library.mjs';
 import {packExemplars} from './genesis-natural.mjs';
-export async function run(engine,selected=null){
- const root=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/atlas-resident-stabilization',output=join(root,'resident-'+engine+(selected?'-'+selected.join('-'):''));mkdirSync(output,{recursive:true});
+export async function run(engine,selected=null,{short=false,streaming='control'}={}){
+ const root=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/atlas-resident-stabilization',output=join(root,'resident-'+engine+(selected?'-'+selected.join('-'):'')+(short?'-short-'+streaming:''));mkdirSync(output,{recursive:true});
  const report=[],save=()=>writeFileSync(join(output,'stabilization.json'),JSON.stringify(report,null,2)),port=engine==='chromium'?4217:4218,url='http://127.0.0.1:'+port+'/apps/crown-and-marches/?atlas-review=1';
  const server=spawn(process.execPath,['scripts/serve-site.mjs'],{env:{...process.env,PORT:String(port),POCKET_WORKS_SITE_ROOT:process.env.PW_QA_SITE_ROOT||process.cwd()},stdio:'ignore'});
  let browser;
@@ -20,17 +20,18 @@ export async function run(engine,selected=null){
   const configs=[{policy:'allocate',pad:96,maxEntries:6},{policy:'recycle',pad:96,maxEntries:6},{policy:'prewarm',pad:96,maxEntries:6},{policy:'recycle',pad:64,maxEntries:6},{policy:'recycle',pad:128,maxEntries:6},{policy:'recycle',pad:96,maxEntries:4},{policy:'recycle',pad:96,maxEntries:6,eviction:'phase-diverse'}];
   const chosen=configs.map((config,index)=>({config,index})).filter(x=>!selected||selected.includes(x.index));if(!chosen.length||selected&&chosen.length!==selected.length)throw Error('Invalid resident group');
   for(const {index,config} of chosen){
-   const rec={engine,index,config,candidate:'organic',frames:[],segments:[],errors:[],qualificationFailures:[],evidenceComplete:false,qualified:false,passed:false};report.push(rec);save();
+   const rec={engine,index,config,short,streaming,candidate:'organic',frames:[],segments:[],errors:[],qualificationFailures:[],evidenceComplete:false,qualified:false,passed:false};report.push(rec);save();
    const context=await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'}),page=await context.newPage();page.on('pageerror',e=>{rec.errors.push(String(e.stack||e));save();});
    try{
     await page.goto(url);await page.locator('[data-act="atlaslab"]').click();await page.locator('#atlasseed').fill('atlas-mountain-173');await page.locator('#atlasshape').selectOption('continents');await page.locator('#atlasdem').setInputFiles(payload);await page.locator('[data-act="atlasstart"]').click();await page.waitForFunction(()=>document.querySelector('.app-shell')?.dataset.campaign==='atlas'&&document.querySelector('#atlas')?.dataset.atlasSurface==='ready',null,{timeout:90000});
     await page.evaluate(()=>window.__atlasReview.composition('resident',true));
     const scene=await page.evaluate(()=>window.__atlasReview.scene('capital',{zoom:12,full:true,tilt:true,surfaceScale:true,identity:true,human:true,urban:true,culture:'organic',keepCache:false}));
     await page.waitForFunction(p=>{const d=document.querySelector('#atlas')?.dataset;return d?.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&Number(d.atlasIntent)===p.intent;},scene,{timeout:90000});
-    rec.origin=await page.evaluate(()=>window.__atlasReview.cameraPresentation());rec.initialPolicy=await page.evaluate(c=>window.__atlasReview.residentPolicy(c),config);save();
+    rec.origin=await page.evaluate(()=>window.__atlasReview.cameraPresentation());rec.initialPolicy=await page.evaluate(c=>window.__atlasReview.residentPolicy(c),config);if(short)rec.initialStreaming=await page.evaluate(p=>window.__atlasReview.streamingPolicy(p),streaming);save();
     await page.screenshot({path:join(output,index+'-start.png')});
     const segments=['straight','diagonal','seeded-turns','return','region-crossing','moving-zoom'];
     for(const [segment,label] of segments.entries()){
+     if(short&&segment<4)continue;
      const part=await page.evaluate(async({segment,label,origin})=>{
       const r=window.__atlasReview,c=document.querySelector('#atlas'),raf=()=>new Promise(ok=>requestAnimationFrame(()=>ok(performance.now()))),frames=[];
       const restore=r.restoreCamera(origin.camera);const settle=async q=>{const start=performance.now();while(performance.now()-start<90000){await raf();try{const d=c.dataset,p=JSON.parse(d.atlasReceipt),req=JSON.parse(d.atlasRequest);if(d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&p.id===req.id&&p.key===req.key&&p.revision===req.revision&&p.intent===q.intent&&Math.abs(p.view.x-q.expectedView.x)<1e-7&&Math.abs(p.view.y-q.expectedView.y)<1e-7&&Math.abs(p.view.s-q.expectedView.s)<1e-9)return;}catch{}}throw Error('Segment restore timeout');};await settle(restore);
@@ -52,7 +53,7 @@ export async function run(engine,selected=null){
       // without counting the drain as additional input or fake delivered frames.
       await raf();await raf();await raf();const journal=r.presentationEvidence('end');
       return {label,frames,elapsed,journal};
-     },{segment,label,origin:rec.origin});const verified=aggregatePresentation(part.journal,part.frames,part.elapsed);rec.segments.push({...part,...verified,frames:undefined});rec.frames.push(...part.frames.map(f=>({...f,segment:label})));rec.errors.push(...verified.errors.map(e=>label+': '+e));save();await page.screenshot({path:join(output,index+'-'+label+'.png')});
+     },{segment,label,origin:rec.origin});const verified=aggregatePresentation(part.journal,part.frames,part.elapsed);rec.segments.push({...part,...verified,frames:undefined});rec.frames.push(...part.frames.map(f=>({...f,segment:label})));rec.errors.push(...verified.errors.map(e=>label+': '+e));if(short)rec.streamingAfterSegment=await page.evaluate(()=>window.__atlasReview.streamingReport());save();await page.screenshot({path:join(output,index+'-'+label+'.png')});
     }
     const poses=new Set(rec.frames.map(f=>JSON.stringify([f.pose.x,f.pose.y,f.pose.s]))),instances=new Map(),regions=new Set();
     let exact=0,hits=0,builds=0,fallbacks=0,maxBytes=0,spatialShifts=0,delivered=0;
@@ -61,13 +62,13 @@ export async function run(engine,selected=null){
     const intervals=rec.segments.flatMap(s=>s.presentationGaps).sort((a,b)=>a-b),elapsed=rec.segments.reduce((n,s)=>n+s.elapsedMs,0);
     rec.summary={uniquePoses:poses.size,uniqueRatio:poses.size/rec.frames.length,regions:regions.size,currentFrames:delivered,frameUpdates:rec.frames.filter(f=>f.advanced).length,missedInputs:rec.frames.length-delivered,presentationFps:1000*delivered/elapsed,presentationP95:intervals.length?intervals[Math.ceil(.95*intervals.length)-1]:null,spatialHits:hits,nonzeroSpatialShifts:spatialShifts,builds,fallbacks,exactPoseHits:exact,maxBytes,totals};save();
     const restored=await page.evaluate(o=>window.__atlasReview.restoreCamera(o.camera),rec.origin);await page.waitForFunction(q=>{const d=document.querySelector('#atlas')?.dataset;try{const p=JSON.parse(d.atlasReceipt);return d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&p.intent===q.intent&&Math.abs(p.view.x-q.expectedView.x)<1e-7&&Math.abs(p.view.y-q.expectedView.y)<1e-7&&Math.abs(p.view.s-q.expectedView.s)<1e-9;}catch{return false;}},restored,{timeout:90000});
-    rec.finalSurface=await page.evaluate(()=>window.__atlasReview.surfaceInfo());rec.gpu=await page.evaluate(()=>window.__atlasReview.gpuProbe());save();const raster=await page.evaluate(()=>window.__atlasReview.residentRasterProbe());for(const [name,png] of Object.entries(raster.images))writeFileSync(join(output,index+'-'+name+'.png'),Buffer.from(png,'base64'));delete raster.images;rec.raster=raster;save();
+    rec.finalSurface=await page.evaluate(()=>window.__atlasReview.surfaceInfo());rec.gpu=await page.evaluate(()=>window.__atlasReview.gpuProbe());save();const raster=await page.evaluate(short=>window.__atlasReview.residentRasterProbe(short),short);for(const [name,png] of Object.entries(raster.images))writeFileSync(join(output,index+'-'+name+'.png'),Buffer.from(png,'base64'));delete raster.images;rec.raster=raster;save();
     // Research admission is about complete trustworthy evidence, not a fast control.
-    if(rec.frames.length!==300||rec.segments.length!==6||rec.frames.some(f=>!Number.isFinite(f.gapMs)||f.gapMs<=0)||rec.segments.some(s=>!Number.isFinite(s.fps)||s.p95!==null&&!Number.isFinite(s.p95)))rec.errors.push('incomplete or invalid motion evidence');
-    if(raster.rows.filter(r=>!r.experimental).length!==10||raster.rows.filter(r=>r.experimental).length!==5||raster.rows.some(r=>r.error||!Number.isInteger(r.count)||!Number.isFinite(r.max)))rec.errors.push('incomplete raster diagnostic evidence');
+    if(rec.frames.length!==(short?100:300)||rec.segments.length!==(short?2:6)||rec.frames.some(f=>!Number.isFinite(f.gapMs)||f.gapMs<=0)||rec.segments.some(s=>!Number.isFinite(s.fps)||s.p95!==null&&!Number.isFinite(s.p95)))rec.errors.push('incomplete or invalid motion evidence');
+    if(raster.rows.filter(r=>!r.experimental).length!==10||raster.rows.filter(r=>r.experimental).length!==(short?7:5)||raster.rows.some(r=>r.error||!Number.isInteger(r.count)||!Number.isFinite(r.max)))rec.errors.push('incomplete raster diagnostic evidence');
     if(!totals.allocations)rec.errors.push('no GPU allocations observed');
     if(rec.segments.some(s=>s.advanced!==50||s.fps<55||!Number.isFinite(s.p95)||s.p95>33.3))rec.qualificationFailures.push('long motion gate failed');
-    if(!spatialShifts||regions.size<2)rec.qualificationFailures.push('nonzero spatial crop or region crossing not demonstrated');
+    if(!spatialShifts||regions.size<2||rec.segments.find(s=>s.label==='region-crossing')?.regions.length<2)rec.qualificationFailures.push('nonzero spatial crop or region crossing not demonstrated');if(short){const revisions=new Set(rec.segments.find(s=>s.label==='moving-zoom')?.journal.events.filter(e=>e.kind==='opportunity').map(e=>e.receipt.revision));rec.scaleRevisions=[...revisions];if(revisions.size<2)rec.qualificationFailures.push('no confirmed scale revision transition');if(rec.streamingAfterSegment?.overflow)rec.errors.push('streaming telemetry overflow');}
     if(raster.rows.filter(r=>!r.experimental).some(r=>r.error||r.count!==0))rec.qualificationFailures.push('raster diagnostics differ from default framebuffer');
     if(config.policy==='recycle'&&!totals.recycles)rec.qualificationFailures.push('no actual evicted GPU allocation reuse');
     if(config.policy==='prewarm'&&!totals.poolTakes)rec.qualificationFailures.push('no preallocated GPU slot consumed');
