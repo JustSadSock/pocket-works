@@ -259,16 +259,16 @@ def render(dyn,hist,exp,out):
             a[start:start+length,0]+=y*env*gain*pan_l
             a[start:start+length,1]+=y*env*gain*pan_r
             receipts.append(dict(part=part,tick=e['tick'],midi=midi,source=source['id'],sourceSha256=source['sha256'],pitchRate=round(rate,6),approximateCrossfade=bool(connected),frames=length))
-        # Distinct early reflections create a shared stone chamber without masking attacks.
-        mono=a.mean(axis=1);ref=np.zeros_like(a)
-        taps=((.019,.115),(.031,.086),(.047,.064),(.067,.048),(.091,.035),(.127,.026),(.173,.018),(.229,.012))
-        for k,(delay,amount) in enumerate(taps):
-            q=round(delay*SR)
-            if q<N:
-                ref[q:,0]+=mono[:-q]*amount*(.72 if k%2 else 1)
-                ref[q:,1]+=mono[:-q]*amount*(1 if k%2 else .72)
-        a+=ref*wet
         groups[group]+=a
+    # Group-specific algorithmic stone-room reverb: early reflections plus a diffuse late field.
+    ROOM={'low-strings':(26,58,88,70,24,-9),'upper-strings':(38,48,100,100,28,-8),'brass':(32,48,95,88,26,-9),'woodwinds':(34,58,90,100,22,-10),'plucked-organ':(40,55,100,100,26,-10),'percussion':(18,72,75,55,12,-13)}
+    for group in GROUPS:
+        raw=groups[group].astype('<f4').tobytes()
+        args=['sox','-R','-t','raw','-e','floating-point','-b','32','-L','-c','2','-r',str(SR),'-','-t','raw','-e','floating-point','-b','32','-L','-c','2','-r',str(SR),'-','reverb',*map(str,ROOM[group])]
+        wet_raw=subprocess.check_output(args,input=raw)
+        wet=np.frombuffer(wet_raw,'<f4')
+        if wet.size!=N*2 or not np.isfinite(wet).all():raise ValueError('room reverb render invalid '+group)
+        groups[group]=wet.reshape(N,2).copy()
     mix=sum(groups.values());peak=max(float(np.max(abs(mix))),*(float(np.max(abs(v))) for v in groups.values()));gain=min(1.,.90/max(peak,1e-9))
     quantized={k:np.rint(v*gain*32767).astype(np.int32) for k,v in groups.items()}
     master32=sum(quantized.values());pcm_error=int(np.max(abs(sum(quantized.values())-master32)))
@@ -287,7 +287,7 @@ def render(dyn,hist,exp,out):
         section_metrics.append(dict(id=sec['id'],meter=sec['meter'],rmsDb=db(np.sqrt(np.mean(x*x))),events=len(es),activeParts=sorted({e['part'] for e in es})))
     mono=master.astype(np.float64).mean(axis=1);stereo=master.astype(np.float64)
     width=float(np.sqrt(np.mean((stereo[:,0]-stereo[:,1])**2))/max(np.sqrt(np.mean(mono**2)),1e-9))
-    report=dict(approval='research-only',score=s,sourceCount=len({r['source'] for r in receipts}),sourceEntries=len(src),eventCount=len(s['events']),receipts=receipts,approximateCrossfades=crossfades,recordedIntervalCoverage=0,sections=section_metrics,stereoWidth=width,monoPeak=float(np.max(abs(mono))/32768),pcmReconstructionError=pcm_error,commonGain=gain,metrics=metrics)
+    report=dict(approval='research-only',roomProcessor='SoX algorithmic room reverb',roomSettings=ROOM,score=s,sourceCount=len({r['source'] for r in receipts}),sourceEntries=len(src),eventCount=len(s['events']),receipts=receipts,approximateCrossfades=crossfades,recordedIntervalCoverage=0,sections=section_metrics,stereoWidth=width,monoPeak=float(np.max(abs(mono))/32768),pcmReconstructionError=pcm_error,commonGain=gain,metrics=metrics)
     (out/'score.json').write_text(json.dumps(s,indent=2)+'\n');(out/'metrics.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k in ('sourceCount','sourceEntries','eventCount','approximateCrossfades','recordedIntervalCoverage','stereoWidth','monoPeak','pcmReconstructionError','sections','metrics')},indent=2))
 def self_test():
