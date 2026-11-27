@@ -6,6 +6,7 @@ import {animation,poseFrom,pose,deform,quat,qmul,rotate} from './core.mjs';
 import {normals,weights} from './hybrid-human.mjs';
 import {raster,commonBounds} from './material-study.mjs';
 import {glb} from './glb.mjs';
+import {continuousStudy} from './motion-continuous-v15.mjs';
 const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(out,n))),write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2));
 const m=read('morph/v9-artisan.model.json'),ref=read('v10-reference-trajectory.json'),native=read('v11-native-mesh-frames.json'),N=ref.frames.length-1,dt=ref.durationSeconds/N;
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,k)=>s+v*b[k],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/(Math.hypot(...a)||1)),inv=q=>[-q[0],-q[1],-q[2],q[3]],clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(...sub(a,b)),I=[0,0,0,1],mix=(a,b,t)=>add(mul(a,1-t),mul(b,t));
@@ -147,6 +148,9 @@ for(let pass=0;pass<2;pass++){
   }
  }
 }
+if(process.env.CHARACTER_V15_MOTION==='1'){
+ continuousStudy({m,ref,native,baseline:bilateral.B,author:variants.A,vertical:vertical.C,sourceSupport:support,sourceMarks,actual,solveLeg,relaxed,groundY,stride:strideA,first,scale,skin:read('morph/makehuman-base.json'),out});
+} else {
 const v14Reports={},v14Rendered={};
 for(const [name,v] of Object.entries(bilateral)){
  const candidate=structuredClone(m);candidate.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};candidate.spec.walkDuration=ref.durationSeconds;candidate.spec.actions=['idle','walk'];candidate.spec.motionRevision='v9';
@@ -192,3 +196,5 @@ json('v13-vertical-report.json',{groundY,sourceContact:contact,support,rootShift
 console.log(JSON.stringify({vertical:Object.fromEntries(Object.entries(verticalReports).map(([k,v])=>[k,{horizontal:v.maxDriftMm,vertical:v.maxVerticalErrorMm,penetration:v.maxGroundPenetrationMm,activeSamples:v.activeSamples,gate:v.gate}]))}));
 json('v12-motion-report.json',{source:ref.source,duration:ref.durationSeconds,sourceTravel:travel,legLengths,scale,strideA,strideB,strideRatio:ratio,staticRows,marks,sourceContact:contact,variants:reports,adjustments,qualification:{contactGate:reports.C.activeSamples>0&&reports.C.maxDriftMm<=10,artApproved:false},limits:['Full bind-relative world orientation plus segment alignment, not a native MakeHuman anatomical-axis calibration.','Source heel/toe use actual original skinned vertices, not force-plate contacts; contact thresholds are 45 mm / 0.28 m/s.','Target heel/toe are sampled boot landmarks.','C uses A as provisional fidelity-first base, median horizontal anchors per measured contact interval and preserves foot orientation/vertical rocker. Correction capped at 45 mm; no art approval.','Original preview scaled to target size; B intentionally has a shorter path. Native source GLB unchanged.']});
 console.log(JSON.stringify({strideA,strideB,variants:Object.fromEntries(Object.entries(reports).map(([k,v])=>[k,{maxDriftMm:v.maxDriftMm,activeSamples:v.activeSamples,maxVerticalErrorMm:v.maxVerticalErrorMm}]))}));
+
+}
