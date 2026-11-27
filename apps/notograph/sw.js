@@ -9,7 +9,7 @@ const APP_SHELL = [
   './index.html',
   './app.config.json',
   './styles.css',
-  './app.js', './core.mjs', './worker.mjs', './advanced.mjs',
+  './app.js', './core.mjs', './worker.mjs', './advanced.mjs', './neural.mjs',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

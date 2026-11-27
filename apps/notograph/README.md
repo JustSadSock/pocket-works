@@ -15,3 +15,6 @@ python -m unittest discover -s apps/notograph/lab -p 'test_*.py'
 ```
 
 Sound Forge JSON exports manifest v2 with independent note lanes, explicit MIDI channels (excluding percussion), exact quantized start and duration, and default program choices by stem category (not identified instruments). It is an offline interchange format for PR #1392, not a browser runtime or an admitted recorded bank. Source split uses the real model outputs; the browser cannot reconstruct notes for drums. Limits 180 seconds, 15 notation lanes and 12,000 notes; invalid inputs fail explicitly.
+
+### Experimental browser Basic Pitch
+The optional neural mode explicitly asks before loading pinned package 1.0.1 from esm.sh and model files from jsDelivr. The original audio is independently resampled to mono 22050 Hz and transferred to a cancellable module worker. There is no audio upload in Notograph code. Third-party JS and model downloads remain a supply-chain risk; vendor and verify the assets before stable release. The browser neural mode does not separate sources. Model inference still needs real Chromium/WebKit acceptance; a failure is surfaced, never silently replaced with spectral estimates.
