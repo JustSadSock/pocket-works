@@ -18,7 +18,7 @@ export function approvedTask(app){
  const suite=approved[app];return {key:app+'-'+suite,app,suite,kind:'node-test',seed:null,install:false};
 }
 export function scopeRoots(app){
- if(app!=='banners-of-war')approvedTask(app);
+ if(!['banners-of-war','crown-and-marches'].includes(app))approvedTask(app);
  return ['apps/'+app,'shared','scripts','package.json','package-lock.json'];
 }
 export function scopedTree(repo,commit,app){

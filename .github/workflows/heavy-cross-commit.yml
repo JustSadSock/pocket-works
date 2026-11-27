@@ -1,0 +1,147 @@
+name: Heavy Cross Commit Qualification
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci-overhaul/heavy-cross-commit*'
+      - '.github/workflows/heavy-cross-commit.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/heavy-cross-commit.test.mjs scripts/ci-overhaul/full-simulation-repeatability.test.mjs
+  execute:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/heavy-cross-commit-qualification'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [banners, crown]
+        side: [prior, current]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch immutable app snapshots
+        run: |
+          git fetch --no-tags origin 11c8e8411b20e8465cafcc0bad51b1f0a6cff2d1 e44862dac566e9ef7c5537f0de26e58df8cebb35
+      - name: Run complete original task in independent offline environment
+        env:
+          KIND: ${{ matrix.kind }}
+          SIDE: ${{ matrix.side }}
+        run: |
+          set -euo pipefail
+          tool="$PWD/scripts/ci-overhaul/universal-cross-commit.mjs"
+          root="$RUNNER_TEMP/heavy"; src="$RUNNER_TEMP/heavy-src"; audit="$RUNNER_TEMP/heavy-measure"
+          mkdir "$root" "$src" "$root/output" "$audit"
+          # Measurement belongs to the controller, not to the historical game checkout.
+          git archive HEAD scripts/ci-overhaul/verified-mounted-inputs.mjs scripts/ci-overhaul/verified-results.mjs | tar -xf - -C "$audit"
+          start_ms="$(date +%s%3N)"
+          node scripts/ci-overhaul/heavy-cross-commit.mjs identity "$KIND" "$SIDE" > "$root/identity.json"
+          sha="$(jq -er .sha "$root/identity.json")"
+          task="$(jq -c .task "$root/identity.json")"
+          app="$(jq -er .app <<< "$task")"
+          key="$(jq -er .key <<< "$task")"
+          git archive "$sha" "apps/$app" shared scripts package.json package-lock.json | tar -xf - -C "$src"
+          node "$tool" normalize "$PWD" "$sha" "$app" "$src" > "$root/before.json"
+          image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
+          docker pull "$image"
+          opts=(--rm --network none --hostname pw-shadow --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp --mount "type=bind,src=$src,dst=/work,readonly" -w /work)
+          config="$(docker image inspect --format '{{.Id}}' "$image")"
+          runtime="$(docker run "${opts[@]}" "$image" node -p 'process.version')"
+          arch="$(docker run "${opts[@]}" "$image" node -p 'process.arch')"
+          toolchain="$(docker run "${opts[@]}" "$image" sha256sum /usr/local/bin/node | cut -d' ' -f1)"
+          kernel="$(uname -srvm | sha256sum | cut -d' ' -f1)"
+          cpu="$(awk -F: '/^(vendor_id|cpu family|model[[:space:]]|model name|stepping|microcode|flags)[[:space:]]*:/{print}' /proc/cpuinfo | sort -u | sha256sum | cut -d' ' -f1)"
+          jq -n --arg image "$image" --arg config "$config" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid}' > "$root/runtime.json"
+          docker run "${opts[@]}" --mount "type=bind,src=$audit,dst=/audit,readonly" "$image" node /audit/scripts/ci-overhaul/verified-mounted-inputs.mjs measure /work > "$root/inside.json"
+          jq -S . "$root/before.json" > "$RUNNER_TEMP/before-sorted.json"
+          jq -S . "$root/inside.json" | cmp - "$RUNNER_TEMP/before-sorted.json"
+          if [[ "$KIND" == banners ]]; then
+            docker run "${opts[@]}" "$image" node --input-type=module -e 'import {numberCases} from "./apps/banners-of-war/numbers-lab.mjs";import {finalCases} from "./apps/banners-of-war/final-integration-lab.mjs";import {antiquityCases} from "./apps/banners-of-war/antiquity-lab.mjs";import {originalCases,extraCases,historicalCases} from "./apps/banners-of-war/completion-lab.mjs";console.log(JSON.stringify([...numberCases().map(()=>"numerical-superiority"),...originalCases().map(()=>"original"),...extraCases().map(()=>"independent"),...historicalCases().map(()=>"historical"),...antiquityCases().map(()=>"antiquity"),...finalCases().map(()=>"final-integration"),...[26,40,60,100,150].map(()=>"performance")].filter((_,i)=>i%8===0)));' > "$root/expected.json"
+          fi
+          prepared_ms="$(date +%s%3N)"
+          mkdir "$src/qa-artifacts"; touch -d @946684800 "$src"
+          # No controller mount is visible during original game execution.
+          docker run "${opts[@]}" --mount "type=bind,src=$root/output,dst=/work/qa-artifacts" -e "PW_QA_TASK=$task" "$image" node scripts/universal-qa/run.mjs
+          executed_ms="$(date +%s%3N)"
+          rmdir "$src/qa-artifacts"; touch -d @946684800 "$src"
+          node "$tool" measure "$src" > "$root/after.json"
+          cmp "$root/before.json" "$root/after.json"
+          jq -e '.success==true and .exitCode==0' "$root/output/$key/result.json"
+          end_ms="$(date +%s%3N)"
+          jq -n --argjson preparationMs "$((prepared_ms-start_ms))" --argjson executionWallMs "$((executed_ms-prepared_ms))" --argjson postVerificationMs "$((end_ms-executed_ms))" '{preparationMs:$preparationMs,executionWallMs:$executionWallMs,postVerificationMs:$postVerificationMs}' > "$root/timing.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heavy-${{ github.run_attempt }}-${{ matrix.kind }}-${{ matrix.side }}
+          path: ${{ runner.temp }}/heavy/
+          if-no-files-found: error
+          retention-days: 7
+  independent_gate:
+    needs: execute
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: git fetch --no-tags origin 11c8e8411b20e8465cafcc0bad51b1f0a6cff2d1 e44862dac566e9ef7c5537f0de26e58df8cebb35
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: heavy-${{ github.run_attempt }}-*
+          path: evidence
+      - name: Independently reconstruct original simulation projections and scope
+        run: |
+          set -euo pipefail
+          node scripts/ci-overhaul/heavy-cross-commit.mjs gate all all evidence | tee gate.json
+          jq -e '.success and .passed==4 and .productionAuthorization==false and .allowResultReuse==false' gate.json
+      - name: Missing and stale attempt control
+        run: |
+          mv "evidence/heavy-$GITHUB_RUN_ATTEMPT-crown-current" "$RUNNER_TEMP/stale"
+          if node scripts/ci-overhaul/heavy-cross-commit.mjs gate all all evidence; then exit 1; fi
+          mv "$RUNNER_TEMP/stale" "evidence/heavy-$GITHUB_RUN_ATTEMPT-crown-current"
+          jq '.attempt += 1' "evidence/heavy-$GITHUB_RUN_ATTEMPT-crown-current/identity.json" > "$RUNNER_TEMP/stale.json"
+          mv "$RUNNER_TEMP/stale.json" "evidence/heavy-$GITHUB_RUN_ATTEMPT-crown-current/identity.json"
+          if node scripts/ci-overhaul/heavy-cross-commit.mjs gate all all evidence; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heavy-independent-gate-${{ github.run_attempt }}
+          path: gate.json
+          if-no-files-found: error
+  required_gate:
+    if: always()
+    needs: [contract, execute, independent_gate]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          CONTRACT: ${{ needs.contract.result }}
+          EXECUTE: ${{ needs.execute.result }}
+          GATE: ${{ needs.independent_gate.result }}
+        run: |
+          set -euo pipefail
+          test "$CONTRACT" = success
+          if jq -e '.pull_request.head.repo.full_name == .repository.full_name and .pull_request.head.ref == "infra/heavy-cross-commit-qualification"' "$GITHUB_EVENT_PATH"; then
+            test "$EXECUTE" = success
+            test "$GATE" = success
+          else
+            test "$EXECUTE" = skipped
+            test "$GATE" = skipped
+          fi
