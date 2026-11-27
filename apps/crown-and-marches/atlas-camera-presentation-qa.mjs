@@ -11,7 +11,7 @@ const report=[];
 const save=()=>writeFileSync(join(output,'camera-presentation.json'),JSON.stringify(report,null,2));
 const file=s=>s.replace(/[^A-Za-z0-9._-]/g,'-');
 const candidates=['cultural','historical','organic'];
-const copyImages=new Map();
+const copyImages=new Map(),directImages=new Map();
 const imageDiff=async(page,a,b)=>page.evaluate(async([a,b])=>{const decode=async v=>createImageBitmap(await (await fetch('data:image/png;base64,'+v)).blob()),[x,y]=await Promise.all([decode(a),decode(b)]);if(x.width!==y.width||x.height!==y.height)throw Error('Browser screenshot dimensions differ');const c=document.createElement('canvas');c.width=x.width;c.height=x.height;const q=c.getContext('2d',{willReadFrequently:true});q.drawImage(x,0,0);const A=q.getImageData(0,0,c.width,c.height);q.clearRect(0,0,c.width,c.height);q.drawImage(y,0,0);const B=q.getImageData(0,0,c.width,c.height),mask=q.createImageData(c.width,c.height);let count=0,max=0;for(let i=0;i<A.data.length;i+=4){let d=0;for(let j=0;j<4;j++)d=Math.max(d,Math.abs(A.data[i+j]-B.data[i+j]));if(d){count++;max=Math.max(max,d);mask.data.set([255,Math.min(255,d*8),0,255],i);}}q.putImageData(mask,0,0);return {count,max,width:c.width,height:c.height,png:c.toDataURL('image/png').split(',')[1]};},[a.toString('base64'),b.toString('base64')]);
 const expectedFramebufferViewport=v=>{const dpr=v.pixelRatio??1,cw=Math.round(v.canvasWidth*dpr),ch=Math.round(v.canvasHeight*dpr),left=Math.round(v.left*dpr),right=Math.round(v.rightEdge*dpr),top=Math.round(v.top*dpr),bottom=Math.round(v.bottomEdge*dpr);return {x:left,y:ch-bottom,width:right-left,height:bottom-top};};
 const geometryDiagnostics=(meta,dataset)=>{
@@ -22,7 +22,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
  let browser=null;
  try{
   browser=await type.launch(engine==='chromium'?{args:['--no-sandbox']}:{});
-  for(const candidate of candidates)for(const composition of ['copy','direct']){
+  for(const candidate of candidates)for(const composition of ['copy','direct','resident']){
    const context=await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'});
    const page=await context.newPage(),pageErrors=[];
    page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));
@@ -42,10 +42,10 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
     const iv=initial.viewport,ix=(iv.centerX-initial.camera.ox)/initial.camera.s,iy=(iv.centerY-initial.camera.oy)/initial.camera.s;
     const initialValid=initial.receipt.id===initial.request.id&&initial.receipt.intent===initial.request.intent&&initial.receipt.key===initial.request.key&&initial.receipt.revision===initial.request.revision&&JSON.stringify(initial.receipt.view)===JSON.stringify(initial.request.view)&&initial.receipt.region[0]<=initial.request.visible[0]&&initial.receipt.region[1]<=initial.request.visible[1]&&initial.receipt.region[2]>=initial.request.visible[2]&&initial.receipt.region[3]>=initial.request.visible[3]&&Math.abs(initial.receipt.view.x-ix)<1e-7&&Math.abs(initial.receipt.view.y-iy)<1e-7&&Math.abs(initial.receipt.view.s-initial.camera.s)<1e-9&&initialGeometry.valid&&initial.request.view.coordinateSpace==='campaign-world'&&initial.request.view.viewport.coordinateSpace==='canvas-css'&&initial.receipt.coordinateSpace==='campaign-world'&&initial.receipt.viewport.coordinateSpace==='canvas-css';
     result.initial={scene,meta:initial,dataset:initialDataset,geometry:initialGeometry,expectedView:{x:ix,y:iy,s:initial.camera.s},valid:initialValid};if(!initialValid)result.errors.push('initial camera receipt or viewport geometry mismatch');
-    result.surface=await page.evaluate(()=>window.__atlasReview.surfaceInfo());if(result.surface.active!==composition)result.errors.push('requested composition not active');if(composition==='direct'&&(!initial.receipt.pair||initial.receipt.pair.terrainFrame!==initial.receipt.pair.overlayFrame||initial.receipt.pair.requestId!==initial.receipt.id))result.errors.push('missing paired surface receipt');
+    result.surface=await page.evaluate(()=>window.__atlasReview.surfaceInfo());if(result.surface.active!==composition)result.errors.push('requested composition not active');if(composition!=='copy'&&(!initial.receipt.pair||initial.receipt.pair.terrainFrame!==initial.receipt.pair.overlayFrame||initial.receipt.pair.requestId!==initial.receipt.id))result.errors.push('missing paired surface receipt');
     const prefix=engine+'-'+candidate+'-'+composition,clip={x:Math.ceil(iv.left),y:Math.ceil(iv.top),width:Math.floor(iv.rightEdge)-Math.ceil(iv.left),height:Math.floor(iv.bottomEdge)-Math.ceil(iv.top)},shot=()=>page.screenshot({clip,style:'#notice { visibility:hidden !important }',animations:'disabled'});
     const browserStart=await shot();writeFileSync(join(output,prefix+'-browser-start.png'),browserStart);
-    if(composition==='copy')copyImages.set(engine+'-'+candidate,browserStart);else{const d=await imageDiff(page,copyImages.get(engine+'-'+candidate),browserStart);writeFileSync(join(output,prefix+'-copy-direct-difference.png'),Buffer.from(d.png,'base64'));delete d.png;result.copyDirectPixels=d;}
+    if(composition==='copy')copyImages.set(engine+'-'+candidate,browserStart);else{const d=await imageDiff(page,copyImages.get(engine+'-'+candidate),browserStart);writeFileSync(join(output,prefix+'-copy-difference.png'),Buffer.from(d.png,'base64'));delete d.png;result.copyDirectPixels=d;if(composition==='direct')directImages.set(engine+'-'+candidate,browserStart);else{const e=await imageDiff(page,directImages.get(engine+'-'+candidate),browserStart);writeFileSync(join(output,prefix+'-direct-difference.png'),Buffer.from(e.png,'base64'));delete e.png;result.directResidentPixels=e;if(e.count)result.errors.push('resident and direct browser screenshots differ');}}
     result.startImage=file(prefix+'-camera-start.png');
     await page.screenshot({path:join(output,result.startImage)});
     const motion=await page.evaluate(async()=>{
@@ -96,7 +96,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
     if(!motion.terrainCacheReuse)result.errors.push('previously visited terrain region was not reused');if(!motion.frameIntervalsValid)result.errors.push('camera frame intervals were not finite and positive');
     if(!motion.pixelEquivalent)result.errors.push('return-to-origin canvas pixels differ');
     if(motion.fps<55||motion.p95>33.3)result.errors.push('camera motion threshold failed');
-    if(candidate!=='cultural'&&!motion.spatialLayerReuse)result.errors.push('human spatial layer reuse was not observed');
+    result.spatialArchitectureReuse=motion.spatialLayerReuse; // report separately: exact pose reuse is not translated raster reuse
     if(pageErrors.length)result.errors.push('browser page errors occurred');
     const browserEnd=await shot();writeFileSync(join(output,prefix+'-browser-end.png'),browserEnd);
     const browserDiff=await imageDiff(page,browserStart,browserEnd);writeFileSync(join(output,prefix+'-browser-return-difference.png'),Buffer.from(browserDiff.png,'base64'));delete browserDiff.png;result.browserReturnPixels=browserDiff;if(browserDiff.count)result.errors.push('actual browser map screenshot differs after return');
@@ -114,10 +114,30 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
     result.architectureExperiment=await page.evaluate(async()=>{const r=window.__atlasReview,c=document.querySelector('#atlas'),origin=r.cameraPresentation().camera,raf=()=>new Promise(ok=>requestAnimationFrame(ok)),rows=[];
      const settle=async expected=>{const start=performance.now();while(performance.now()-start<15000){await raf();try{const d=c.dataset,p=JSON.parse(d.atlasReceipt);if(d.atlasSurface==='ready'&&p.id===Number(d.atlasRequestId)&&Math.abs(p.view.x-expected.x)<1e-7&&Math.abs(p.view.y-expected.y)<1e-7&&Math.abs(p.view.s-expected.s)<1e-7)return;}catch{}}throw Error('Architecture experiment receipt timeout');};
      const poses=[['origin',0,0],['same-pose',0,0],['integer',4,0],['fractional',2.4,1.2],['return',0,0]];
-     for(const mode of ['fresh','exact','integer','legacy-subpixel']){r.humanCacheMode(mode);for(const [label,dx,dy] of poses){r.restoreCamera(origin);if(dx||dy)r.motion(dx,dy,1);const expected=r.cameraPresentation().expectedView;await settle(expected);const before=r.meta().human,capture=await r.captureCameraLayers(),a=capture.layers.architecture,h=await crypto.subtle.digest('SHA-256',a.data);rows.push({mode,label,hash:Array.from(new Uint8Array(h),v=>v.toString(16).padStart(2,'0')).join(''),cache:before?{reused:!!before.reused,spatialReuse:!!before.spatialReuse,offsetPx:before.offsetPx}:null});}}
-     r.humanCacheMode('integer');r.restoreCamera(origin);await settle(r.cameraPresentation().expectedView);
+     for(const mode of ['fresh','exact','integer','legacy-subpixel','phase']){r.humanCacheMode(mode);for(const [label,dx,dy] of poses){r.restoreCamera(origin);if(dx||dy)r.motion(dx,dy,1);const expected=r.cameraPresentation().expectedView;await settle(expected);const before=r.meta().human,capture=await r.captureCameraLayers(),a=capture.layers.architecture,h=await crypto.subtle.digest('SHA-256',a.data);rows.push({mode,label,hash:Array.from(new Uint8Array(h),v=>v.toString(16).padStart(2,'0')).join(''),cache:before?{reused:!!before.reused,spatialReuse:!!before.spatialReuse,offsetPx:before.offsetPx,poseCacheHit:before.poseCacheHit,phaseCache:before.phaseCache}:null});}}
+     r.humanCacheMode('phase');r.restoreCamera(origin);await settle(r.cameraPresentation().expectedView);
      const fresh=Object.fromEntries(rows.filter(x=>x.mode==='fresh').map(x=>[x.label,x.hash]));return rows.map(x=>({...x,matchesFresh:x.hash===fresh[x.label]}));});
-    if(result.architectureExperiment.some(x=>x.mode==='integer'&&!x.matchesFresh))result.errors.push('phase-safe architecture differs from fresh raster');
+    if(result.architectureExperiment.some(x=>x.mode==='phase'&&!x.matchesFresh))result.errors.push('exact phase architecture differs from fresh raster');if(candidate!=='cultural'&&!result.architectureExperiment.some(x=>x.mode==='phase'&&x.cache?.poseCacheHit))result.errors.push('exact pose cache was not reused');result.legacyIntegerMismatches=result.architectureExperiment.filter(x=>x.mode==='integer'&&!x.matchesFresh).map(x=>x.label);
+    if(composition==='resident'){
+     result.residentChecks=[];
+     for(const [label,dx,dy,f] of [['origin',0,0,1],['integer-x',4,0,1],['integer-y',0,4,1],['fractional',2.4,1.2,1],['zoom',0,0,1.18],['cold',720,300,1],['return',0,0,1]]){
+      const evidence=await page.evaluate(async({origin,dx,dy,f})=>{const r=window.__atlasReview,c=document.querySelector('#atlas');r.restoreCamera(origin);if(dx||dy||f!==1)r.motion(dx,dy,f);const target=r.cameraPresentation().expectedView,start=performance.now();while(performance.now()-start<90000){await new Promise(ok=>requestAnimationFrame(ok));try{const d=c.dataset,p=JSON.parse(d.atlasReceipt);if(d.atlasSurface==='ready'&&p.id===Number(d.atlasRequestId)&&p.pair?.composition==='resident'&&Math.abs(p.view.x-target.x)<1e-7&&Math.abs(p.view.y-target.y)<1e-7&&Math.abs(p.view.s-target.s)<1e-7)return r.residentCompare();}catch(e){if(String(e).includes('Resident receipt'))throw e;}}throw Error('Resident pose timeout');},{origin:initial.camera,dx,dy,f});
+      for(const name of ['actual','fresh','diff']){writeFileSync(join(output,prefix+'-'+label+'-terrain-'+name+'.png'),Buffer.from(evidence[name],'base64'));delete evidence[name];}
+      result.residentChecks.push({label,...evidence});if(evidence.count)result.errors.push('resident terrain differs from fresh: '+label);
+     }
+     if(!result.residentChecks.some(x=>x.before?.hits>0))result.errors.push('no resident crop hit observed');
+     if(result.residentChecks.some(x=>x.before?.bytes>x.before?.limit))result.errors.push('resident memory budget exceeded');
+     // Use the same state for portrait/DPR and restricted-knowledge checks.
+     await page.setViewportSize({width:390,height:844});
+     const partial=await page.evaluate(o=>window.__atlasReview.scene('capital',o),{zoom:12,full:false,tilt:true,surfaceScale:true,identity:true,human:true,urban:true,culture:candidate,keepCache:false});
+     await page.waitForFunction(p=>{const d=document.querySelector('#atlas')?.dataset;return d?.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&Number(d.atlasIntent)===p.intent;},partial,{timeout:90000});
+     result.mobileFog=await page.evaluate(async()=>({meta:window.__atlasReview.meta(),surface:window.__atlasReview.surfaceInfo(),mutation:await window.__atlasReview.fogMutation()}));
+     await page.screenshot({path:join(output,prefix+'-mobile-fog.png')});
+     if(result.mobileFog.surface.resident?.bytes!==0||result.mobileFog.surface.resident?.last?.reason!=='restricted-knowledge'||!result.mobileFog.mutation.pixels||!result.mobileFog.mutation.geometry||!result.mobileFog.mutation.contours)result.errors.push('resident restricted-knowledge regression');
+     const contextLost=await page.evaluate(()=>window.__atlasReview.loseSurfaceContext());
+     result.contextLoss={supported:contextLost};
+     if(contextLost){await page.waitForFunction(()=>{const d=document.querySelector('#atlas')?.dataset;return d?.atlasCompositionFallback==='context-lost'&&d.atlasCompositionActive==='copy'&&d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId;},null,{timeout:90000});result.contextLoss.recovered=await page.evaluate(()=>window.__atlasReview.surfaceInfo());await page.screenshot({path:join(output,prefix+'-context-recovered.png')});}else result.errors.push('context-loss extension unavailable: recovery unverified');
+    }
     if(composition==='direct'){
      result.discardBuffer=await page.evaluate(async()=>{const r=window.__atlasReview,c=document.querySelector('#atlas'),origin=r.cameraPresentation().camera,raf=()=>new Promise(ok=>requestAnimationFrame(()=>ok(performance.now())));r.composition('direct',false);const wait=async()=>{const start=performance.now();while(performance.now()-start<90000){await raf();const d=c.dataset;if(d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&d.atlasCompositionActive==='direct')return;}throw Error('Direct discard surface not ready');};await wait();const surface=r.surfaceInfo(),frames=[];r.cameraProfiling(false);let previous=await raf(),prior=Number(c.dataset.atlasFrame);for(let i=0;i<60;i++){r.motion(Math.floor(i/5)%2===0?2.4:-2.4,Math.floor(i/10)%2===0?1.2:-1.2,1);const t=await raf(),frame=Number(c.dataset.atlasFrame);frames.push({gapMs:t-previous,advanced:frame>prior,frame});prior=frame;previous=t;}r.restoreCamera(origin);await wait();r.cameraProfiling(true);const gaps=frames.map(x=>x.gapMs),sorted=gaps.slice().sort((a,b)=>a-b);return {surface,frames,fps:1000*frames.filter(x=>x.advanced).length/gaps.reduce((a,b)=>a+b,0),p95:sorted[Math.ceil(sorted.length*.95)-1],gpu:await r.gpuProbe()};});
      if(result.discardBuffer.surface.attributes?.preserveDrawingBuffer!==false)result.errors.push('discard drawing buffer context not established');
@@ -136,6 +156,6 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
  finally{await browser?.close();}
 }
 const failures=report.filter(r=>r.passed===false);
-report.push({phase:'aggregate',passed:failures.length===0,engines:['chromium','webkit'],candidates,compositions:['copy','direct'],failures:failures.map(r=>({engine:r.engine,candidate:r.candidate,errors:r.errors}))});
+report.push({phase:'aggregate',passed:failures.length===0,engines:['chromium','webkit'],candidates,compositions:['copy','direct','resident'],failures:failures.map(r=>({engine:r.engine,candidate:r.candidate,errors:r.errors}))});
 save();
 assert.equal(failures.length,0,'Camera Presentation QA failed: '+JSON.stringify(failures.map(r=>({engine:r.engine,candidate:r.candidate,composition:r.composition,errors:r.errors}))));

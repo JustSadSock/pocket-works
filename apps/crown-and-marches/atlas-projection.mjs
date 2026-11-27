@@ -53,3 +53,11 @@ export function pickAtlasSurface(terrain,lod,cfg,x,y){
  for(let ty=Math.floor((guess-25)/4);ty<=Math.floor((guess+25)/4);ty++)for(const [a,i] of index.get(Math.floor(x/4)+':'+ty)??[]){let offsets=seen.get(a);if(!offsets)seen.set(a,offsets=new Set());if(offsets.has(i))continue;offsets.add(i);const t=tri(a,i),projected=t.map(p=>[p[0],centerY+(p[1]-centerY)*cs-(p[2]-datum)*tilt]),weights=barycentric(x,y,...projected);if(!weights)continue;const Y=weights.reduce((n,w,j)=>n+w*t[j][1],0),z=weights.reduce((n,w,j)=>n+w*t[j][2],0),d=depth(Y,z);if(d>=front){front=d;best=Y;}}
  return [x,best];
 }
+
+// Exact-coordinate memoization: no rounding of points, no cross-terrain or
+// cross-LOD reuse. Only one active sampler is retained by the surface.
+export function surfaceHeightSampler(terrain,lod,{limit=32768}={}){
+ const map=new Map();let hits=0,misses=0,evictions=0;
+ const height=(x,y)=>{const key=x+':'+y;if(map.has(key)){hits++;return map.get(key);}misses++;const z=atlasSurfaceHeight(terrain,lod,x,y);if(map.size>=limit){map.delete(map.keys().next().value);evictions++;}map.set(key,z);return z;};
+ return {terrain,lod,height,report:()=>({entries:map.size,limit,hits,misses,evictions})};
+}
