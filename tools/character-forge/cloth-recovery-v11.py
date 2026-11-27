@@ -279,7 +279,7 @@ if os.getenv('CHARACTER_V17_CLOTH_CONFIG'):
  if not matrix.get('fullRemeshAllowed') or not matrix.get('selectedConfig') or not matrix.get('selected'):raise RuntimeError('Independent coupon matrix not qualified')
  chosenFactor=matrix['selected'];v17config=matrix['selectedConfig']
  if not all(x.get('passed') for x in matrix['validation'][chosenFactor].values()) or len(matrix['validation'][chosenFactor])!=5:raise RuntimeError('Missing five independent coupon controls')
- if len(v17config)!=1 or next(iter(v17config)) not in ['friction','tension','bend','quality','selfDistance']:raise RuntimeError('Unqualified physical factor')
+ if len(v17config)!=1 or next(iter(v17config)) not in ['friction','tension','bend','quality','selfDistance','pinRamp']:raise RuntimeError('Unqualified physical factor')
  experiments=[('remesh-static',1,1,6,None),('remesh',2,1,18,None),('world',3,1,18,None)]
 chosen=None
 for label,stage,slow,ramp,allowed in experiments:
@@ -315,6 +315,8 @@ for label,stage,slow,ramp,allowed in experiments:
   firstRing=sorted(set(j for i in wpins for j in graph[i])-set(wpins))
   # Physical one-ring transition only; the hem and all remaining cloth stay free.
   pinWeights={j:1. for j in wpins}
+  if 'pinRamp' in v17config:
+   for j in firstRing:pinWeights[j]=v17config['pinRamp']
   if variant=='transition':
    for j in firstRing:pinWeights[j]=.22
   bpy.ops.wm.read_factory_settings(use_empty=True);scene=bpy.context.scene;scene.render.fps=spec['fps'];scene.gravity=(0,0,-9.81)

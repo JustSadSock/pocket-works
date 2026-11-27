@@ -1,7 +1,7 @@
 // Local index-PIP study. No change to Character Core or normal production GLB.
 import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {poseFrom,deform,rotate} from './core.mjs';
+import {poseFrom,deform,rotate,qmul} from './core.mjs';
 import {normals,weights} from './hybrid-human.mjs';
 import {raster,commonBounds} from './material-study.mjs';
 import {glb} from './glb.mjs';
@@ -9,9 +9,9 @@ const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(ou
 const source=read('morph/makehuman-base.json'),a=read('morph/v15-hand-core.json'),b=read('v16-hand-transfer.json'),prior=read('v16-hand-audit.json');
 const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],len=a=>Math.hypot(...a),unit=a=>mul(a,1/Math.max(1e-12,len(a))),clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
 const mix=(a,b,t)=>add(mul(a,1-t),mul(b,t)),J=n=>source.joints.find(j=>j.name===n+'.L');
-const mcp=J('finger2-1'),pip=J('finger2-2'),dip=J('finger2-3');
-if(!mcp||!pip||!dip)throw Error('Missing index anatomy');
-const model=structuredClone(source),p=model.parts[0],axis=unit(sub(dip.position,mcp.position)),half=Math.min(len(sub(pip.position,mcp.position)),len(sub(dip.position,pip.position)))*.45;
+const mcp=J('finger2-1'),pip=J('finger2-2'),dip=J('finger2-3'),parent=source.joints[mcp?.parent];
+if(!mcp||!pip||!dip||!parent)throw Error('Missing index MCP anatomy');
+const model=structuredClone(source),p=model.parts[0],axis=unit(sub(mcp.position,parent.position)),half=Math.min(len(sub(mcp.position,parent.position)),len(sub(pip.position,mcp.position)))*.45;
 const region=new Map(),restP=i=>p.positions.slice(3*i,3*i+3);
 const count=p.positions.length/3;
 const getW=(part,i)=>weights(part,i).filter(x=>x[1]>1e-9);
@@ -22,25 +22,28 @@ function setW(part,i,entries){
  for(let k=0;k<4;k++){part.joints[i*4+k]=sorted[k]?.[0]??0;part.weights[i*4+k]=(sorted[k]?.[1]??0)/t4;}
 }
 for(let i=0;i<count;i++){
- const w=getW(p,i),lookup=new Map(w),pair=(lookup.get(mcp.id)??0)+(lookup.get(pip.id)??0),x=dot(sub(restP(i),pip.position),axis);
+ const w=getW(p,i),lookup=new Map(w),pair=(lookup.get(parent.id)??0)+(lookup.get(mcp.id)??0),x=dot(sub(restP(i),mcp.position),axis);
  if(pair<.8||Math.abs(x)>=half)continue;
  const influence=smooth(1-Math.abs(x)/half),t=smooth((x+half)/(2*half));
- const old=lookup.get(pip.id)??0,updated=old*(1-influence*.65)+pair*t*influence*.65;
- lookup.set(pip.id,updated);lookup.set(mcp.id,pair-updated);setW(p,i,[...lookup]);region.set(i,{x,influence,pair});
+ const old=lookup.get(mcp.id)??0,updated=old*(1-influence*.65)+pair*t*influence*.65;
+ lookup.set(mcp.id,updated);lookup.set(parent.id,pair-updated);setW(p,i,[...lookup]);region.set(i,{x,influence,pair});
 }
-if(region.size<4)throw Error('Insufficient local PIP vertices');
+if(region.size<4)throw Error('Insufficient local MCP vertices');
 const phases=[0,.25,.5,.75,1],names=['open','index-0.25','index-0.5','index-0.75','index-1'];
 const brot=names.map(n=>{const r=b.rows.find(r=>r.name===n);if(!r)throw Error(n);return r.rotations});
 const ar=names.map(n=>{const r=a.rows.find(r=>r.name===(n==='open'?'rest':n));if(!r)throw Error(n);return r.coreRotations});
-const w=poseFrom(model,brot.at(-1)),actual=deform(model,p,w),delta=Array(p.positions.length).fill(0);
+const normq=q=>mul(q,1/Math.max(1e-12,len(q))),qinv=q=>[-q[0],-q[1],-q[2],q[3]],qangle=q=>2*Math.acos(clamp(Math.abs(normq(q)[3])));
+function qslerp(a,b,t){let d=dot(a,b);if(d<0){b=mul(b,-1);d=-d}if(d>.9995)return normq(mix(a,b,t));const th=Math.acos(Math.max(-1,Math.min(1,d))),sn=Math.sin(th);return normq(add(mul(a,Math.sin((1-t)*th)/sn),mul(b,Math.sin(t*th)/sn)))}
+const poseMatchDiagnostics=[],matchedB=brot.map((row,j)=>{const result=row.map(q=>q.slice()),joints=[];for(const id of [mcp.id,pip.id,dip.id]){const qa=qmul(qinv(ar[0][id]),ar[j][id]),qb=qmul(qinv(brot[0][id]),brot[j][id]),aDeg=qangle(qa),bDeg=qangle(qb),ratio=bDeg>1e-6?aDeg/bDeg:0,scaled=qslerp([0,0,0,1],qb,ratio);result[id]=normq(qmul(brot[0][id],scaled));joints.push({joint:source.joints[id].name,makeHumanDeg:aDeg,referenceDeg:bDeg,matchedDeg:qangle(scaled),ratio})}poseMatchDiagnostics.push({phase:phases[j],joints});return result});
+const w=poseFrom(model,brot.at(-1)),delta=Array(p.positions.length).fill(0);
 function normq(q){return mul(q,1/Math.max(1e-12,len(q)))}
 function inverseCols(cols,y){const [a,b,c]=cols,d=dot(a,cross(b,c));if(Math.abs(d)<1e-6)return null;return [dot(y,cross(b,c)),dot(y,cross(c,a)),dot(y,cross(a,b))].map(x=>x/d)}
 for(const [i,r] of region){
- const point=restP(i),inf=getW(p,i),pair=r.pair,t=(inf.find(x=>x[0]===pip.id)?.[1]??0)/pair;
- const qa=w[mcp.id].q,qb=w[pip.id].q,rigid=normq(mix(qa,dot(qa,qb)<0?mul(qb,-1):qb,t));
- // Blend about the shared physical joint centre, not a radial thickness shrink.
- const pivot=w[pip.id].p,rigidPoint=add(pivot,rotate(rigid,sub(point,pip.position)));
- const rigidA=add(w[mcp.id].p,rotate(qa,sub(point,mcp.position))),rigidB=add(w[pip.id].p,rotate(qb,sub(point,pip.position)));
+ const point=restP(i),inf=getW(p,i),pair=r.pair,t=(inf.find(x=>x[0]===mcp.id)?.[1]??0)/pair;
+ const qa=w[parent.id].q,qb=w[mcp.id].q,rigid=normq(mix(qa,dot(qa,qb)<0?mul(qb,-1):qb,t));
+ // Preserve local volume around the actual metacarpal-to-proximal-phalanx MCP joint.
+ const pivot=w[mcp.id].p,rigidPoint=add(pivot,rotate(rigid,sub(point,mcp.position)));
+ const rigidA=add(w[parent.id].p,rotate(qa,sub(point,parent.position))),rigidB=add(w[mcp.id].p,rotate(qb,sub(point,mcp.position)));
  let displacement=mul(sub(rigidPoint,mix(rigidA,rigidB,t)),pair*r.influence);
  const max=.35*half;if(len(displacement)>max)displacement=mul(displacement,max/len(displacement));
  const columns=[[1,0,0],[0,1,0],[0,0,1]].map(e=>inf.reduce((s,[id,x])=>add(s,mul(rotate(w[id].q,e),x)),[0,0,0]));
@@ -84,25 +87,22 @@ function candidate(name,model,rotations,indices,faces,deltas){
  const normalDeltas={};
  if(deltas)for(let k=0;k<c.parts.length;k++){const x=c.parts[k],d=k===0?deltas:Array(x.positions.length).fill(0),corrected={...x,positions:x.positions.map((v,j)=>v+d[j])};normals(corrected);normalDeltas[x.name]=corrected.normals.map((v,j)=>v-x.normals[j]);}
  const opt=deltas?{researchMorph:{deltas:Object.fromEntries(c.parts.map((p,i)=>[p.name,i===0?deltas:Array(p.positions.length).fill(0)])),normalDeltas,weights:activation}}:{};
- write('v17-hand-'+name+'.glb',glb(c,opt));return {name,rest,faces,rows,indices,activation:deltas?activation:null};
+ write('v17-hand-'+name+'.glb',glb(c,opt));return {name,rest,faces,rows,indices,activation:deltas?activation:null,jointPositions:rotations.map(q=>poseFrom(model,q)[mcp.id].p)};
 }
-const cases=[candidate('A',source,ar,a.selected,a.faces),candidate('B',source,brot,a.selected,a.faces),candidate('C',model,brot,a.selected,a.faces,delta),candidate('D',D,brot,dsel,df,dd)];
+const primaryCases=[candidate('A',source,ar,a.selected,a.faces),candidate('B',source,brot,a.selected,a.faces),candidate('B-matched',source,matchedB,a.selected,a.faces),candidate('C',model,brot,a.selected,a.faces,delta),candidate('D',D,brot,dsel,df,dd)];
+const morphTransfer=[],morphCases=[],morphFiles=[['makehuman-older-man.json','older-man'],['makehuman-older-woman.json','older-woman'],['makehuman-short-light.json','short-light'],['makehuman-tall-heavy.json','tall-heavy'],['makehuman-young-woman.json','young-woman']];
+for(const [file,slug] of morphFiles){const variant=read('morph/'+file),vp=variant.parts[0],compatible=vp.positions.length===p.positions.length&&vp.indices.length===p.indices.length&&vp.indices.every((x,i)=>x===p.indices[i]);if(!compatible){morphTransfer.push({name:slug,compatible:false,reason:'Topology/index correspondence differs'});continue}for(const key of ['joints8','weights8','joints','weights'])vp[key]=model.parts[0][key].slice();morphCases.push(candidate('C-'+slug,variant,brot,a.selected,a.faces,delta));morphTransfer.push({name:slug,compatible:true,correctiveTransferred:true,vertices:vp.positions.length/3,triangles:vp.indices.length/3,maxCorrectiveMm:Math.max(...[...region.keys()].map(i=>len(delta.slice(i*3,i*3+3))))*1000,artApproved:false})}
+const cases=[...primaryCases,...morphCases];
 for(const i of [0,2,4]){
- const meshes=cases.map(c=>{const m={...p,positions:c.rows[i].vertices.flat(),indices:c.faces.flat()};normals(m);return {parts:[m]}});
+ const meshes=primaryCases.map(c=>{const m={...p,positions:c.rows[i].vertices.flat(),indices:c.faces.flat()};normals(m);return {parts:[m]}});
  for(const view of ['front','side','three-quarter']){
   const bounds=commonBounds(meshes,view);
-  for(let j=0;j<cases.length;j++)write('v17-hand-'+cases[j].name+'-'+phases[i]+'-'+view+'.png',raster(meshes[j],{view,bounds,size:640,mode:'A'}).png);
-  const close=cases.map((c,j)=>{
-   const local=c.indices.map((x,k)=>region.has(x)||x>=oldCount?k:-1).filter(k=>k>=0),set=new Set(local);
-   const mesh=structuredClone(meshes[j].parts[0]);mesh.indices=c.faces.filter(f=>f.some(k=>set.has(k))).flat();
-   const map=new Map();for(const k of mesh.indices)if(!map.has(k))map.set(k,map.size);
-   mesh.positions=[...map.keys()].flatMap(k=>c.rows[i].vertices[k]);mesh.indices=mesh.indices.map(k=>map.get(k));normals(mesh);
-   return {parts:[mesh]};
-  });
+  for(let j=0;j<primaryCases.length;j++)write('v17-hand-'+primaryCases[j].name+'-'+phases[i]+'-'+view+'.png',raster(meshes[j],{view,bounds,size:640,mode:'A'}).png);
+  const close=primaryCases.map(c=>{const center=c.jointPositions[i],localFaces=c.faces.filter(f=>{const p0=[0,1,2].map(k=>(c.rows[i].vertices[f[0]][k]+c.rows[i].vertices[f[1]][k]+c.rows[i].vertices[f[2]][k])/3);return len(sub(p0,center))<.045});if(!localFaces.length)throw Error('No MCP close-up faces for '+c.name);const ids=[...new Set(localFaces.flat())],map=new Map(ids.map((v,k)=>[v,k])),mesh={...p,positions:ids.flatMap(v=>c.rows[i].vertices[v]),indices:localFaces.flatMap(f=>f.map(v=>map.get(v)))};normals(mesh);return {parts:[mesh]}});
   const cb=commonBounds(close,view);
-  for(let j=0;j<cases.length;j++)write('v17-index-PIP-'+cases[j].name+'-'+phases[i]+'-'+view+'.png',raster(close[j],{view,bounds:cb,size:640,mode:'A'}).png);
+  for(let j=0;j<primaryCases.length;j++)write('v17-index-MCP-'+primaryCases[j].name+'-'+phases[i]+'-'+view+'.png',raster(close[j],{view,bounds:cb,size:640,mode:'A'}).png);
  }
 }
 const regionRows=[...region].map(([i,r])=>({vertex:i,...r,delta:delta.slice(i*3,i*3+3)}));
-write('v17-hand-surface.json',JSON.stringify({joint:pip.name,half,region:regionRows,originalVertices:oldCount,retessellatedVertices:dp.positions.length/3,splitEdges:[...mid],cases,oppositionControl:prior.transferB?.find(x=>x.name==='opposition')??null,limitations:['D is a local conforming retessellation control, not a new anatomical ring template.','Joint centre held fixed pending independent evidence of misalignment.','No other digits, morphs or grip qualified.']}));
-console.log(JSON.stringify({region:region.size,splitEdges:mid.size,maxCorrectiveMm:Math.max(...regionRows.map(r=>len(r.delta)))*1000,candidates:cases.map(c=>c.name)}));
+write('v17-hand-surface.json',JSON.stringify({joint:mcp.name,parent:parent.name,half,region:regionRows,originalVertices:oldCount,retessellatedVertices:dp.positions.length/3,splitEdges:[...mid],poseMatchDiagnostics,morphTransfer,cases,oppositionControl:prior.transferB?.find(x=>x.name==='opposition')??null,limitations:['A and B raw poses are not angle-matched; B-matched is the fair per-joint flexion-magnitude control.','D is a local conforming retessellation control, not a new anatomical ring template.','MCP centre held fixed pending independent evidence of misalignment.','No other digits, scutum or grip qualified.']}));
+console.log(JSON.stringify({region:region.size,splitEdges:mid.size,maxCorrectiveMm:Math.max(...regionRows.map(r=>len(r.delta)))*1000,candidates:cases.map(c=>c.name),morphTransfer:morphTransfer.map(x=>({name:x.name,compatible:x.compatible}))}));

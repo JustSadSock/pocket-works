@@ -59,7 +59,7 @@ matrix={
  'tension-low':{'tension':25},'tension-high':{'tension':45},
  'bend-low':{'bend':.5},'bend-high':{'bend':1.5},
  'substeps':{'quality':32},'time-sampling':{'sampling':2},
- 'self-clearance':{'selfDistance':.0025},'slower':{'slow':2},
+ 'self-clearance':{'selfDistance':.0025},'pin-ramp-022':{'pinRamp':.22},'pin-ramp-035':{'pinRamp':.35},'slower':{'slow':2},
  'anchor-distance':{'anchorOffset':.025},'reverse-same-endpoint':{'reverseAbsolute':True}
 }
 def stretch_track(track,n):
@@ -75,6 +75,7 @@ def simulate(label,track,config):
  mesh=bpy.data.meshes.new('Coupon');mesh.from_pydata(verts,[],faces);mesh.update()
  cloth=bpy.data.objects.new('Coupon',mesh);bpy.context.collection.objects.link(cloth)
  pins=cloth.vertex_groups.new(name='fixed top edge');pins.add(list(range(n)),1,'REPLACE')
+ if 'pinRamp' in config:pins.add(list(range(n,2*n)),config['pinRamp'],'REPLACE')
  bpy.ops.mesh.primitive_uv_sphere_add(segments=32,ring_count=16,radius=radius,location=normal*(-radius-.008)+vertical*config.get('anchorOffset',0.0))
  sphere=bpy.context.object;start=sphere.location.copy()
  cm=sphere.modifiers.new('Smooth single collider','COLLISION');cm.settings.thickness_outer=.004;cm.settings.thickness_inner=.004

@@ -225,7 +225,7 @@ jobs:
       - name: Independent source and transferred hand triangle audit
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/hand-audit-v16.py'
-      - name: Local index PIP surface correctives and conforming retessellation
+      - name: Local index MCP surface correctives and conforming retessellation
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: node tools/character-forge/hand-surface-v17.mjs
       - name: Independent local index geometry audit
@@ -245,8 +245,9 @@ jobs:
       - name: Render actual physical coupon onset and local self-collision strain
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: node tools/character-forge/cloth-coupon-render-v17.mjs
-      - name: Re-test Remesh only after all isolated coupon controls qualify
+      - name: Re-test selected physical factor on Remesh only after coupon qualification
         id: remesh17
+        continue-on-error: true
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
           root="$CHARACTER_EVIDENCE"
@@ -260,9 +261,67 @@ jobs:
           if [ -d "$CHARACTER_EVIDENCE/v17-remesh-recovery" ]; then
             CHARACTER_EVIDENCE="$CHARACTER_EVIDENCE/v17-remesh-recovery" CHARACTER_V15_CLOTH=1 node tools/character-forge/cloth-evidence-v12.mjs
           fi
+      - name: Independently test solver and pin-transition factors on Remesh
+        id: remesh17controls
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, shutil, subprocess
+          root=pathlib.Path(os.environ["CHARACTER_EVIDENCE"])
+          matrix=json.loads((root/"v17-cloth-matrix.json").read_text())
+          factors=["substeps","pin-ramp-022","pin-ramp-035"]
+          summary=[]
+          for factor in factors:
+              controls=matrix.get("validation",{}).get(factor,{})
+              if len(controls)!=5 or not all(x.get("passed") for x in controls.values()):
+                  summary.append({"factor":factor,"status":"not-qualified-on-coupon"})
+                  continue
+              if factor==matrix.get("selected"):
+                  summary.append({"factor":factor,"status":"tested-as-selected"})
+                  continue
+              out=root/("v17-remesh-"+factor)
+              (out/"morph").mkdir(parents=True,exist_ok=True)
+              shutil.copy2(root/"morph/v9-cloth-input.json",out/"morph/v9-cloth-input.json")
+              config={"fullRemeshAllowed":True,"selected":factor,"selectedConfig":matrix["configs"][factor],"validation":{factor:controls}}
+              cfg=root/("v17-remesh-"+factor+"-config.json");cfg.write_text(json.dumps(config))
+              env=os.environ.copy();env.update({"CHARACTER_EVIDENCE":str(out),"CHARACTER_V15_CLOTH":"1","CHARACTER_V17_CLOTH_CONFIG":str(cfg)})
+              cmd=[os.environ["BLENDER"],"--background","--factory-startup","--disable-autoexec","--python-exit-code","1","--python","tools/character-forge/cloth-recovery-v11.py"]
+              with (out/"run.log").open("w") as log:result=subprocess.run(cmd,env=env,stdout=log,stderr=subprocess.STDOUT)
+              recovery=out/"v11-cloth-recovery.json"
+              if recovery.exists():
+                  data=json.loads(recovery.read_text());stages=data.get("stages",[])
+                  passed=any(x.get("stage")==3 and x.get("passed") for x in stages)
+                  summary.append({"factor":factor,"exit":result.returncode,"status":data.get("status"),"stage2":next((x.get("gates") for x in stages if x.get("stage")==2),None),"stage3Passed":passed})
+                  subprocess.run(["node","tools/character-forge/cloth-evidence-v12.mjs"],env=env,check=False)
+              else:summary.append({"factor":factor,"exit":result.returncode,"status":"missing-recovery-report"})
+          (root/"v17-remesh-control-candidates.json").write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary),flush=True)
+          PY
+      - name: Enforce at least one full dynamic Remesh qualification before production
+        id: remeshGate
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          root=pathlib.Path(os.environ["CHARACTER_EVIDENCE"])
+          reports=[root/"v17-remesh-recovery/v11-cloth-recovery.json"]
+          candidates=root/"v17-remesh-control-candidates.json"
+          if candidates.exists():
+              for row in json.loads(candidates.read_text()):
+                  if row.get("status") not in ("not-qualified-on-coupon","missing-recovery-report","tested-as-selected"):
+                      reports.append(root/("v17-remesh-"+row["factor"]+"/v11-cloth-recovery.json"))
+          passed=[]
+          for path in reports:
+              if not path.exists():continue
+              data=json.loads(path.read_text())
+              passed.extend((str(path),s) for s in data.get("stages",[]) if s.get("stage")==3 and s.get("passed"))
+          if not passed:raise SystemExit("No isolated Remesh candidate passed full dynamic/root-motion qualification; production remains blocked.")
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:f.write("passed=true\\n")
+          print("Qualified Remesh candidates:",[x[0] for x in passed])
+          PY
       - name: Full cloth bake and standalone playback after recovery gate
         id: cloth
-        if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && steps.remesh17.outcome == 'success' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
+        if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && steps.remeshGate.outputs.passed == 'true' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle-v9.py
           node tools/character-forge/evidence-cloth-v9.mjs
@@ -284,7 +343,8 @@ jobs:
           node --check tools/character-forge/hand-transfer-v16.mjs
           node --check tools/character-forge/hand-surface-v17.mjs
           python3 -m py_compile tools/character-forge/hand-surface-audit-v17.py
-          python3 -m py_compile tools/character-forge/hand-audit-v16.py tools/character-forge/cloth-coupon-v16.py
+          python3 -m py_compile tools/character-forge/hand-audit-v16.py tools/character-forge/cloth-coupon-v16.py tools/character-forge/cloth-recovery-v11.py
+          node --check tools/character-forge/cloth-coupon-render-v17.mjs
           python3 -m py_compile tools/character-forge/hand-bind-v15.py tools/character-forge/hand-source-v15.py tools/character-forge/motion-independent-v15.py
       - name: Required native CC0 reference motion (skinless GLB channels)
         id: kinemiq
@@ -302,7 +362,7 @@ jobs:
         run: |
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
           for view in side front; do
-            for variant in Original 25 49 97 cyclic49 cyclic97 cyclic49Upper velocity49half velocity49 elbow49; do
+            for variant in Original 25 49 97 cyclic49 cyclic97 cyclic49Upper velocity49quarter velocity49half velocity49 elbow49; do
               ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-$variant-$view-1x.mp4"
             done
             ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-25-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-97-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-1x.mp4"
@@ -312,7 +372,7 @@ jobs:
               ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-anatomy-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-anatomy-$view.mp4"
             fi
             ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49Upper-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v16-walk-cyclic-comparison-$view.mp4"
-            for variant in cyclic49 velocity49 elbow49; do
+            for variant in cyclic49 velocity49quarter velocity49half velocity49 elbow49; do
               ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v17-loop-$variant-$view/%02d.png" -frames:v 72 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v17-loop-$variant-$view.mp4"
               if [ -d "$CHARACTER_EVIDENCE/v17-anatomy-$variant-$view" ]; then
                 ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v17-anatomy-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v17-anatomy-$variant-$view.mp4"
@@ -340,10 +400,10 @@ jobs:
           for f in "$CHARACTER_EVIDENCE"/source-*.svg; do rsvg-convert "$f" -o "${f%.svg}.png"; done
           ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/source-v9-elephant-motion/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/source-v9-elephant-walk.mp4"
           ffmpeg -hide_banner -loglevel error -y -framerate 12 -i "$CHARACTER_EVIDENCE/v12-elephant-source-crew/%02d.png" -frames:v 12 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-elephant-source-crew.mp4"
-      - name: Enforce independent isolated grip result (no shield production)
+      - name: Confirm isolated grip remains blocked pending hand surface qualification
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
-          node -e 'const a=require(process.env.CHARACTER_EVIDENCE+"/v15-hand-independent.json"),r=require(process.env.CHARACTER_EVIDENCE+"/morph/v11-grip-report.json"),s=require(process.env.CHARACTER_EVIDENCE+"/v15-reference-poses.json");if(!a.agreement||!s.poses.length||!r.accepted){console.error("Independent reference / anatomy / isolated grip gate rejected: "+r.reason);process.exit(1)}'
+          node -e 'const a=require(process.env.CHARACTER_EVIDENCE+"/v15-hand-independent.json"),r=require(process.env.CHARACTER_EVIDENCE+"/morph/v11-grip-report.json"),s=require(process.env.CHARACTER_EVIDENCE+"/v15-reference-poses.json");if(!a.agreement||!s.poses.length)throw Error("Independent source bind/pose regression");if(r.accepted||r.shieldProductionAllowed)throw Error("Grip must remain blocked until the index/four-finger/thumb/closed-hand sequence qualifies");console.log("Grip intentionally blocked; no handle or shield production: "+r.reason)'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

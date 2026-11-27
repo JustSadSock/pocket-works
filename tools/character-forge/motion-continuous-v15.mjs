@@ -189,6 +189,7 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
     v.rotations[k][j]=qmul(q,qexp(add(qdelta(q,v.rotations[k][j]),mul(right[j],f))));
     v.rotations[n-k][j]=qmul(qe,qexp(add(qdelta(qe,v.rotations[n-k][j]),mul(left[j],f))));
    }
+   const tr=k/n,tl=(n-k)/n;correct(v.rotations[k],v.offsets[k],tr,sample(base,tr));correct(v.rotations[n-k],v.offsets[n-k],tl,sample(base,tl));
   }
   v.trace=undefined;v.velocitySeam=seamVelocity(v);return v;
  }
@@ -240,11 +241,11 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   return {keyCount:v.rotations.length,additionalAuditSamples:n+1,counts,max,loop,velocity:seamVelocity(v),maxRootSpeedMetresPerSecond:maxRate,gate,rows};
  }
  const models={},reports={};
- const variants=[25,49,97,'cyclic49','cyclic97','cyclic49Upper','velocity49half','velocity49','elbow49'];
+ const variants=[25,49,97,'cyclic49','cyclic97','cyclic49Upper','velocity49quarter','velocity49half','velocity49','elbow49'];
  const cyclicDiagnostics={};let cyclic49,upperReport,elbowReport;
  for(const count of variants){
   let v;
-  if(count==='velocity49half'||count==='velocity49')v=velocityRegularize(cyclic49,count==='velocity49half'?.5:1);
+  if(count==='velocity49quarter'||count==='velocity49half'||count==='velocity49')v=velocityRegularize(cyclic49,count==='velocity49quarter'?.25:count==='velocity49half'?.5:1);
   else if(count==='elbow49'){const e=elbowStudy(cyclic49);v=e.v;elbowReport=e.report;}
   else if(count==='cyclic49Upper'){const upper=upperStudy(cyclic49);v=upper.v;upperReport=upper.report;}
   else v=String(count).startsWith('cyclic')?cyclic(Number(String(count).slice(6))):generate(count);
@@ -256,7 +257,7 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
  const accepted=reports.cyclic49;
  const noRegression=r=>r.gate&&['drift','vertical','penetration'].every(k=>r.max[k]<=accepted.max[k]+1e-6)&&r.loop.maxJointDegrees<=accepted.loop.maxJointDegrees+1e-6;
  const velocityImproved=r=>r.velocity.rootMmPerSecond<accepted.velocity.rootMmPerSecond&&r.velocity.maxJointVectorDegreesPerSecond<accepted.velocity.maxJointVectorDegreesPerSecond;
- const ranked=['velocity49half','velocity49'].filter(k=>noRegression(reports[k])&&velocityImproved(reports[k])).sort((a,b)=>reports[a].velocity.rootMmPerSecond+reports[a].velocity.maxJointVectorDegreesPerSecond-reports[b].velocity.rootMmPerSecond-reports[b].velocity.maxJointVectorDegreesPerSecond);
+ const ranked=['velocity49quarter','velocity49half','velocity49'].filter(k=>noRegression(reports[k])&&velocityImproved(reports[k])).sort((a,b)=>reports[a].velocity.rootMmPerSecond+reports[a].velocity.maxJointVectorDegreesPerSecond-reports[b].velocity.rootMmPerSecond-reports[b].velocity.maxJointVectorDegreesPerSecond);
  const choose=ranked[0]??'cyclic49';
  const productionSelection={baseline:'cyclic49',selected:choose,baselineGate:accepted.gate,velocityCandidates:Object.fromEntries(['velocity49half','velocity49'].map(k=>[k,{noRegression:noRegression(reports[k]),velocityImproved:velocityImproved(reports[k])}])),artApproved:false};
  const selected=models[choose];

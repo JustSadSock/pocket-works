@@ -1,5 +1,6 @@
 """Independent BVH, signed normal and area audit of the actual index surfaces."""
 import json,os,math,struct
+from collections import Counter
 import numpy as np
 from mathutils import Matrix,Quaternion
 from pathlib import Path
@@ -54,13 +55,15 @@ def raw_glb(case):
  return {'rows':rows,'agreement':all(r['maxVertexErrorMm']<=.05 for r in rows),'method':'Independent raw float32 GLB morph-before-skin matrix evaluation, not Blender importer playback'}
 reports={}
 for c in data['cases']:
- f=c['faces'];base,baseStrict=audit(c['rest'],f);rest=geom(c['rest'],f);rows=[]
+ f=c['faces'];base,baseStrict=audit(c['rest'],f);rest=geom(c['rest'],f);edgeCounts=Counter(tuple(sorted((face[i],face[(i+1)%3]))) for face in f for i in range(3));edgeLengths=[(Vector(c['rest'][a])-Vector(c['rest'][b])).length for a,b in edgeCounts];triAreas=[x.length*.5 for x in rest];rows=[]
  for r in c['rows']:
   pairs,strict=audit(r['vertices'],f);cur=geom(r['vertices'],f)
   ratios=[b.length/a.length for a,b in zip(rest,cur) if a.length>1e-12]
-  rows.append({'phase':r['phase'],'totalPairs':len(pairs),'strictPairs':len(strict),'newPairs':len(pairs-base),'newStrictPairs':len(strict-baseStrict),'strictIndices':sorted(strict),'areaMin':min(ratios),'areaMax':max(ratios),'areaTotalRatio':sum(x.length for x in cur)/sum(x.length for x in rest),'normalOpposedToRest':sum(a.dot(b)<0 for a,b in zip(rest,cur))})
- reports[c['name']]={'glbPlayback':raw_glb(c),'rows':rows,'zeroNewStrict':all(x['newStrictPairs']==0 for x in rows),'artApproved':False}
-result={'reports':reports,'gripAllowed':False,'note':'Normals compared in world space, rotations may reverse their orientation without triangle inversion. Contact classification does not waive unresolved pairs.'}
+  involved=sorted(set(i for pair in strict for i in pair));newStrict=strict-baseStrict;newFaces=sorted(set(i for pair in newStrict for i in pair));area=[x.length*.5 for x in cur];strictArea=sum(area[i] for i in involved);newArea=sum(area[i] for i in newFaces);strictVerts=sorted(set(v for i in involved for v in f[i]));newVerts=sorted(set(v for i in newFaces for v in f[i]))
+  rows.append({'phase':r['phase'],'totalPairs':len(pairs),'strictPairs':len(strict),'newPairs':len(pairs-base),'newStrictPairs':len(newStrict),'strictIndices':sorted(strict),'strictFaceCount':len(involved),'strictVertexCount':len(strictVerts),'strictSurfaceAreaMm2':strictArea*1e6,'strictSurfaceAreaRatio':strictArea/max(sum(area),1e-12),'newStrictFaceCount':len(newFaces),'newStrictVertexCount':len(newVerts),'newStrictSurfaceAreaMm2':newArea*1e6,'areaMin':min(ratios),'areaMax':max(ratios),'areaTotalRatio':sum(x.length for x in cur)/sum(x.length for x in rest),'normalOpposedToRest':sum(a.dot(b)<0 for a,b in zip(rest,cur))})
+ topology={'vertices':len(c['rest']),'triangles':len(f),'boundaryEdges':sum(v==1 for v in edgeCounts.values()),'nonManifoldEdges':sum(v>2 for v in edgeCounts.values()),'edgeLengthMinMm':min(edgeLengths)*1000,'edgeLengthP95Mm':float(np.percentile(edgeLengths,95))*1000,'edgeLengthMaxMm':max(edgeLengths)*1000,'triangleAreaMinMm2':min(triAreas)*1e6,'triangleAreaP05Mm2':float(np.percentile(triAreas,5))*1e6,'triangleAreaP95Mm2':float(np.percentile(triAreas,95))*1e6,'triangleAreaMaxMm2':max(triAreas)*1e6}
+ reports[c['name']]={'glbPlayback':raw_glb(c),'topology':topology,'rows':rows,'zeroNewStrict':all(x['newStrictPairs']==0 for x in rows),'artApproved':False}
+result={'reports':reports,'poseMatchDiagnostics':data.get('poseMatchDiagnostics'),'morphTransfer':data.get('morphTransfer'),'gripAllowed':False,'note':'Raw strict-pair count is accompanied by unique involved-face area and topology statistics; subdivision can increase pair counts without proportionally increasing affected surface. Normals compared in world space, rotations may reverse their orientation without triangle inversion.'}
 (out/'v17-hand-audit.json').write_text(json.dumps(result,indent=2))
 print(json.dumps({k:{'rows':[{x:y for x,y in r.items() if x!='strictIndices'} for r in v['rows']],'glbPlayback':v['glbPlayback']} for k,v in reports.items()}),flush=True)
 if not all(v['glbPlayback']['agreement'] for v in reports.values()):raise RuntimeError('GLB corrective playback diverged from evaluated candidate')
