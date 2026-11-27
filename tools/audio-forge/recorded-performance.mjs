@@ -1,5 +1,6 @@
 // Offline unified recorded performance: independently advancing recorded voices,
-// qualified sustain loops, pressure-driven real layers and explicit legato.
+// qualified sustain loops, pressure-driven real layers, legato and pitch expression.
+import {compileRecordedExpression} from './recorded-expression.mjs';
 const SR=48000,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function read(a,p){const k=Math.floor(p),f=p-k;if(k<0||k+1>=a.length)throw Error('Recorded performance source exhausted');return a[k]*(1-f)+a[k+1]*f;}
 function voice(z,midi,offset,sustain){
@@ -7,11 +8,12 @@ function voice(z,midi,offset,sustain){
  const a=z.samples,rate=2**((midi-z.measuredMidi)/12),gain=Math.min(.6/z.peak,.18/z.rms),l=z.loop;
  if(sustain&&(!l||![l.start,l.end,l.fade].every(Number.isInteger)||l.start<0||l.fade<2||l.end>=a.length-1||l.end-l.start<=2*l.fade||!Number.isFinite(l.correlation)||l.correlation<.78||!Number.isFinite(l.rmsRatio)||l.rmsRatio<.65))throw Error('Unqualified performance sustain loop');
  let p=offset,wraps=0;
- return {id:z.id,hash:z.sourceSha256,rate,get wraps(){return wraps},next(){
+ return {id:z.id,hash:z.sourceSha256,rate,get wraps(){return wraps},next(rateMultiplier=1){
+  if(!Number.isFinite(rateMultiplier)||rateMultiplier<.85||rateMultiplier>1.15)throw Error('Invalid expressive playback rate');
   if(sustain)while(p>=l.end){p=l.start+l.fade+p-l.end;wraps++;}
   let x=read(a,p);
   if(sustain&&p>=l.end-l.fade){const t=(p-l.end+l.fade)/l.fade,w=.5-.5*Math.cos(Math.PI*t);x=x*(1-w)+read(a,l.start+p-l.end+l.fade)*w;}
-  p+=rate;return x*gain;
+  p+=rate*rateMultiplier;return x*gain;
  }};
 }
 function curveFor(n){
@@ -37,7 +39,7 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
  let last=0;
  for(const [i,n] of notes.entries()){
   if(!Number.isInteger(n.midi)||!Number.isFinite(n.start)||n.start<0||!Number.isFinite(n.duration)||n.duration<.15||n.duration>30||typeof n.articulation!=='string')throw Error('Invalid performance note');
-  const start=Math.round(n.start*SR),end=Math.round((n.start+n.duration)*SR),curve=curveFor(n);
+  const start=Math.round(n.start*SR),end=Math.round((n.start+n.duration)*SR),curve=curveFor(n),expression=compileRecordedExpression(n.expression,n.duration);
   if(start<last||end>frames||end-start<7200||n.connected===true&&(!i||start!==last||n.articulation!==notes[i-1].articulation))throw Error('Invalid performance grid');
   const candidates=[...groups.values()].filter(g=>g.articulation===n.articulation).sort((a,b)=>Math.abs(a.root-n.midi)-Math.abs(b.root-n.midi)||a.root-b.root);
   const g=candidates[0];if(!g||Math.abs(g.root-n.midi)>5)throw Error('Unrecorded performance articulation or pitch');
@@ -51,7 +53,7 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
    const z=takes[cursor%takes.length];cursors.set(key,cursor+1);
    return {v,z};
   });
-  events.push({n,start,end,curve,selected});last=end;
+  events.push({n,start,end,curve,selected,expression});last=end;
  }
  let previous=null,maxStep=0,peak=0;
  for(const [i,e] of events.entries()){
@@ -73,15 +75,16 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
    }
   }
   const voices=selected.map(({z},k)=>voice(z,n.midi,(offset+(k===0?Math.max(0,-alignment.delay):Math.max(0,alignment.delay)))*2**((n.midi-z.measuredMidi)/12),n.sustain===true));
-  let point=0,pressure=curve[0].value;
+  let point=0,pressure=curve[0].value,expressionFrame=0;
   function next(p){
-   const x=voices[0].next();
+   const rateMultiplier=expression?expression.rateAt(expressionFrame/SR):1;expressionFrame++;
+   const x=voices[0].next(rateMultiplier);
    if(voices.length===1)return x*p;
-   const y=voices[1].next(),t=clamp((p-selected[0].v)/(selected[1].v-selected[0].v),0,1);
+   const y=voices[1].next(rateMultiplier),t=clamp((p-selected[0].v)/(selected[1].v-selected[0].v),0,1);
    const c=clamp(alignment.correlation,0,1),correction=Math.min(1.35,1/Math.sqrt((1-t)**2+t*t+2*c*t*(1-t)));
    return (x*(1-t)+y*t)*p*correction;
   }
-  const meta={midi:n.midi,articulation:n.articulation,startFrame:start,frames:len,connected,sustain:n.sustain===true,sourceIds:voices.map(v=>v.id),sourceHashes:voices.map(v=>v.hash),variants:selected.map(x=>x.z.variant),layers:selected.map(x=>x.v),boundaryStep:0,wraps:[],alignment};
+  const meta={midi:n.midi,articulation:n.articulation,startFrame:start,frames:len,connected,sustain:n.sustain===true,sourceIds:voices.map(v=>v.id),sourceHashes:voices.map(v=>v.hash),variants:selected.map(x=>x.z.variant),layers:selected.map(x=>x.v),boundaryStep:0,wraps:[],alignment,expression:expression?.metadata??null};
   for(let j=0;j<len;j++){
    const u=j/(len-1);while(point+1<curve.length-1&&u>curve[point+1].at)point++;
    const l=curve[point],r=curve[point+1];pressure=l.value+(r.value-l.value)*(u-l.at)/(r.at-l.at);
