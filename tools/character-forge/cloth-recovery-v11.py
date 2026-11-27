@@ -138,11 +138,64 @@ def outer_proxy(item):
  if t['signedVolume']<0:fs=[(a,c,b) for a,b,c in fs];t=topology(vv,fs)
  if t['boundaryEdges'] or t['nonManifoldEdges'] or t['signedVolume']<=0:raise RuntimeError('Invalid outer collision proxy '+item['name'])
  return fs,convert,t
+# Same motion, same mass, and same pin path in each candidate.
+# Smooth rings retain their measured centroid and mean cross-section radius.
+def smooth_ring(ring):
+ c=Vector([sum(p[k] for p in ring)/len(ring) for k in range(3)])
+ v=[Vector(p)-c for p in ring];u=[v[i]*.6+v[i-1]*.2+v[(i+1)%len(v)]*.2 for i in range(len(v))]
+ scale=sum(x.length for x in v)/max(1e-9,sum(x.length for x in u))
+ return [list(c+x*scale) for x in u]
+def rings(v,n):return [v[i:i+n] for i in range(0,5*n,n)]
+def resample(ring,n):
+ out=[]
+ for i in range(n):
+  t=i*len(ring)/n;a=int(t);f=t-a;out.append([x+(y-x)*f for x,y in zip(ring[a],ring[(a+1)%len(ring)])])
+ return out
+def ringmesh(rows):
+ n=len(rows[0]);v=[list(p) for row in rows for p in row];fs=[]
+ for i in range(len(rows)-1):
+  for k in range(n):
+   a=i*n+k;b=i*n+(k+1)%n;fs.extend([(a,b,b+n),(a,b+n,a+n)])
+ for i,row in enumerate([rows[0],rows[-1]]):
+  center=len(v);v.append([sum(p[k] for p in row)/n for k in range(3)]);offset=0 if i==0 else (len(rows)-1)*n
+  for k in range(n):fs.append((center,offset+(k+1)%n,offset+k) if i==0 else (center,offset+k,offset+(k+1)%n))
+ if topology(v,fs)['signedVolume']<0:fs=[(a,c,b) for a,b,c in fs]
+ return v,fs
+def continuous_leg(trouser,boot,alignment):
+ a=[smooth_ring(r) for r in rings(trouser,18)];b=[resample(smooth_ring(r),18) for r in rings(boot,16)]
+ if alignment is None:
+  trials=[(sum(math.dist(a[3][k],b[4][(direction*k+offset)%18])**2 for k in range(18)),direction,offset) for direction in [-1,1] for offset in range(18)];_,direction,offset=min(trials);alignment=(direction,offset)
+ direction,offset=alignment;b=[[row[(direction*k+offset)%18] for k in range(18)] for row in b]
+ # Fuse overlapping calf and boot cuff into one measured intermediate ring.
+ joint=[[.5*(x+y) for x,y in zip(p,q)] for p,q in zip(a[3],b[4])]
+ return ringmesh(a[:3]+[joint]+b[:4][::-1]),alignment
+def defect_detail(v,old,cs,previous_cs):
+ ranked=sorted([(math.dist(v[a],v[b])/d,a,b,d) for (a,b),d in zip(edges,lengths)],reverse=True)[:8];details=[]
+ trees=[(name,tree(vv,ff),vv,ff) for name,vv,ff in cs]
+ for ratio,a,b,d in ranked:
+  mid=Vector([(x+y)*.5 for x,y in zip(v[a],v[b])]);nearest=[]
+  for name,t,vv,ff in trees:
+   co,normal,fi,distance=t.find_nearest(mid)
+   if co is None:continue
+   ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*spec['fps']/3 for k in range(3)]
+   nearest.append({'name':name,'face':fi,'faceVertices':ids,'distanceMetres':distance,'normal':list(normal),'surfaceVelocity':velocity})
+  details.append({'edge':[a,b],'ratio':ratio,'previousRatio':math.dist(old[a],old[b])/d,'restLength':d,'midpoint':list(mid),'nearestCollider':min(nearest,key=lambda x:x['distanceMetres']) if nearest else None})
+ selfTree=tree(v,faces);pairs=[(a,b) for a,b in selfTree.overlap(selfTree) if a<b and not set(faces[a])&set(faces[b])]
+ normalsChanged=[]
+ for i,(a,b,c) in enumerate(faces):
+  oldN=(Vector(old[b])-Vector(old[a])).cross(Vector(old[c])-Vector(old[a]));newN=(Vector(v[b])-Vector(v[a])).cross(Vector(v[c])-Vector(v[a]))
+  if oldN.length>1e-10 and newN.length>1e-10 and oldN.normalized().dot(newN.normalized())<0:normalsChanged.append(i)
+ return {'worstEdges':details,'nonAdjacentSelfOverlapPairs':len(pairs),'selfPairs':pairs[:80],'normalReversalSincePrevious':normalsChanged[:100]}
 results=[]
-experiments=[('static',1,1,6,None),('A',2,1,6,['trousers R']),('B',2,3,18,['trousers R']),('C',2,1,18,['trousers R']),('D',2,1,18,['trousers L','trousers R']),('E',2,1,18,None),('world',3,1,18,None)]
+experiments=[('static',1,1,6,None),('original',2,1,18,None),('smooth',2,1,18,None),('continuous',2,1,18,None),('fine',2,1,18,None),('world',3,1,18,None)]
+chosen=None
 for label,stage,slow,ramp,allowed in experiments:
  if stage==2 and not results[0]['passed']:break
- if stage==3 and not all(r['passed'] for r in results):break
+ if stage==3:
+  valid=[r for r in results if r['stage']==2 and r['passed']]
+  if not valid:break
+  chosen=min(valid,key=lambda r:max(f['maxStretch'] for f in r['frames']))['experiment']
+ method=chosen if stage==3 else label
  bpy.ops.wm.read_factory_settings(use_empty=True);scene=bpy.context.scene;scene.render.fps=spec['fps'];scene.gravity=(0,0,-9.81)
  # Static settling first, then local leg motion. Stage 3 replays the same
  # local simulation and explicitly applies measured root translation on export.
@@ -163,17 +216,29 @@ for label,stage,slow,ramp,allowed in experiments:
  cloth=object_mesh('MerchantRobeWelded',initial,faces)
  if stage>1:keys(cloth,expected,set(wpins))
  group=cloth.vertex_groups.new(name='PinnedSeam');group.add(wpins,1,'REPLACE')
- colliders=[];collider_data=[];topologies={}
- for item in spec['colliders']:
+ colliders=[];collider_data=[];topologies={};items=spec['colliders']
+ if method in ['continuous','fine']:
+  items=[i for i in items if i['name']=='tunic']
+  for side in ['L','R']:
+   leg=next(i for i in spec['colliders'] if i['name']=='trousers '+side);boot=next(i for i in spec['colliders'] if i['name']=='boot '+side)
+   (neutral,fs),alignment=continuous_leg(raw(leg['staticPositions']),raw(boot['staticPositions']),None)
+   frames=[]
+   for a,b in zip(leg['frames'],boot['frames']):
+    (v,_),_=continuous_leg(raw(a),raw(b),alignment);frames.append(v)
+   items.append({'name':'continuous '+side,'staticPositions':neutral,'frames':frames,'indices':[j for f in fs for j in f],'continuousProxy':True})
+ for item in items:
   if allowed is not None and item['name'] not in allowed:continue
   fs=[tuple(item['indices'][k:k+3]) for k in range(0,len(item['indices']),3)];frames=[frame_positions(item,idx,t) for idx,t in enumerate(times)]
   sourceTopology=topology(frames[0],fs)
-  if stage>1 and item['name']!='tunic':
+  if stage>1 and item['name']!='tunic' and not item.get('continuousProxy'):
    fs,convert,proxyTopology=outer_proxy(item);frames=[convert(v) for v in frames]
+   if method=='smooth':
+    n=16 if item['name'].startswith('boot') else 18
+    frames=[ringmesh([smooth_ring(r) for r in rings(v,n)])[0] for v in frames];fs=ringmesh([smooth_ring(r) for r in rings(raw(item['staticPositions']),n)])[1];proxyTopology=topology(frames[0],fs)
   else:proxyTopology=sourceTopology
   ob=object_mesh('Collider_'+item['name'],frames[0],fs)
-  if stage>1 and label!='A':keys(ob,frames)
-  cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.004;cm.settings.thickness_inner=.004;colliders.append(ob);collider_data.append((item['name'],frames,fs,ob))
+  if stage>1:keys(ob,frames)
+  cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.003 if method=='fine' else .004;cm.settings.thickness_inner=.003 if method=='fine' else .004;colliders.append(ob);collider_data.append((item['name'],frames,fs,ob))
   topologies[item['name']]={'original':sourceTopology,'evaluatedProxy':proxyTopology,'outerThickness':.004,'innerThickness':.004}
  # For the local experiments, compare to a truly stationary pinned seam.
  # Only E/world include the full actual animated seam.
@@ -183,22 +248,23 @@ for label,stage,slow,ramp,allowed in experiments:
   if cloth.data.shape_keys:
    for key in list(cloth.data.shape_keys.key_blocks)[1:]:
     for j in wpins:key.data[j].co=cv(initial[j])
- mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=16;s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1
+ mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=28 if method=='fine' else 16;s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1
  # Firm woven wool, not default stretchy fabric; no dynamic rest shape.
  for name,val in [('tension_stiffness',35),('compression_stiffness',35),('shear_stiffness',22),('bending_stiffness',1.0),('tension_damping',8),('compression_damping',8),('shear_damping',5),('bending_damping',.7),('use_dynamic_mesh',False)]:
   if hasattr(s,name):setattr(s,name,val)
  c=mod.collision_settings;c.use_collision=True;c.distance_min=.004;c.collision_quality=10;c.use_self_collision=True;c.self_distance_min=.004
+ if method=='fine':c.collision_quality=16;c.distance_min=.003;c.friction=3
  cache=mod.point_cache;cache.frame_start=1;cache.frame_end=count
  if hasattr(cache,'use_disk_cache'):cache.use_disk_cache=False
  bpy.context.view_layer.objects.active=cloth;cloth.select_set(True);scene.frame_set(1);bpy.context.view_layer.update()
- rows=[];samples=[];prev={};firstDefect=None;priorSamples=[]
+ rows=[];samples=[];prev={};firstDefect=None;priorSamples=[];prevCloth=initial;defects=[]
  # Sequential evaluation deliberately measures initial and settled state.
  # No all-vertex animated shape keys are applied to the free cloth.
  for frame in range(1,count+1):
   scene.frame_set(frame);bpy.context.view_layer.update();v=evaluated(cloth)
   if len(v)!=len(initial) or not all(math.isfinite(x) for p in v for x in p):raise RuntimeError('Invalid cloth surface')
   i=frame-1
-  cs=[];audit={}
+  cs=[];audit={};previous_cs=dict(prev)
   for name,fs,idx,ob in collider_data:
    actual=evaluated(ob);assert len(actual)==len(fs[i])
    err=max(math.dist(a,b) for a,b in zip(actual,fs[i]));vel=max((math.dist(a,b)*spec['fps'] for a,b in zip(actual,prev.get(name,actual))),default=0)
@@ -208,6 +274,8 @@ for label,stage,slow,ramp,allowed in experiments:
   root=offsets[int(times[i])] if stage==3 and times[i]>=0 else [0,0,0]
   sample={'frame':frame,'sourceFrame':times[i],'root':root,'positions':[[x+y for x,y in zip(p,root)] for p in v],'colliders':[{'name':name,'positions':vv,'faces':ff} for name,vv,ff in cs]}
   bad=sum(row['nonSeamTrianglePairs'].values())>0 or row['maxStretch']>1.6 or row['collapsedEdges']>0
+  if stage>1 and (40<=frame<=46 or (bad and firstDefect is None) or (firstDefect is not None and frame<=firstDefect+2)):defects.append({'frame':frame,**defect_detail(v,prevCloth,cs,previous_cs)})
+  prevCloth=v
   if bad and firstDefect is None:
    firstDefect=frame;samples.extend(priorSamples);samples.append(sample)
   if frame==1 or frame==warm or frame==warm+1 or frame==count or (firstDefect is not None and frame<=firstDefect+2 and frame>firstDefect):samples.append(sample)
@@ -217,9 +285,9 @@ for label,stage,slow,ramp,allowed in experiments:
  settled=[r for r in rows if r['frame']>= (warm+1 if stage==1 else 25)];initialPairs=sum(rows[0]['nonSeamTrianglePairs'].values())
  gates={'stretch':all(r['p95Stretch']<=1.15 and r['maxStretch']<=1.6 and not r['collapsedEdges'] for r in settled),'pin':all(r['pinErrorMetres']<=.006 for r in settled),'shape':all(.78<=r['hemRadiusRatio']<=1.22 and r['maxDeviationMetres']<=.15 for r in settled),'collision':all(sum(r['nonSeamTrianglePairs'].values())<=initialPairs and sum(r['nonSeamTrianglePairs'].values())<=10 for r in settled)}
  gates['evaluatedColliderAgreement']=all(x['maxEvaluatedMismatchMetres']<=1e-5 for r in rows for x in r['colliderAudit'].values())
- results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'frames':rows,'sampleFrames':len(samples)})
- (out/('v12-cloth-'+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'faces':faces,'pinIndices':wpins,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
- (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':'passed' if len(results)==7 and all(r['passed'] for r in results) else 'blocked or incomplete at '+label},indent=2))
+ results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'method':method,'quality':s.quality,'collisionThickness':c.distance_min,'frames':rows,'sampleFrames':len(samples)})
+ (out/('v13-cloth-'+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'faces':faces,'pinIndices':wpins,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
+ (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':'passed' if len(results)==6 and results[-1]['stage']==3 and results[-1]['passed'] else 'blocked or incomplete at '+label},indent=2))
  print(json.dumps({'stage':stage,'gates':gates,'last':rows[-1]}),flush=True)
  if stage==3 and all(gates.values()):
   # The existing verified cache format remains available; no production cache
