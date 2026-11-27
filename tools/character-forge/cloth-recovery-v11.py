@@ -170,7 +170,8 @@ def continuous_leg(trouser,boot,alignment):
  joint=[[.5*(x+y) for x,y in zip(p,q)] for p,q in zip(a[3],b[4])]
  return ringmesh(a[:3]+[joint]+b[:4][::-1]),alignment
 def defect_detail(v,old,cs,previous_cs):
- ranked=sorted([(math.dist(v[a],v[b])/d,a,b,d) for (a,b),d in zip(edges,lengths)],reverse=True)[:8];details=[]
+ allRatios=sorted([(math.dist(v[a],v[b])/d,a,b,d) for (a,b),d in zip(edges,lengths)],reverse=True)
+ ranked=allRatios[:8]+[x for x in allRatios if x[0]<.5];details=[]
  trees=[(name,tree(vv,ff),vv,ff) for name,vv,ff in cs]
  for ratio,a,b,d in ranked:
   mid=Vector([(x+y)*.5 for x,y in zip(v[a],v[b])]);nearest=[]
@@ -179,7 +180,7 @@ def defect_detail(v,old,cs,previous_cs):
    if co is None:continue
    ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*spec['fps']/3 for k in range(3)]
    nearest.append({'name':name,'face':fi,'faceVertices':ids,'distanceMetres':distance,'normal':list(normal),'surfaceVelocity':velocity})
-  details.append({'edge':[a,b],'ratio':ratio,'previousRatio':math.dist(old[a],old[b])/d,'restLength':d,'midpoint':list(mid),'nearestCollider':min(nearest,key=lambda x:x['distanceMetres']) if nearest else None})
+  details.append({'edge':[a,b],'ratio':ratio,'previousRatio':math.dist(old[a],old[b])/d,'restLength':d,'midpoint':list(mid),'edgeDirection':list((Vector(v[b])-Vector(v[a])).normalized()),'pinDistancesMetres':[min(math.dist(initial[j],initial[k]) for k in wpins) for j in (a,b)],'nearestCollider':min(nearest,key=lambda x:x['distanceMetres']) if nearest else None})
  selfTree=tree(v,faces);pairs=[(a,b) for a,b in selfTree.overlap(selfTree) if a<b and not set(faces[a])&set(faces[b])]
  normalsChanged=[]
  for i,(a,b,c) in enumerate(faces):
@@ -397,6 +398,15 @@ for label,stage,slow,ramp,allowed in experiments:
     prev[name]=actual;top=topology(actual,idx);audit[name]={'maxEvaluatedMismatchMetres':err,'maxSurfaceSpeedMetresPerSecond':vel,'signedVolume':top['signedVolume'],'boundaryEdges':top['boundaryEdges'],'nonManifoldEdges':top['nonManifoldEdges']}
     cs.append((name,actual,idx))
    row=stats(v,expected[i],cs);row={'frame':frame,**row,'colliderAudit':audit};rows.append(row)
+   if v15 and construction=='remesh':
+    selfTree=tree(v,faces)
+    selfPairs=[(a,b) for a,b in selfTree.overlap(selfTree) if a<b and not set(faces[a])&set(faces[b])]
+    row['selfOverlapPairs']=len(selfPairs)
+    row['selfOverlapIndices']=selfPairs
+    row['maxPinTargetSpeed']=max((math.dist(expected[i][j],expected[max(0,i-1)][j])*spec['fps'] for j in wpins),default=0)
+    if 44<=frame<=46:
+     row['edgeStrainMap']=[math.dist(v[a],v[b])/d for (a,b),d in zip(edges,lengths)]
+     row['edgeIndices']=edges
    # Measure contacts on the attachment triangles separately; these were
    # intentionally omitted from the historical free-surface collision gate.
    if stage>1 and 40<=frame<=48:

@@ -232,6 +232,9 @@ jobs:
       - name: Render local cloth experiment evidence even after a rejected gate
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: CHARACTER_V15_CLOTH=1 node tools/character-forge/cloth-evidence-v12.mjs
+      - name: Isolated Remesh defect trajectory and cloth coupon
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-coupon-v16.py'
       - name: Full cloth bake and standalone playback after recovery gate
         id: cloth
         if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
