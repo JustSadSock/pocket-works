@@ -29,7 +29,7 @@ for(const [key,clip] of Object.entries(sets)){
  const candidate=structuredClone(m);candidate.sampledWalk=clip;candidate.spec.actions=['idle','walk'];candidate.spec.motionRevision='v9';write('v10-walk-'+key+'.glb',glb(candidate));write('v10-walk-'+key+'-spec.json',JSON.stringify({spec:candidate.spec,sampledWalk:clip},null,2));
  const models=[],samples=[];
  for(let i=0;i<=N;i++){const phase=i/N,w=pose(candidate,'walk',phase),q=structuredClone(candidate);for(let j=0;j<q.parts.length;j++){q.parts[j].positions=deform(candidate,candidate.parts[j],w).flat();normals(q.parts[j])}models.push(q);
-  const pelvis=J('pelvis'),hip=w[pelvis.id].p,shoulders=sub(w[J('upperarm01.L').id].p,w[J('upperarm01.R').id].p),knees=['L','R'].map(s=>{const a=w[J('upperleg01.'+s).id].p,b=w[J('lowerleg01.'+s).id].p,c=w[J('foot.'+s).id].p;return 180-Math.acos(clamp(dot(unit(sub(a,b)),unit(sub(c,b))),-1,1))*180/Math.PI});
+  const pelvis=m.joints.find(j=>j.name==='pelvis')??J('root'),hip=w[pelvis.id].p,shoulders=sub(w[J('upperarm01.L').id].p,w[J('upperarm01.R').id].p),knees=['L','R'].map(s=>{const a=w[J('upperleg01.'+s).id].p,b=w[J('lowerleg01.'+s).id].p,c=w[J('foot.'+s).id].p;return 180-Math.acos(clamp(dot(unit(sub(a,b)),unit(sub(c,b))),-1,1))*180/Math.PI});
   const feet=candidate.contacts.map(c=>{const j=candidate.joints[c.joint],point=add(w[j.id].p,rotate(w[j.id].q,c.local)),local=(phase+c.phase)%1,expected=add(add(j.position,c.local),[0,0,candidate.spec.gaitStride*(phase-local)]);return {side:j.name,stance:local<candidate.spec.gaitDuty,height:point[1]-c.groundY,drift:Math.hypot(point[0]-expected[0],point[2]-expected[2])}});
   samples.push({phase,pelvis:hip,head:w[J('head').id].p,shoulderYaw:Math.atan2(shoulders[2],shoulders[0]),knees,feet});
  }
