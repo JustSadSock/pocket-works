@@ -68,3 +68,50 @@ test('six recorded musicians retain independent stage positions in both room pre
   assert.ok(r.mix.every(Number.isFinite));
  }
 });
+
+
+test('one shared phrase gesture coordinates bow and breath reattacks across musicians',()=>{
+ const base=zones();
+ const violin=base.map((z,i)=>({...z,id:'violin-'+i,sourceSha256:(i+11).toString(16).padStart(64,'0'),instrument:'violin',articulation:'arco'}));
+ const flute=base.map((z,i)=>({...z,id:'flute-'+i,sourceSha256:(i+21).toString(16).padStart(64,'0'),instrument:'flute',articulation:'non-vibrato'}));
+ const line=(articulation,reattack)=>[
+  {midi:69,start:0,duration:.6,articulation,pressure:.7,phraseId:'shared-line'},
+  {midi:69,start:.6,duration:.6,articulation,pressure:.7,connected:true,phraseId:'shared-line',reattack:{kind:reattack,strength:.3,durationSeconds:.08}},
+  {midi:72,start:1.2,duration:.6,articulation,pressure:.7,connected:true,phraseId:'shared-line'}
+ ];
+ const gestures=[{id:'shared-line',start:0,end:1.8,curve:[{at:0,value:.82},{at:.45,value:1.18},{at:1,value:.76}]}];
+ const tracks=[
+  {id:'strings',instrument:'violin',group:'strings',pan:-.35,gain:.4,phrasingTechnique:'bowed',notes:line('arco','bow-change')},
+  {id:'winds',instrument:'flute',group:'woodwind',pan:.35,gain:.4,phrasingTechnique:'breath',notes:line('non-vibrato','breath')}
+ ];
+ const opts={zones:[...violin,...flute],tracks,seconds:2,includeTrackStems:true};
+ const expressive=renderRecordedEnsemble({...opts,gestures});
+ const dry=renderRecordedEnsemble({...opts,tracks:tracks.map(t=>({...t,phrasingTechnique:undefined,notes:t.notes.map(({phraseId,reattack,...n})=>n)}))});
+ assert.notDeepEqual(expressive.mix,dry.mix);
+ assert.deepEqual(expressive.mix,renderRecordedEnsemble({...opts,gestures}).mix);
+ assert.deepEqual(Object.keys(expressive.trackStems),['strings','winds']);
+ assert.equal(expressive.gestureReceipts.length,1);
+ assert.equal(expressive.gestureReceipts[0].participants.length,2);
+ assert.deepEqual(expressive.gestureReceipts[0].participants.map(x=>x.technique),['bowed','breath']);
+ assert.equal(expressive.choices.strings[1].reattack.kind,'bow-change');
+ assert.equal(expressive.choices.winds[1].reattack.kind,'breath');
+ assert.equal(expressive.choices.strings[1].sourceOffsetFrames,0);
+ assert.equal(expressive.choices.winds[1].sourceOffsetFrames,0);
+ for(let i=0;i<expressive.mix.length;i++){
+  const {strings,winds}=expressive.trackStems;
+  assert.ok(Math.abs(strings[i]+winds[i]-expressive.mix[i])<1e-6);
+ }
+});
+
+test('shared ensemble gestures require multiple correctly typed participants',()=>{
+ const base=zones(),notes=[
+  {midi:69,start:0,duration:.6,articulation:'arco',pressure:.7,phraseId:'line'},
+  {midi:72,start:.6,duration:.6,articulation:'arco',pressure:.7,connected:true,phraseId:'line'}
+ ];
+ const gestures=[{id:'line',start:0,end:1.2,curve:[{at:0,value:.8},{at:1,value:1.1}]}];
+ const track={id:'one',instrument:'fixture',group:'strings',pan:0,gain:.5,phrasingTechnique:'bowed',notes};
+ const opts={zones:base,tracks:[track],seconds:1.4,gestures};
+ assert.throws(()=>renderRecordedEnsemble(opts),/at least two musicians/);
+ assert.throws(()=>renderRecordedEnsemble({...opts,tracks:[{...track,phrasingTechnique:'breath'},{...track,id:'two'}]}),/Invalid ensemble phrasing/);
+ assert.throws(()=>renderRecordedEnsemble({...opts,gestures:[{...gestures[0],id:'missing'}]}),/Unknown ensemble gesture/);
+});
