@@ -1,0 +1,121 @@
+name: Banners Signed Cross Commit Candidate
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci-overhaul/banners-signed-cross-commit-candidate*'
+      - '.github/workflows/banners-signed-cross-commit-candidate.yml'
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/banners-signed-cross-commit-candidate.test.mjs scripts/ci-overhaul/heavy-cross-commit.test.mjs
+  candidate:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/banners-signed-cross-commit-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: git fetch --no-tags origin 8c70528d57134a01558a3b9d5bef8d1e34d429a3 3b4294292ba7aed4034231c8bc5ec277073bdfae
+      - name: Measure real mounted scope under signed issuer runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tool="$PWD/scripts/ci-overhaul/banners-signed-cross-commit-candidate.mjs"
+          measure="$PWD/scripts/ci-overhaul/verified-gameplay-receipt.mjs"
+          dir="$RUNNER_TEMP/signed-candidate"; src="$RUNNER_TEMP/signed-target"; audit="$RUNNER_TEMP/signed-audit"
+          mkdir "$dir" "$src" "$audit"
+          node "$tool" identity > "$dir/identity.json"
+          target="$(jq -er .target "$dir/identity.json")"
+          issuer="$(jq -er .issuer "$dir/identity.json")"
+          git archive "$target" apps/banners-of-war shared scripts package.json package-lock.json | tar -xf - -C "$src"
+          git archive "$issuer" scripts/ci-overhaul | tar -xf - -C "$audit"
+          node "$measure" normalize "$PWD" "$target" "$src" source > "$dir/source-before.json"
+          node "$measure" normalize "$PWD" "$issuer" "$audit" audit > "$dir/audit-before.json"
+          image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
+          docker pull "$image"
+          opts=(--rm --network none --hostname pw-gameplay --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$audit,dst=/audit,readonly" -w /work)
+          config="$(docker image inspect --format '{{.Id}}' "$image")"
+          runtime="$(docker run "${opts[@]}" "$image" node -p 'process.version')"
+          arch="$(docker run "${opts[@]}" "$image" node -p 'process.arch')"
+          toolchain="$(docker run "${opts[@]}" "$image" sha256sum /usr/local/bin/node | cut -d' ' -f1)"
+          kernel="$(uname -srvm | sha256sum | cut -d' ' -f1)"
+          cpu="$(awk -F: '/^(vendor_id|cpu family|model[[:space:]]|model name|stepping|microcode|flags)[[:space:]]*:/{print}' /proc/cpuinfo | sort -u | sha256sum | cut -d' ' -f1)"
+          jq -n --arg image "$image" --arg config "$config" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid}' > "$dir/runtime.json"
+          docker run "${opts[@]}" "$image" node /audit/scripts/ci-overhaul/verified-mounted-inputs.mjs measure /work > "$dir/source-inside.json"
+          docker run "${opts[@]}" "$image" node /audit/scripts/ci-overhaul/verified-mounted-inputs.mjs measure /audit > "$dir/audit-inside.json"
+          node "$measure" measure "$src" > "$dir/source-after.json"
+          node "$measure" measure "$audit" > "$dir/audit-after.json"
+          node "$tool" issue "$dir"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-cross-candidate-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/signed-candidate/
+          if-no-files-found: error
+          retention-days: 7
+  independent_gate:
+    needs: candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: git fetch --no-tags origin 8c70528d57134a01558a3b9d5bef8d1e34d429a3 3b4294292ba7aed4034231c8bc5ec277073bdfae
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-cross-candidate-${{ github.run_attempt }}
+          path: evidence
+      - name: Reauthenticate all signed source records and reconstruct scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/ci-overhaul/banners-signed-cross-commit-candidate.mjs gate evidence verdict.json
+          jq -e '.success and .authenticatedSubjects==9 and .verifiedBundles==8 and .negativeControls==4 and .candidate.identity=="scoped-cross-commit" and .gameplayCandidates==1868 and .alwaysFreshPerformanceCases==5 and .reusedTasks==0 and .economics.decision=="fresh" and .productionAuthorization==false' verdict.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-cross-candidate-gate-${{ github.run_attempt }}
+          path: verdict.json
+          if-no-files-found: error
+          retention-days: 7
+  required_gate:
+    if: always()
+    needs: [contract,candidate,independent_gate]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          CONTRACT: ${{ needs.contract.result }}
+          CANDIDATE: ${{ needs.candidate.result }}
+          GATE: ${{ needs.independent_gate.result }}
+        run: |
+          set -euo pipefail
+          test "$CONTRACT" = success
+          if jq -e '.pull_request.head.repo.full_name == .repository.full_name and .pull_request.head.ref == "infra/banners-signed-cross-commit-candidate"' "$GITHUB_EVENT_PATH"; then
+            test "$CANDIDATE" = success
+            test "$GATE" = success
+          else
+            test "$CANDIDATE" = skipped
+            test "$GATE" = skipped
+          fi
