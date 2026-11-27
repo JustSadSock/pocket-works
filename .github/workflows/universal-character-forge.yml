@@ -238,7 +238,7 @@ jobs:
       - name: Render local cloth experiment evidence even after a rejected gate
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: CHARACTER_V15_CLOTH=1 node tools/character-forge/cloth-evidence-v12.mjs
-      - name: Isolated Remesh defect trajectory and cloth coupon
+      - name: Isolated Remesh defect trajectory and one-factor physical matrix
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-coupon-v16.py'
       - name: Full cloth bake and standalone playback after recovery gate
@@ -263,6 +263,8 @@ jobs:
           node --check tools/character-forge/hand-reference-v15.mjs
           node --check tools/character-forge/motion-continuous-v15.mjs
           node --check tools/character-forge/hand-transfer-v16.mjs
+          node --check tools/character-forge/hand-surface-v17.mjs
+          python3 -m py_compile tools/character-forge/hand-surface-audit-v17.py
           python3 -m py_compile tools/character-forge/hand-audit-v16.py tools/character-forge/cloth-coupon-v16.py
           python3 -m py_compile tools/character-forge/hand-bind-v15.py tools/character-forge/hand-source-v15.py tools/character-forge/motion-independent-v15.py
       - name: Required native CC0 reference motion (skinless GLB channels)
