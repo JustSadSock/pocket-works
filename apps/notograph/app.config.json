@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "notograph",
+  "name": "Нотограф",
+  "shortName": "Нотограф",
+  "description": "Преврати напев или аудиозапись в ноты, проверь на слух и сохрани партитуру.",
+  "version": "0.1.0",
+  "releaseDate": "2026-11-26",
+  "releaseDateTime": "2026-11-26T21:06:00Z",
+  "changelog": [
+    "Локальное распознавание напева и аудиофайлов.",
+    "Редактирование нот, экспериментальные два регистра и воспроизведение.",
+    "Печать, MusicXML и MIDI."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#245e57",
+  "backgroundColor": "#e4ebe8",
+  "themeColor": "#e4ebe8",
+  "orientation": "any",
+  "cacheName": "notograph-v0.1.0",
+  "storageNamespace": "pocket-works:notograph",
+  "tags": [
+    "music",
+    "audio",
+    "utility",
+    "offline",
+    "notation"
+  ],
+  "order": 57
+}

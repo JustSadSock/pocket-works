@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "product": "notograph",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "press",
+      "evidence": "apps/press/visual-direction.json (repository design record)",
+      "lesson": "Horizontal waveform and flowing staff replace the fixed file-operation rail and byte ledger."
+    },
+    {
+      "slug": "folkarium",
+      "evidence": "apps/folkarium/visual-direction.json (repository design record)",
+      "lesson": "Mint signal strip and compact measure sequence replace the warm composition folio."
+    },
+    {
+      "slug": "sin-guion",
+      "evidence": "apps/sin-guion/visual-direction.json (repository design record)",
+      "lesson": "Broad waveform with notation below replaces cobalt rehearsal station panels."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/12002874/",
+      "observation": "YIN modifies autocorrelation to reduce fundamental frequency estimation errors.",
+      "principle": "Represent pitch uncertainty instead of promising flawless transcription from raw recordings.",
+      "application": "Normalized difference pitch estimator with confidence coloring and a waveform.",
+      "avoid": "Do not claim full research implementation or neural source separation.",
+      "inspectedAt": "2026-11-26T21:06:00Z"
+    },
+    {
+      "url": "https://github.com/spotify/basic-pitch",
+      "observation": "Basic Pitch is instrument-agnostic and supports polyphonic transcription.",
+      "principle": "Note transcription is distinct from instrument identity and source separation.",
+      "application": "Clearly label the spectral register mode as approximate and not vocal separation.",
+      "avoid": "Do not claim the Basic Pitch neural model is installed or running.",
+      "inspectedAt": "2026-11-26T21:06:00Z"
+    },
+    {
+      "url": "https://www.w3.org/2021/06/musicxml40/tutorial/notation-basics/",
+      "observation": "MusicXML describes notation using measures, pitch, duration and time signatures.",
+      "principle": "Encode durations and rests explicitly rather than exporting only note names.",
+      "application": "A four-division beat grid emits measures and ties in separately named parts.",
+      "avoid": "Do not assume a manual tempo recovers a recording's precise meter.",
+      "inspectedAt": "2026-11-26T21:06:00Z"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "signal-sheet",
+      "medium": "Native audio APIs, worker signal analysis and editable vector notation.",
+      "composition": "One horizontal recording strip over a responsive continuous staff.",
+      "interaction": "Import, transcribe, compare, correct and export actual events.",
+      "motion": "Waveform appears on decoded audio; pitches highlight in time.",
+      "rationale": "Chosen because measured audio and readable notation stay connected."
+    },
+    {
+      "id": "piano-roll",
+      "medium": "Full-screen canvas sequencer and piano key grid.",
+      "composition": "Vertical keyboard beside zoomable temporal note matrix.",
+      "interaction": "Draw and stretch rectangular note blocks on a timeline.",
+      "motion": "Panning and inertial zoom follow horizontal audio sequences.",
+      "rationale": "Rejected because a piano roll de-emphasizes the printable sheet."
+    },
+    {
+      "id": "tuner-dial",
+      "medium": "Circular dial with live frequency rings and radial vector markings.",
+      "composition": "Centered tuning instrument with controls around its circumference.",
+      "interaction": "Watch a live pitch and manually capture individual notes.",
+      "motion": "Rotating needle follows fundamental frequency with damped motion.",
+      "rationale": "Rejected because manual live capture does not handle full recordings well."
+    }
+  ],
+  "selection": {
+    "concept": "signal-sheet",
+    "reason": "Actual waveform and printable notation create a clear transformation with direct editing.",
+    "rejected": [
+      {
+        "concept": "piano-roll",
+        "reason": "Sequencer navigation adds complexity and de-emphasizes the printed score."
+      },
+      {
+        "concept": "tuner-dial",
+        "reason": "Tuner focuses on one moment and cannot present a complete composition."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg-dom",
+      "availability": "available",
+      "reason": "Native vector paths and semantic controls are lightweight and local."
+    },
+    {
+      "id": "sound-forge",
+      "availability": "unverified",
+      "reason": "Sound Forge draft explicitly lacks production runtime integration.",
+      "fallback": "Use local Web Audio and export standard MIDI for interchange."
+    }
+  ],
+  "assets": [
+    {
+      "id": "signal-icon",
+      "tool": "svg-dom",
+      "source": "icons/source.svg",
+      "output": "icons/icon.svg",
+      "role": "Waveform turning into two beamed notes identifies the application.",
+      "acceptance": "Waveform and two noteheads remain recognizable on a 48px tile.",
+      "integration": "Same original vector appears in manifest and recorder identity.",
+      "provenance": "Self-authored vector paths and ellipses created for Notograph.",
+      "maxBytes": 8192
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Verify notation glyphs on mobile Safari and print layout.",
+      "Verify playback gesture and microphone permissions.",
+      "Confirm register mode does not imply stem isolation."
+    ],
+    "comparisons": [
+      "Compare input strip and notation against Press rail.",
+      "Compare audio-first workflow against Folkarium composition surface."
+    ]
+  }
+}

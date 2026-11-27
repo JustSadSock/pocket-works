@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "notograph",
+  "direction": {
+    "premise": "A field transcription instrument folds an audio signal into readable musical marks.",
+    "composition": "Horizontal input and waveform strip over a flowing score; controls live beside the source and selected notes.",
+    "shapeLanguage": "Thin staff lines, angular buttons, oval noteheads and waveform strokes create measured rhythm.",
+    "surfaceAndMaterial": "Matte muted mint instrument housing and near-white score; no artificial vellum texture.",
+    "paletteLogic": "Deep green ink for pitches and recording controls, amber for uncertain or selected notes.",
+    "typography": "Serif introduction gives way to practical sans-serif controls and compact monospace identifiers.",
+    "signature": "Actual waveform is followed by staff symbols whose noteheads highlight during synthesized playback.",
+    "distinction": "Signal-to-score vertical flow differs from the Press operation rail and Folkarium composition folio."
+  },
+  "architecture": {
+    "spatialLayout": "single-instrument",
+    "controlLocation": "contextual",
+    "navigation": "editor-toolbox",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "sliding",
+    "primaryVerb": "Capture audio, extract pitches, adjust individual notes, then audition the resulting score.",
+    "physicalFeedback": "Waveform appears after decoding, worker progress advances, and selected notes open a correction strip; playback highlights timed events.",
+    "spatialRationale": "Phone uses one continuous instrument without a permanent sidebar; each measure fits the viewport and correction controls stay near the bottom.",
+    "comparisons": [
+      {
+        "slug": "press",
+        "spatialDifference": "Horizontal waveform and flowing staff replace the fixed file-operation rail and byte ledger.",
+        "interactionDifference": "Infer and edit musical notes rather than compressing or extracting files."
+      },
+      {
+        "slug": "folkarium",
+        "spatialDifference": "Mint signal strip and compact measure sequence replace the warm composition folio.",
+        "interactionDifference": "Audio capture is the input, rather than building a composition directly."
+      },
+      {
+        "slug": "sin-guion",
+        "spatialDifference": "Broad waveform with notation below replaces cobalt rehearsal station panels.",
+        "interactionDifference": "Extract pitch from sound rather than practicing spoken dialogue."
+      },
+      {
+        "slug": "rivals-dna",
+        "spatialDifference": "A continuous audio strip and rhythmic staff replace player classification dossiers.",
+        "interactionDifference": "Correct inferred pitches rather than classifying character selections."
+      },
+      {
+        "slug": "bunny-bloom",
+        "spatialDifference": "The measured waveform and flat staff replace an illustrated garden environment.",
+        "interactionDifference": "Record and inspect musical audio instead of growing simulated plants."
+      },
+      {
+        "slug": "trace-mosaic",
+        "spatialDifference": "A linear time sheet replaces a tiled restoration board and brass tray.",
+        "interactionDifference": "Edit detected semitones instead of spatially dragging image tiles."
+      },
+      {
+        "slug": "pereves",
+        "spatialDifference": "A horizontal recording strip replaces the suspended sculpture and weight table.",
+        "interactionDifference": "Adjust musical pitch and replay instead of balancing simulated torque."
+      },
+      {
+        "slug": "petlya-17",
+        "spatialDifference": "A compact upright recorder replaces full-screen 3D cockpit telemetry.",
+        "interactionDifference": "Discrete transcription and replay replace steering and throttle manipulation."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "A signal and flowing score replace two stacked player dossiers.",
+        "interactionDifference": "Pitch correction and MIDI export replace roster annotation and comparison."
+      },
+      {
+        "slug": "flickyard",
+        "spatialDifference": "Flickyard uses a broad continuous target field with a separate equipment rail; Notograph is a vertically flowing recorder and printable staff.",
+        "interactionDifference": "Flickyard samples live pointer motion and resolves timed shots, while Notograph extracts timed pitch events and edits them on a score."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Semantic HTML controls and generated SVG notation with browser audio and a worker.",
+    "focalAsset": "Waveform-to-beamed-note vector identity, reflecting the actual signal to score transformation."
+  },
+  "motion": {
+    "character": "Direct measured feedback follows the time axis of the selected recording.",
+    "action": "Selecting a source enables recognition and the score scrolls into view after analysis.",
+    "anticipation": "Record control changes label and state while capturing sound.",
+    "response": "Waveform updates after decoded input and progress follows analyzed frames.",
+    "followThrough": "Actual detected notes settle into a printable staff and playback highlights noteheads.",
+    "interruption": "Cancel terminates the worker; playback stop halts scheduled oscillators.",
+    "reducedMotion": "Without animated scrolling the signal, progress and note colors remain legible."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#demo"
+    },
+    "expectedChange": "Original demonstration audio creates a six-note score with functional playback and export controls.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
