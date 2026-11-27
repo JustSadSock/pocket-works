@@ -24,7 +24,9 @@
         "atlas-human-layout.test.mjs",
         "atlas-urban.test.mjs",
         "atlas-cultural.test.mjs",
-        "atlas-historical.test.mjs"
+        "atlas-historical.test.mjs",
+        "atlas-resident-pool.test.mjs",
+        "atlas-resident-math.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -445,6 +447,18 @@
         4
       ],
       "tier": "deep"
+    },
+    {
+      "id": "resident-stabilization-chromium",
+      "kind": "browser-node",
+      "entry": "atlas-resident-chromium-qa.mjs",
+      "tier": "smoke"
+    },
+    {
+      "id": "resident-stabilization-webkit",
+      "kind": "browser-node",
+      "entry": "atlas-resident-webkit-qa.mjs",
+      "tier": "smoke"
     }
   ]
 }
