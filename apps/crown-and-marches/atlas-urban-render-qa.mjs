@@ -28,7 +28,7 @@ async function setup(browser,r){
    day(){fixture.s.day++;const stats=draw();return {stats,match:compare(baseline,image())};},
    pan(dx,dy){const stats=draw(dx,dy),actual=image(),fresh=draw(dx,dy,'fresh'),freshPixels=image(),repeat=draw(dx,dy),repeatPixels=image();return {stats,fresh,repeat,againstFresh:compare(actual,freshPixels),repeatAgainstFresh:compare(repeatPixels,freshPixels)};},
    returnPose(){const stats=draw(),actual=image(),fresh=draw(0,0,'fresh'),freshPixels=image();draw();return {stats,fresh,againstFresh:compare(actual,freshPixels),againstOrigin:compare(baseline,actual)};},
-   integerControl(){const origin=draw(0,0,'integer'),originPixels=image(),stats=draw(12,8,'integer'),translated=image(),fresh=draw(12,8,'fresh'),freshPixels=image();draw();return {origin,stats,fresh,shift:compare(originPixels,translated,12,8),againstFresh:compare(translated,freshPixels)};},
+   integerControl(){const origin=draw(0,0,'integer'),originPixels=image(),stats=draw(12,8,'integer'),translated=image(),fresh=draw(12,8,'fresh'),freshPixels=image();c.putImageData(new ImageData(translated,canvas.width,canvas.height),0,0);return {origin,stats,fresh,shift:compare(originPixels,translated,12,8),againstFresh:compare(translated,freshPixels)};},
    construction(){const day=fixture.s.day,fort=fixture.s.cities[0].fort;fixture.s.cities[0].fort++;const stats=draw();return {stats,dayBefore:day,dayAfter:fixture.s.day,fortBefore:fort,fortAfter:fixture.s.cities[0].fort};},
    sheet(candidate){const sheet=humanArchitectureSheet(candidate);sheet.id='sheet';document.body.append(sheet);return [sheet.width,sheet.height];}
   };
