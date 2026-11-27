@@ -1,0 +1,61 @@
+name: Gameplay Renewal Deduplication
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/gameplay-renewal-dedup.yml'
+      - 'scripts/ci-overhaul/gameplay-renewal-dedup*'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/gameplay-renewal-dedup.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs
+  live:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/gameplay-renewal-dedup'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Authenticate the observed production catalog without a run ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir "$RUNNER_TEMP/dedup"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {checkRenewal,renewalDecision} from './scripts/ci-overhaul/gameplay-renewal-dedup.mjs';
+          import {writeFileSync} from 'node:fs';
+          const id={source:'848f174e092afae8339c8de799eecc72e6da9bb0',sourceTree:'de97621699be90b0ae88122e970ccbd57e1d19a6',sourcePR:1355,sourceRef:'refs/pull/1355/merge'};
+          const ctrl={sha:'91019b3bea4a37a51cd223f84aad997fa3a9eee9',tree:'19ee4aa9e0d4f401167b643f9633fcd4200687fb'};
+          const result=checkRenewal(id,ctrl,process.env.RUNNER_TEMP+'/dedup');
+          assert.equal(result.renewalRequired,false,'The pinned live fixture must remain recent and authentic; otherwise refresh the fixture');
+          assert.equal(result.productionAuthorization,false);
+          assert.equal(result.allowResultReuse,false);
+          assert.equal(renewalDecision(id,{...ctrl,sha:'f'.repeat(40)},null).renewalRequired,true);
+          writeFileSync(process.env.RUNNER_TEMP+'/dedup/renewal-decision.json',JSON.stringify(result,null,2)+'\n');
+          console.log(JSON.stringify(result,null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renewal-dedup-live-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dedup/renewal-decision.json
+          if-no-files-found: error
+          retention-days: 7
