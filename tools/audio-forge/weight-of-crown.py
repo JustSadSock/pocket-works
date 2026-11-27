@@ -157,7 +157,7 @@ def make_score():
         if j in (0,4,7):at(5,j,0,'organ',76,5,.18-.01*j);at(5,j,0,'organ',77,5,.13-.01*j)
         if j in (0,4):at(5,j,1.5,'harp',64,.5,.18)
         if j==0:at(5,j,0,'timpani-hit',None,1,.35)
-    s=dict(title='The Weight of a Crown',directionBrief='the-weight-of-a-crown-v1',compositionStage='II',researchOnly=True,mode='E Phrygian',pitchClasses=sorted(MODE),tempoBpm=BPM,ppq=PPQ,rhythmicGrouping='5/4 grouped 3+2 with 3/4 conspiracy contrast',sections=sections,totalTicks=tick,bars=56,events=sorted(events,key=lambda e:(e['tick'],e['part'],e['midi'] or -1)))
+    s=dict(title='The Weight of a Crown',directionBrief='the-weight-of-a-crown-v2',compositionStage='II',researchOnly=True,mode='E Phrygian',pitchClasses=sorted(MODE),tempoBpm=BPM,ppq=PPQ,rhythmicGrouping='5/4 grouped 3+2 with 3/4 conspiracy contrast',sections=sections,totalTicks=tick,bars=56,events=sorted(events,key=lambda e:(e['tick'],e['part'],e['midi'] or -1)))
     return s
 def validate(s):
     assert s['bars']==56 and len(s['sections'])==6
