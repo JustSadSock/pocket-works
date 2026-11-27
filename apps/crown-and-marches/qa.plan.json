@@ -27,7 +27,8 @@
         "atlas-historical.test.mjs",
         "atlas-resident-pool.test.mjs",
         "atlas-resident-math.test.mjs",
-        "atlas-qa-admission.test.mjs"
+        "atlas-qa-admission.test.mjs",
+        "atlas-presentation-evidence.test.mjs"
       ],
       "tier": "smoke"
     },
