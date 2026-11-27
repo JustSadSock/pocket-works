@@ -129,6 +129,7 @@ export function rotate(q,v){let u=q.slice(0,3),t=mul(cross(u,v),2);return add(v,
 const cycle=x=>((x%1)+1)%1,smoothCycle=x=>x*x*(3-2*x);
 export function solveFootPath(model,input,phase,offset=[0,0,0]){
  const qs=input.map(q=>q.slice()),family=model.spec.family??'humanoid',duty=model.spec.gaitDuty??({humanoid:.62,elephant:.76,horse:.66,dog:.62}[family]??.62),height=model.spec.morphology?.height??1.7,stride=model.spec.gaitStride??height*(family==='elephant'?.105:.21),diagnostics=[];
+ const inverse=q=>[-q[0],-q[1],-q[2],q[3]];
  for(const c of model.contacts??[]){
   if(!Array.isArray(c.local)||c.local.length!==3||!Number.isInteger(c.joint))continue;
   const local=cycle(phase+(c.phase??0)),stance=local<duty,joint=model.joints[c.joint];
@@ -136,20 +137,25 @@ export function solveFootPath(model,input,phase,offset=[0,0,0]){
   const anchor=add(joint.position,c.local),u=stance?local/duty:(local-duty)/(1-duty),target=[anchor[0]-offset[0],(c.groundY??model.spec.groundY??0)-offset[1]+(stance?0:height*(model.spec.swingHeight??.047)*Math.sin(Math.PI*u)),anchor[2]+(stance?-stride*local:-stride*duty+stride*smoothCycle(u))];
   const chain=[];let parent=joint.parent;while(parent>=0&&chain.length<3){const j=model.joints[parent];if(j.role.startsWith('leg.'))chain.push(parent);parent=j.parent}
   const params=chain.reverse().slice(0,2);if(params.length!==2)continue;
-  // Keep the boot/sole level through stance; toe lift is confined to swing.
-  qs[c.joint]=qmul(quat(joint.axis,stance?0:-.16*Math.sin(Math.PI*u)),[0,0,0,1]);
-  const evaluate=()=>{const w=poseFrom(model,qs)[c.joint];return add(w.p,rotate(w.q,c.local))};
-  let error=Infinity;
-  for(let iteration=0;iteration<12;iteration++){
-   const current=evaluate(),e=[target[1]-current[1],target[2]-current[2]];error=Math.hypot(...e);if(error<.0015)break;
+  // Keep the sole level in world space while the two-joint IK solve moves the
+  // ankle. Toe lift is introduced only during swing.
+  const targetWorld=quat([1,0,0],stance?0:-.16*Math.sin(Math.PI*u));
+  const evaluate=()=>{
+   const world=poseFrom(model,qs),parentQ=joint.parent>=0?world[joint.parent].q:[0,0,0,1];
+   qs[c.joint]=qmul(inverse(parentQ),targetWorld);
+   return add(world[joint.id].p,rotate(targetWorld,c.local));
+  };
+  for(let iteration=0;iteration<18;iteration++){
+   const current=evaluate(),e=[target[1]-current[1],target[2]-current[2]],error=Math.hypot(...e);if(error<.001)break;
    const J=[];
    for(const id of params){const old=qs[id],eps=.001;qs[id]=qmul(quat(model.joints[id].axis,eps),old);const moved=evaluate();qs[id]=old;J.push([(moved[1]-current[1])/eps,(moved[2]-current[2])/eps])}
-   const a=J[0][0]**2+J[0][1]**2+1e-4,b=J[0][0]*J[1][0]+J[0][1]*J[1][1],d=J[1][0]**2+J[1][1]**2+1e-4,r0=J[0][0]*e[0]+J[0][1]*e[1],r1=J[1][0]*e[0]+J[1][1]*e[1],det=a*d-b*b;
-   if(Math.abs(det)<1e-9)break;
+   const a=J[0][0]**2+J[0][1]**2+1e-5,b=J[0][0]*J[1][0]+J[0][1]*J[1][1],d=J[1][0]**2+J[1][1]**2+1e-5,r0=J[0][0]*e[0]+J[0][1]*e[1],r1=J[1][0]*e[0]+J[1][1]*e[1],det=a*d-b*b;
+   if(Math.abs(det)<1e-10)break;
    const delta=[(d*r0-b*r1)/det,(a*r1-b*r0)/det];
-   for(let k=0;k<2;k++)qs[params[k]]=qmul(quat(model.joints[params[k]].axis,Math.max(-.16,Math.min(.16,delta[k]))),qs[params[k]]);
+   for(let k=0;k<2;k++)qs[params[k]]=qmul(quat(model.joints[params[k]].axis,Math.max(-.12,Math.min(.12,delta[k]))),qs[params[k]]);
   }
-  diagnostics.push({joint:joint.name,stance,target,current:evaluate(),error,stancePhase:local});
+  const current=evaluate();
+  diagnostics.push({joint:joint.name,stance,target,current,error:Math.hypot(target[1]-current[1],target[2]-current[2]),stancePhase:local,toePitch:stance?0:-.16*Math.sin(Math.PI*u)});
  }
  return {rotations:qs,diagnostics};
 }
@@ -160,7 +166,7 @@ export function animation(model,action,phase){if(!model.spec.actions.includes(ac
  return quat(j.axis,Math.max(-j.limitDegrees*Math.PI/180,Math.min(j.limitDegrees*Math.PI/180,angle)))})
 }
 export function poseFrom(model,qs){let world=[];for(let j of model.joints){let p=j.parent<0?null:world[j.parent];world.push({q:p?qmul(p.q,qs[j.id]):qs[j.id],p:p?add(p.p,rotate(p.q,j.local)):j.position})}return world}
-export function rootOffset(model,action,phase){if(!['v3','v4','v9'].includes(model.spec.motionRevision)||!['walk','run'].includes(action))return [0,0,0];let h=model.spec.morphology.height??1.7,t=phase*Math.PI*2,f=model.spec.family;if(model.spec.motionRevision==='v9')return [0,f==='elephant'?-h*.012+h*.004*(1-Math.cos(t*2))*.5:-h*.045+h*.003*(1-Math.cos(t*2))*.5,(model.spec.gaitStride??h*(f==='elephant'?.105:.32))*phase];return model.spec.motionRevision==='v4'&&['horse','elephant'].includes(f)?[h*(f==='elephant'?.012:.016)*Math.sin(t),h*(f==='elephant'?.009:.018)*(1-Math.cos(t*2)),h*.012*Math.sin(t*2+.3)]:[h*(f==='humanoid'?.018:.008)*Math.sin(t),h*(f==='elephant'?.005:.012)*(1-Math.cos(t*2)),h*.009*Math.sin(t*2)]}
+export function rootOffset(model,action,phase){if(!['v3','v4','v9'].includes(model.spec.motionRevision)||!['walk','run'].includes(action))return [0,0,0];let h=model.spec.morphology.height??1.7,t=phase*Math.PI*2,f=model.spec.family;if(model.spec.motionRevision==='v9')return [0,f==='elephant'?-h*.012+h*.004*(1-Math.cos(t*2))*.5:h*.003*(1-Math.cos(t*2))*.5,(model.spec.gaitStride??h*(f==='elephant'?.105:.32))*phase];return model.spec.motionRevision==='v4'&&['horse','elephant'].includes(f)?[h*(f==='elephant'?.012:.016)*Math.sin(t),h*(f==='elephant'?.009:.018)*(1-Math.cos(t*2)),h*.012*Math.sin(t*2+.3)]:[h*(f==='humanoid'?.018:.008)*Math.sin(t),h*(f==='elephant'?.005:.012)*(1-Math.cos(t*2)),h*.009*Math.sin(t*2)]}
 export function pose(model,action,phase){let w=poseFrom(model,animation(model,action,phase)),d=rootOffset(model,action,phase);return w.map(v=>({...v,p:add(v.p,d)}))}
 export function correctFootHeight(model,input,phase){let q=input.map(v=>v.slice()),diagnostics=[];const duty={humanoid:.62,horse:.66,dog:.62,elephant:.76}[model.spec.family]??.62;
  for(let c of model.contacts){if(((phase+(c.phase??0))%1+1)%1>=duty)continue;let j=model.joints[c.joint];if(j.name.startsWith('rider/')||j.name.startsWith('crew/'))continue;let chain=[],parent=j.parent;while(parent>=0&&model.joints[parent].role.startsWith('leg.')){chain.push(parent);parent=model.joints[parent].parent}if(!chain.length)continue;

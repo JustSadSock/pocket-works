@@ -28,21 +28,29 @@ function miniatureFrame(model,action,phase,quat){
  });
 }
 function miniatureFrameV9(model,action,phase,quat){
- const walk=action==='walk',t=phase*TAU,cycle=(x)=>Math.sin(x*TAU),mul=(a,b)=>[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
+ const walk=action==='walk',t=phase*TAU,duty=model.spec.gaitDuty??.62;
+ const cyc=x=>((x%1)+1)%1,smooth=x=>x*x*(3-2*x);
+ const gait=p=>{
+  const local=cyc(p),stance=local<duty,u=stance?local/duty:(local-duty)/(1-duty),e=smooth(u);
+  const hip=stance?-.34+.64*smooth(local/duty):.30-.64*e;
+  const knee=stance?.025*Math.sin(Math.PI*local/duty):.62*Math.sin(Math.PI*u);
+  return {local,stance,u,hip,knee};
+ };
+ const mul=(a,b)=>[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
  return model.joints.map(j=>{
-  const name=j.name,left=name.endsWith('.L'),sign=left?1:-1,offset=left?0:Math.PI,leg=cycle(phase+offset),swing=Math.max(0,Math.sin((phase+offset)*TAU));
+  const name=j.name,left=name.endsWith('.L'),sign=left?1:-1,leg=gait(phase+(left?0:.5)),arm=gait(phase+(left?.5:0));
   let x=0,y=0,z=0;
-  if(/^upperarm01\./.test(name)){z=-sign*.10;x=walk?.24*Math.sin(t+offset+Math.PI):0}
-  if(/^lowerarm01\./.test(name)){x=.23+(walk?.10*Math.max(0,Math.sin(t+offset+Math.PI)):0)}
-  if(/^upperleg01\./.test(name)){x=walk?.24*Math.sin(t+offset):0}
-  if(/^lowerleg01\./.test(name)){x=walk?.58*swing:0}
-  if(/^foot\./.test(name)){x=walk?-.16*swing:0}
-  if(name==='pelvis'||name==='root'){y=walk?.025*Math.sin(t):0}
-  if(name==='spine03'){y=walk?-.035*Math.sin(t):0;x=walk?.018*Math.sin(2*t):.012}
-  if(name==='spine02'){y=walk?.025*Math.sin(t+.3):0}
-  if(name==='spine01'){y=walk?.012*Math.sin(t+.5):0}
-  if(name==='neck01'){x=walk?-.018*Math.sin(2*t):0}
-  if(name==='head'){x=walk?.012*Math.sin(2*t+.2):.015;y=walk?-.018*Math.sin(t):0}
+  if(/^upperarm01\./.test(name)){z=-sign*.08;x=walk?-.50*arm.hip:0}
+  if(/^lowerarm01\./.test(name)){x=.20+(walk&&!arm.stance?.07*Math.sin(Math.PI*arm.u):0)}
+  if(/^upperleg01\./.test(name))x=walk?leg.hip:0;
+  if(/^lowerleg01\./.test(name))x=walk?leg.knee:0;
+  if(/^foot\./.test(name))x=0;
+  if(name==='pelvis')y=walk?.035*Math.sin(t):0;
+  if(name==='spine03'){y=walk?-.040*Math.sin(t):0;x=walk?.018*Math.sin(2*t):.012}
+  if(name==='spine02')y=walk?.023*Math.sin(t+.25):0;
+  if(name==='spine01')y=walk?.012*Math.sin(t+.48):0;
+  if(name==='neck01')x=walk?-.012*Math.sin(2*t):0;
+  if(name==='head'){x=walk?.010*Math.sin(2*t+.2):.015;y=walk?-.014*Math.sin(t):0}
   return mul(quat([0,0,1],z),mul(quat([0,1,0],y),quat([1,0,0],x)));
  });
 }
