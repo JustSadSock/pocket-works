@@ -9,7 +9,7 @@ import {canonical,digest,taskDigest} from './verified-results.mjs';
 import {mountedFingerprint} from './verified-mounted-inputs.mjs';
 const SHA=/^[a-f0-9]{40}$/, EPOCH=946684800, LIMIT=64*1024*1024;
 const flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
-const approved=Object.freeze({'axis-pals':'rules',flickyard:'engine'});
+const approved=Object.freeze({'axis-pals':'rules',flickyard:'engine',press:'zip-regression'});
 const git=(root,args)=>execFileSync('git',args,{cwd:root,maxBuffer:LIMIT});
 const fail=m=>{throw Error(m);};
 const validPath=p=>p.length>0&&p.length<=1024&&!/[\\\x00-\x1f\x7f\ufffd]/.test(p)&&p.split('/').every(x=>x&&x!=='.'&&x!=='..');

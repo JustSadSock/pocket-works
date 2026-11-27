@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'scripts/ci-overhaul/universal-cross-commit*'
+      - 'scripts/ci-overhaul/universal-verified-inventory*'
       - '.github/workflows/universal-cross-commit-proof.yml'
   workflow_dispatch:
 permissions:
@@ -18,7 +19,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/universal-cross-commit.test.mjs
+      - run: node --test scripts/ci-overhaul/universal-cross-commit.test.mjs scripts/ci-overhaul/universal-verified-inventory.test.mjs
+      - name: Inventory original application QA plans
+        run: |
+          node scripts/ci-overhaul/universal-verified-inventory.mjs > inventory.json
+          jq '{apps,plannedApps,tasks,totals,errors,productionAuthorization}' inventory.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-verified-inventory-${{ github.run_attempt }}
+          path: inventory.json
+          if-no-files-found: error
+          retention-days: 7
   live:
     needs: contract
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/universal-cross-commit-proof'
@@ -29,6 +40,10 @@ jobs:
       matrix:
         include:
           - app: axis-pals
+            prior: '91019b3bea4a37a51cd223f84aad997fa3a9eee9'
+            current: '5c87f6448f2ec8a5eab0f9d1921651334d510e16'
+            expected: 'true'
+          - app: press
             prior: '91019b3bea4a37a51cd223f84aad997fa3a9eee9'
             current: '5c87f6448f2ec8a5eab0f9d1921651334d510e16'
             expected: 'true'
