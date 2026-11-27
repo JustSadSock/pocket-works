@@ -348,10 +348,12 @@ for label,stage,slow,ramp,allowed in experiments:
   timeResolution=int(v20config.get('timeResolution',1)) if v20config and stage>1 else 1
   timeScale=slow*timeResolution
   rampFrames=ramp*timeResolution if stage>1 else ramp
-  simulationFps=spec['fps']*timeResolution
-  scene.render.fps=simulationFps;scene.gravity=(0,0,-9.81)
-  # Static settling and the contact transition retain their original duration.
-  # v0.20 increases solver evaluations per second without slowing the motion.
+  sceneFps=spec['fps']*timeResolution
+  clothTimeScale=float(v20config.get('timeScale',1.0)) if v20config and stage>1 else 1.0
+  simulationFps=sceneFps*clothTimeScale
+  scene.render.fps=sceneFps;scene.gravity=(0,0,-9.81)
+  # Blender's cloth time_scale is frame-based. Compensate it when increasing
+  # scene FPS so the source motion, pin targets and solver advance in equal time.
   warm=24 if stage==1 else (24+ramp)*timeResolution
   count=49 if stage==1 else warm+(spec['frameCount']-1)*timeScale+1;scene.frame_start=1;scene.frame_end=count
   times=[-1 if stage==1 or label=='A' or i<warm-rampFrames else max(0,min(spec['frameCount']-1,(i-warm)/timeScale)) for i in range(count)]
@@ -434,7 +436,7 @@ for label,stage,slow,ramp,allowed in experiments:
    if cloth.data.shape_keys:
     for key in list(cloth.data.shape_keys.key_blocks)[1:]:
      for j in wpins:key.data[j].co=cv(initial[j])
-  mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=v17config.get('quality',28 if method=='fine' else 16);s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1
+  mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=v17config.get('quality',28 if method=='fine' else 16);s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1;s.time_scale=clothTimeScale
   # Firm woven wool, not default stretchy fabric; no dynamic rest shape.
   for name,val in [('tension_stiffness',v17config.get('tension',35)),('compression_stiffness',35),('shear_stiffness',22),('bending_stiffness',v17config.get('bend',1.0)),('tension_damping',8),('compression_damping',8),('shear_damping',5),('bending_damping',.7),('use_dynamic_mesh',False)]:
    if hasattr(s,name):setattr(s,name,val)
@@ -497,7 +499,7 @@ for label,stage,slow,ramp,allowed in experiments:
   results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'method':method,'variant':variant,'pinWeights':pinWeights,'transitionWidthMetres':max((min(math.dist(initial[j],initial[k]) for k in wpins) for j in firstRing),default=0),'totalMassKg':experimentMass,'vertexMassKg':vertexMass,'friction':c.friction,'quality':s.quality,'collisionThickness':c.distance_min,'frames':rows,'sampleFrames':len(samples)})
   (out/(('v15-cloth-' if v15 else 'v14-cloth-')+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'refinementMapping':mapping,'restPositions':initial,'faces':faces,'pinIndices':wpins,'pinWeights':pinWeights,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
   status='diagnostic complete; production qualification not evaluated' if (v18config or v19config or v20config) and results[-1]['stage']==2 else ('passed' if results[-1]['stage']==3 and results[-1]['passed'] else 'blocked or incomplete at '+label)
-  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'sourceFps':spec['fps'],'simulationFps':simulationFps,'timeResolution':timeResolution,'timeScale':timeScale,'preflight':preflight,'diagnosticOnly':bool(v18config or v19config or v20config),'diagnosticConfig':v20config or v19config or v18config,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':status},indent=2))
+  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'sourceFps':spec['fps'],'sceneFps':sceneFps,'simulationFps':simulationFps,'clothTimeScale':clothTimeScale,'timeResolution':timeResolution,'timeScale':timeScale,'preflight':preflight,'diagnosticOnly':bool(v18config or v19config or v20config),'diagnosticConfig':v20config or v19config or v18config,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':status},indent=2))
   print(json.dumps({'stage':stage,'gates':gates,'last':rows[-1]}),flush=True)
   if stage==3 and all(gates.values()):
    # The existing verified cache format remains available; no production cache

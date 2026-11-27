@@ -14,7 +14,7 @@ for name,factor in experiments:
     out=root/("v20-trousers-R-"+name)
     (out/"morph").mkdir(parents=True,exist_ok=True)
     shutil.copy2(source,out/"morph"/"v9-cloth-input.json")
-    config={"diagnosticOnly":True,"collider":"trousers R","timeResolution":factor,
+    config={"diagnosticOnly":True,"collider":"trousers R","timeResolution":factor,"timeScale":1.0/factor,
             "friction":5.0,"selfDistance":0.0025,"proxy":"outer",
             "pinMotion":True,"colliderMotion":True}
     cfg=out/"v20-config.json"
@@ -28,7 +28,7 @@ for name,factor in experiments:
         proc=subprocess.run(cmd,env=env,stdout=log,stderr=subprocess.STDOUT)
     report=out/"v11-cloth-recovery.json"
     if not report.exists():
-        summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,
+        summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,"clothTimeScale":1.0/factor,"effectiveSimulationFps":spec["fps"],
                         "exit":proc.returncode,"status":"missing-recovery-report"})
         continue
     data=json.loads(report.read_text())
@@ -86,7 +86,7 @@ if baseline:
             "relativeTangentialSpeedDelta":row.get("maxRelativeTangentialSpeed",0)-baseline.get("maxRelativeTangentialSpeed",0),
             "colliderMismatchDelta":row.get("maxColliderMismatchMetres",0)-baseline.get("maxColliderMismatchMetres",0)}
 matrix={"version":"v0.20","diagnosticOnly":True,"productionAllowed":False,
-    "method":"same source and material; 24/48/96 FPS; warm-up and transition duration scaled to preserve elapsed time",
+    "method":"same source and material; 24/48/96 scene FPS; Blender cloth time_scale compensated as 1/factor; equal simulation duration and pin-target travel",
     "sourceSha256":hashlib.sha256(source.read_bytes()).hexdigest(),
     "experiments":summary,"comparisonsAgainst24Fps":comparisons}
 (root/"v20-time-resolution-matrix.json").write_text(json.dumps(matrix,indent=2))
