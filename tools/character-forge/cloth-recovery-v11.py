@@ -180,7 +180,7 @@ def defect_detail(v,old,cs,previous_cs):
   for name,t,vv,ff in trees:
    co,normal,fi,distance=t.find_nearest(mid)
    if co is None:continue
-   ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*spec['fps']/3 for k in range(3)]
+   ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*simulationFps/3 for k in range(3)]
    clothVelocity=[sum((v[j][k]-old[j][k])*spec['fps'] for j in (a,b))*.5 for k in range(3)]
    relative=Vector(clothVelocity)-Vector(velocity);normalUnit=normal.normalized();normalSpeed=relative.dot(normalUnit);tangentialSpeed=(relative-normalUnit*normalSpeed).length
    nearest.append({'name':name,'face':fi,'faceVertices':ids,'distanceMetres':distance,'normal':list(normal),'surfaceVelocity':velocity,'clothEdgeVelocity':clothVelocity,'relativeVelocity':list(relative),'relativeNormalSpeed':normalSpeed,'relativeTangentialSpeed':tangentialSpeed})
@@ -348,7 +348,8 @@ for label,stage,slow,ramp,allowed in experiments:
   timeResolution=int(v20config.get('timeResolution',1)) if v20config and stage>1 else 1
   timeScale=slow*timeResolution
   rampFrames=ramp*timeResolution if stage>1 else ramp
-  scene.render.fps=spec['fps']*timeResolution;scene.gravity=(0,0,-9.81)
+  simulationFps=spec['fps']*timeResolution
+  scene.render.fps=simulationFps;scene.gravity=(0,0,-9.81)
   # Static settling and the contact transition retain their original duration.
   # v0.20 increases solver evaluations per second without slowing the motion.
   warm=24 if stage==1 else (24+ramp)*timeResolution
@@ -408,7 +409,7 @@ for label,stage,slow,ramp,allowed in experiments:
    else:proxyTopology=sourceTopology
    localFrames=frames;rigidTransforms=None;useWorld=False
    if v19config and stage>1 and item['name']==v19config['collider']:
-    decomposition=decompose_frames(frames,spec['fps'],active_start=warm-ramp)
+    decomposition=decompose_frames(frames,simulationFps,active_start=warm-rampFrames)
     v19DecompositionReport=decomposition['report']
     (out/'v19-motion-decomposition.json').write_text(json.dumps(v19DecompositionReport,indent=2))
     mode=v19config['motionTransfer']
@@ -483,7 +484,7 @@ for label,stage,slow,ramp,allowed in experiments:
    prevCloth=v
    if bad and firstDefect is None:
     firstDefect=frame;samples.extend(priorSamples);samples.append(sample)
-   if frame==1 or (stage>1 and 40<=frame<=48) or frame==warm or frame==warm+1 or frame==count or (firstDefect is not None and frame<=firstDefect+2 and frame>firstDefect):samples.append(sample)
+   if frame==1 or (stage>1 and 40<=frame<=48) or frame==warm or frame==warm+1 or frame==count or (firstDefect is not None and abs(frame-firstDefect)<=2):samples.append(sample)
    priorSamples=(priorSamples+[sample])[-3:]
   # Require all settled samples to preserve weave and hem, anchor, and avoid
   # new non-seam intersections. Initial contacts are reported, not ignored.
