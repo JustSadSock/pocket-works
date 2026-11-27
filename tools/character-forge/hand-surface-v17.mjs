@@ -81,7 +81,9 @@ function candidate(name,model,rotations,indices,faces,deltas){
   rows.push({phase:phases[j],vertices:local});
  }
  const c=structuredClone(model);c.spec.actions=['walk'];c.spec.walkDuration=1;c.spec.motionRevision='v9';c.sampledWalk={rotations,offsets:rotations.map(()=>[0,0,0])};
- const opt=deltas?{researchMorph:{deltas:Object.fromEntries(c.parts.map((p,i)=>[p.name,i===0?deltas:Array(p.positions.length).fill(0)])),weights:activation}}:{};
+ const normalDeltas={};
+ if(deltas)for(let k=0;k<c.parts.length;k++){const x=c.parts[k],d=k===0?deltas:Array(x.positions.length).fill(0),corrected={...x,positions:x.positions.map((v,j)=>v+d[j])};normals(corrected);normalDeltas[x.name]=corrected.normals.map((v,j)=>v-x.normals[j]);}
+ const opt=deltas?{researchMorph:{deltas:Object.fromEntries(c.parts.map((p,i)=>[p.name,i===0?deltas:Array(p.positions.length).fill(0)])),normalDeltas,weights:activation}}:{};
  write('v17-hand-'+name+'.glb',glb(c,opt));return {name,rest,faces,rows,indices,activation:deltas?activation:null};
 }
 const cases=[candidate('A',source,ar,a.selected,a.faces),candidate('B',source,brot,a.selected,a.faces),candidate('C',model,brot,a.selected,a.faces,delta),candidate('D',D,brot,dsel,df,dd)];

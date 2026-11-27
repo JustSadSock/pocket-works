@@ -233,6 +233,7 @@ jobs:
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/hand-surface-audit-v17.py'
       - name: Required gated physical garment reference and remesh recovery
         id: recovery
+        continue-on-error: true
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: 'CHARACTER_V15_CLOTH=1 "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-recovery-v11.py'
       - name: Render local cloth experiment evidence even after a rejected gate
@@ -241,9 +242,18 @@ jobs:
       - name: Isolated Remesh defect trajectory and one-factor physical matrix
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-coupon-v16.py'
+      - name: Re-test Remesh only after all isolated coupon controls qualify
+        id: remesh17
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          root="$CHARACTER_EVIDENCE"
+          python3 -c 'import json,sys; r=json.load(open(sys.argv[1]));sys.exit(0 if r["fullRemeshAllowed"] else 1)' "$root/v17-cloth-matrix.json"
+          mkdir -p "$root/v17-remesh-recovery/morph"
+          cp "$root/morph/v9-cloth-input.json" "$root/v17-remesh-recovery/morph/"
+          CHARACTER_EVIDENCE="$root/v17-remesh-recovery" CHARACTER_V15_CLOTH=1 CHARACTER_V17_CLOTH_CONFIG="$root/v17-cloth-matrix.json" "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-recovery-v11.py
       - name: Full cloth bake and standalone playback after recovery gate
         id: cloth
-        if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
+        if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && steps.remesh17.outcome == 'success' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle-v9.py
           node tools/character-forge/evidence-cloth-v9.mjs

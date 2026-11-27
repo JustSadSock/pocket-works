@@ -273,6 +273,14 @@ if v15:
 results=[]
 experiments=[('static',1,1,6,None),('original',2,1,18,None),('smooth',2,1,18,None),('transition',2,1,18,None),('waistband',2,1,18,None),('refined',2,1,18,None),('friction',2,1,18,None),('pin-ramp',2,1,18,None),('world',3,1,18,None)]
 if v15:experiments=[('static',1,1,6,None),('smooth',2,1,18,None),('reference-static',1,1,6,None),('reference',2,1,18,None),('remesh-static',1,1,6,None),('remesh',2,1,18,None),('world',3,1,18,None)]
+v17config={}
+if os.getenv('CHARACTER_V17_CLOTH_CONFIG'):
+ matrix=json.loads(Path(os.environ['CHARACTER_V17_CLOTH_CONFIG']).read_text())
+ if not matrix.get('fullRemeshAllowed') or not matrix.get('selectedConfig') or not matrix.get('selected'):raise RuntimeError('Independent coupon matrix not qualified')
+ chosenFactor=matrix['selected'];v17config=matrix['selectedConfig']
+ if not all(x.get('passed') for x in matrix['validation'][chosenFactor].values()) or len(matrix['validation'][chosenFactor])!=5:raise RuntimeError('Missing five independent coupon controls')
+ if len(v17config)!=1 or next(iter(v17config)) not in ['friction','tension','bend','quality','selfDistance']:raise RuntimeError('Unqualified physical factor')
+ experiments=[('remesh-static',1,1,6,None),('remesh',2,1,18,None),('world',3,1,18,None)]
 chosen=None
 for label,stage,slow,ramp,allowed in experiments:
  if stage==2:
@@ -363,7 +371,9 @@ for label,stage,slow,ramp,allowed in experiments:
    else:proxyTopology=sourceTopology
    ob=object_mesh('Collider_'+item['name'],frames[0],fs)
    if stage>1:keys(ob,frames)
-   cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.003 if method=='fine' else .004;cm.settings.thickness_inner=.003 if method=='fine' else .004;colliders.append(ob);collider_data.append((item['name'],frames,fs,ob))
+   cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.003 if method=='fine' else .004;cm.settings.thickness_inner=.003 if method=='fine' else .004
+   if 'friction' in v17config:cm.settings.cloth_friction=v17config['friction']
+   colliders.append(ob);collider_data.append((item['name'],frames,fs,ob))
    topologies[item['name']]={'original':sourceTopology,'evaluatedProxy':proxyTopology,'outerThickness':.004,'innerThickness':.004}
   # For the local experiments, compare to a truly stationary pinned seam.
   # Only E/world include the full actual animated seam.
@@ -373,13 +383,13 @@ for label,stage,slow,ramp,allowed in experiments:
    if cloth.data.shape_keys:
     for key in list(cloth.data.shape_keys.key_blocks)[1:]:
      for j in wpins:key.data[j].co=cv(initial[j])
-  mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=28 if method=='fine' else 16;s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1
+  mod=cloth.modifiers.new('Cloth','CLOTH');s=mod.settings;s.quality=v17config.get('quality',28 if method=='fine' else 16);s.mass=vertexMass;s.vertex_group_mass=group.name;s.pin_stiffness=1
   # Firm woven wool, not default stretchy fabric; no dynamic rest shape.
-  for name,val in [('tension_stiffness',35),('compression_stiffness',35),('shear_stiffness',22),('bending_stiffness',1.0),('tension_damping',8),('compression_damping',8),('shear_damping',5),('bending_damping',.7),('use_dynamic_mesh',False)]:
+  for name,val in [('tension_stiffness',v17config.get('tension',35)),('compression_stiffness',35),('shear_stiffness',22),('bending_stiffness',v17config.get('bend',1.0)),('tension_damping',8),('compression_damping',8),('shear_damping',5),('bending_damping',.7),('use_dynamic_mesh',False)]:
    if hasattr(s,name):setattr(s,name,val)
   if variant=='waistband':
    s.vertex_group_structural_stiffness=band.name;s.tension_stiffness_max=55;s.compression_stiffness_max=55;s.shear_stiffness_max=30
-  c=mod.collision_settings;c.use_collision=True;c.distance_min=.004;c.collision_quality=10;c.use_self_collision=True;c.self_distance_min=.004
+  c=mod.collision_settings;c.use_collision=True;c.distance_min=.004;c.collision_quality=10;c.use_self_collision=True;c.self_distance_min=v17config.get('selfDistance',.004)
   if variant=='friction':c.friction=3
   cache=mod.point_cache;cache.frame_start=1;cache.frame_end=count
   if hasattr(cache,'use_disk_cache'):cache.use_disk_cache=False
@@ -429,6 +439,9 @@ for label,stage,slow,ramp,allowed in experiments:
   # new non-seam intersections. Initial contacts are reported, not ignored.
   settled=[r for r in rows if r['frame']>= (warm+1 if stage==1 else 25)];initialPairs=sum(rows[0]['nonSeamTrianglePairs'].values())
   gates={'stretch':all(r['p95Stretch']<=1.15 and r['maxStretch']<=1.6 and not r['collapsedEdges'] for r in settled),'pin':all(r['pinErrorMetres']<=.006 for r in settled),'shape':all(.78<=r['hemRadiusRatio']<=1.22 and r['maxDeviationMetres']<=.15 for r in settled),'collision':all(sum(r['nonSeamTrianglePairs'].values())<=initialPairs and sum(r['nonSeamTrianglePairs'].values())<=10 for r in settled)}
+  if v17config:
+   gates['zeroExternal']=all(sum(r['nonSeamTrianglePairs'].values())==0 for r in settled)
+   gates['zeroSelf']=all(r.get('selfOverlapPairs',1)==0 for r in settled)
   gates['evaluatedColliderAgreement']=all(x['maxEvaluatedMismatchMetres']<=1e-5 for r in rows for x in r['colliderAudit'].values())
   results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'method':method,'variant':variant,'pinWeights':pinWeights,'transitionWidthMetres':max((min(math.dist(initial[j],initial[k]) for k in wpins) for j in firstRing),default=0),'totalMassKg':experimentMass,'vertexMassKg':vertexMass,'friction':c.friction,'quality':s.quality,'collisionThickness':c.distance_min,'frames':rows,'sampleFrames':len(samples)})
   (out/(('v15-cloth-' if v15 else 'v14-cloth-')+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'refinementMapping':mapping,'restPositions':initial,'faces':faces,'pinIndices':wpins,'pinWeights':pinWeights,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
