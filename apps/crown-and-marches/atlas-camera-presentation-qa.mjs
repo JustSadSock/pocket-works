@@ -157,6 +157,20 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
  finally{await browser?.close();}
 }
 const failures=report.filter(r=>r.passed===false);
-report.push({phase:'aggregate',passed:failures.length===0,engines:['chromium','webkit'],candidates,compositions:['copy','direct','resident'],failures:failures.map(r=>({engine:r.engine,candidate:r.candidate,errors:r.errors}))});
+const profileSummary=p=>p?Object.fromEntries(['layoutMs','textureMs','terrainGpuSubmitMs','terrainTransferSubmitMs','terrainTotalMs','terrainGpuWaitMs','frontierMs','architectureMs','labelsAndMarkersMs','mapMs','uiLastMs','terrainGpuReused','composition','resident'].filter(k=>p[k]!==undefined).map(k=>[k,p[k]])):null;
+const humanSummary=h=>h?Object.fromEntries(['reused','spatialReuse','offsetPx','lookupMs','blendMs','compositeMs','layoutMs','drawMs','searchMs','groundMs','spriteBuildMs','spriteDraws','phaseCache'].filter(k=>h[k]!==undefined).map(k=>[k,h[k]])):null;
+for(const r of report.filter(x=>x.engine)){
+ const m=r.motion,diagnostic={
+  engine:r.engine,candidate:r.candidate,composition:r.composition,passed:r.passed,errors:r.errors??[],
+  motion:m?{fps:m.fps,p95:m.p95,rafFps:m.rafFps,rafP95:m.rafP95,advanced:m.sweep?.frames?.length??0,terrainCacheReuse:m.terrainCacheReuse,pixelEquivalent:m.pixelEquivalent,
+   steps:(m.steps??[]).map(s=>({label:s.label,ok:s.ok,latencyMs:s.latencyMs,profile:profileSummary(s.meta?.profile),human:humanSummary(s.meta?.human)})),
+   continuous:(m.continuous??[]).map(s=>({profiling:s.profiling,fps:s.fps,p95:s.p95,advanced:s.advanced,elapsedMs:s.elapsedMs,restored:s.restored,errors:s.errors,spatialHits:s.spatialHits,builds:s.builds,fallbacks:s.fallbacks}))}:null,
+  residentChecks:(r.residentChecks??[]).map(s=>({label:s.label,count:s.count,max:s.max,before:s.before?{bytes:s.before.bytes,limit:s.before.limit,hits:s.before.hits,misses:s.before.misses,fallbacks:s.before.fallbacks,phaseRejects:s.before.phaseRejects,coverageRejects:s.before.coverageRejects,last:s.before.last}:null})),
+  browserReturnPixels:r.browserReturnPixels?{count:r.browserReturnPixels.count,max:r.browserReturnPixels.max}:null,
+  failureImage:r.failureImage??null
+ };
+ console.log('[camera-presentation-qa] '+JSON.stringify(diagnostic));
+}
+report.push({phase:'aggregate',passed:failures.length===0,engines:['chromium','webkit'],candidates,compositions:['copy','direct','resident'],failures:failures.map(r=>({engine:r.engine,candidate:r.candidate,composition:r.composition,errors:r.errors}))});
 save();
 assert.equal(failures.length,0,'Camera Presentation QA failed: '+JSON.stringify(failures.map(r=>({engine:r.engine,candidate:r.candidate,composition:r.composition,errors:r.errors}))));
