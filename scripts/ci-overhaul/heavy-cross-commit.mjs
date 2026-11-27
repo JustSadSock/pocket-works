@@ -8,6 +8,7 @@ import {canonical,digest} from './verified-results.mjs';
 import {compareScope,normalizeSnapshot,scopeRoots} from './universal-cross-commit.mjs';
 import {compareFull} from './full-simulation-repeatability.mjs';
 import {validateRuntime} from './universal-signed-receipts.mjs';
+import {economicDecision} from './universal-reuse-economics.mjs';
 const flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 const SHA=/^[a-f0-9]{40}$/,eq=(a,b)=>canonical(a)===canonical(b),fail=s=>{throw Error(s);};
 export const CASES=Object.freeze({
@@ -45,7 +46,14 @@ function reconstruct(repo,commit,app){
  const dir=mkdtempSync(join(tmpdir(),'pw-heavy-proof-'));
  try{const bytes=execFileSync('git',['archive',commit,...scopeRoots(app)],{cwd:repo,maxBuffer:70*1024*1024});execFileSync('tar',['-xf','-','-C',dir],{input:bytes});return normalizeSnapshot(repo,commit,app,dir);}finally{rmSync(dir,{recursive:true,force:true});}
 }
+export function costObservation(prior,current,durations,gateMs){
+ const fields=['preparationMs','executionWallMs','postVerificationMs'];
+ for(const t of [prior,current])if(!t||!fields.every(k=>Number.isSafeInteger(t[k])&&t[k]>=0)||t.executionWallMs<=0)fail('Invalid observed timing');
+ if(!Array.isArray(durations)||durations.length!==2||durations.some((x,i)=>!Number.isSafeInteger(x)||x<0||x>[prior,current][i].executionWallMs)||!Number.isSafeInteger(gateMs)||gateMs<0)fail('Invalid execution or audit duration');
+ return {freshExecutionMs:durations,preparationMs:[prior.preparationMs,current.preparationMs],postVerificationMs:[prior.postVerificationMs,current.postVerificationMs],independentReconstructionMs:gateMs,observations:2,admission:economicDecision(null),note:'No measured signed reuse path or three comparable samples; no net savings claim'};
+}
 function audit(repo,kind,root,ctx){
+ const started=Date.now();
  const c=CASES[kind],target=controlledCommit(repo,c.source),scope=compareScope(repo,c.source,target,c.app);
  const negative=compareScope(repo,c.source,controlledCommit(repo,c.source,'scripts/pw-heavy-cross-commit-control.txt'),c.app);
  if(negative.scopeMatch!==false)fail('Scoped mutation not detected');
@@ -56,18 +64,20 @@ function audit(repo,kind,root,ctx){
   if(!eq(meta,{...ctx,kind,side,sha,task:c.task}))fail('Wrong execution identity');
   const mount=reconstruct(repo,sha,c.app);
   for(const stage of ['before','inside','after'])if(!eq(mount,json(join(d,stage+'.json'))))fail('Independent mount proof differs');
-  sides[side]={runtime:validateRuntime(json(join(d,'runtime.json'))),mount,dir:join(d,'output',c.task.key)};
+  sides[side]={runtime:validateRuntime(json(join(d,'runtime.json'))),mount,dir:join(d,'output',c.task.key),timing:json(join(d,'timing.json'))};
  }
  let expected=null;
  if(kind==='banners'){
-  // Recompute expected sequence from the independently archived plan rather than
-  // accepting one side's summary. Both measured runners must agree.
+  // Both measured runners must agree with the historical source coverage.
+  // This is a qualification check, not the production split-plan validator.
   expected=json(join(root,'heavy-'+ctx.attempt+'-'+kind+'-prior','expected.json'));
   if(!eq(expected,json(join(root,'heavy-'+ctx.attempt+'-'+kind+'-current','expected.json')))||expected.length!==c.count)fail('Banners case sequence differs');
   const expectedGroups={original:126,independent:11,historical:37,antiquity:17,'final-integration':24,'numerical-superiority':19,performance:1};
   if(!eq(Object.fromEntries(Object.keys(expectedGroups).map(k=>[k,expected.filter(x=>x===k).length])),expectedGroups))fail('Banners plan coverage differs');
  }
- return {...evaluate(kind,scope,sides.prior,sides.current,compareFull(kind,sides.prior.dir,sides.current.dir,expected)),negativeControl:true};
+ const projection=compareFull(kind,sides.prior.dir,sides.current.dir,expected);
+ const result=evaluate(kind,scope,sides.prior,sides.current,projection);
+ return {...result,negativeControl:true,economics:costObservation(sides.prior.timing,sides.current.timing,projection.durationMs,Date.now()-started)};
 }
 const context=()=>({run:Number(process.env.GITHUB_RUN_ID),attempt:Number(process.env.GITHUB_RUN_ATTEMPT),controller:process.env.GITHUB_SHA});
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

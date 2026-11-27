@@ -4,7 +4,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
-import {controlledCommit,evaluate,CASES} from './heavy-cross-commit.mjs';
+import {controlledCommit,evaluate,CASES,costObservation} from './heavy-cross-commit.mjs';
 import {compareScope} from './universal-cross-commit.mjs';
 test('controlled commits are reproducible and scoped mutation invalidates',()=>{
  const root=mkdtempSync(join(tmpdir(),'pw-heavy-test-')),git=(...a)=>execFileSync('git',a,{cwd:root,encoding:'utf8'}).trim();
@@ -22,4 +22,12 @@ test('controlled runtime observations never authorize portability or reuse',()=>
  const r=evaluate('banners',scope,a,b,p);assert.equal(r.finding,'observed-directed-runtime-match');assert.equal(r.allowResultReuse,false);
  assert.equal(evaluate('banners',scope,a,{...b,runtime:{...b.runtime,image:'y'}},p).controlled,false);
  assert.throws(()=>evaluate('banners',scope,a,b,{...p,coverage:{cases:234}}));
+});
+
+test('heavy cost observations cannot authorize reuse without measured signed path',()=>{
+ const timing={preparationMs:7000,executionWallMs:450000,postVerificationMs:1000};
+ const r=costObservation(timing,timing,[440000,430000],500);
+ assert.equal(r.admission.decision,'fresh');assert.equal(r.admission.productionAuthorization,false);
+ assert.throws(()=>costObservation(timing,timing,[460000,430000],500));
+ assert.throws(()=>costObservation({...timing,preparationMs:-1},timing,[440000,430000],500));
 });

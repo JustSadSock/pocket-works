@@ -23,3 +23,7 @@ The economic preflight is advisory and integrated into the original Universal QA
 ## Heavy simulation qualification
 
 Four independent fresh executions compare Banners historical Completion Lab shard 0 and Crown current pinned balance shard 3 with deterministic controlled child commits that change only an unrelated documentation path. The gate reconstructs scoped archives and original simulation projections; scoped script mutation, missing artifacts and wrong attempt are negative controls. Runtime drift is recorded, not globally authorized. No production route or gameplay authorization is changed. Controlled commits are local Git objects, not application releases. This stage does not issue production receipts or skip expensive tests.
+
+### Recovery and cost telemetry
+
+The initial pair of Banners runs completed 470 cases and 864 metrics with matching semantic rows and different CPU/kernel fingerprints. Crown stopped before execution because its pinned source lacked the mounted-input measurement helper. The helper is now independently archived from the immutable controller and mounted read-only only for measurement; original execution receives no controller mount. Both sides record actual preparation, execution wall time and post-verification; the independent gate records reconstruction time. Two fresh executions alone cannot justify an economic admission, and no signed reuse cost has yet been measured. All evidence stays attempt-isolated.

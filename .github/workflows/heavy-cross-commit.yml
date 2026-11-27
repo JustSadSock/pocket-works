@@ -45,8 +45,11 @@ jobs:
         run: |
           set -euo pipefail
           tool="$PWD/scripts/ci-overhaul/universal-cross-commit.mjs"
-          root="$RUNNER_TEMP/heavy"; src="$RUNNER_TEMP/heavy-src"
-          mkdir "$root" "$src" "$root/output"
+          root="$RUNNER_TEMP/heavy"; src="$RUNNER_TEMP/heavy-src"; audit="$RUNNER_TEMP/heavy-measure"
+          mkdir "$root" "$src" "$root/output" "$audit"
+          # Measurement belongs to the controller, not to the historical game checkout.
+          git archive HEAD scripts/ci-overhaul/verified-mounted-inputs.mjs scripts/ci-overhaul/verified-results.mjs | tar -xf - -C "$audit"
+          start_ms="$(date +%s%3N)"
           node scripts/ci-overhaul/heavy-cross-commit.mjs identity "$KIND" "$SIDE" > "$root/identity.json"
           sha="$(jq -er .sha "$root/identity.json")"
           task="$(jq -c .task "$root/identity.json")"
@@ -64,18 +67,23 @@ jobs:
           kernel="$(uname -srvm | sha256sum | cut -d' ' -f1)"
           cpu="$(awk -F: '/^(vendor_id|cpu family|model[[:space:]]|model name|stepping|microcode|flags)[[:space:]]*:/{print}' /proc/cpuinfo | sort -u | sha256sum | cut -d' ' -f1)"
           jq -n --arg image "$image" --arg config "$config" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid}' > "$root/runtime.json"
-          docker run "${opts[@]}" "$image" node /work/scripts/ci-overhaul/verified-mounted-inputs.mjs measure /work > "$root/inside.json"
+          docker run "${opts[@]}" --mount "type=bind,src=$audit,dst=/audit,readonly" "$image" node /audit/scripts/ci-overhaul/verified-mounted-inputs.mjs measure /work > "$root/inside.json"
           jq -S . "$root/before.json" > "$RUNNER_TEMP/before-sorted.json"
           jq -S . "$root/inside.json" | cmp - "$RUNNER_TEMP/before-sorted.json"
           if [[ "$KIND" == banners ]]; then
             docker run "${opts[@]}" "$image" node --input-type=module -e 'import {numberCases} from "./apps/banners-of-war/numbers-lab.mjs";import {finalCases} from "./apps/banners-of-war/final-integration-lab.mjs";import {antiquityCases} from "./apps/banners-of-war/antiquity-lab.mjs";import {originalCases,extraCases,historicalCases} from "./apps/banners-of-war/completion-lab.mjs";console.log(JSON.stringify([...numberCases().map(()=>"numerical-superiority"),...originalCases().map(()=>"original"),...extraCases().map(()=>"independent"),...historicalCases().map(()=>"historical"),...antiquityCases().map(()=>"antiquity"),...finalCases().map(()=>"final-integration"),...[26,40,60,100,150].map(()=>"performance")].filter((_,i)=>i%8===0)));' > "$root/expected.json"
           fi
+          prepared_ms="$(date +%s%3N)"
           mkdir "$src/qa-artifacts"; touch -d @946684800 "$src"
+          # No controller mount is visible during original game execution.
           docker run "${opts[@]}" --mount "type=bind,src=$root/output,dst=/work/qa-artifacts" -e "PW_QA_TASK=$task" "$image" node scripts/universal-qa/run.mjs
+          executed_ms="$(date +%s%3N)"
           rmdir "$src/qa-artifacts"; touch -d @946684800 "$src"
           node "$tool" measure "$src" > "$root/after.json"
           cmp "$root/before.json" "$root/after.json"
           jq -e '.success==true and .exitCode==0' "$root/output/$key/result.json"
+          end_ms="$(date +%s%3N)"
+          jq -n --argjson preparationMs "$((prepared_ms-start_ms))" --argjson executionWallMs "$((executed_ms-prepared_ms))" --argjson postVerificationMs "$((end_ms-executed_ms))" '{preparationMs:$preparationMs,executionWallMs:$executionWallMs,postVerificationMs:$postVerificationMs}' > "$root/timing.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -102,6 +110,7 @@ jobs:
           path: evidence
       - name: Independently reconstruct original simulation projections and scope
         run: |
+          set -euo pipefail
           node scripts/ci-overhaul/heavy-cross-commit.mjs gate all all evidence | tee gate.json
           jq -e '.success and .passed==4 and .productionAuthorization==false and .allowResultReuse==false' gate.json
       - name: Missing and stale attempt control
