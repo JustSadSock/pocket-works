@@ -1,0 +1,7 @@
+# Universal QA verified split integration
+
+The directed environment policy from #1405 is now exercised through the actual Fresh Split task entry point, not a parallel mock runner. The dedicated PR workflow runs all eight tasks using both direct and sharded execution and a ninth missing-evidence case through the normal fresh route. Source and controller are immutable experimental revisions; the candidate overlay changes only platform scripts. This is not a claim of eligibility for arbitrary app branches.
+
+Verified evidence is revalidated at assembly. Historical gameplay timing is separated from fresh measurements, and all performance cases remain fresh. The isolated mode deliberately writes verified-completion and verified-split-contract artifacts, never the normal completion JSONL, because legacy consumers cannot distinguish historical timings. The ordinary task result is explicitly marked verified-split-shadow, and production verdicts and generic receipt issuance reject that marker. Default production execution and delivery policy remain unchanged. Missing authentication or mismatched candidate scope before a phase starts falls back to the ordinary Fresh Split; failures after execution starts are not hidden by retry or fallback.
+
+Next rollout requires a successful real integration matrix and independent verification, a renewable source/compatibility policy for the current candidate, and explicit promotion of the production gate's accepted evidence schema. No historical result is currently allowed to satisfy mandatory production QA.

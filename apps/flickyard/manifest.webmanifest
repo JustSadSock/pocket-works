@@ -1,0 +1,21 @@
+{
+  "id": "/apps/flickyard/",
+  "name": "FLICKYARD — мастерская меткости",
+  "short_name": "FLICKYARD",
+  "description": "PC aim trainer: flick, tracking, switching и реакция.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#e8e0cf",
+  "theme_color": "#27312b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

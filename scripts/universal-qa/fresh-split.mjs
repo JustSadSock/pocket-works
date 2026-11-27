@@ -8,6 +8,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {loadOriginal,runPhase,combine,projectShard} from '../ci-overhaul/simulation-performance-contracts.mjs';
 import {ROOT,loadSuites,resolveTasks} from './plan.mjs';
+import {selectVerifiedShadow,assembleVerifiedShadow} from './verified-split.mjs';
 export const AUDITED_PLAN='81f618b94fadc8e1bd96ff66a339528c55b768e72ac50767ada94de409e2ee25';
 export const PRODUCERS=Object.freeze({
  'completion-runner.mjs':'db22d10f4087822ff756c1964bdd198a5e081092',
@@ -43,15 +44,15 @@ export function selectSplit(root,task,suite,mode=process.env.PW_QA_SPLIT_BANNERS
 function checkPlan(original){
  return original.version==='chronicles-completion-v1'&&original.plan.planDigest===AUDITED_PLAN&&original.plan.total===1873;
 }
-function launch(args){
+function launch(args,{binary=process.execPath,allowFallback=false}={}){
  return new Promise((done,reject)=>{
-  const child=spawn(process.execPath,args,{cwd:ROOT,stdio:'inherit',shell:false});
+  const child=spawn(binary,args,{cwd:ROOT,stdio:'inherit',shell:false});
   const terminate=signal=>{child.kill(signal);process.exit(signal==='SIGINT'?130:143);};
   const onTerm=()=>terminate('SIGTERM'),onInt=()=>terminate('SIGINT');
   process.once('SIGTERM',onTerm);process.once('SIGINT',onInt);
   const cleanup=()=>{process.removeListener('SIGTERM',onTerm);process.removeListener('SIGINT',onInt);};
   child.once('error',e=>{cleanup();reject(e);});
-  child.once('close',(code,signal)=>{cleanup();if(code===0&&!signal)done();else reject(Error('Fresh child failed: '+code+' '+(signal??'')));});
+  child.once('close',(code,signal)=>{cleanup();if(code===0&&!signal)done(0);else if(allowFallback&&code===75&&!signal)done(75);else reject(Error('Fresh child failed: '+code+' '+(signal??'')));});
  });
 }
 const json=p=>JSON.parse(readFileSync(p,'utf8'));
@@ -86,6 +87,14 @@ async function main(){
   // Before any new execution, return to the untouched app-owned original.
   console.log('Split plan differs; executing original Banners completion runner');
   await launch([join(ROOT,'apps/banners-of-war/completion-runner.mjs'),seed,'8',output]);return;
+ }
+ if(selectVerifiedShadow(process.env)){
+  const temp=mkdtempSync(join(tmpdir(),'pw-verified-split-'));
+  try{
+   const exit=await launch([join(ROOT,'scripts/universal-qa/verified-split-shadow.sh'),String(shard),temp],{binary:'bash',allowFallback:true});
+   if(exit===0){assembleVerifiedShadow(original,shard,temp,process.env.PW_QA_VERIFIED_EVIDENCE,output);return;}
+   console.log('Verified shadow preflight declined; running ordinary fresh split');
+  }finally{rmSync(temp,{recursive:true,force:true});}
  }
  const temp=mkdtempSync(join(tmpdir(),'pw-fresh-split-')),context={source:AUDITED_PLAN,run:randomUUID(),attempt:1,auditCommit:AUDITED_PLAN};
  try{

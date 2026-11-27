@@ -1,0 +1,218 @@
+name: Gameplay Renewable Admission Integration
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/gameplay-renewable-admission.yml'
+      - 'scripts/ci-overhaul/gameplay-renewable-admission*'
+  workflow_call:
+    inputs:
+      expected:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/gameplay-renewable-admission.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs
+  prepare:
+    needs: contract
+    if: inputs.expected != '' || (github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'infra/gameplay-production-admission-integration' || github.event.pull_request.head.ref == 'infra/gameplay-production-gate-readiness'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+      pull-requests: read
+    outputs:
+      source: ${{ steps.prepare.outputs.source }}
+      controller: ${{ steps.prepare.outputs.controller }}
+      matrix: ${{ steps.prepare.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Discover signed evidence for actual target without pinning a renewal run
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED: ${{ inputs.expected }}
+          BASE: ${{ github.event.pull_request.base.sha || github.sha }}
+          QA_PR_NUMBER: '1355'
+          QA_HEAD_REPO: JustSadSock/pocket-works
+          QA_HEAD_REF: app/banners-of-war
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$EXPECTED" ]]; then
+            info="$(gh api "repos/$GITHUB_REPOSITORY/pulls/1355")"
+            jq -e '.state=="open" and .head.repo.full_name=="JustSadSock/pocket-works" and .head.ref=="app/banners-of-war" and .base.ref=="main"' <<< "$info"
+            export QA_HEAD_SHA="$(jq -er '.head.sha' <<< "$info")"
+            actual="$(jq -er 'select(.mergeable==true)|.merge_commit_sha' <<< "$info")"
+            merge="$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$actual")"
+            jq -e --arg sha "$actual" --arg base "$(jq -er '.base.sha' <<< "$info")" --arg head "$QA_HEAD_SHA" '.sha==$sha and [.parents[].sha]==[$base,$head]' <<< "$merge"
+            export QA_EXPECTED='["banners-of-war-completion-lab-0"]'
+            matrix='[{"shard":0,"evidence":"on"},{"shard":1,"evidence":"on"},{"shard":2,"evidence":"on"},{"shard":3,"evidence":"on"},{"shard":4,"evidence":"on"},{"shard":5,"evidence":"on"},{"shard":6,"evidence":"on"},{"shard":7,"evidence":"on"},{"shard":0,"evidence":"off"}]'
+          else
+            export QA_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            actual="$(git rev-parse HEAD)"
+            export QA_EXPECTED="$EXPECTED"
+            matrix="$(jq -ce '[.[]|select(test("^banners-of-war-completion-lab-[0-7]$"))|{shard:(split("-")[-1]|tonumber),evidence:"on"}]|unique_by(.shard)|select(length>0)' <<< "$EXPECTED")"
+          fi
+          node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/discovered"
+          report="$RUNNER_TEMP/discovered/discovery.json"
+          if jq -e '.status=="authenticated-candidate"' "$report" >/dev/null; then
+            controller="$(jq -er '.issuer' "$report")"
+            RENEWABLE_ADMISSION_FIXTURE="$RUNNER_TEMP/discovered/authenticated" node --test scripts/ci-overhaul/gameplay-renewable-admission.test.mjs
+          else
+            controller="$BASE"
+            if [[ -z "$EXPECTED" ]]; then echo 'Live test requires a discovered signed catalog'; exit 1; fi
+          fi
+          [[ "$actual" =~ ^[a-f0-9]{40}$ && "$controller" =~ ^[a-f0-9]{40}$ ]]
+          echo "source=$actual" >> "$GITHUB_OUTPUT"
+          echo "controller=$controller" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renewable-admission-input-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/discovered/
+          if-no-files-found: error
+          retention-days: 7
+  execute:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.controller }}
+          path: trusted-controller
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
+          path: actual-source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        if: matrix.evidence == 'on'
+        continue-on-error: true
+        with:
+          name: renewable-admission-input-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/discovered
+      - name: Admit against actual mounted inputs; always run fresh performance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git -C actual-source rev-parse HEAD)" = "${{ needs.prepare.outputs.source }}"
+          test "$(git -C trusted-controller rev-parse HEAD)" = "${{ needs.prepare.outputs.controller }}"
+          bash scripts/ci-overhaul/gameplay-renewable-admission.sh "$PWD/trusted-controller" "$PWD/actual-source" "$RUNNER_TEMP/discovered" "$RUNNER_TEMP/result"
+          if [[ "${{ matrix.evidence }}" == off ]]; then
+            jq -e '.admission.decision=="execute" and .freshGameplayCases==234 and .freshPerformanceCases==1 and .historicalMeasurements==0 and .freshMeasurements==432' "$RUNNER_TEMP/result/admission-report.json"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renewable-admission-${{ matrix.shard }}-${{ matrix.evidence }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/result/
+          if-no-files-found: warn
+          retention-days: 7
+  aggregate:
+    needs: [prepare, execute]
+    if: always() && needs.execute.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: renewable-admission-*-*-${{ github.run_attempt }}
+          path: reports
+      - uses: actions/download-artifact@v4
+        with:
+          name: renewable-admission-input-${{ github.run_attempt }}
+          path: discovered
+      - name: Independently authenticate and reconstruct each raw task
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MATRIX: ${{ needs.prepare.outputs.matrix }}
+          ACTUAL_QA_SOURCE: ${{ needs.prepare.outputs.source }}
+          ACTUAL_QA_CONTROLLER: ${{ needs.prepare.outputs.controller }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir audited
+          while IFS= read -r row; do
+            export SHARD="$(jq -er .shard <<< "$row")"
+            evidence="$(jq -er .evidence <<< "$row")"
+            name="renewable-admission-$SHARD-$evidence-$GITHUB_RUN_ATTEMPT"
+            mkdir "audited/$name"
+            input="$PWD/discovered"
+            if [[ "$evidence" == off ]]; then input="$PWD/no-evidence"; fi
+            node scripts/ci-overhaul/gameplay-renewable-admission.mjs audit "$PWD/reports/$name/raw" "$input" "$PWD/audited/$name" "$PWD/reports/$name"
+          done < <(jq -c '.[]' <<< "$MATRIX")
+          # The control has no historical receipt, so corruption cannot be
+          # masked by an authentication failure or an expired catalog.
+          if jq -e 'any(.[]; .shard==0 and .evidence=="off")' <<< "$MATRIX" >/dev/null; then
+            export SHARD=0
+            cp -a "reports/renewable-admission-0-off-$GITHUB_RUN_ATTEMPT" tampered
+            printf '%s\n' '{"corrupt":true}' >> tampered/fresh-measurements.jsonl
+            mkdir rejected
+            if node scripts/ci-overhaul/gameplay-renewable-admission.mjs audit "$PWD/tampered/raw" "$PWD/no-evidence" "$PWD/rejected" "$PWD/tampered" > rejected.log 2>&1; then
+              echo 'Independent gate accepted corrupt output'; exit 1
+            fi
+            grep -F 'Projected evidence differs: fresh-measurements.jsonl' rejected.log
+            test ! -e rejected/gate-candidate.json
+            printf '%s\n' '{"corruptProjectionRejected":true}' > tamper-verdict.json
+          fi
+      - name: Validate coverage and provenance
+        env:
+          MATRIX: ${{ needs.prepare.outputs.matrix }}
+          SOURCE: ${{ needs.prepare.outputs.source }}
+          CONTROLLER: ${{ needs.prepare.outputs.controller }}
+        run: node scripts/ci-overhaul/gameplay-renewable-admission-aggregate.mjs reports aggregate.json audited
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renewable-admission-aggregate-${{ github.run_attempt }}
+          path: |
+            aggregate.json
+            audited/*/gate-candidate.json
+            tamper-verdict.json
+          if-no-files-found: error
+          retention-days: 7

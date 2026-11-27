@@ -15,6 +15,7 @@ export function verdict(tasks,records,tree){
  for(const t of tasks){
   const r=byKey.get(t.key);
   if(r.schema!==1||typeof r.success!=='boolean'||canonical(Object.fromEntries(Object.keys(t).map(k=>[k,r[k]])))!==canonical(t))throw Error('Canary task identity mismatch: '+t.key);
+  if(r.verificationMode!==undefined)throw Error('Shadow evidence cannot satisfy production QA: '+t.key);
   if(compareEvidence([t],{[t.key]:r},{[t.key]:r}).success)passed.push(t);else failed.push(t);
  }
  return {tree,planDigest:digest(canonical(tasks.map(taskDigest).sort())),expected:tasks.length,finalPassed:passed.length,passedTaskDigests:passed.map(taskDigest).sort(),failed:failed.map(t=>t.key),success:failed.length===0};
