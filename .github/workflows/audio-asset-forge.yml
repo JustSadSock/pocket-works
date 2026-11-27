@@ -997,6 +997,7 @@ jobs:
           assert [x['meter'] for x in s['sections']]==[[5,4],[5,4],[3,4],[5,4],[5,4],[5,4]]
           assert len(s['events'])>700 and m['sourceCount']>=15
           assert m['approximateCrossfades']>100 and m['recordedIntervalCoverage']==0
+          assert m['roomProcessor']=='SoX algorithmic room reverb' and len(m['roomSettings'])==6
           assert m['pcmReconstructionError']==0 and m['monoPeak']<1 and m['stereoWidth']>0
           def read(e):
               f=p/e['file']
