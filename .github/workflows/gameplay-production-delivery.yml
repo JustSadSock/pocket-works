@@ -24,7 +24,7 @@ jobs:
       - run: node --test scripts/ci-overhaul/gameplay-production-delivery.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/ci-overhaul/gameplay-renewable-admission.test.mjs
   prepare:
     needs: contract
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/gameplay-production-delivery'
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'infra/gameplay-production-delivery' || github.event.pull_request.head.ref == 'infra/banners-production-verified-route')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     outputs:
@@ -61,7 +61,7 @@ jobs:
           head="$(jq -er '.head.sha' <<< "$info")"
           jq -e --arg actual "$actual" --arg base "$base" --arg head "$head" '.sha==$actual and (.parents|length)==2 and .parents[0].sha==$base and .parents[1].sha==$head' "$RUNNER_TEMP/app-merge.json" >/dev/null
           export GITHUB_REF=refs/pull/1355/merge
-          export QA_SOURCE_SHA="$QA_HEAD_SHA"
+          export QA_SOURCE_SHA="$actual"
           export PW_QA_INTEGRATION_SOURCE=1
           node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/discovered"
           report="$RUNNER_TEMP/discovered/discovery.json"
