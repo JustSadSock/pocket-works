@@ -38,7 +38,7 @@ test('opt-in individual stems preserve the approved dry mix and reconstruct shar
  for(let i=0;i<r.mix.length;i++){
   const {a,b,c}=r.trackStems;
   assert.ok(Math.abs(a[i]+b[i]-r.stems.strings[i])<1e-6);
-  assert.equal(c[i],r.stems.woodwind[i]);
+  assert.ok(Math.abs(c[i]-r.stems.woodwind[i])<1e-7); // signed zero is numerically identical
   assert.ok(Math.abs(a[i]+b[i]+c[i]-r.mix[i])<1e-6);
  }
  assert.throws(()=>renderRecordedEnsemble({...opts,includeTrackStems:1}),/Invalid recorded ensemble/);
