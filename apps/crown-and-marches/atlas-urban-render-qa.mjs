@@ -22,11 +22,13 @@ async function setup(browser,r){
   const clear=()=>{c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,canvas.width,canvas.height);};
   const image=()=>c.getImageData(0,0,canvas.width,canvas.height).data;
   const compare=(a,b,dx=0,dy=0)=>{let mismatches=0,compared=0;for(let y=0;y<canvas.height-dy;y++)for(let x=0;x<canvas.width-dx;x++){const j=(y*canvas.width+x)*4,k=((y+dy)*canvas.width+x+dx)*4;if(a[j+3]||b[k+3]){compared++;for(let z=0;z<4;z++)if(a[j+z]!==b[k+z]){mismatches++;break;}}}return {compared,mismatches};};
-  const draw=(dx=0,dy=0)=>{const {s,opts,cam,receipt}=fixture;clear();c.setTransform(cam.s,0,0,cam.s,dx,dy);return composeHumanGeography(c,s,{...cam,ox:dx,oy:dy},opts,dx||dy?{...receipt,key:'fixture-pan'}:receipt);};
+  const draw=(dx=0,dy=0,cacheMode='phase')=>{const {s,opts,cam,receipt}=fixture;clear();c.setTransform(cam.s,0,0,cam.s,dx,dy);return composeHumanGeography(c,s,{...cam,ox:dx,oy:dy},{...opts,cacheMode},dx||dy?{...receipt,key:'fixture-pan'}:receipt);};
   window.urbanPreflight={
    fresh(candidate,{reference=false}={}){fixture=urbanRenderFixture();fixture.opts.candidate=candidate;fixture.opts.terrain={fixture:true};fixture.receipt.revision='fixture';fixture.receipt.tilt=.28;const stats=draw(),bytes=image();let pixels=0;for(let k=3;k<bytes.length;k+=4)if(bytes[k])pixels++;const match=baseline?compare(baseline,bytes):null;if(reference)baseline=bytes;return {stats,pixels,match};},
    day(){fixture.s.day++;const stats=draw();return {stats,match:compare(baseline,image())};},
-   pan(){const stats=draw(12,8);return {stats,...compare(baseline,image(),12,8)};},
+   pan(dx,dy){const stats=draw(dx,dy),actual=image(),fresh=draw(dx,dy,'fresh'),freshPixels=image(),repeat=draw(dx,dy),repeatPixels=image();return {stats,fresh,repeat,againstFresh:compare(actual,freshPixels),repeatAgainstFresh:compare(repeatPixels,freshPixels)};},
+   returnPose(){const stats=draw(),actual=image(),fresh=draw(0,0,'fresh'),freshPixels=image();draw();return {stats,fresh,againstFresh:compare(actual,freshPixels),againstOrigin:compare(baseline,actual)};},
+   integerControl(){const origin=draw(0,0,'integer'),originPixels=image(),stats=draw(12,8,'integer'),translated=image(),fresh=draw(12,8,'fresh'),freshPixels=image();draw();return {origin,stats,fresh,shift:compare(originPixels,translated,12,8),againstFresh:compare(translated,freshPixels)};},
    construction(){const day=fixture.s.day,fort=fixture.s.cities[0].fort;fixture.s.cities[0].fort++;const stats=draw();return {stats,dayBefore:day,dayAfter:fixture.s.day,fortBefore:fort,fortAfter:fixture.s.cities[0].fort};},
    sheet(candidate){const sheet=humanArchitectureSheet(candidate);sheet.id='sheet';document.body.append(sheet);return [sheet.width,sheet.height];}
   };
@@ -51,14 +53,28 @@ try{
      const cold=await step(page,r,'cold',c=>window.urbanPreflight.fresh(c,{reference:true}),candidate);await evidence(page,r,'cold');
      const warm=await step(page,r,'warm',c=>window.urbanPreflight.fresh(c),candidate);await evidence(page,r,'warm');
      const day=await step(page,r,'day',()=>window.urbanPreflight.day());await evidence(page,r,'day');
-     const motion=candidate==='cultural'?null:await step(page,r,'pan',()=>window.urbanPreflight.pan());if(candidate!=='cultural')await evidence(page,r,'pan');
+     const motion=await step(page,r,'pan',()=>window.urbanPreflight.pan(12,8));await evidence(page,r,'pan');
+     const fractional=await step(page,r,'fractional-pan',()=>window.urbanPreflight.pan(14.4,9.2));await evidence(page,r,'fractional-pan');
+     const returned=await step(page,r,'return-pose',()=>window.urbanPreflight.returnPose());await evidence(page,r,'return-pose');
+     // Keep the original integer translation assertion as an explicit control.
+     // Phase cache does not promise translation; it must match a fresh raster
+     // at every pose and demonstrate a real cache hit on repeated/return poses.
+     const integer=candidate==='cultural'?null:await step(page,r,'integer-control',()=>window.urbanPreflight.integerControl());if(candidate!=='cultural')await evidence(page,r,'integer-control');
      const construction=await step(page,r,'construction',()=>window.urbanPreflight.construction());await evidence(page,r,'construction');
      // Save the entire result and all images before checking a single assertion.
      const sheet=await step(page,r,'sheet',c=>window.urbanPreflight.sheet(c),candidate);await evidence(page,r,'sheet','#sheet');
      if(cold){checkDraw(r,'cold-render',cold.stats);check(r,'cold-cache',()=>{assert.equal(cold.stats.spriteCacheEntriesBefore,0,'cache not isolated');assert.ok(cold.stats.spriteBuilds>0,'cold cache created no sprites');assert.ok(cold.pixels>100,'no pixels rendered');});}
      if(warm){checkDraw(r,'warm-render',warm.stats);check(r,'warm-cache',()=>{assert.ok(warm.stats.spriteCacheEntriesBefore>0,'warm cache empty');assert.equal(warm.stats.spriteBuilds,0,'warm redraw unexpectedly rebuilt sprites');assert.ok(warm.stats.spriteHits>0&&!warm.stats.reused,'warm test must stamp sprites, not reuse screen layer');assert.ok(warm.match.compared>100&&warm.match.mismatches===0,'warm redraw differs from cold pixels');});}
      if(day)check(r,'calendar-layer-reuse',()=>{assert.ok(day.stats.reused&&day.stats.layoutMs===0&&day.stats.drawMs===0&&day.stats.spriteDraws===0,'calendar-only change invalidated layer');assert.ok(day.match.compared>100&&day.match.mismatches===0,'calendar layer pixels changed');});
-     if(motion)check(r,'pan-pixels',()=>{assert.ok(motion.stats.spatialReuse,'small pan must translate resident image');assert.ok(motion.compared>100&&motion.mismatches===0,'translated layer must match exact pixel shift');});
+     for(const [name,pose] of [['pan-pixels',motion],['fractional-pan-pixels',fractional]])check(r,name,()=>{
+      assert.equal(pose.stats.cacheMode,'phase');assert.ok(!pose.stats.reused&&!pose.stats.spatialReuse,'new pose must be rasterized without translation');
+      assert.ok(!pose.fresh.reused,'fresh comparator must rasterize');assert.ok(pose.againstFresh.compared>100&&pose.againstFresh.mismatches===0,'new pose differs from fresh raster');
+      assert.ok(pose.repeat.poseCacheHit&&pose.repeat.reused&&!pose.repeat.spatialReuse,'identical pose failed to hit exact-pose bank');
+      assert.equal(pose.repeat.spriteDraws,0,'exact pose cache unexpectedly stamped sprites');
+      assert.ok(pose.repeatAgainstFresh.compared>100&&pose.repeatAgainstFresh.mismatches===0,'cached pose differs from fresh raster');
+     });
+     check(r,'return-pose-pixels',()=>{assert.ok(returned.stats.poseCacheHit&&returned.stats.reused&&!returned.stats.spatialReuse,'return failed to hit exact-pose bank');assert.ok(!returned.fresh.reused);assert.ok(returned.againstFresh.compared>100&&returned.againstFresh.mismatches===0,'returned pose differs from fresh raster');assert.ok(returned.againstOrigin.compared>100&&returned.againstOrigin.mismatches===0,'returned pose differs from initial pixels');});
+     if(candidate!=='cultural')check(r,'integer-control-shift',()=>{assert.equal(integer.stats.cacheMode,'integer');assert.ok(integer.stats.spatialReuse,'small pan must translate resident image in integer control');assert.ok(integer.shift.compared>100&&integer.shift.mismatches===0,'translated layer must match exact pixel shift');assert.ok(integer.againstFresh.compared>100,'missing fresh raster comparison for translation control');});
      if(construction)check(r,'construction',()=>{assert.equal(construction.dayAfter,construction.dayBefore);assert.equal(construction.fortAfter,construction.fortBefore+1);assert.ok(!construction.stats.reused,'same-day construction failed to invalidate');assert.ok(construction.stats.plans.some(p=>p.walls>0),'fortification not rendered');});
      check(r,'sheet',()=>assert.deepEqual(sheet,[1200,760]));
     }catch(e){r.errors.push(label(r,r.stage)+': '+String(e.stack||e));if(page)await evidence(page,r,'failure');}
