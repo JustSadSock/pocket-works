@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "product": "flickyard",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "press",
+      "evidence": "apps/press/visual-direction.json inspected; apps/press/visual-memory/memory.json is absent and no legacy cover was listed.",
+      "lesson": "Do not reuse a file ledger or permanent operation rail as the main composition; keep the target field dominant and the mode rail outside it."
+    },
+    {
+      "slug": "pereves",
+      "evidence": "apps/pereves/visual-direction.json inspected; apps/pereves/visual-memory/memory.json is absent and no legacy cover was listed.",
+      "lesson": "Avoid a suspended sculpture, lavender gallery wall and object table; target plates must travel on horizontal rails and react to mouse input."
+    },
+    {
+      "slug": "echolot",
+      "evidence": "apps/echolot/visual-direction.json inspected; apps/echolot/visual-memory/memory.json is absent and no legacy cover was listed.",
+      "lesson": "Avoid the circular sonar screen and perimeter scanning console; the playfield is a broad open range with no radar or hidden-map reveal."
+    },
+    {
+      "slug": "emergent-kingdoms",
+      "evidence": "apps/emergent-kingdoms/visual-direction.json inspected; memory.json is absent; covers/emergent-kingdoms.jpg exists as a legacy cover with unknown capture state and was not treated as verified evidence.",
+      "lesson": "Avoid map-table composition, chronology and comparative geography; this product needs continuous mouse travel and a live target at all times."
+    },
+    {
+      "slug": "folkarium",
+      "evidence": "apps/folkarium/visual-direction.json inspected; memory.json is absent; covers/folkarium.jpg exists as a legacy cover with unknown capture state and was not treated as verified evidence.",
+      "lesson": "Avoid manuscript spreads, notation grids and instrument inspectors; the training world must remain an unobstructed horizontal arena."
+    },
+    {
+      "slug": "petlya-17",
+      "evidence": "apps/petlya-17/visual-direction.json and app.config.json inspected; apps/petlya-17/visual-memory/memory.json is absent and no verified screenshot capture was available.",
+      "lesson": "Avoid a 3D driving cockpit, horizon perspective and peripheral vehicle telemetry; keep mouse aim coordinates flat, predictable and independent of camera movement."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://aimlabs.com/articles/aimlabs/train-your-core-fundamentals-with-the-aimlabs-aim-basics-routine/",
+      "inspectedAt": "2026-11-26",
+      "observation": "Aimlabs groups its general fundamentals around flicking, target switching and tracking, with smaller task variations under each category.",
+      "principle": "Keep the core aiming skills separate so a short session can isolate a weakness instead of mixing every input into one score.",
+      "application": "Flickyard exposes distinct Flick, Track and Switch drills, then combines them in a fixed three-stage 90-second circuit.",
+      "avoid": "Do not copy Aimlabs branding, target art, screen layout or named scenario content."
+    },
+    {
+      "url": "https://steamcommunity.com/app/824270/workshop/",
+      "inspectedAt": "2026-11-26",
+      "observation": "KovaaK's workshop organizes a large community scenario library, including separate tracking, clicking and switching scenarios.",
+      "principle": "A training task should have a clear input contract and adjustable parameters rather than one universal difficulty curve.",
+      "application": "Each Flickyard mode has its own scoring rule, duration and target behavior, with a separate difficulty selector.",
+      "avoid": "Do not reproduce the workshop catalogue, community marketplace or its weapon-oriented presentation."
+    },
+    {
+      "url": "https://www.3daimtrainer.com/",
+      "inspectedAt": "2026-11-26",
+      "observation": "3D Aim Trainer offers a browser entry point alongside its downloadable desktop experience and describes drills for mouse accuracy, flicking and tracking.",
+      "principle": "A browser trainer should reach its first useful exercise quickly and retain meaningful local feedback after a session.",
+      "application": "Flickyard launches directly into a ready range, works without a network connection and stores personal bests on the device.",
+      "avoid": "Do not imitate its game-specific 3D scenes, player leaderboard claims or external account flow."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "rail-yard",
+      "medium": "A hand-authored 2D Canvas range with layered steel rails, ceramic target faces, brass fasteners and small impact fragments.",
+      "composition": "A wide open horizontal playfield occupies most of the screen, with one narrow drill rail and a separate results ledger.",
+      "interaction": "Mouse movement directly controls the reticle; left click fires, while a dedicated tracking task scores continuous on-target time.",
+      "motion": "Targets slide on rails, make small readable direction corrections and rotate with inertia when struck.",
+      "rationale": "This direction keeps the mouse path honest, renders sharply in the browser and gives every hit a tactile mechanical consequence."
+    },
+    {
+      "id": "optical-bench",
+      "medium": "A precise SVG calibration instrument with etched glass rings, a movable optical iris and printed measurement scales.",
+      "composition": "One centered instrument fills a narrow portrait workbench, with a compact row of calibration controls beneath it.",
+      "interaction": "The player adjusts a lens aperture and dials sensitivity before running a static alignment test.",
+      "motion": "Dials rotate slowly and the lens closes with a damped mechanical stop, emphasizing calibration rather than target contact.",
+      "rationale": "It is useful for mouse setup but does not create enough repeated target acquisition to sustain an aim-training loop."
+    },
+    {
+      "id": "orbit-gallery",
+      "medium": "A WebGL 3D gallery of floating ceramic spheres, volumetric spotlights and orbital target rigs.",
+      "composition": "A circular three-dimensional arena surrounds a central camera, with a floating bottom HUD and radial mode selector.",
+      "interaction": "The player uses pointer lock to turn freely in three dimensions and fires at targets moving in depth.",
+      "motion": "Targets orbit, drift toward and away from the camera, and break into volumetric shards after impact.",
+      "rationale": "The 3D camera adds depth and spectacle but makes browser performance and consistent mouse benchmarking harder to control."
+    }
+  ],
+  "selection": {
+    "concept": "rail-yard",
+    "reason": "A 2D horizontal range gives predictable mouse coordinates, high refresh responsiveness and a distinct physical identity without external assets or a heavy renderer.",
+    "rejected": [
+      {
+        "concept": "optical-bench",
+        "reason": "A calibration instrument is a useful setup utility, but its dial interaction does not provide repeated flicking, tracking and switching practice."
+      },
+      {
+        "concept": "orbit-gallery",
+        "reason": "A 3D orbital arena introduces camera acceleration and depth perception variables that weaken repeatable mouse-skill measurement in a browser."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas-2d",
+      "availability": "available",
+      "reason": "Native Canvas 2D is available in the quick runtime and supports a high-frequency pointer-driven target field without a remote renderer."
+    },
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "Inline SVG produces a crisp app icon and small mechanical marks with no raster download or external font dependency."
+    },
+    {
+      "id": "web-audio",
+      "availability": "available",
+      "reason": "Web Audio can synthesize the enamel and steel contact from filtered noise and short independent resonances after a user gesture."
+    }
+  ],
+  "assets": [
+    {
+      "id": "range-target-system",
+      "tool": "canvas-2d",
+      "source": "art-bible.json",
+      "output": "app.js",
+      "role": "The target plates, rails, measurement marks, reticle, hit rings and impact fragments form the only focal visual system.",
+      "acceptance": "Targets remain distinguishable at 13–27 CSS pixels and the active target is identifiable without relying on color alone.",
+      "integration": "The range is drawn in CSS-pixel coordinates with a capped device-pixel ratio and is resized proportionally during an active session.",
+      "provenance": "Original Canvas paths and geometry authored for Flickyard; no borrowed sprites, branded marks or stock imagery.",
+      "maxBytes": 42000
+    },
+    {
+      "id": "flickyard-brand-mark",
+      "tool": "svg",
+      "source": "art-bible.json",
+      "output": "icons/icon.svg",
+      "role": "A concentric target plate intersects two steel rails and one rust-red crosshair axis.",
+      "acceptance": "The plate, rails and center remain readable at 48 pixels without text or a generic monogram.",
+      "integration": "The same SVG is used by the PWA manifest, browser favicon and app launcher.",
+      "provenance": "Original hand-authored SVG paths and circles using the app palette.",
+      "maxBytes": 4096
+    },
+    {
+      "id": "mechanical-impact-sound",
+      "tool": "web-audio",
+      "source": "AUDIO.md",
+      "output": "sound.mjs",
+      "role": "A hit combines a sharp filtered enamel tick with a low plate resonance; a miss is a softer felt-backed knock.",
+      "acceptance": "Hit, miss, selection and finish remain distinguishable at ordinary speaker volume with no harsh transient peak.",
+      "integration": "A lazy AudioContext creates a bounded number of procedural voices and is muted by a persistent settings control.",
+      "provenance": "Original browser synthesis using generated noise buffers and short oscillators; no external samples.",
+      "maxBytes": 9000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      1366,
+      768
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Pointer Lock may be denied or released by Escape; visible-cursor fallback and pause behavior must remain reliable.",
+      "The target field must keep accurate CSS-pixel coordinates across high-DPI displays and browser resizing.",
+      "The left rail and result ledger must not cover the active target field on narrow landscape and portrait screens.",
+      "Target speed and impact fragments must not create frame-time spikes during rapid repeated hits."
+    ],
+    "comparisons": [
+      "press",
+      "pereves",
+      "echolot",
+      "emergent-kingdoms",
+      "folkarium",
+      "bzyn",
+      "kalibr",
+      "petlya-17"
+    ]
+  }
+}

@@ -13,7 +13,7 @@ const subjects=['catalog.json',...Array.from({length:8},(_,i)=>'receipt-'+i+'.js
 export function eligibleRuns(runs,now=Date.now()){
  if(!Array.isArray(runs)||!positive(now))return [];
  return runs.filter(r=>r&&positive(r.id)&&positive(r.run_attempt)&&r.path===RENEWAL_WORKFLOW&&r.head_branch==='main'&&events.includes(r.event)&&r.repository?.full_name===REPO&&r.head_repository?.full_name===REPO&&r.status==='completed'&&r.conclusion==='success'&&SHA.test(r.head_sha)&&Number.isFinite(Date.parse(r.created_at))&&Date.parse(r.created_at)<=now&&now-Date.parse(r.created_at)<=MAX_AGE)
- .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)||b.id-a.id).slice(0,8);
+ .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)||b.id-a.id).slice(0,100);
 }
 export function verifyDiscoveredCatalog(c,receipts,run,source,sourceTree,auditTree,now=Date.now()){
  if(eligibleRuns([run],now).length!==1||!SHA.test(source)||!SHA.test(sourceTree)||!SHA.test(auditTree)||c?.source!==source||c.sourceTree!==sourceTree||c.sourcePR!==APP_PR||!['main',APP_BRANCH,'refs/pull/'+APP_PR+'/merge'].includes(c.sourceRef)||c.auditCommit!==run.head_sha||c.auditTree!==auditTree||c.run!==run.id||c.attempt!==run.run_attempt||c.ref!=='refs/heads/main'||c.event!==run.event||c.planDigest!==PLAN||!positive(c.issuedAt)||!positive(c.expiresAt)||now<c.issuedAt||now>=c.expiresAt)fail('Wrong, stale or untrusted catalog identity');
@@ -24,6 +24,15 @@ export function verifyDiscoveredCatalog(c,receipts,run,source,sourceTree,auditTr
 }
 const gh=(args,timeout=30000)=>execFileSync('gh',args,{encoding:'utf8',timeout,maxBuffer:8*1024*1024,stdio:['ignore','pipe','pipe']});
 const api=path=>JSON.parse(gh(['api',path]));
+// Successful scheduled no-op runs are not catalog candidates. Metadata is only a
+// cheap prefilter; all signatures and original bundles are still verified below.
+export function catalogArtifactPresent(run,artifacts){
+ const name='renewal-signed-catalog-'+run.run_attempt;
+ if(!Array.isArray(artifacts))return false;
+ const matches=artifacts.filter(a=>a?.name===name);
+ return matches.length===1&&matches[0].expired===false&&positive(matches[0].id)&&positive(matches[0].size_in_bytes);
+}
+const hasPublishedCatalog=run=>catalogArtifactPresent(run,api('repos/'+REPO+'/actions/runs/'+run.id+'/artifacts?name=renewal-signed-catalog-'+run.run_attempt+'&per_page=100').artifacts);
 const json=p=>{const st=lstatSync(p);if(!st.isFile()||st.size>4_000_000)fail('Invalid catalog subject');return JSON.parse(readFileSync(p,'utf8'));};
 const tree=sha=>{const c=api('repos/'+REPO+'/git/commits/'+sha);if(c.sha!==sha||!SHA.test(c.tree?.sha))fail('Commit/tree API mismatch');return c.tree.sha;};
 export function verifyBundles(root,receipts,run){
@@ -48,19 +57,28 @@ export function discoveryTarget(env,checkout){
  if(env.GITHUB_REF==='refs/heads/main'&&['workflow_dispatch','issues','push'].includes(env.GITHUB_EVENT_NAME))return checkout;
  return null;
 }
-export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list=()=>api('repos/'+REPO+'/actions/workflows/gameplay-receipt-renewal.yml/runs?branch=main&status=success&per_page=20').workflow_runs,getTree=tree,getRun=id=>api('repos/'+REPO+'/actions/runs/'+id),download=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--name','renewal-signed-catalog-'+r.run_attempt,'--dir',dir]),authenticate=(r,path)=>gh(['attestation','verify',path,'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',r.head_sha,'--deny-self-hosted-runners']),downloadBundles=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--pattern','renewal-bundle-'+r.run_attempt+'-*','--dir',dir],60000),checkBundles=verifyBundles}={}){
- const miss=(reason,attempted=0)=>({schema:1,status:'fresh-fallback',source:source??null,checkout,reason,attempted,...flags});
+export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list=()=>api('repos/'+REPO+'/actions/workflows/gameplay-receipt-renewal.yml/runs?branch=main&status=success&per_page=100').workflow_runs,hasCatalog=hasPublishedCatalog,requiredIssuer=null,getTree=tree,getRun=id=>api('repos/'+REPO+'/actions/runs/'+id),download=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--name','renewal-signed-catalog-'+r.run_attempt,'--dir',dir]),authenticate=(r,path)=>gh(['attestation','verify',path,'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',r.head_sha,'--deny-self-hosted-runners']),downloadBundles=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--pattern','renewal-bundle-'+r.run_attempt+'-*','--dir',dir],60000),checkBundles=verifyBundles}={}){
+ const stats={listed:0,issuerExcluded:0,metadataChecks:0,withoutCatalog:0,candidateDownloads:0};
+ const miss=(reason,attempted=0)=>({schema:1,status:'fresh-fallback',source:source??null,checkout,reason,attempted,lookupStats:{...stats},...flags});
  if(!source)return miss('No eligible Banners task');
  if(!SHA.test(source)||!SHA.test(checkout))return miss('Invalid source identity');
  let checked=0;
  try{
   const sourceTree=getTree(source);
-  for(const listing of eligibleRuns(list(),now)){
+  const candidates=eligibleRuns(list(),now);stats.listed=candidates.length;
+  for(const listing of candidates){
+   if(checked>=8)break;
+   if(requiredIssuer!==null&&listing.head_sha!==requiredIssuer){stats.issuerExcluded++;continue;}
+   // Limit expensive downloads, not successful no-op schedules. Metadata API
+   // failures remain fail-closed via the outer fallback.
+   stats.metadataChecks++;
+   if(!hasCatalog(listing)){stats.withoutCatalog++;continue;}
    checked++;
    const tmp=mkdtempSync(join(out,'candidate-'));
    try{
     const run=getRun(listing.id);
     if(eligibleRuns([run],now).length!==1||run.id!==listing.id||run.head_sha!==listing.head_sha||run.run_attempt!==listing.run_attempt)fail('Run changed during lookup');
+    stats.candidateDownloads++;
     download(run,tmp);
     if(!eq(readdirSync(tmp).sort(),[...subjects].sort()))fail('Missing or extra signed subjects');
     const c=json(join(tmp,'catalog.json'));
@@ -75,7 +93,7 @@ export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list
     const finalRun=getRun(run.id);
     if(eligibleRuns([finalRun],clock()).length!==1||finalRun.run_attempt!==run.run_attempt||finalRun.head_sha!==run.head_sha||clock()>=r.expiresAt)fail('Run or freshness changed after authentication');
     renameSync(tmp,join(out,'authenticated'));
-    return {...r,verifiedBundles:8,checkout,checkoutMatchesSource:checkout===source,attempted:checked};
+    return {...r,verifiedBundles:8,checkout,checkoutMatchesSource:checkout===source,attempted:checked,lookupStats:{...stats}};
    }catch(e){console.log('Renewal candidate '+listing.id+' declined: '+String(e.message).slice(0,300));}
    finally{rmSync(tmp,{recursive:true,force:true});}
   }

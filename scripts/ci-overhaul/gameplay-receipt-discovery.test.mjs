@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {eligibleRuns,verifyDiscoveredCatalog,discover,discoveryTarget,verifyBundles} from './gameplay-receipt-discovery.mjs';
+import {eligibleRuns,verifyDiscoveredCatalog,discover,discoveryTarget,verifyBundles,catalogArtifactPresent} from './gameplay-receipt-discovery.mjs';
 import {buildCatalog,REPO,RENEWAL_WORKFLOW,APP_BRANCH} from './gameplay-renewal.mjs';
 import {PLAN} from './verified-gameplay-receipt.mjs';
 const now=Date.parse('2026-11-26T12:00:00Z'),source='a'.repeat(40),sourceTree='b'.repeat(40),issuer='c'.repeat(40),auditTree='d'.repeat(40),h='e'.repeat(64),flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false},repo={full_name:REPO};
@@ -26,7 +26,7 @@ test('all nine signatures are checked; failure leaves no authenticated directory
  for(const reject of [false,true]){
   const out=mkdtempSync(join(tmpdir(),'pw-discovery-'));let checks=0;
   try{
-   const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>[run],getTree:s=>s===source?sourceTree:auditTree,getRun:()=>run,download:(_,dir)=>{writeFileSync(join(dir,'catalog.json'),JSON.stringify(catalog));receipts.forEach((x,i)=>writeFileSync(join(dir,'receipt-'+i+'.json'),JSON.stringify(x)));},authenticate:()=>{checks++;if(reject&&checks===9)throw Error('signature rejected');},downloadBundles:()=>{},checkBundles:()=>{assert.equal(checks,9);}});
+   const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>[run],hasCatalog:()=>true,getTree:s=>s===source?sourceTree:auditTree,getRun:()=>run,download:(_,dir)=>{writeFileSync(join(dir,'catalog.json'),JSON.stringify(catalog));receipts.forEach((x,i)=>writeFileSync(join(dir,'receipt-'+i+'.json'),JSON.stringify(x)));},authenticate:()=>{checks++;if(reject&&checks===9)throw Error('signature rejected');},downloadBundles:()=>{},checkBundles:()=>{assert.equal(checks,9);}});
    assert.equal(checks,9);assert.equal(r.status,reject?'fresh-fallback':'authenticated-candidate');assert.equal(existsSync(join(out,'authenticated')),!reject);assert.equal(r.allowResultReuse,false);
   }finally{rmSync(out,{recursive:true,force:true});}
  }
@@ -41,3 +41,27 @@ test('discovery only for planned Banners work and approved branch',()=>{
 });
 
 test('missing original bundles cannot be accepted',()=>{const root=mkdtempSync(join(tmpdir(),'pw-bundle-'));try{assert.throws(()=>verifyBundles(root,receipts,run));}finally{rmSync(root,{recursive:true,force:true});}});
+
+test('scheduled no-ops cannot hide an authentic older catalog',()=>{
+ const out=mkdtempSync(join(tmpdir(),'pw-discovery-lookback-'));let downloads=0,metadata=0,signatures=0;
+ const noop=Array.from({length:24},(_,i)=>({...run,id:100+i,created_at:new Date(now-1000-i).toISOString()}));
+ try{
+  const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>[{...run,id:999,head_sha:'f'.repeat(40),created_at:new Date(now-1).toISOString()},...noop,run],requiredIssuer:issuer,hasCatalog:x=>{metadata++;return x.id===run.id;},getTree:s=>s===source?sourceTree:auditTree,getRun:()=>run,download:(_,dir)=>{downloads++;writeFileSync(join(dir,'catalog.json'),JSON.stringify(catalog));receipts.forEach((x,i)=>writeFileSync(join(dir,'receipt-'+i+'.json'),JSON.stringify(x)));},authenticate:()=>{signatures++;},downloadBundles:()=>{},checkBundles:()=>{}});
+  assert.equal(r.status,'authenticated-candidate');assert.equal(r.attempted,1);assert.equal(metadata,25);assert.equal(downloads,1);assert.equal(signatures,9);assert.deepEqual(r.lookupStats,{listed:26,issuerExcluded:1,metadataChecks:25,withoutCatalog:24,candidateDownloads:1});
+ }finally{rmSync(out,{recursive:true,force:true});}
+});
+test('metadata is an exact current-attempt, unexpired artifact prefilter only',()=>{
+ const a={id:1,name:'renewal-signed-catalog-1',expired:false,size_in_bytes:100};
+ assert.equal(catalogArtifactPresent(run,[a]),true);
+ for(const xs of [[],[a,a],[{...a,expired:true}],[{...a,name:'renewal-signed-catalog-2'}],[{...a,size_in_bytes:0}]])assert.equal(catalogArtifactPresent(run,xs),false);
+});
+test('only eight actual catalog candidates are downloaded, metadata failure is fail closed',()=>{
+ for(const broken of [false,true]){
+  const out=mkdtempSync(join(tmpdir(),'pw-discovery-budget-'));let downloads=0;
+  const candidates=Array.from({length:12},(_,i)=>({...run,id:100+i}));
+  try{
+   const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>candidates,hasCatalog:()=>{if(broken)throw Error('metadata API failed');return true;},getTree:()=>sourceTree,getRun:id=>candidates.find(x=>x.id===id),download:()=>{downloads++;throw Error('missing signed catalog');}});
+   assert.equal(r.status,'fresh-fallback');assert.equal(downloads,broken?0:8);assert.equal(r.lookupStats.metadataChecks,broken?1:8);assert.equal(r.lookupStats.candidateDownloads,broken?0:8);assert.equal(r.allowResultReuse,false);assert.equal(existsSync(join(out,'authenticated')),false);
+  }finally{rmSync(out,{recursive:true,force:true});}
+ }
+});

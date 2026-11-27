@@ -32,18 +32,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/gameplay-renewal.test.mjs
+      - run: node --test scripts/ci-overhaul/gameplay-renewal.test.mjs scripts/ci-overhaul/gameplay-renewal-dedup.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs
   select:
     needs: contract
     if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/gameplay-receipt-renewal')
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 12
     permissions:
       contents: read
       pull-requests: read
+      actions: read
+      attestations: read
     outputs:
       source: ${{ steps.freeze.outputs.source }}
       identity: ${{ steps.freeze.outputs.identity }}
+      renewal_required: ${{ steps.dedup.outputs.required }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,9 +86,36 @@ jobs:
           test -f audit-source/apps/banners-of-war/qa.plan.json
           tree="$(git -C audit-source rev-parse HEAD^{tree})"
           echo "source=$source" >> "$GITHUB_OUTPUT"
-          echo "identity=$(jq -c --arg tree "$tree" '.+{sourceTree:$tree}' "$RUNNER_TEMP/selection.json")" >> "$GITHUB_OUTPUT"
+          jq -c --arg tree "$tree" '.+{sourceTree:$tree}' "$RUNNER_TEMP/selection.json" > "$RUNNER_TEMP/frozen-source.json"
+          echo "identity=$(cat "$RUNNER_TEMP/frozen-source.json")" >> "$GITHUB_OUTPUT"
+      - name: Avoid redundant scheduled renewal of an exact recent catalog
+        id: dedup
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/ci-overhaul/gameplay-renewal-dedup.mjs "$RUNNER_TEMP/frozen-source.json" "$RUNNER_TEMP/renewal-dedup"
+          report="$RUNNER_TEMP/renewal-dedup/renewal-decision.json"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          if jq -e '.renewalRequired==false and .productionAuthorization==false and .allowResultReuse==false and .allowImpactSkipping==false' "$report" >/dev/null; then
+            echo 'required=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'required=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'schedule'
+        continue-on-error: true
+        with:
+          name: renewal-dedup-decision-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/renewal-dedup/renewal-decision.json
+          if-no-files-found: warn
+          retention-days: 7
   execute:
     needs: select
+    if: needs.select.result == 'success' && needs.select.outputs.renewal_required != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
