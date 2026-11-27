@@ -64,9 +64,9 @@ function elephantRebind(model){
  return candidate;
 }
 for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','elephant']){
- let source=JSON.parse(readFileSync(join(out,'animal-source-'+family+'.json'))),baseBounds=bounds(source.parts),base=build({...resolveProfile(reg,family,'base'),anatomy:'v4'}),targetBounds=bounds(base.parts);
+ let source=JSON.parse(readFileSync(join(out,'animal-source-'+family+'.json'))),baseBounds=bounds(source.parts),base=build({...resolveProfile(reg,family,'base'),anatomy:family==='elephant'?'v10':'v4'}),targetBounds=bounds(base.parts);
  for(let name of ['base',family==='horse'?'draft':'massive',family==='horse'?'courser':'light']){
-  let spec={...resolveProfile(reg,family,name),anatomy:'v4'},m=build(spec),bb=bounds(m.parts),t=performance.now();m.parts=source.parts.map(src=>{let p=part(src.name,src.color,'body');for(let i=0;i<src.positions.length;i+=3){let v=src.positions.slice(i,i+3),u=v.map((x,k)=>(x-baseBounds[k][0])/Math.max(1e-7,baseBounds[k][1]-baseBounds[k][0])),q=u.map((x,k)=>bb[k][0]+x*(bb[k][1]-bb[k][0])); // nonuniform anatomical template warp, continuous source topology
+  let spec={...resolveProfile(reg,family,name),anatomy:family==='elephant'?'v10':'v4'},m=build(spec),bb=bounds(m.parts),t=performance.now();m.parts=source.parts.map(src=>{let p=part(src.name,src.color,'body');for(let i=0;i<src.positions.length;i+=3){let v=src.positions.slice(i,i+3),u=v.map((x,k)=>(x-baseBounds[k][0])/Math.max(1e-7,baseBounds[k][1]-baseBounds[k][0])),q=u.map((x,k)=>bb[k][0]+x*(bb[k][1]-bb[k][0])); // nonuniform anatomical template warp, continuous source topology
     let height=u[1],front=u[2],chest=spec.morphology.chest??1,neck=spec.morphology.neck??1;
     q[0]*=1+(chest-1)*Math.max(0,1-Math.abs(front-.5)*3)*Math.max(0,1-Math.abs(height-.62)*3);
     q[1]+=((neck-1)*.12*spec.morphology.height)*Math.max(0,(front-.6)/.4)*Math.max(0,(height-.55)/.45);
@@ -77,7 +77,7 @@ for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','el
     const r=segmentElephant(m,{name,out,write:(file,data)=>writeFileSync(join(out,file),data)});
     writeFileSync(join(out,'source-v9-elephant-'+name+'-segmentation.json'),JSON.stringify(r.report,null,2));
     writeFileSync(join(out,'source-v9-elephant-'+name+'-segmented.glb'),glb(r.model));
-    if(name==='base')writeFileSync(join(out,'source-v9-elephant-active.glb'),glb(r.active));
+    if(name==='base'){writeFileSync(join(out,'source-v9-elephant-active.glb'),glb(r.active));writeFileSync(join(out,'source-v10-elephant-active.model.json'),JSON.stringify(r.active));}
     console.log(JSON.stringify({name,surfaceContacts:m.surfaceContacts,before:r.report.before,after:r.report.after,forbidden:r.report.forbidden,accepted:r.report.approvedTechnical,selectedConfig:r.report.selectedConfig}));
   }else if(family==='elephant'){
     // Keep B's original source topology; C is a bounded, procedural
