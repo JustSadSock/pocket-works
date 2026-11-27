@@ -1,7 +1,16 @@
 """Synthetic rigid + residual reconstruction and real Blender transform-key test."""
-import bpy, numpy as np
+import sys
+from pathlib import Path
+
+# Blender launched with --python does not guarantee the script directory is on
+# sys.path; resolve it explicitly so the adjacent research module is importable
+# from CI containers and local Blender sessions alike.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import bpy
+import numpy as np
 from mathutils import Vector
-from cloth_motion_v19 import decompose_frames,apply_rigid_keys,world_vertices_gltf
+from cloth_motion_v19 import decompose_frames, apply_rigid_keys, world_vertices_gltf
 
 def to_gltf(p):return np.column_stack((p[:,0],p[:,2],-p[:,1])).tolist()
 base=np.asarray([[-.10,0,-.05],[.10,0,-.05],[-.10,.12,.04],[.10,.12,.04],[-.06,.25,-.02],[.06,.25,-.02],[-.08,.36,.03],[.08,.36,.03],[0,.18,.10]],dtype=np.float64)
