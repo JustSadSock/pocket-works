@@ -53,10 +53,12 @@ for name,factor in experiments:
     contacts.sort(key=lambda x:x.get("relativeTangentialSpeed") or 0,reverse=True)
     warm=(24+18)*factor
     time_scale=factor
+    expected_frames=66*factor+1
     first=stage.get("firstDefect")
     summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,
         "exit":proc.returncode,"status":data.get("status"),"passed":stage.get("passed"),
-        "simulationFrames":len(frames),"simulationDurationSeconds":(len(frames)-1)/(spec["fps"]*factor),
+        "simulationFrames":len(frames),"expectedSimulationFrames":expected_frames,"frameCountMatches":len(frames)==expected_frames,
+        "warmupDurationSeconds":42/24,"simulationDurationSeconds":(len(frames)-1)/(spec["fps"]*factor),
         "sourceMotionDurationSeconds":(spec["frameCount"]-1)/spec["fps"],
         "firstDefect":first,"firstDefectSourceFrame":None if first is None else 1+(first-1-warm)/time_scale,
         "gates":stage.get("gates"),
@@ -87,5 +89,5 @@ matrix={"version":"v0.20","diagnosticOnly":True,"productionAllowed":False,
     "experiments":summary,"comparisonsAgainst24Fps":comparisons}
 (root/"v20-time-resolution-matrix.json").write_text(json.dumps(matrix,indent=2))
 print(json.dumps(matrix),flush=True)
-if len(summary)!=len(experiments) or any(x.get("exit")!=0 or x.get("status") in ("missing-recovery-report",None) for x in summary):
+if len(summary)!=len(experiments) or any(x.get("exit")!=0 or x.get("status") in ("missing-recovery-report",None) or not x.get("frameCountMatches") for x in summary):
     raise SystemExit("v0.20 time-resolution matrix incomplete or Blender execution failed")
