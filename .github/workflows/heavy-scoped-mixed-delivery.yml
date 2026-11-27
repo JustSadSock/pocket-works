@@ -1,0 +1,190 @@
+name: Heavy Scoped Mixed Delivery
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci-overhaul/heavy-scoped-mixed-delivery*'
+      - '.github/workflows/heavy-scoped-mixed-delivery.yml'
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/heavy-scoped-mixed-delivery.test.mjs
+  prepare:
+    needs: contract
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/heavy-scoped-mixed-delivery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: git fetch --no-tags origin 8c70528d57134a01558a3b9d5bef8d1e34d429a3 3b4294292ba7aed4034231c8bc5ec277073bdfae
+      - name: Authenticate nine subjects and eight original bundles
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir "$RUNNER_TEMP/signed-source"
+          node scripts/ci-overhaul/heavy-scoped-mixed-delivery.mjs discover "$RUNNER_TEMP/signed-source"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heavy-scoped-source-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/signed-source/
+          if-no-files-found: error
+          retention-days: 7
+  execute:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: git fetch --no-tags origin 8c70528d57134a01558a3b9d5bef8d1e34d429a3 3b4294292ba7aed4034231c8bc5ec277073bdfae
+      - uses: actions/download-artifact@v4
+        with:
+          name: heavy-scoped-source-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/signed-source
+      - name: Execute fresh performance and rotating canary; omit only verified gameplay
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          start="$(date +%s%3N)"
+          outer="$PWD"
+          controller_sha="$GITHUB_SHA"
+          tool="$outer/scripts/ci-overhaul/heavy-scoped-mixed-delivery.mjs"
+          source_evidence="$RUNNER_TEMP/signed-source"
+          result="$RUNNER_TEMP/scoped-result"
+          issuer_dir="$RUNNER_TEMP/issuer"
+          mkdir "$result" "$result/mount-proofs"
+          identity="$(node "$tool" identity)"
+          target="$(jq -er .target <<< "$identity")"
+          issuer="$(jq -er .issuer <<< "$identity")"
+          git clone --quiet --shared --no-checkout "$outer" "$issuer_dir"
+          git -C "$issuer_dir" checkout --quiet --detach "$issuer"
+          git clone --quiet --shared --no-checkout "$outer" "$issuer_dir/audit-source"
+          git -C "$issuer_dir/audit-source" checkout --quiet --detach "$target"
+          export RENEWAL_SOURCE_JSON="$RUNNER_TEMP/pilot-source.json"
+          # sourceRef is the original input-selection contract; target SHA is a
+          # local controlled child, NOT the actual GitHub PR merge.
+          jq -n --arg source "$target" --arg tree "$(git rev-parse "$target^{tree}")" '{source:$source,sourceTree:$tree,sourceRef:"refs/pull/1355/merge",sourcePR:1355}' > "$RENEWAL_SOURCE_JSON"
+          (
+            cd "$issuer_dir"
+            export GITHUB_SHA="$issuer"
+            source scripts/ci-overhaul/gameplay-renewal-offline.sh
+            prepare_gameplay source
+            prepared="$(date +%s%3N)"
+            (cd "$outer"; GITHUB_SHA="$controller_sha" node "$tool" decide "$out" "$source_evidence" "$SHARD") > "$result/decision.json"
+            cat "$result/decision.json"
+            authenticated="$(date +%s%3N)"
+            run_gameplay_phase performance
+            performed="$(date +%s%3N)"
+            gameplayMs=0
+            if jq -e '.mode=="verified-pilot" and .productionAuthorization==false and .allowResultReuse==false' "$result/decision.json"; then
+              echo "Verified scoped pilot: gameplay command omitted"
+            else
+              jq -e '.mode=="fresh"' "$result/decision.json"
+              run_gameplay_phase gameplay
+              gameplayMs="$(( $(date +%s%3N) - performed ))"
+            fi
+            executed="$(date +%s%3N)"
+            verify_gameplay_mounts
+            mkdir "$result/raw"
+            cp -a "$out/." "$result/raw/"
+            for kind in source audit; do
+              for stage in before inside after; do
+                cp "$RUNNER_TEMP/gameplay-$kind-$stage.json" "$result/mount-proofs/$kind-$stage.json"
+              done
+            done
+            end="$(date +%s%3N)"
+            jq -n --argjson preparationMs "$((prepared-start))" --argjson authenticationMs "$((authenticated-prepared))" --argjson performanceMs "$((performed-authenticated))" --argjson gameplayMs "$gameplayMs" --argjson postVerificationMs "$((end-executed))" '{preparationMs:$preparationMs,authenticationMs:$authenticationMs,performanceMs:$performanceMs,gameplayMs:$gameplayMs,postVerificationMs:$postVerificationMs}' > "$result/timing.json"
+          )
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scoped-heavy-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/scoped-result/
+          if-no-files-found: error
+          retention-days: 7
+  independent_gate:
+    needs: execute
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: git fetch --no-tags origin 8c70528d57134a01558a3b9d5bef8d1e34d429a3 3b4294292ba7aed4034231c8bc5ec277073bdfae
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: scoped-heavy-${{ github.run_attempt }}-*
+          path: evidence
+      - name: Reauthenticate independently; verify every original gameplay and performance case
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/ci-overhaul/heavy-scoped-mixed-delivery.mjs gate evidence verdict.json
+          jq -e '.success and .passed==8 and .verifiedTasks>=1 and .freshTasks>=1 and (.reusedGameplayCases+.freshGameplayCases)==1868 and .freshPerformanceCases==5 and .freshPerformanceMeasurements==10 and .productionAuthorization==false and .economics.decision=="fresh"' verdict.json
+      - name: Reject incomplete matrix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mv "evidence/scoped-heavy-$GITHUB_RUN_ATTEMPT-0" "$RUNNER_TEMP/missing-shard"
+          if node scripts/ci-overhaul/heavy-scoped-mixed-delivery.mjs gate evidence rejected.json; then exit 1; fi
+          test ! -e rejected.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heavy-scoped-mixed-gate-${{ github.run_attempt }}
+          path: verdict.json
+          if-no-files-found: error
+          retention-days: 7
+  required_gate:
+    if: always()
+    needs: [contract,prepare,execute,independent_gate]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          CONTRACT: ${{ needs.contract.result }}
+          PREPARE: ${{ needs.prepare.result }}
+          EXECUTE: ${{ needs.execute.result }}
+          GATE: ${{ needs.independent_gate.result }}
+        run: |
+          set -euo pipefail
+          test "$CONTRACT" = success
+          if jq -e '.pull_request.head.repo.full_name == .repository.full_name and .pull_request.head.ref == "infra/heavy-scoped-mixed-delivery"' "$GITHUB_EVENT_PATH"; then
+            test "$PREPARE" = success
+            test "$EXECUTE" = success
+            test "$GATE" = success
+          else
+            test "$PREPARE" = skipped
+            test "$EXECUTE" = skipped
+            test "$GATE" = skipped
+          fi
