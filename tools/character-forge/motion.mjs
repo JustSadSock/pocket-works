@@ -38,12 +38,14 @@ function miniatureFrameV9(model,action,phase,quat){
  };
  const mul=(a,b)=>[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
  return model.joints.map(j=>{
-  const name=j.name,left=name.endsWith('.L'),sign=left?1:-1,leg=gait(phase+(left?0:.5)),arm=gait(phase+(left?.5:0));
+  const name=j.name,left=name.endsWith('.L'),sign=left?1:-1,arm=gait(phase+(left?.5:0));
   let x=0,y=0,z=0;
   if(/^upperarm01\./.test(name)){z=-sign*.08;x=walk?-.50*arm.hip:0}
   if(/^lowerarm01\./.test(name)){x=.20+(walk&&!arm.stance?.07*Math.sin(Math.PI*arm.u):0)}
-  if(/^upperleg01\./.test(name))x=walk?leg.hip:0;
-  if(/^lowerleg01\./.test(name))x=walk?leg.knee:0;
+  // Leg rotations are solved from the measured sole path below, not layered
+  // on top of a second procedural swing curve.
+  if(/^upperleg01\./.test(name))x=0;
+  if(/^lowerleg01\./.test(name))x=0;
   if(/^foot\./.test(name))x=0;
   if(name==='pelvis')y=walk?.035*Math.sin(t):0;
   if(name==='spine03'){y=walk?-.040*Math.sin(t):0;x=walk?.018*Math.sin(2*t):.012}
