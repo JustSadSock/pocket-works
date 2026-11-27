@@ -47,7 +47,7 @@ function segmented(source,{passes=4,selfWeight=.45,neighborWeight=.55,geoScale=.
      if(rigid){raw.push(new Map([[rigid.id,1]]));dominant.push('rigid-'+rigid.name);continue}
      let v=vs[i],a=labels[i].a,ws=new Map(),groupsUsed=groupNames.filter(k=>a[k]>.001);
      for(const k of groupsUsed){
-       const g=groups[k],d=geo[k]?.[i],mass=a[k]*(Number.isFinite(d)?Math.exp(-Math.min(5,d/(geoScale*H))):.65);
+       const g=groups[k].filter(j=>j.role!=='ear'||(labels[i].ear>.15&&j.name==='ear'+(v[0]<0?'L':'R'))),d=geo[k]?.[i],mass=a[k]*(Number.isFinite(d)?Math.exp(-Math.min(5,d/(geoScale*H))):.65);
        const hits=g.map(j=>{const parent=m.joints[j.parent]??j,hit=distance(v,parent.position,j.position);return {j,parent,...hit,w:1/(distanceScale*H+hit.d)**3}});
        const sum=hits.reduce((s,x)=>s+x.w,0)||1;
        for(const h of hits){
@@ -70,7 +70,7 @@ function segmented(source,{passes=4,selfWeight=.45,neighborWeight=.55,geoScale=.
      if(count){for(const [j,w] of out){const self=(ws.get(j)||0)*selfWeight;out.set(j,self+(w-self)*neighborWeight/count)}}
      const sum=[...out.values()].reduce((s,w)=>s+w,0);return sum>0?new Map([...out].map(([j,w])=>[j,w/sum])):ws;
    });
-   for(let i=0;i<n;i++){push(q,vs[i],[...sm[i]]);const names=weights(q,i).map(([j])=>m.joints[j].name),l=labels[i];if(l.leg>.8&&l.tr<.35&&names.some(n=>n.startsWith('tail-')))forbidden.tailFoot++;if(l.ear>.75&&names.some(n=>/^fore/.test(n)))forbidden.earFore++;if(l.tr>.8&&names.some(n=>/^fore|^hind|^chest$/.test(n)))forbidden.trunkShoulder++;if(!rigid&&names.some(n=>/^(fore|hind)[LR]/.test(n)&&n[4]!== (vs[i][0]<0?'L':'R')))forbidden.crossLimb++}
+   for(let i=0;i<n;i++){const l0=labels[i],earJoint=J('ear'+(vs[i][0]<0?'L':'R'));let w0=[...sm[i]].filter(([id])=>m.joints[id].role!=='ear'||(l0.ear>.15&&id===earJoint?.id));if(!rigid&&earJoint&&l0.ear>.35){const t=Math.min(.95,(l0.ear-.35)/.65);w0=w0.map(([j,w])=>[j,w*(1-t)]);w0.push([earJoint.id,t])}push(q,vs[i],w0);const names=weights(q,i).map(([j])=>m.joints[j].name),l=labels[i];if(l.leg>.8&&l.tr<.35&&names.some(n=>n.startsWith('tail-')))forbidden.tailFoot++;if(l.ear>.75&&names.some(n=>/^fore/.test(n)))forbidden.earFore++;if(l.tr>.8&&names.some(n=>/^fore|^hind|^chest$/.test(n)))forbidden.trunkShoulder++;if(!rigid&&names.some(n=>/^(fore|hind)[LR]/.test(n)&&n[4]!== (vs[i][0]<0?'L':'R')))forbidden.crossLimb++}
    q.indices=p.indices.slice();m.parts[pi]=normals(q);regions.push({name:p.name,counts:Object.fromEntries([...new Set(dominant)].map(k=>[k,dominant.filter(x=>x===k).length]))});vertexRegions.push(dominant);
  }
  m.spec.sourceAdapter='v9 semantic region + mesh geodesic segmentation; experimental';return {m,regions,vertexRegions,forbidden};
