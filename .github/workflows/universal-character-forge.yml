@@ -239,7 +239,7 @@ jobs:
         id: kinemiq
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: python3 tools/character-forge/kinemiq-v11.py
-      - name: Required v12 full-orientation reference and heel/toe contact comparison
+      - name: Required v13 biomechanical heel/toe and vertical contact comparison
         id: reference
         if: ${{ !cancelled() && steps.kinemiq.outcome == 'success' }}
         run: |
@@ -247,13 +247,21 @@ jobs:
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
           for view in side front; do
             for variant in Original A B C; do
-              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v12-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-$variant-$view-1x.mp4"
-              ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v12-walk-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-$variant-$view-05x.mp4"
+              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v13-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-$variant-$view-1x.mp4"
+              ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-walk-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-$variant-$view-05x.mp4"
             done
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v12-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v12-walk-A-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v12-walk-B-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v12-walk-C-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-comparison-$view-1x.mp4"
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v12-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-walk-comparison-$view-05x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v13-walk-A-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v13-walk-B-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v13-walk-C-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-comparison-$view-1x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-comparison-$view-05x.mp4"
           done
-          node -e 'const r=require(process.env.CHARACTER_EVIDENCE+"/v12-motion-report.json");if(!r.qualification.contactGate)throw Error("Reference contact gate rejected: "+r.variants.C.maxDriftMm+" mm")'
+          for view in side front; do
+            for variant in A B C; do
+              if [ -d "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view" ]; then
+                ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view-1x.mp4"
+                ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view-05x.mp4"
+              fi
+            done
+          done
+          node -e 'const old=require(process.env.CHARACTER_EVIDENCE+"/v12-motion-report.json"),r=require(process.env.CHARACTER_EVIDENCE+"/v13-vertical-report.json");if(!old.qualification.contactGate||!r.qualification.contactGate)throw Error("Biomechanical contact gate rejected: "+JSON.stringify({horizontal:r.variants.C.maxDriftMm,vertical:r.variants.C.maxVerticalErrorMm,groundPenetration:r.variants.C.maxGroundPenetrationMm}))'
       - name: Native animal and mounted composition comparisons (explicit full suite only)
         if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
@@ -291,6 +299,7 @@ jobs:
             quality-artifacts/character-bridge/v10-*
             quality-artifacts/character-bridge/v11-*
             quality-artifacts/character-bridge/v12-*
+            quality-artifacts/character-bridge/v13-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
