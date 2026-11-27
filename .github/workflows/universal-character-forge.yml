@@ -99,10 +99,11 @@ jobs:
           CHARACTER_V11_FOCUS=1 node tools/character-forge/recovery-v6.mjs
           CHARACTER_V7_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v7.test.mjs
           CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v9.test.mjs
-      - name: Required isolated hand and exact skeletal cloth driver
-        run: |
-          node tools/character-forge/research-v11-input.mjs
-          node tools/character-forge/grip-study-v11.mjs
+      - name: Required exact skeletal cloth driver
+        run: node tools/character-forge/research-v11-input.mjs
+      - name: Required isolated digit anatomy (numerical gate enforced independently in Bridge)
+        continue-on-error: true
+        run: node tools/character-forge/grip-study-v11.mjs
       - name: Retrieve licensed KinemIQ archive with exact digest
         run: |
           curl -fL --retry 3 --connect-timeout 20 --max-time 240 -o "$CHARACTER_EVIDENCE/v9-cc0-motions.zip" https://huggingface.co/datasets/Kinemiq/free-game-animations/resolve/main/KinemIQ_Free_Animations_CC0_GLB.zip
@@ -239,7 +240,7 @@ jobs:
         id: kinemiq
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: python3 tools/character-forge/kinemiq-v11.py
-      - name: Required v13 biomechanical heel/toe and vertical contact comparison
+      - name: Required v14 bilateral contact and actual exported intermediate samples
         id: reference
         if: ${{ !cancelled() && steps.kinemiq.outcome == 'success' }}
         run: |
@@ -247,21 +248,13 @@ jobs:
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
           for view in side front; do
             for variant in Original A B C; do
-              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v13-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-$variant-$view-1x.mp4"
-              ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-walk-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-$variant-$view-05x.mp4"
+              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v14-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-$variant-$view-1x.mp4"
+              ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v14-walk-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-$variant-$view-05x.mp4"
             done
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v13-walk-A-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v13-walk-B-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v13-walk-C-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-comparison-$view-1x.mp4"
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-walk-comparison-$view-05x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v14-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v14-walk-A-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v14-walk-B-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v14-walk-C-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-comparison-$view-1x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v14-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v14-walk-comparison-$view-05x.mp4"
           done
-          for view in side front; do
-            for variant in A B C; do
-              if [ -d "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view" ]; then
-                ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view-1x.mp4"
-                ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v13-anatomy-$variant-$view-05x.mp4"
-              fi
-            done
-          done
-          node -e 'const old=require(process.env.CHARACTER_EVIDENCE+"/v12-motion-report.json"),r=require(process.env.CHARACTER_EVIDENCE+"/v13-vertical-report.json");if(!old.qualification.contactGate||!r.qualification.contactGate)throw Error("Biomechanical contact gate rejected: "+JSON.stringify({horizontal:r.variants.C.maxDriftMm,vertical:r.variants.C.maxVerticalErrorMm,groundPenetration:r.variants.C.maxGroundPenetrationMm}))'
+          node -e 'const old=require(process.env.CHARACTER_EVIDENCE+"/v12-motion-report.json"),r=require(process.env.CHARACTER_EVIDENCE+"/v14-contact-report.json");if(!old.qualification.contactGate||!r.qualification.contactGate)throw Error("Bilateral exported contact gate rejected: "+JSON.stringify({horizontal:r.variants.C.exported.maxDriftMm,vertical:r.variants.C.exported.maxVerticalErrorMm,groundPenetration:r.variants.C.exported.maxGroundPenetrationMm,seam:r.variants.C.rootCorrectionSeamMm}))'
       - name: Native animal and mounted composition comparisons (explicit full suite only)
         if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
@@ -282,7 +275,7 @@ jobs:
       - name: Enforce independent isolated grip result (no shield production)
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
-          node -e 'const r=require(process.env.CHARACTER_EVIDENCE+"/morph/v11-grip-report.json");if(!r.accepted){console.error("Isolated grip contact gate rejected");process.exit(1)}'
+          node -e 'const a=require(process.env.CHARACTER_EVIDENCE+"/morph/v14-hand-anatomy.json"),r=require(process.env.CHARACTER_EVIDENCE+"/morph/v11-grip-report.json");if(!a.gripAllowed||!r.accepted){console.error("Independent hand anatomy / isolated grip gate rejected: "+r.reason);process.exit(1)}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -300,6 +293,7 @@ jobs:
             quality-artifacts/character-bridge/v11-*
             quality-artifacts/character-bridge/v12-*
             quality-artifacts/character-bridge/v13-*
+            quality-artifacts/character-bridge/v14-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
