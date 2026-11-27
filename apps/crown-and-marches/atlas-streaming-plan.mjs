@@ -1,5 +1,5 @@
 // Exact camera/receipt semantics are independent of speculative preparation.
-import {covers,regionKey} from './atlas-surface-requests.mjs';
+import {covers} from './atlas-surface-requests.mjs';
 export function samePreparationKnowledge(job,current){return !!current&&job.intent===current.intent&&job.knowledge===current.knowledge;}
 export function eligibleTerrain(job,terrain,current){return samePreparationKnowledge(job,current)&&job.revision===current.revision&&covers(terrain.bounds,current.visible)&&terrain.detail===current.detail&&terrain.stats?.contours?.detail===current.contourDetail;}
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
