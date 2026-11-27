@@ -25,7 +25,7 @@ jobs:
       - run: node --test scripts/ci-overhaul/gameplay-production-delivery.test.mjs scripts/universal-qa/attempt-artifacts.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/ci-overhaul/gameplay-renewable-admission.test.mjs
   prepare:
     needs: contract
-    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'infra/gameplay-production-delivery' || github.event.pull_request.head.ref == 'infra/banners-production-verified-route')
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'infra/gameplay-production-delivery' || github.event.pull_request.head.ref == 'infra/banners-production-verified-route' || github.event.pull_request.head.ref == 'fix/production-delivery-attempt-artifacts')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     outputs:
