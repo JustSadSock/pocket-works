@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "product": "svidetel-interval",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "press",
+      "evidence": "apps/press/visual-direction.json; screenshot evidence not available in connector",
+      "lesson": "Do not duplicate its permanent operational rail, byte ruler or file processing workflow."
+    },
+    {
+      "slug": "pereves",
+      "evidence": "apps/pereves/visual-direction.json; screenshot evidence not available in connector",
+      "lesson": "Use a flat typeset archive rather than free space around a suspended mechanical sculpture."
+    },
+    {
+      "slug": "echolot",
+      "evidence": "apps/echolot/index.html and visual-direction.json; screenshots not inspected",
+      "lesson": "Keep the timeline and its clues as real text instead of a circular instrument."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://store.steampowered.com/app/2716400/",
+      "inspectedAt": "2026-11-26",
+      "observation": "Description separates scene observations from deductions and revisits completed cases; screenshot review unavailable.",
+      "principle": "Evidence and conclusions should be distinguishable functional surfaces.",
+      "application": "Place clue statements alongside the editable chronology with independent truth marks.",
+      "avoid": "Do not reproduce characters, illustrated scenes or branded interface elements."
+    },
+    {
+      "url": "https://roottrees.com/en/",
+      "inspectedAt": "2026-11-26",
+      "observation": "Official description shows evidence leading to progressively constrained family tree placements.",
+      "principle": "Progress is made by resolving placement constraints rather than collecting arbitrary points.",
+      "application": "Use a finite set of records whose logical ordering is constrained by the clues.",
+      "avoid": "Do not copy the family tree structure, artwork, narratives or identity puzzles."
+    },
+    {
+      "url": "https://thenewyorktimeshelpcenter.helpjuice.com/360011158491-New-York-Times-Games/28525912587924-Connections",
+      "inspectedAt": "2026-11-26",
+      "observation": "Rules explain selecting word groups and distinct visual outcomes for correct groups.",
+      "principle": "Short, explicit feedback helps users reason about a discrete selection.",
+      "application": "Mark each clue as consistent or contradictory after every exchange.",
+      "avoid": "Do not duplicate the sixteen-word grid, grouping rules or category color scheme."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "archive",
+      "medium": "Typeset DOM and paper-like CSS records",
+      "composition": "Open archival document with timeline and clue lists",
+      "interaction": "Select two records to exchange their positions",
+      "motion": "Short paper impression immediately after each exchange",
+      "rationale": "Legibility and exact spatial order suit deduction on small touch screens."
+    },
+    {
+      "id": "clock",
+      "medium": "Vector brass clock and moving circular pointers",
+      "composition": "Radial dial with events on numbered clock positions",
+      "interaction": "Rotate hands to assign events to angular slots",
+      "motion": "Rotational movement settles into evenly spaced notches",
+      "rationale": "Interesting tactile appearance but circular reading obscures chronological order."
+    },
+    {
+      "id": "cabinet",
+      "medium": "Illustrated isometric archive drawers and index cards",
+      "composition": "Spatial cabinet with separate compartments",
+      "interaction": "Open drawers and drag selected objects between compartments",
+      "motion": "Depth transitions and sliding furniture respond to touch",
+      "rationale": "Strong atmosphere but occlusion and extra navigation complicate the core deduction."
+    }
+  ],
+  "selection": {
+    "concept": "archive",
+    "reason": "The document layout makes order and evidence simultaneously legible without precision gestures or hidden controls.",
+    "rejected": [
+      {
+        "concept": "clock",
+        "reason": "Circular arrangement introduces ambiguity between first and last position for chronological puzzles."
+      },
+      {
+        "concept": "cabinet",
+        "reason": "Object occlusion and drawer navigation add effort unrelated to logical reasoning."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg-css",
+      "availability": "available",
+      "reason": "Authored vector icon and native CSS paper geometry require no asset pipeline."
+    },
+    {
+      "id": "playwright",
+      "availability": "unavailable",
+      "reason": "No local Playwright module or direct repository network access in this runtime.",
+      "fallback": "Use hosted GitHub browser QA and inspect actual artifact images before merge."
+    }
+  ],
+  "assets": [
+    {
+      "id": "archive-icon",
+      "tool": "svg-css",
+      "source": "art-bible.json",
+      "output": "icons/icon.svg",
+      "role": "Recognizable document and stamped checkmark at launcher size.",
+      "acceptance": "Page silhouette and red stamp remain distinct at 48 pixels.",
+      "integration": "Manifest, launcher and browser tab load the app-owned SVG.",
+      "provenance": "Original vector artwork authored for this project without external imagery.",
+      "maxBytes": 4096
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Seven records may require intentional vertical scroll on short screens.",
+      "Contrast of clue marks and clipping of long labels must be reviewed."
+    ],
+    "comparisons": [
+      "press",
+      "pereves"
+    ]
+  }
+}

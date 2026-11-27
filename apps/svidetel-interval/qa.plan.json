@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "files": [
+        "core.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#record-0",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#record-0"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#record-1"
+        },
+        {
+          "action": "screenshot"
+        }
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "journey",
+      "kind": "playwright",
+      "files": [
+        "qa/journey.spec.js"
+      ],
+      "tier": "smoke"
+    }
+  ]
+}
