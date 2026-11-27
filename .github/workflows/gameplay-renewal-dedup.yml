@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/gameplay-renewal-dedup.yml'
       - 'scripts/ci-overhaul/gameplay-renewal-dedup*'
+      - 'scripts/ci-overhaul/gameplay-receipt-discovery*'
 permissions:
   contents: read
 jobs:
@@ -20,7 +21,7 @@ jobs:
       - run: node --test scripts/ci-overhaul/gameplay-renewal-dedup.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs
   live:
     needs: contract
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/gameplay-renewal-dedup'
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'infra/gameplay-renewal-dedup' || github.event.pull_request.head.ref == 'infra/gameplay-renewal-lifetime')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
