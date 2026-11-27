@@ -27,7 +27,7 @@ Musical duration 165 seconds; 3.2-second natural tail. Total 56 bars, 6,336 PPQ 
 
 ## Qualified source plan
 - Low foundation: VSCO 2 CE Solo Contrabass, repacked in String Studio double-bass CC0 manifest, pinned revision 3a12d6961bb4e1c3111c68cf1624c45bb49c97dd; seven roots (MIDI 28, 30, 33, 37, 40, 44, 47), two velocity layers.
-- Recorded orchestral percussion: VCSL CC0, pinned revision c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e; bass drum and timpani hits/rolls.
+- Recorded orchestral percussion: VCSL CC0, pinned revision c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e; bass drum hits/crescendos and timpani hits/rolls.
 - Existing qualified recorded banks: cello section, violin, horn, trumpet, clarinet, folk harp, frame drum and Renaissance organ.
 - No choir, tuba or trombone is represented in this realization. No synthetic voice. No invented instrumental legato.
 - Sustained string/brass phrases may use a short overlap and attack-skip as an explicitly approximate crossfade. The recorded interval coverage remains zero.
