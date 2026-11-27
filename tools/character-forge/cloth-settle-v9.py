@@ -50,7 +50,9 @@ for item in spec["colliders"]:
  obj=mesh_obj("Collider_"+item["name"],item["positions"],item["indices"]);animate_shapes(obj,item["frames"]);add_collision(obj);obj.hide_render=True;colliders.append(obj)
 mod=cloth.modifiers.new("AnimatedCloth","CLOTH");settings=mod.settings;settings.quality=spec["simulation"]["quality"];settings.mass=spec["simulation"]["mass"];settings.air_damping=1.0;settings.vertex_group_mass=pin.name;settings.pin_stiffness=1.0
 collision=mod.collision_settings;collision.use_collision=True;collision.distance_min=spec["simulation"]["collisionDistance"];collision.collision_quality=8;collision.use_self_collision=True;collision.self_distance_min=spec["simulation"]["selfCollisionDistance"]
-cache=mod.point_cache;cache.frame_start=1;cache.frame_end=spec["frameCount"];cache.use_disk=False
+cache=mod.point_cache;cache.frame_start=1;cache.frame_end=spec["frameCount"]
+if hasattr(cache,'use_disk_cache'):cache.use_disk_cache=False
+elif hasattr(cache,'use_disk'):cache.use_disk=False
 bpy.context.view_layer.objects.active=cloth;cloth.select_set(True)
 for obj in colliders:obj.select_set(False)
 scene.frame_set(1);bpy.context.view_layer.update()
