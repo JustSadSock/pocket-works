@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {decide} from './universal-cross-delivery.mjs';
+import {decide,runtimeDifferences} from './universal-cross-delivery.mjs';
 import {PAIRS} from './universal-signed-receipts.mjs';
 import {approvedTask} from './universal-cross-commit.mjs';
 const now=1000,scope={scopeMatch:true,distinctCommits:true,distinctTrees:true},mount={digest:'a'},runtime={kernel:'k',cpu:'c'},target={scope,mount,runtime};
@@ -15,4 +15,11 @@ test('only authenticated positive candidate can omit fresh execution',()=>{
 });
 test('fresh canary and negative control cannot be skipped',()=>{
  for(const p of PAIRS.slice(1))assert.equal(decide(p,receipt(p),target,now).mode,'fresh');
+});
+
+test('CPU and kernel drift are reported but never granted portability',()=>{
+ const p=PAIRS[0],r=receipt(p),other={...target,runtime:{kernel:'different',cpu:'different'}};
+ assert.deepEqual(runtimeDifferences(runtime,other.runtime),['cpu','kernel']);
+ const result=decide(p,r,other,now);assert.equal(result.mode,'fresh');assert.deepEqual(result.runtimeDifferences,['cpu','kernel']);
+ assert.equal(result.allowResultReuse,false);
 });

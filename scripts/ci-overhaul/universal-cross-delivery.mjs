@@ -39,13 +39,17 @@ function authenticated(repo,root,now){
  const last=JSON.parse(gh(['api','repos/'+REPO+'/actions/runs/'+SOURCE_RUN]));if(!eq(sourceContext(last,repo),ctx))fail('Issuer attempt changed');
  return rows;
 }
+export function runtimeDifferences(a,b){
+ return [...new Set([...Object.keys(a??{}),...Object.keys(b??{})])].filter(k=>!Object.hasOwn(a??{},k)||!Object.hasOwn(b??{},k)||!eq(a[k],b[k])).sort();
+}
 export function decide(pair,receipt,target,now){
  const fresh=reason=>({mode:'fresh',reason,...flags});
  if(pair.app==='press')return fresh('Mandatory fresh canary');
  if(!receipt)return fresh('Authenticated receipt unavailable');
  if(!pair.expected||!receipt.observedEquivalent)return fresh('Scoped inputs changed');
  if(receipt.pair?.app!==pair.app||!eq(receipt.pair,pair)||!eq(receipt.task,approvedTask(pair.app))||!Number.isSafeInteger(now)||now<receipt.issuedAt||now>=receipt.expiresAt)return fresh('Receipt identity or expiry mismatch');
- if(!eq(receipt.prior.mount,target.mount)||!eq(receipt.current.mount,target.mount)||!eq(receipt.prior.runtime,target.runtime)||!eq(receipt.current.runtime,target.runtime))return fresh('Actual target mount or runtime changed');
+ if(!eq(receipt.prior.mount,target.mount)||!eq(receipt.current.mount,target.mount))return fresh('Actual target mount changed');
+ if(!eq(receipt.prior.runtime,target.runtime)||!eq(receipt.current.runtime,target.runtime))return {...fresh('Actual target runtime changed'),runtimeDifferences:runtimeDifferences(receipt.prior.runtime,target.runtime)};
  if(!eq(receipt.scope,target.scope)||target.scope.scopeMatch!==true||target.scope.distinctCommits!==true||target.scope.distinctTrees!==true)return fresh('Actual commit scope differs');
  return {mode:'verified-pilot',reason:'Authenticated equivalent cross-commit inputs',receiptDigest:digest(canonical(receipt)),sourceRun:receipt.issuer.run,sourceAttempt:receipt.issuer.attempt,tests:receipt.prior.result.counts.tests,...flags};
 }
@@ -66,11 +70,15 @@ function inspect(repo,pair,dir,ctx,receipt,now){
  if(hit&&!eq(decision,expected))fail('Unverified cross-commit hit');
  if(!hit&&(decision.mode!=='fresh'||Object.keys(flags).some(k=>decision[k]!==false)))fail('Invalid fallback decision');
  const files=['runtime.json','before.json','inside.json','after.json','target.json','decision.json'];
- let tests;
+ let tests,freshResult=null;
  if(hit){tests=decision.tests;if(existsSync(join(dir,'result.json'))||existsSync(join(dir,'console.log')))fail('Ambiguous hit evidence');}
- else{files.push('result.json','console.log');tests=summarizeResult(target.task,json(join(dir,'result.json')),read(join(dir,'console.log'),2_100_000).toString('utf8')).counts.tests;}
+ else{files.push('result.json','console.log');freshResult=summarizeResult(target.task,json(join(dir,'result.json')),read(join(dir,'console.log'),2_100_000).toString('utf8'));tests=freshResult.counts.tests;}
  if(!eq(readdirSync(dir).sort(),files.sort()))fail('Unexpected target evidence');
- return {app:pair.app,task:target.task.key,mode:decision.mode,tests,reason:decision.reason,receiptDigest:hit?decision.receiptDigest:null};
+ const runtimeDrift=receipt?runtimeDifferences(receipt.current.runtime,target.runtime):null;
+ const comparableFresh=!!freshResult&&!!receipt&&eq(receipt.current.mount,target.mount)&&eq(receipt.task,target.task);
+ const freshAssertionsMatch=comparableFresh?eq(freshResult.counts,receipt.current.result.counts)&&freshResult.assertionDigest===receipt.current.result.assertionDigest:null;
+ if(comparableFresh&&freshAssertionsMatch===false)fail('Fresh assertion drift on comparable target inputs');
+ return {app:pair.app,task:target.task.key,mode:decision.mode,tests,reason:decision.reason,receiptDigest:hit?decision.receiptDigest:null,runtimeDrift,freshAssertionsMatch,freshExecutionMs:freshResult?.durationMs??null,portabilityAuthorization:false};
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{

@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'scripts/ci-overhaul/universal-cross-delivery*'
+      - 'scripts/ci-overhaul/universal-reuse-economics*'
       - '.github/workflows/universal-cross-delivery.yml'
   workflow_dispatch:
 permissions:
@@ -19,7 +20,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/universal-cross-delivery.test.mjs
+      - run: node --test scripts/ci-overhaul/universal-cross-delivery.test.mjs scripts/ci-overhaul/universal-reuse-economics.test.mjs
+      - name: Test economic preflight against original application plans
+        run: |
+          node --input-type=module -e 'import {resolveTasks} from "./scripts/universal-qa/plan.mjs"; import {planEconomics} from "./scripts/ci-overhaul/universal-reuse-economics.mjs"; console.log(JSON.stringify(planEconomics(resolveTasks(process.cwd(),{apps:["axis-pals","press","flickyard"],profile:"deep"})),null,2))' > economics.json
+          jq -e 'length>3 and all(.[];.decision=="execute-original-route" and .allowResultReuse==false)' economics.json
+          cat economics.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cross-delivery-economics-${{ github.run_attempt }}
+          path: economics.json
+          if-no-files-found: error
   delivery:
     needs: contract
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/universal-cross-commit-delivery'
@@ -121,6 +132,18 @@ jobs:
             rm -rf "$RUNNER_TEMP/source-evidence"
           fi
           node scripts/ci-overhaul/universal-cross-delivery.mjs gate all delivery "$RUNNER_TEMP/source-evidence" | tee gate.log
+      - name: Reject altered and missing current-attempt artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp -a delivery bad-delivery
+          jq '.context.attempt += 1' "delivery/cross-delivery-$GITHUB_RUN_ATTEMPT-axis-pals/target.json" > "bad-delivery/cross-delivery-$GITHUB_RUN_ATTEMPT-axis-pals/target.json"
+          if node scripts/ci-overhaul/universal-cross-delivery.mjs gate all bad-delivery "$RUNNER_TEMP/source-evidence"; then exit 1; fi
+          rm -rf bad-delivery
+          cp -a delivery bad-delivery
+          rm -rf "bad-delivery/cross-delivery-$GITHUB_RUN_ATTEMPT-press"
+          if node scripts/ci-overhaul/universal-cross-delivery.mjs gate all bad-delivery "$RUNNER_TEMP/source-evidence"; then exit 1; fi
       - uses: actions/upload-artifact@v4
         with:
           name: cross-delivery-gate-${{ github.run_attempt }}
