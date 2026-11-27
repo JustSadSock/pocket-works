@@ -142,8 +142,8 @@ export async function chartedContourSource(s,source,known,{contourDetail=8,verti
 const scaleTiles=new WeakMap(),materialSourceTiles=new WeakMap(),materialTileIds=new WeakMap();let nextMaterialTileId=1;
 function materialTileId(data){let id=materialTileIds.get(data);if(id===undefined){if(nextMaterialTileId>=Number.MAX_SAFE_INTEGER)throw Error('Material source identity exhausted');id=nextMaterialTileId++;materialTileIds.set(data,id);}return id;}
 export function materialSourceIdentity(source,rect){
- const entry=materialSourceTiles.get(source);if(!entry||!entry.waterDry||!entry.inkAbsent||!entry.normalInTile||!source.scaleSurface||source.diagnostic||source.ink)return null;
- const [x0,y0,x1,y1]=rect,size=entry.tileSize,eps=1e-9;if(!(x1>=x0&&y1>=y0))return null;
+ const entry=materialSourceTiles.get(source);if(!entry||!entry.waterDry||!entry.inkAbsent||!entry.normalInTile||!source.water||!source.scaleSurface||source.diagnostic||source.ink)return null;
+ const [x0,y0,x1,y1]=rect,size=entry.tileSize,eps=1e-9;if(!(x1>=x0&&y1>=y0)||x0<source.bounds[0]-eps||y0<source.bounds[1]-eps||x1>source.bounds[2]+eps||y1>source.bounds[3]+eps)return null;
  // Include a tile beginning exactly at the inclusive last sample: scaleTerrainSource copies shared edge samples from the later tile when it exists.\n const tx0=Math.floor(x0/size)*size,ty0=Math.floor(y0/size)*size,tx1=Math.floor(x1/size)*size,ty1=Math.floor(y1/size)*size,map=entry.byKey,tokens=[size,source.detail];
  for(let ty=ty0;ty<=ty1;ty+=size)for(let tx=tx0;tx<=tx1;tx+=size){const tile=map.get(tx+':'+ty),left=Math.max(x0,tx),right=Math.min(x1,tx+size),top=Math.max(y0,ty),bottom=Math.min(y1,ty+size);if(!tile||tile.tx>left+eps||tile.ty>top+eps||tile.ex<right-eps||tile.ey<bottom-eps)return null;tokens.push(tile.tx,tile.ty,tile.ex,tile.ey,tile.stride,materialTileId(tile.data));}
  return Float64Array.from(tokens);

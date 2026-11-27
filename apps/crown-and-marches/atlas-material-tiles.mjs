@@ -9,7 +9,7 @@ export class MaterialTileCache extends SpatialLRU{
 }
 export function materialTiles(source,size,halo,visible=null){
  const {cols:w,rows:h,detail:r,bounds}=source,rx=bounds[0]*r,ry=bounds[1]*r,aligned=Math.abs(rx-Math.round(rx))<1e-9&&Math.abs(ry-Math.round(ry))<1e-9,ox=Math.round(rx),oy=Math.round(ry),out=[];
- for(let y=0;y<h;){const gy=oy+y,y1=Math.min(h,y+size-((gy%size+size)%size));for(let x=0;x<w;){const gx=ox+x,x1=Math.min(w,x+size-((gx%size+size)%size)),interior=aligned&&x1>x&&y1>y;
+ for(let y=0;y<h;){const gy=oy+y,y1=Math.min(h,y+size-((gy%size+size)%size));for(let x=0;x<w;){const gx=ox+x,x1=Math.min(w,x+size-((gx%size+size)%size)),interior=aligned&&x>=halo&&y>=halo&&x1+halo<=w&&y1+halo<=h&&x1-x===size&&y1-y===size;
  const needed=!visible||gx<visible[2]*r&&gx+x1-x>visible[0]*r&&gy<visible[3]*r&&gy+y1-y>visible[1]*r;out.push({x,y,x1,y1,gx,gy,interior,needed});x=x1;}y=y1;}
  return out.sort((a,b)=>Number(b.needed)-Number(a.needed));
 }
@@ -31,7 +31,7 @@ export function materialDependencySignature(source){
  return ['material-v'+REVISION,type(source.elevations),type(source.vertices),type(source.normalField),type(source.water?.kind),type(source.water?.depth),type(source.water?.shore),type(source.ink)].join('/');
 }
 export function materialDependencies(source,t,halo){
- const {x,y,x1,y1}=t,r=source.detail,ox=Math.round(source.bounds[0]*r),oy=Math.round(source.bounds[1]*r),rect=[(ox+x-halo)/r,(oy+y-halo)/r,(ox+x1+halo-1)/r,(oy+y1+halo-1)/r],identity=materialSourceIdentity(source,rect);
+ const {x,y,x1,y1}=t,r=source.detail,ox=Math.round(source.bounds[0]*r),oy=Math.round(source.bounds[1]*r);if(x<halo||y<halo||x1+halo>source.cols||y1+halo>source.rows)return null;const rect=[(ox+x-halo)/r,(oy+y-halo)/r,(ox+x1+halo-1)/r,(oy+y1+halo-1)/r],identity=materialSourceIdentity(source,rect);
  if(identity){const bytes=new Uint8Array(identity.buffer,identity.byteOffset,identity.byteLength);return {mode:'source-tile-identity',bytes,layout:[],tokenCount:(identity.length-2)/6};}
  if(x<halo||y<halo||x1+halo>source.cols||y1+halo>source.rows)return null;
  const l=dependencyFields(source,t,halo),bytes=new Uint8Array(l.total),layout=[];
