@@ -42,7 +42,7 @@ export function raster(model,{view='three-quarter',size=768,bounds=commonBounds(
      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
        const w0=((b[1]-c[1])*(x+.5-c[0])+(c[0]-b[0])*(y+.5-c[1]))/den,w1=((c[1]-a[1])*(x+.5-c[0])+(a[0]-c[0])*(y+.5-c[1]))/den,w2=1-w0-w1;if(Math.min(w0,w1,w2)<-1e-5)continue;
        const z=w0*a[2]+w1*b[2]+w2*c[2],i=y*size+x;if(z<=depth[i])continue;depth[i]=z;owners[i]=pi;faces[i]=t/3;
-       let n=unit(ns[0].map((v,k)=>w0*v+w1*ns[1][k]+w2*ns[2][k])),v=pts[0].map((v,k)=>w0*v+w1*pts[1][k]+w2*pts[2][k]);if(dot(n,face)<0)n=face;
+       let n=unit(ns[0].map((v,k)=>w0*v+w1*ns[1][k]+w2*ns[2][k])),v=pts[0].map((v,k)=>w0*v+w1*pts[1][k]+w2*pts[2][k]);if(model.spec.style==='low-poly'||dot(n,face)<0)n=face;
        let base=p.vertexColors?ids.reduce((a,j,k)=>a.map((v,d)=>v+p.vertexColors[3*j+d]*[w0,w1,w2][k]),[0,0,0]):p.color.slice(),rough=mode==='A'?.72:(p.material?.roughness??mat.roughness),metal=mode==='A'?0:(p.material?.metallic??mat.metallic);
        if(p.vertexTint)base=base.map((v,k)=>v*ids.reduce((sum,j,l)=>sum+p.vertexTint[3*j+k]*[w0,w1,w2][l],0));
        if(mode==='C'&&map){const detailFrequency=Math.max(1.2,Math.min(5,size/128*5)),uv=p.texcoords?.length?[0,1].map(k=>ids.reduce((s,j,l)=>s+p.texcoords[2*j+k]*[w0,w1,w2][l],0)*detailFrequency/5):[v[0]*detailFrequency+v[2]*detailFrequency*.54,v[1]*detailFrequency],j=lookup(map.color,map.size,...uv),tangent=unit(cross(Math.abs(n[1])>.95?[1,0,0]:[0,1,0],n)),bitangent=cross(n,tangent);base=base.map((c,k)=>c*(map.color[j+k]/255)**2);rough=map.roughness[j+1]/255;metal=map.roughness[j+2]/255;n=unit(n.map((x,k)=>x+(map.normal[j]/127.5-1)*tangent[k]+(map.normal[j+1]/127.5-1)*bitangent[k]))}
