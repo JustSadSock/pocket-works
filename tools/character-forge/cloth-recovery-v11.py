@@ -179,7 +179,9 @@ def defect_detail(v,old,cs,previous_cs):
    co,normal,fi,distance=t.find_nearest(mid)
    if co is None:continue
    ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*spec['fps']/3 for k in range(3)]
-   nearest.append({'name':name,'face':fi,'faceVertices':ids,'distanceMetres':distance,'normal':list(normal),'surfaceVelocity':velocity})
+   clothVelocity=[sum((v[j][k]-old[j][k])*spec['fps'] for j in (a,b))*.5 for k in range(3)]
+   relative=Vector(clothVelocity)-Vector(velocity);normalUnit=normal.normalized();normalSpeed=relative.dot(normalUnit);tangentialSpeed=(relative-normalUnit*normalSpeed).length
+   nearest.append({'name':name,'face':fi,'faceVertices':ids,'distanceMetres':distance,'normal':list(normal),'surfaceVelocity':velocity,'clothEdgeVelocity':clothVelocity,'relativeVelocity':list(relative),'relativeNormalSpeed':normalSpeed,'relativeTangentialSpeed':tangentialSpeed})
   details.append({'edge':[a,b],'ratio':ratio,'previousRatio':math.dist(old[a],old[b])/d,'restLength':d,'midpoint':list(mid),'edgeDirection':list((Vector(v[b])-Vector(v[a])).normalized()),'pinDistancesMetres':[min(math.dist(initial[j],initial[k]) for k in wpins) for j in (a,b)],'nearestCollider':min(nearest,key=lambda x:x['distanceMetres']) if nearest else None})
  selfTree=tree(v,faces);pairs=[(a,b) for a,b in selfTree.overlap(selfTree) if a<b and not set(faces[a])&set(faces[b])]
  normalsChanged=[]
@@ -281,6 +283,13 @@ if os.getenv('CHARACTER_V17_CLOTH_CONFIG'):
  if not all(x.get('passed') for x in matrix['validation'][chosenFactor].values()) or len(matrix['validation'][chosenFactor])!=5:raise RuntimeError('Missing five independent coupon controls')
  if len(v17config)!=1 or next(iter(v17config)) not in ['friction','tension','bend','quality','selfDistance','pinRamp']:raise RuntimeError('Unqualified physical factor')
  experiments=[('remesh-static',1,1,6,None),('remesh',2,1,18,None),('world',3,1,18,None)]
+v18config={}
+if os.getenv('CHARACTER_V18_CLOTH_CONFIG'):
+ v18config=json.loads(Path(os.environ['CHARACTER_V18_CLOTH_CONFIG']).read_text())
+ if not v18config.get('diagnosticOnly') or v18config.get('collider')!='trousers R':raise RuntimeError('v0.18 contact probe must be diagnostic-only and scoped to trousers R')
+ slow=int(v18config.get('slow',1))
+ if slow not in (1,2,3,4):raise RuntimeError('Unsupported relative-motion time scale')
+ experiments=[('remesh-static',1,1,6,None),('remesh',2,slow,18,None)]
 chosen=None
 for label,stage,slow,ramp,allowed in experiments:
  if stage==2:
@@ -294,6 +303,7 @@ for label,stage,slow,ramp,allowed in experiments:
   variant=chosen if stage==3 else label
   construction=variant.replace('-static','')
   method=variant if variant in ['static','original'] else 'smooth'
+  if v18config and stage>1:method='smooth' if v18config.get('proxy','outer')=='smooth' else 'outer'
   mapping=[[(i,1.)] for i in range(len(baseInitial))];faces=baseFaces[:]
   wpins=basePins[:]
   if variant=='refined':mapping,faces=refine_boundary()
@@ -338,6 +348,9 @@ for label,stage,slow,ramp,allowed in experiments:
   for row in expected:
    for j in range(len(row)):
     row[j]=[a+b-c for a,b,c in zip(row[j],initial[j],original[j])]
+  if v18config and not v18config.get('pinMotion',True):
+   for row in expected:
+    for j in wpins:row[j]=initial[j][:]
   cloth=object_mesh('MerchantRobeWelded',initial,faces)
   if variant=='pin-ramp':
    # Change only the pre-walk pin driver, not collider timing or free cloth.
@@ -352,6 +365,7 @@ for label,stage,slow,ramp,allowed in experiments:
   if variant=='waistband':
    band=cloth.vertex_groups.new(name='ConstructiveWaistband');band.add(wpins,1,'REPLACE');band.add(firstRing,.8,'REPLACE')
   colliders=[];collider_data=[];topologies={};items=spec['colliders']
+  if v18config and stage>1:items=[item for item in items if item['name']==v18config['collider']]
   if method in ['continuous','fine']:
    items=[i for i in items if i['name']=='tunic']
    for side in ['L','R']:
@@ -364,6 +378,7 @@ for label,stage,slow,ramp,allowed in experiments:
   for item in items:
    if allowed is not None and item['name'] not in allowed:continue
    fs=[tuple(item['indices'][k:k+3]) for k in range(0,len(item['indices']),3)];frames=[frame_positions(item,idx,t) for idx,t in enumerate(times)]
+   if v18config and stage>1 and not v18config.get('colliderMotion',True):frames=[frames[0] for _ in frames]
    sourceTopology=topology(frames[0],fs)
    if stage>1 and item['name']!='tunic' and not item.get('continuousProxy'):
     fs,convert,proxyTopology=outer_proxy(item);frames=[convert(v) for v in frames]
@@ -374,7 +389,8 @@ for label,stage,slow,ramp,allowed in experiments:
    ob=object_mesh('Collider_'+item['name'],frames[0],fs)
    if stage>1:keys(ob,frames)
    cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.003 if method=='fine' else .004;cm.settings.thickness_inner=.003 if method=='fine' else .004
-   if 'friction' in v17config:cm.settings.cloth_friction=v17config['friction']
+   friction=v17config.get('friction',v18config.get('friction'))
+   if friction is not None:cm.settings.cloth_friction=friction
    colliders.append(ob);collider_data.append((item['name'],frames,fs,ob))
    topologies[item['name']]={'original':sourceTopology,'evaluatedProxy':proxyTopology,'outerThickness':.004,'innerThickness':.004}
   # For the local experiments, compare to a truly stationary pinned seam.
@@ -391,7 +407,7 @@ for label,stage,slow,ramp,allowed in experiments:
    if hasattr(s,name):setattr(s,name,val)
   if variant=='waistband':
    s.vertex_group_structural_stiffness=band.name;s.tension_stiffness_max=55;s.compression_stiffness_max=55;s.shear_stiffness_max=30
-  c=mod.collision_settings;c.use_collision=True;c.distance_min=.004;c.collision_quality=10;c.use_self_collision=True;c.self_distance_min=v17config.get('selfDistance',.004)
+  c=mod.collision_settings;c.use_collision=True;c.distance_min=.004;c.collision_quality=10;c.use_self_collision=True;c.self_distance_min=v17config.get('selfDistance',v18config.get('selfDistance',.004))
   if variant=='friction':c.friction=3
   cache=mod.point_cache;cache.frame_start=1;cache.frame_end=count
   if hasattr(cache,'use_disk_cache'):cache.use_disk_cache=False
@@ -441,13 +457,14 @@ for label,stage,slow,ramp,allowed in experiments:
   # new non-seam intersections. Initial contacts are reported, not ignored.
   settled=[r for r in rows if r['frame']>= (warm+1 if stage==1 else 25)];initialPairs=sum(rows[0]['nonSeamTrianglePairs'].values())
   gates={'stretch':all(r['p95Stretch']<=1.15 and r['maxStretch']<=1.6 and not r['collapsedEdges'] for r in settled),'pin':all(r['pinErrorMetres']<=.006 for r in settled),'shape':all(.78<=r['hemRadiusRatio']<=1.22 and r['maxDeviationMetres']<=.15 for r in settled),'collision':all(sum(r['nonSeamTrianglePairs'].values())<=initialPairs and sum(r['nonSeamTrianglePairs'].values())<=10 for r in settled)}
-  if v17config:
+  if v17config or v18config:
    gates['zeroExternal']=all(sum(r['nonSeamTrianglePairs'].values())==0 for r in settled)
    gates['zeroSelf']=all(r.get('selfOverlapPairs',1)==0 for r in settled)
   gates['evaluatedColliderAgreement']=all(x['maxEvaluatedMismatchMetres']<=1e-5 for r in rows for x in r['colliderAudit'].values())
   results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'method':method,'variant':variant,'pinWeights':pinWeights,'transitionWidthMetres':max((min(math.dist(initial[j],initial[k]) for k in wpins) for j in firstRing),default=0),'totalMassKg':experimentMass,'vertexMassKg':vertexMass,'friction':c.friction,'quality':s.quality,'collisionThickness':c.distance_min,'frames':rows,'sampleFrames':len(samples)})
   (out/(('v15-cloth-' if v15 else 'v14-cloth-')+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'refinementMapping':mapping,'restPositions':initial,'faces':faces,'pinIndices':wpins,'pinWeights':pinWeights,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
-  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':'passed' if results[-1]['stage']==3 and results[-1]['passed'] else 'blocked or incomplete at '+label},indent=2))
+  status='diagnostic complete; production qualification not evaluated' if v18config and results[-1]['stage']==2 else ('passed' if results[-1]['stage']==3 and results[-1]['passed'] else 'blocked or incomplete at '+label)
+  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'diagnosticOnly':bool(v18config),'diagnosticConfig':v18config,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':status},indent=2))
   print(json.dumps({'stage':stage,'gates':gates,'last':rows[-1]}),flush=True)
   if stage==3 and all(gates.values()):
    # The existing verified cache format remains available; no production cache
@@ -461,4 +478,7 @@ for label,stage,slow,ramp,allowed in experiments:
   (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'status':'execution error in '+label,'preflight':preflight},indent=2))
   print(json.dumps(failure),flush=True)
 
-if not (results and results[0]['passed'] and results[-1]['stage']==3 and results[-1]['passed'] and not any(r.get('executionError') for r in results)):raise RuntimeError('Cloth local experiment gate rejected; world-root stage intentionally blocked')
+if v18config:
+ if not (results and results[0]['passed'] and results[-1]['stage']==2 and not any(r.get('executionError') for r in results)):raise RuntimeError('Right-trouser diagnostic did not complete; production remains blocked')
+ print(json.dumps({'diagnosticOnly':True,'name':v18config.get('name'),'stage2Passed':results[-1]['passed'],'gates':results[-1].get('gates')}),flush=True)
+elif not (results and results[0]['passed'] and results[-1]['stage']==3 and results[-1]['passed'] and not any(r.get('executionError') for r in results)):raise RuntimeError('Cloth local experiment gate rejected; world-root stage intentionally blocked')

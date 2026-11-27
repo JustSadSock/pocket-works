@@ -315,6 +315,70 @@ jobs:
           (root/"v17-remesh-control-candidates.json").write_text(json.dumps(summary,indent=2))
           print(json.dumps(summary),flush=True)
           PY
+      - name: Isolate actual right-trouser contact, friction and relative motion
+        id: trouserContactV18
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, shutil, subprocess
+          root=pathlib.Path(os.environ["CHARACTER_EVIDENCE"])
+          factors={
+              "baseline":{"friction":5.0,"pinMotion":True,"colliderMotion":True,"slow":1,"proxy":"outer"},
+              "friction-low":{"friction":2.0,"pinMotion":True,"colliderMotion":True,"slow":1,"proxy":"outer"},
+              "friction-high":{"friction":20.0,"pinMotion":True,"colliderMotion":True,"slow":1,"proxy":"outer"},
+              "pant-only":{"friction":5.0,"pinMotion":False,"colliderMotion":True,"slow":1,"proxy":"outer"},
+              "pin-only":{"friction":5.0,"pinMotion":True,"colliderMotion":False,"slow":1,"proxy":"outer"},
+              "slow-2x":{"friction":5.0,"pinMotion":True,"colliderMotion":True,"slow":2,"proxy":"outer"},
+              "smooth-proxy-control":{"friction":5.0,"pinMotion":True,"colliderMotion":True,"slow":1,"proxy":"smooth"}
+          }
+          summary=[]
+          for name,settings in factors.items():
+              out=root/("v18-trousers-R-"+name)
+              (out/"morph").mkdir(parents=True,exist_ok=True)
+              shutil.copy2(root/"morph/v9-cloth-input.json",out/"morph/v9-cloth-input.json")
+              config={"diagnosticOnly":True,"name":name,"collider":"trousers R","selfDistance":0.0025,**settings}
+              cfg=out/"v18-config.json";cfg.write_text(json.dumps(config))
+              env=os.environ.copy()
+              env.update({"CHARACTER_EVIDENCE":str(out),"CHARACTER_V15_CLOTH":"1","CHARACTER_V18_CLOTH_CONFIG":str(cfg)})
+              cmd=[os.environ["BLENDER"],"--background","--factory-startup","--disable-autoexec","--python-exit-code","1","--python","tools/character-forge/cloth-recovery-v11.py"]
+              with (out/"run.log").open("w") as log:
+                  proc=subprocess.run(cmd,env=env,stdout=log,stderr=subprocess.STDOUT)
+              report=out/"v11-cloth-recovery.json"
+              if not report.exists():
+                  summary.append({"name":name,"exit":proc.returncode,"status":"missing-report"})
+                  continue
+              data=json.loads(report.read_text())
+              stage=next((x for x in data.get("stages",[]) if x.get("stage")==2),None)
+              if stage is None:
+                  summary.append({"name":name,"exit":proc.returncode,"status":data.get("status")})
+                  continue
+              frames=stage.get("frames",[])
+              speeds=[x.get("colliderAudit",{}).get("trousers R",{}).get("maxSurfaceSpeedMetresPerSecond",0) for x in frames]
+              peak=max(frames,key=lambda x:x.get("maxStretch",0)) if frames else {}
+              contact=[]
+              for defect in stage.get("defects",[]):
+                  if defect.get("frame") in (44,45,46):
+                      for edge in defect.get("worstEdges",[]):
+                          nearest=edge.get("nearestCollider") or {}
+                          if nearest.get("name")=="trousers R":
+                              contact.append({"frame":defect["frame"],"edge":edge.get("edge"),"stretch":edge.get("ratio"),"surfaceSpeed":nearest.get("surfaceVelocity"),"relativeVelocity":nearest.get("relativeVelocity"),"relativeNormalSpeed":nearest.get("relativeNormalSpeed"),"relativeTangentialSpeed":nearest.get("relativeTangentialSpeed"),"distance":nearest.get("distanceMetres")})
+              summary.append({"name":name,"exit":proc.returncode,"status":data.get("status"),"passed":stage.get("passed"),"firstDefect":stage.get("firstDefect"),"gates":stage.get("gates"),"maxStretch":max((x.get("maxStretch",0) for x in frames),default=0),"maxP95Stretch":max((x.get("p95Stretch",0) for x in frames),default=0),"maxSelfPairs":max((x.get("selfOverlapPairs",0) for x in frames),default=0),"maxExternalPairs":max((sum(x.get("nonSeamTrianglePairs",{}).values()) for x in frames),default=0),"maxRightPantSurfaceSpeed":max(speeds,default=0),"peakFrame":peak.get("frame"),"peakColliderAudit":peak.get("colliderAudit",{}).get("trousers R"),"contactSamples":contact[:18]})
+              if name in ("baseline","friction-high"):
+                  subprocess.run(["node","tools/character-forge/cloth-evidence-v12.mjs"],env=env,check=False)
+          (root/"v18-trousers-R-contact.json").write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary),flush=True)
+          if any(x.get("status")=="missing-report" for x in summary):
+              raise SystemExit("One or more right-trouser contact diagnostics did not produce a report")
+          PY
+      - name: Upload v0.18 right-trouser contact evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-cloth-v18-contact
+          path: |
+            quality-artifacts/character-bridge/v18-trousers-R-*
+            quality-artifacts/character-bridge/v18-trousers-R-contact.json
+          if-no-files-found: warn
       - name: Enforce at least one full dynamic Remesh qualification before production
         id: remeshGate
         if: ${{ !cancelled() && env.BLENDER != '' }}
