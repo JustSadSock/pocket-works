@@ -53,12 +53,12 @@ for name,factor in experiments:
     contacts.sort(key=lambda x:x.get("relativeTangentialSpeed") or 0,reverse=True)
     warm=(24+18)*factor
     time_scale=factor
-    expected_frames=66*factor+1
+    expected_frames=warm+(spec["frameCount"]-1)*factor+1
     first=stage.get("firstDefect")
     summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,
         "exit":proc.returncode,"status":data.get("status"),"passed":stage.get("passed"),
         "simulationFrames":len(frames),"expectedSimulationFrames":expected_frames,"frameCountMatches":len(frames)==expected_frames,
-        "warmupDurationSeconds":42/24,"simulationDurationSeconds":(len(frames)-1)/(spec["fps"]*factor),
+        "warmupDurationSeconds":warm/(spec["fps"]*factor),"simulationDurationSeconds":(len(frames)-1)/(spec["fps"]*factor),
         "sourceMotionDurationSeconds":(spec["frameCount"]-1)/spec["fps"],
         "firstDefect":first,"firstDefectSourceFrame":None if first is None else 1+(first-1-warm)/time_scale,
         "gates":stage.get("gates"),
@@ -82,7 +82,9 @@ if baseline:
             "maxP95StretchDelta":row.get("maxP95Stretch",0)-baseline.get("maxP95Stretch",0),
             "selfPairsDelta":row.get("maxSelfPairs",0)-baseline.get("maxSelfPairs",0),
             "externalPairsDelta":row.get("maxExternalPairs",0)-baseline.get("maxExternalPairs",0),
-            "surfaceSpeedDelta":row.get("maxRightPantSurfaceSpeed",0)-baseline.get("maxRightPantSurfaceSpeed",0)}
+            "surfaceSpeedDelta":row.get("maxRightPantSurfaceSpeed",0)-baseline.get("maxRightPantSurfaceSpeed",0),
+            "relativeTangentialSpeedDelta":row.get("maxRelativeTangentialSpeed",0)-baseline.get("maxRelativeTangentialSpeed",0),
+            "colliderMismatchDelta":row.get("maxColliderMismatchMetres",0)-baseline.get("maxColliderMismatchMetres",0)}
 matrix={"version":"v0.20","diagnosticOnly":True,"productionAllowed":False,
     "method":"same source and material; 24/48/96 FPS; warm-up and transition duration scaled to preserve elapsed time",
     "sourceSha256":hashlib.sha256(source.read_bytes()).hexdigest(),
