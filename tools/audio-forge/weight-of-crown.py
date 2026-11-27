@@ -187,7 +187,7 @@ def sources(dyn,hist,exp):
             z=metrics.get(e['id'],{})
             midi=e.get('expectedMidi',recipe.get('midi'))
             measured=e.get('measuredMidi',z.get('measuredMidi',midi))
-            vel=e.get('velocity',recipe.get('velocity',.65))
+            vel=e.get('velocity') or recipe.get('velocity') or .65
             offset=z.get('offsetFrames',0)
             b=(root/'library'/e['path']).read_bytes()
             if hashlib.sha256(b).hexdigest()!=e['sha256']:raise ValueError('source hash mismatch '+e['id'])
@@ -240,7 +240,7 @@ def render(dyn,hist,exp,out):
             if finite:
                 tail={'folk-harp':1.15,'frame-drum':1.0,'bass-drum':1.55,'timpani':1.8}[inst]
                 length=min(int((len(x)-2)/rate),max(dur,round(tail*SR)))
-            offset=(int(source['offsetFrames']) if not connected else 0)+ (round(.065*SR) if connected else 0)
+            offset=round(.065*SR) if connected else 0
             if (length-1)*rate+offset>=len(x)-1:
                 length=min(length,int((len(x)-offset-2)/rate))
             if length<480 or start+length>N:raise ValueError('sample too short or event outside render '+part)
@@ -269,7 +269,7 @@ def render(dyn,hist,exp,out):
         groups[group]+=a
     mix=sum(groups.values());peak=float(np.max(abs(mix)));gain=min(1.,.90/max(peak,1e-9))
     quantized={k:np.rint(v*gain*32767).astype(np.int32) for k,v in groups.items()}
-    master32=sum(quantized.values());pcm_error=0
+    master32=sum(quantized.values());pcm_error=int(np.max(abs(sum(quantized.values())-master32)))
     if np.max(abs(master32))>32767:raise ValueError('master clipping after stem sum')
     master=master32.astype('<i2')
     metrics=[];section_metrics=[]
@@ -279,7 +279,6 @@ def render(dyn,hist,exp,out):
     save('the-weight-of-a-crown',master)
     for name,q in quantized.items():
         save('the-weight-of-a-crown-'+name,q.astype('<i2'))
-        pcm_error=max(pcm_error,int(np.max(abs(q-master32))))
     for sec in s['sections']:
         lo=frame(sec['startTick']);hi=frame(sec['startTick']+sec['durationTicks']);x=master[lo:hi].astype(np.float64)/32768
         es=[e for e in s['events'] if sec['startTick']<=e['tick']<sec['startTick']+sec['durationTicks']]
