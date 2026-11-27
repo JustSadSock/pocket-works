@@ -35,7 +35,7 @@ Musical duration 165 seconds; 3.2-second natural tail. Total 56 bars, 6,336 PPQ 
 ## Orchestration and space
 Low strings carry the floor; cello moves independently rather than simply doubling the bass. Horns answer in the middle register; trumpet is reserved for a few structural peaks, not continuous high-register glare. Violin carries a restrained transformed motif. Clarinet owns the conspiracy section. Harp provides irregular plucked connective tissue. Frame drum is a quiet processional layer; bass drum and timpani are reserved for selected structural accents and rolls. Renaissance organ supplies a distant E/F suspension only in the Weight/Price sections.
 
-Panning separates instrumental families. A short stone-chamber early-reflection field adds shared space while preserving attacks. Reverb must not conceal articulation or create a long wash.
+Panning separates instrumental families. Group-specific stone-chamber algorithmic reverb adds early reflections and a diffuse late field, with distinct pre-delay, damping and stereo depth for strings, brass, winds, plucked/organ and percussion. Reverb must not conceal articulation or create a long wash.
 
 ## Acceptance gates
 1. Every source is hash-verified, CC0 and pinned; every pitched event is inside E Phrygian and within 5.1 semitones of a measured recorded root.
