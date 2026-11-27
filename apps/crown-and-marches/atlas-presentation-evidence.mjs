@@ -1,4 +1,4 @@
-// Review-only bounded event log. A RAF opportunity is not physical scanout.
+// Review-only bounded event log. Frame composition is not physical scanout.
 export class PresentationEvidence {
  constructor(limit=4096){this.limit=limit;this.events=[];this.sequence=0;this.inputSequence=0;this.latest=null;this.overflow=0;this.enabled=false;this.session=0;}
  begin(){this.session++;this.events=[];this.overflow=0;this.latest=null;this.enabled=true;return this.sequence;}
@@ -27,10 +27,11 @@ export function aggregatePresentation(log,inputs,elapsedMs){
   }
   if(e.kind==='pair-ready'){const x=submitted.get(e.frame);if(!x||x.requestId!==e.requestId||x.inputId!==e.inputId)errors.push('unbound pair');pairs.set(e.frame,e);if(e.profile?.humanPoseCacheHit)exact++;}
   if(e.kind==='superseded'){drops.set(e.frame,e.reason);}
-  if(e.kind==='opportunity'){
-   const pair=pairs.get(e.frame),raster=submitted.get(e.frame),req=raster&&requests.get(raster.requestSequence),q=req?.request,input=byInput.get(e.inputId),p=input?.pose,rec=e.receipt,t=e.token;
-   if(!pair||!raster||!q||!p||!rec||!t||pair.inputId!==e.inputId||req.inputId!==e.inputId||q.id!==e.requestId||rec.id!==q.id||rec.key!==q.key||rec.intent!==q.intent||rec.intent!==p.intent||rec.revision!==q.revision||rec.detail!==q.detail||rec.contourDetail!==q.contourDetail||rec.tilt!==q.tilt||rec.lod!==raster.lod||rec.coordinateSpace!=='campaign-world'||rec.viewport?.coordinateSpace!=='canvas-css'||!covers(rec.region,q.visible)||!equal(rec.view.viewport,p.viewport)||!equal(q.view.viewport,p.viewport)||!equal(rec.viewport,p.viewport)||!close(rec.view.x,p.expectedView.x)||!close(rec.view.y,p.expectedView.y)||!close(rec.view.s,p.expectedView.s,1e-9)||!close(q.view.x,p.expectedView.x)||!close(q.view.y,p.expectedView.y)||!close(q.view.s,p.expectedView.s,1e-9)||t.terrainFrame!==e.frame||t.overlayFrame!==e.frame||t.requestId!==q.id||t.overlayCompleteAt>t.opportunityAt||t.opportunityAt>e.at||t.submittedAt>t.overlayCompleteAt||pair.sequence>=e.sequence||raster.sequence>=pair.sequence||input.sequence>=req.sequence||e.currentRequestId!==q.id||e.currentFrame!==e.frame||drops.has(e.frame)||t.composition!=='copy'&&!equal(rec.pair,t)){
-    errors.push('invalid opportunity frame '+e.frame);continue;
+  if(e.kind==='frame-composed'||e.kind==='opportunity'){
+   const pair=pairs.get(e.frame),raster=submitted.get(e.frame),req=raster&&requests.get(raster.requestSequence),q=req?.request,input=byInput.get(e.inputId),p=input?.pose,rec=e.receipt,t=e.token,composedAt=t?.composedAt??t?.opportunityAt;
+   const pairMatches=e.kind==='frame-composed'?equal(rec?.pair,t):t?.composition==='copy'||equal(rec?.pair,t);
+   if(!pair||!raster||!q||!p||!rec||!t||pair.inputId!==e.inputId||req.inputId!==e.inputId||q.id!==e.requestId||rec.id!==q.id||rec.key!==q.key||rec.intent!==q.intent||rec.intent!==p.intent||rec.revision!==q.revision||rec.detail!==q.detail||rec.contourDetail!==q.contourDetail||rec.tilt!==q.tilt||rec.lod!==raster.lod||rec.coordinateSpace!=='campaign-world'||rec.viewport?.coordinateSpace!=='canvas-css'||!covers(rec.region,q.visible)||!equal(rec.view.viewport,p.viewport)||!equal(q.view.viewport,p.viewport)||!equal(rec.viewport,p.viewport)||!close(rec.view.x,p.expectedView.x)||!close(rec.view.y,p.expectedView.y)||!close(rec.view.s,p.expectedView.s,1e-9)||!close(q.view.x,p.expectedView.x)||!close(q.view.y,p.expectedView.y)||!close(q.view.s,p.expectedView.s,1e-9)||t.terrainFrame!==e.frame||t.overlayFrame!==e.frame||t.requestId!==q.id||!Number.isFinite(composedAt)||t.overlayCompleteAt>composedAt||composedAt>e.at||t.submittedAt>t.overlayCompleteAt||pair.sequence>=e.sequence||raster.sequence>=pair.sequence||input.sequence>=req.sequence||e.currentRequestId!==q.id||e.currentFrame!==e.frame||drops.has(e.frame)||!pairMatches){
+    errors.push('invalid composed frame '+e.frame);continue;
    }
    if(!delivered.has(e.inputId)){delivered.set(e.inputId,e);opportunities.push(e);regions.add(JSON.stringify(rec.region));}
   }

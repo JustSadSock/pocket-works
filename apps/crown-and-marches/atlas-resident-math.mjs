@@ -15,3 +15,7 @@ export function depthSafe(bounds,range,view,tilt){
  for(const y of [bounds[1],bounds[3]])for(const z of [range.minZ,range.maxZ])if(Math.abs((y-view.y)*tilt+(z-datum)*cs)>=159)return false;
  return true;
 }
+
+// Raster reuse is admitted only at the exact anchor pose. Integer geometry
+// equivalence alone does not guarantee identical browser rasterization.
+export function exactResidentCrop(crop){return !!crop&&crop.dx===0&&crop.dy===0;}
