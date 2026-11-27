@@ -89,6 +89,23 @@ jobs:
           const raw=['cpu_matrix='+JSON.stringify(matrices.cpu),'browser_matrix='+JSON.stringify(matrices.browser),'expected='+JSON.stringify(expected)].join(nl)+nl;
           appendFileSync(process.env.GITHUB_OUTPUT,['cpu='+JSON.stringify(matrices.cpu),'expected='+JSON.stringify(expected),'plan_digest='+describePlan(raw).planDigest,'matrix='+JSON.stringify(tasks.map(task=>({task,control:false})).concat({task:tasks[0],control:true}))].join(nl)+nl);
           NODE
+      - name: Reproduce stale artifact namespace from an earlier attempt
+        run: |
+          mkdir stale-summary stale-task
+          printf '%s\n' '{"schema":1,"success":true,"previousAttempt":true}' > stale-summary/summary.json
+          printf '%s\n' '{"schema":1,"success":true,"previousAttempt":true}' > stale-task/result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-summary-${{ github.run_id }}
+          path: stale-summary/
+          if-no-files-found: error
+          overwrite: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-task-0-banners-of-war-completion-lab-0
+          path: stale-task/
+          if-no-files-found: error
+          overwrite: true
       - uses: actions/upload-artifact@v4
         with:
           name: delivery-discovery-${{ github.run_attempt }}
