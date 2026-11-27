@@ -17,7 +17,7 @@ export function validateRecordedGestures(gestures,seconds){
  if(gestures===undefined)return [];
  if(!Array.isArray(gestures)||gestures.length>64||!Number.isFinite(seconds)||seconds<.15||seconds>90)throw Error('Invalid shared gesture timeline');
  const ids=new Set(),out=gestures.map(g=>{
-  if(!g||!validId(g.id)||ids.has(g.id))throw Error('Invalid or duplicate shared gesture');
+  if(!g||typeof g!=='object'||Array.isArray(g)||Object.keys(g).some(k=>!['id','start','end','curve','technique'].includes(k))||!validId(g.id)||ids.has(g.id))throw Error('Invalid or duplicate shared gesture');
   ids.add(g.id);
   if(!Number.isFinite(g.start)||!Number.isFinite(g.end)||g.start<0||g.end<=g.start||g.end>seconds)throw Error('Invalid shared gesture range');
   const normalized={id:g.id,start:g.start,end:g.end,curve:curve(g.curve,'shared gesture')};
