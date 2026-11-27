@@ -5,13 +5,13 @@
   "name": "Нотограф",
   "shortName": "Нотограф",
   "description": "Преврати напев или аудиозапись в ноты, проверь на слух и сохрани партитуру.",
-  "version": "0.1.0",
-  "releaseDate": "2026-11-26",
-  "releaseDateTime": "2026-11-26T21:06:00Z",
+  "version": "0.2.0",
+  "releaseDate": "2026-11-27",
+  "releaseDateTime": "2026-11-27T02:09:00Z",
   "changelog": [
-    "Локальное распознавание напева и аудиофайлов.",
-    "Редактирование нот, экспериментальные два регистра и воспроизведение.",
-    "Печать, MusicXML и MIDI."
+    "Экспериментальная многоголосная транскрипция с отдельными голосами.",
+    "Импорт локального AI-анализа Demucs + Basic Pitch с проверяемыми WAV-дорожками.",
+    "Экспорт manifest v2 Universal Sound Forge."
   ],
   "status": "experimental",
   "preset": "interactive",
@@ -19,7 +19,7 @@
   "backgroundColor": "#e4ebe8",
   "themeColor": "#e4ebe8",
   "orientation": "any",
-  "cacheName": "notograph-v0.1.0",
+  "cacheName": "notograph-v0.2.0",
   "storageNamespace": "pocket-works:notograph",
   "tags": [
     "music",

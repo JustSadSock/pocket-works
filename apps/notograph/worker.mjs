@@ -1,1 +1,2 @@
-import {analyze} from './core.mjs';self.onmessage=({data})=>{try{self.postMessage({tracks:analyze(data.samples,data.mode,p=>self.postMessage({progress:p}))})}catch(e){self.postMessage({error:e.message})}};
+import {analyze,spectrum} from './core.mjs';import {polyphonic} from './advanced.mjs';
+self.onmessage=({data})=>{try{const progress=p=>self.postMessage({progress:p});self.postMessage({tracks:data.mode==='polyphonic'?polyphonic(data.samples,spectrum,progress):analyze(data.samples,data.mode,progress)})}catch(e){self.postMessage({error:e.message})}};

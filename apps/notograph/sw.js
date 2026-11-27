@@ -1,15 +1,15 @@
 const CACHE_PREFIX = 'notograph-';
-const CACHE_NAME = 'notograph-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-11-26';
+const CACHE_NAME = 'notograph-v0.2.0';
+const APP_VERSION = '0.2.0';
+const RELEASE_DATE = '2026-11-27';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Локальное распознавание напева и аудиофайлов.","Редактирование нот, экспериментальные два регистра и воспроизведение.","Печать, MusicXML и MIDI."];
+const RELEASE_NOTES = ["Экспериментальная многоголосная транскрипция с отдельными голосами.","Импорт локального AI-анализа Demucs + Basic Pitch с проверяемыми WAV-дорожками.","Экспорт manifest v2 Universal Sound Forge."];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
-  './app.js', './core.mjs', './worker.mjs',
+  './app.js', './core.mjs', './worker.mjs', './advanced.mjs',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
