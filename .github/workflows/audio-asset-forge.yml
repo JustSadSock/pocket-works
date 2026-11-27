@@ -845,6 +845,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Qualify connected acoustic phrasing and recorded forte layers
+        id: phrase_performance
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' && steps.recorded_dynamics.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/phrase_performance.py .audio-recorded-dynamics .audio-historical-score .audio-phrase-performance
+          test "$(find .audio-phrase-performance -maxdepth 1 -name '*.wav' | wc -l)" -eq 3
+          test -s .audio-phrase-performance/metrics.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.phrase_performance.outcome == 'success' }}
+        with:
+          name: sound-forge-phrase-performance-${{ github.run_id }}
+          path: .audio-phrase-performance/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
