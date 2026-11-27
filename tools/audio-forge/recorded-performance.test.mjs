@@ -24,6 +24,20 @@ test('one performance combines independent loop cursors, dynamic layers, legato 
  assert.deepEqual(a.samples,renderRecordedPerformance(opts).samples);
  assert.notDeepEqual(a.samples,renderRecordedPerformance({...opts,mode:'discrete'}).samples);
 });
+
+test('recorded pitch expression changes only opted-in notes and remains deterministic',()=>{
+ const opts={zones:fixture(),instrument:'fixture',notes,seconds:8.2};
+ const dry=renderRecordedPerformance(opts),repeat=renderRecordedPerformance(opts);
+ const expressive=renderRecordedPerformance({...opts,notes:notes.map(n=>({...n,expression:{
+  vibrato:{depthCents:18,rateHz:5.2,delaySeconds:.1,fadeInSeconds:.14,releaseSeconds:.1},
+  attackBend:{cents:-16,durationSeconds:.065}
+ }}))});
+ assert.deepEqual(dry.samples,repeat.samples);
+ assert.notDeepEqual(dry.samples,expressive.samples);
+ assert.ok(expressive.samples.every(v=>Number.isFinite(v)&&Math.abs(v)<.9));
+ assert.ok(expressive.choices.every(c=>c.expression?.vibrato?.depthCents===18&&c.expression?.attackBend?.cents===-16));
+ assert.ok(dry.choices.every(c=>c.expression===null));
+});
 test('explicit admission rejects unknown articulation, unqualified sustain, bad connection and duplicate source',()=>{
  const zones=fixture(),opts={zones,instrument:'fixture',notes,seconds:8.2};
  assert.throws(()=>renderRecordedPerformance({...opts,notes:[{...notes[0],articulation:'missing'}]}),/Unrecorded/);
