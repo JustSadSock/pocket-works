@@ -40,7 +40,7 @@ test('rejects malformed controls, unknown properties and impossible timings',()=
  const invalid=[
   [{vibrato:{depthCents:46}},.5],
   [{vibrato:{rateHz:2}},.5],
-  [{vibrato:{delaySeconds:.6}},.5],
+  [{vibrato:{depthCents:10,delaySeconds:.6}},.5],
   [{attackBend:{cents:81,durationSeconds:.1}},.5],
   [{attackBend:{cents:10,durationSeconds:.6}},.5],
   [{vibrato:{unknown:1}},.5],
