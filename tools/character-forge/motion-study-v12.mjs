@@ -114,6 +114,71 @@ function verticalAudit(v){
 }
 const verticalReports=Object.fromEntries(Object.entries(vertical).map(([k,v])=>[k,verticalAudit(v)]));
 const relaxed=q=>{const q2=q.map(x=>x.slice());for(const s of ['L','R']){const wrist=J('wrist.'+s),digits=[2,3,4,5].map(n=>J('finger'+n+'-1.'+s)),bar=unit(sub(digits[3].position,digits[0].position)),palm=digits.reduce((a,j)=>add(a,mul(j.position,.25)),[0,0,0]),along=unit(sub(palm,wrist.position)),normal=mul(unit(cross(bar,along)),s==='L'?1:-1);for(let n=1;n<=5;n++)for(let j=1;j<=3;j++){const b=J('finger'+n+'-'+j+'.'+s),c=J('finger'+n+'-'+(j===3?2:j+1)+'.'+s),dir=j===3?sub(b.position,c.position):sub(c.position,b.position),axis=unit(cross(dir,normal));q2[b.id]=qmul(q2[b.id],quat(axis,(n===1?.4:1)*[.13,.22,.11][j-1]))}}return q2};
+// v14: preserve v13 C exactly, solve both legs including swing clearance.
+const bilateral={A:structuredClone(vertical.C),B:{rotations:[],offsets:[]},C:{rotations:[],offsets:[]}},targetPoints={},rootPlan=[];
+for(let i=0;i<=N;i++){targetPoints[i]={};const q=bilateral.A.rotations[i],o=bilateral.A.offsets[i];const required=[];for(const side of ['L','R']){const a=actual(q,o,side),active=support[i][side].active;targetPoints[i][side]=a;required.push(groundY-a.meshMin-.002)}rootPlan.push(clamp(Math.max(0,...required)*.35,0,.028))}
+const slerp=(a,b,t)=>{let d=dot(a,b);if(d<0){b=mul(b,-1);d=-d}d=clamp(d,-1,1);if(d>.9995)return unit(add(mul(a,1-t),mul(b,t)));const th=Math.acos(d);return add(mul(a,Math.sin((1-t)*th)/Math.sin(th)),mul(b,Math.sin(t*th)/Math.sin(th)))};
+const changes=[];
+for(const name of ['B','C'])for(let i=0;i<=N;i++){
+ const base=bilateral.A.rotations[i],q=base.map(x=>x.slice()),o=bilateral.A.offsets[i].slice();
+ const shift=name==='B'?rootPlan[i]:(rootPlan[Math.max(0,i-1)]+2*rootPlan[i]+rootPlan[Math.min(N,i+1)])/4;o[1]+=shift;
+ // Preserve world foot rotations; both active and inactive surfaces are
+ // constrained. A swing foot may translate upwards, never flatten to ground.
+ for(let pass=0;pass<6;pass++)for(const side of ['L','R']){
+  const f=J('foot.'+side),a=actual(q,o,side),b=targetPoints[i][side],active=support[i][side].active;
+  const e=active.map(k=>[b[k][0]-a[k][0],groundY-a[k+'Min'],b[k][2]-a[k][2]]);
+  let d=e.length?mul(e.reduce(add,[0,0,0]),1/e.length):[0,0,0];
+  d[1]=Math.max(d[1],groundY-a.meshMin-.0015);
+  if(Math.hypot(...d)<.0005)continue;const w=poseFrom(m,q);solveLeg(q,side,add(w[f.id].p,d.map(x=>clamp(x,-.045,.045))));
+ }
+ bilateral[name].rotations.push(q);bilateral[name].offsets.push(o);
+}
+ // Regularize correction deltas, not source motion. Re-project after
+ // smoothing so constraints are never silently dropped.
+for(let pass=0;pass<2;pass++){
+ const prev=bilateral.C.rotations.map(q=>q.map(x=>x.slice()));
+ for(let i=0;i<=N;i++){
+  const q=bilateral.C.rotations[i],base=bilateral.A.rotations[i],o=bilateral.C.offsets[i];
+  for(const side of ['L','R'])for(const n of ['upperleg01','lowerleg01']){const j=J(n+'.'+side),k=j.id,delta=t=>qmul(prev[t][k],inv(bilateral.A.rotations[t][k])),left=delta(Math.max(0,i-1)),right=delta(Math.min(N,i+1)),center=delta(i);q[k]=qmul(slerp(center,slerp(left,right,.5),.18),base[k])}
+  for(let loop=0;loop<5;loop++)for(const side of ['L','R']){
+   const f=J('foot.'+side),baseW=poseFrom(m,base),w0=poseFrom(m,q);q[f.id]=qmul(inv(w0[f.parent].q),baseW[f.id].q);
+   const a=actual(q,o,side),b=targetPoints[i][side],active=support[i][side].active,e=active.map(k=>[b[k][0]-a[k][0],groundY-a[k+'Min'],b[k][2]-a[k][2]]);
+   const d=e.length?mul(e.reduce(add,[0,0,0]),1/e.length):[0,0,0];d[1]=Math.max(d[1],groundY-a.meshMin-.0015);if(Math.hypot(...d)<.0005)continue;solveLeg(q,side,add(poseFrom(m,q)[f.id].p,d.map(x=>clamp(x,-.035,.035))));
+  }
+ }
+}
+const v14Reports={};
+for(const [name,v] of Object.entries(bilateral)){
+ const candidate=structuredClone(m);candidate.sampledWalk=v;candidate.spec.walkDuration=ref.durationSeconds;candidate.spec.actions=['idle','walk'];candidate.spec.motionRevision='v9';
+ const bin=glb(candidate);write('v14-walk-'+name+'.glb',bin);json('v14-walk-'+name+'-spec.json',{spec:candidate.spec,sampledWalk:v});
+ // Read exact float32 exported animation channels, including root travel.
+ const len=bin.readUInt32LE(12),doc=JSON.parse(bin.subarray(20,20+len).toString()),offset=28+len,clip=doc.animations.find(a=>a.name==='walk');
+ const acc=id=>{const a=doc.accessors[id],view=doc.bufferViews[a.bufferView],n=a.type==='SCALAR'?1:a.type==='VEC3'?3:4,base=offset+(view.byteOffset??0)+(a.byteOffset??0);if(a.componentType!==5126)throw Error('Unexpected exported motion accessor');return Array.from({length:a.count},(_,i)=>Array.from({length:n},(_,j)=>bin.readFloatLE(base+i*(view.byteStride??n*4)+4*j)))};
+ const tracks=clip.channels.map(ch=>({node:ch.target.node,path:ch.target.path,values:acc(clip.samplers[ch.sampler].output),times:acc(clip.samplers[ch.sampler].input).flat()}));const root=m.joints.find(j=>j.parent<0),rootTrack=tracks.find(t=>t.node===root.id&&t.path==='translation');if(!rootTrack)throw Error('Missing exported root translation');
+ const count=(rootTrack.times.length-1)*4,frames=[],anchors14={};let maxPen=0,maxVert=0,maxDrift=0,activeCount=0,maxDelta=0;
+ for(let j=0;j<=count;j++){
+  const phase=j/count,t=phase*(rootTrack.times.length-1),k=Math.floor(t),l=Math.min(k+1,rootTrack.times.length-1),u=t-k,qs=m.joints.map(()=>I.slice());
+  for(const tr of tracks)if(tr.path==='rotation')qs[tr.node]=slerp(tr.values[k],tr.values[l],u);
+  const o=sub(add(mul(rootTrack.values[k],1-u),mul(rootTrack.values[l],u)),root.local),feet={};
+  // Interpolate between source contact classifications; keep all key-frame
+  // contacts, and retain the interval when both ends classify it active.
+  for(const side of ['L','R']){
+   const a=actual(qs,o,side),active=u===0?support[k][side].active:support[k][side].active.filter(x=>support[l][side].active.includes(x));const cs={};
+   maxPen=Math.max(maxPen,(groundY-a.meshMin)*1000);
+   for(const key of ['heel','toe']){const tag=side+key;if(active.includes(key)){anchors14[tag]??=a[key].slice();const drift=Math.hypot(a[key][0]-anchors14[tag][0],a[key][2]-anchors14[tag][2])*1000,vertical=Math.abs(a[key+'Min']-groundY)*1000;maxDrift=Math.max(maxDrift,drift);maxVert=Math.max(maxVert,vertical);activeCount++;cs[key]={drift,vertical}}else delete anchors14[tag]}
+   feet[side]={...a,active,contacts:cs}
+  }
+  frames.push({phase,feet,offset:o});
+ }
+ for(let i=0;i<=N;i++)for(const side of ['L','R'])for(const n of ['upperleg01','lowerleg01','foot']){const k=J(n+'.'+side).id;maxDelta=Math.max(maxDelta,2*Math.acos(clamp(Math.abs(dot(v.rotations[i][k],bilateral.A.rotations[i][k])),0,1))*180/Math.PI)}
+ const seam=dist(sub(v.offsets[N],v.offsets[0]),[0,0,strideA])*1000;
+ const jointSeam=Math.max(...v.rotations[0].map((q,k)=>2*Math.acos(clamp(Math.abs(dot(q,v.rotations[N][k])),0,1))*180/Math.PI));
+ const keyAudit=verticalAudit(v);v14Reports[name]={keyAudit,exported:{frames,activeCount,maxGroundPenetrationMm:maxPen,maxVerticalErrorMm:maxVert,maxDriftMm:maxDrift},maxJointChangeDegrees:maxDelta,rootSeamResidualMm:seam,jointSeamDegrees:jointSeam,gate:maxPen<=3&&maxVert<=10&&maxDrift<=10&&keyAudit.activeSamples===verticalReports.C.activeSamples};
+ const models=v.rotations.map((q,i)=>{const w=poseFrom(candidate,relaxed(q)).map(b=>({...b,p:add(b.p,v.offsets[i])})),model=structuredClone(candidate);for(let j=0;j<model.parts.length;j++){model.parts[j].positions=deform(candidate,candidate.parts[j],w).flat();normals(model.parts[j])}return model});
+ for(const view of ['side','front']){const dir='v14-walk-'+name+'-'+view;mkdirSync(join(out,dir),{recursive:true});const bounds=commonBounds(models,view);for(let i=0;i<=N;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(models[i],{view,bounds,size:512,mode:'B',groundLine:true}).png);for(const frame of [0,17,24]){const model={parts:models[frame].parts.filter(p=>/^boot /.test(p.name))};write('v14-foot-'+name+'-'+frame+'-'+view+'.png',raster(model,{view,size:512,mode:'A',groundLine:true}).png)}}
+}
+json('v14-contact-report.json',{variants:v14Reports,qualification:{contactGate:v14Reports.C.gate,artApproved:false},limits:['97 samples directly decoded from exported float32 GLB channels.','Source key-frame contact classifications preserved; intermediate active intervals require agreement at both ends.','Root and joint seam residuals reported, not yet artistic loop approval.','C smooths local correction deltas and reprojects bilateral surface constraints.']});
+console.log(JSON.stringify({bilateral:Object.fromEntries(Object.entries(v14Reports).map(([k,v])=>[k,{drift:v.exported.maxDriftMm,vertical:v.exported.maxVerticalErrorMm,penetration:v.exported.maxGroundPenetrationMm,gate:v.gate}]))}));
 const rendered={},anatomy={},fullSkin=read('morph/makehuman-base.json'),sameRig=fullSkin.joints.length===m.joints.length&&fullSkin.joints.every((j,i)=>j.name===m.joints[i].name&&dist(j.position,m.joints[i].position)<1e-6);
 for(const [name,v] of Object.entries(vertical)){
  const candidate=structuredClone(m);candidate.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};candidate.spec.walkDuration=ref.durationSeconds;candidate.spec.actions=['idle','walk'];write('v13-walk-'+name+'.glb',glb(candidate));json('v13-walk-'+name+'-spec.json',{spec:candidate.spec,sampledWalk:candidate.sampledWalk});
