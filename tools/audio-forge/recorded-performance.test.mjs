@@ -38,6 +38,27 @@ test('recorded pitch expression changes only opted-in notes and remains determin
  assert.ok(expressive.choices.every(c=>c.expression?.vibrato?.depthCents===18&&c.expression?.attackBend?.cents===-16));
  assert.ok(dry.choices.every(c=>c.expression===null));
 });
+
+test('continuous phrase pressure shapes recorded layers and repeated-note bow change reattacks',()=>{
+ const phraseNotes=[
+  {midi:69,start:0,duration:.8,articulation:'arco',curve,morph:true,sustain:true,phraseId:'bow-line'},
+  {midi:72,start:.8,duration:.8,articulation:'arco',curve,morph:true,sustain:true,connected:true,phraseId:'bow-line'},
+  {midi:72,start:1.6,duration:.8,articulation:'arco',curve,morph:true,sustain:true,connected:true,phraseId:'bow-line',reattack:{kind:'bow-change',strength:.28,durationSeconds:.1}}
+ ];
+ const phrases=[{id:'bow-line',technique:'bowed',start:0,end:2.4,curve:[{at:0,value:.8},{at:.5,value:1.15},{at:1,value:.72}]}];
+ const opts={zones:fixture(),instrument:'fixture',notes:phraseNotes,seconds:2.6};
+ const plain=renderRecordedPerformance({...opts,notes:phraseNotes.map(({phraseId,reattack,...n})=>n)});
+ const expressive=renderRecordedPerformance({...opts,phrases});
+ assert.notDeepEqual(plain.samples,expressive.samples);
+ assert.deepEqual(expressive.samples,renderRecordedPerformance({...opts,phrases}).samples);
+ assert.equal(expressive.choices[0].phrasing.firstMultiplier,.8);
+ assert.equal(expressive.choices[2].reattack.kind,'bow-change');
+ assert.equal(expressive.choices[1].sourceOffsetFrames,Math.round(.16*48000));
+ assert.equal(expressive.choices[2].sourceOffsetFrames,0);
+ assert.ok(expressive.choices.every(x=>x.phrasing.id==='bow-line'));
+ assert.ok(expressive.choices.every(x=>Number.isFinite(x.boundaryStep)&&x.boundaryStep<.15));
+ assert.ok(expressive.samples.every(x=>Number.isFinite(x)&&Math.abs(x)<.9));
+});
 test('explicit admission rejects unknown articulation, unqualified sustain, bad connection and duplicate source',()=>{
  const zones=fixture(),opts={zones,instrument:'fixture',notes,seconds:8.2};
  assert.throws(()=>renderRecordedPerformance({...opts,notes:[{...notes[0],articulation:'missing'}]}),/Unrecorded/);
