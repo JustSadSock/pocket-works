@@ -1,0 +1,98 @@
+// Continuous-contact experiment on existing B v14. No new actions.
+import {writeFileSync,mkdirSync} from 'node:fs';
+import {join} from 'node:path';
+import {poseFrom,deform,quat,qmul,rotate,animation,rootOffset} from './core.mjs';
+import {glb} from './glb.mjs';
+import {raster,commonBounds} from './material-study.mjs';
+import {normals} from './hybrid-human.mjs';
+export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSupport,sourceMarks,actual,solveLeg,relaxed,groundY,stride,first,scale,skin,out}){
+ const J=n=>m.joints.find(j=>j.name===n),add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((n,x,i)=>n+x*b[i],0),clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(...sub(a,b)),unit=a=>mul(a,1/(Math.hypot(...a)||1)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],inv=q=>[-q[0],-q[1],-q[2],q[3]],angle=(a,b)=>2*Math.acos(clamp(Math.abs(dot(a,b)),0,1))*180/Math.PI;
+ const slerp=(a,b,t)=>{let d=dot(a,b);if(d<0){b=mul(b,-1);d=-d}d=clamp(d,-1,1);if(d>.9995)return unit(add(mul(a,1-t),mul(b,t)));const th=Math.acos(d);return unit(add(mul(a,Math.sin((1-t)*th)/Math.sin(th)),mul(b,Math.sin(t*th)/Math.sin(th))))};
+ const N=sourceSupport.length-1,active=(phase,s)=>{const t=phase*N,i=Math.min(N,Math.floor(t+1e-9)),u=t-i,k=Math.min(N,i+1);return Math.abs(u)<1e-8?sourceSupport[i][s].active:sourceSupport[i][s].active.filter(x=>sourceSupport[k][s].active.includes(x))};
+ const sample=(v,t)=>{const u=t*(v.rotations.length-1),i=Math.floor(u),j=Math.min(i+1,v.rotations.length-1),f=u-i;return {q:v.rotations[i].map((q,k)=>slerp(q,v.rotations[j][k],f)),o:add(mul(v.offsets[i],1-f),mul(v.offsets[j],f))}};
+ const median=a=>{a=a.slice().sort((a,b)=>a-b);return (a[Math.floor((a.length-1)/2)]+a[Math.ceil((a.length-1)/2)])/2};
+ const write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2));
+ // Track seam contributions before any new repair. The source itself may not
+ // be an exact periodic clip; report axial and lateral displacement separately.
+ const seam=v=>({rootDelta:sub(v.offsets.at(-1),v.offsets[0]),rootResidualMm:dist(sub(v.offsets.at(-1),v.offsets[0]),[0,0,stride])*1000,maxJointDegrees:Math.max(...v.rotations[0].map((q,k)=>angle(q,v.rotations.at(-1)[k])))});
+ const matDiff=(a,b)=>Math.max(...a.map((x,i)=>Math.abs(x-b[i])));
+ const sourceSeam={pelvisDelta:sub(ref.frames.at(-1).points.pelvis,ref.frames[0].points.pelvis),worldOrientationMatrixResidual:Math.max(...Object.keys(ref.frames[0].worldMatrices).map(k=>matDiff(ref.frames[0].worldMatrices[k].filter((_,i)=>i<12),ref.frames.at(-1).worldMatrices[k].filter((_,i)=>i<12))))};
+ // Same frozen contact classification and horizontal anchors for all densities.
+ // Median from v14 B across the measured continuous contact interval.
+ const anchors={};for(const s of ['L','R'])for(const k of ['heel','toe']){
+  let run=[];const flush=()=>{if(!run.length)return;const pts=run.map(i=>{const a=sample(baseline,i/96);return actual(a.q,a.o,s)[k]});const center=[0,1,2].map(j=>median(pts.map(p=>p[j])));for(const i of run)anchors[i+':'+s+':'+k]=center;run=[]};
+  for(let i=0;i<=96;i++){if(active(i/96,s).includes(k))run.push(i);else flush()}flush();
+ }
+ function correct(q,o,t,base){
+  const key=Math.round(t*96);
+  for(let pass=0;pass<5;pass++)for(const s of ['L','R']){
+   const f=J('foot.'+s),act=active(t,s);
+   // A small pitch adjustment only if both ends are actually supported.
+   // Select by real deformed sole error and penetration, never ankle height.
+   if(pass===0&&act.length===2){
+    const a=actual(q,o,s),v=sub(a.toe,a.heel),axis=unit(cross(unit([v[0],0,v[2]]),[0,1,0])),w=poseFrom(m,q),original=q[f.id].slice();
+    const cost=()=>{const p=actual(q,o,s);return Math.abs(p.heelMin-p.toeMin)+Math.max(0,Math.min(p.heelMin,p.toeMin)-p.meshMin)*2};
+    let best=original,value=cost();
+    for(const step of [-.15,-.10,-.05,.05,.10,.15]){q[f.id]=qmul(inv(w[f.parent].q),qmul(quat(axis,step),w[f.id].q));const c=cost()+Math.abs(step)*.005;if(c<value){best=q[f.id];value=c}}
+    q[f.id]=best;
+   }
+   const a=actual(q,o,s),errors=act.map(k=>{const goal=anchors[key+':'+s+':'+k]??actual(base.q,base.o,s)[k];return [goal[0]-a[k][0],groundY-a[k+'Min'],goal[2]-a[k][2]]});
+   const d=errors.length?mul(errors.reduce(add,[0,0,0]),1/errors.length):[0,0,0];d[1]=Math.max(d[1],groundY-a.meshMin-.0005);
+   if(Math.hypot(...d)<.0003)continue;
+   solveLeg(q,s,add(poseFrom(m,q)[f.id].p,d.map(v=>clamp(v,-.035,.035))));
+  }
+ }
+ function generate(count){
+  const v={rotations:[],offsets:[]};
+  const end=baseline.rotations.at(-1),start=baseline.rotations[0],rootError=sub(sub(baseline.offsets.at(-1),baseline.offsets[0]),[0,0,stride]);
+  for(let i=0;i<count;i++){
+   const t=i/(count-1),base=sample(baseline,t),q=base.q.map(x=>x.slice()),o=base.o.slice();
+   // Symmetric seam repair over 12.5% of the cycle. Correct the base pose
+   // as well as correction channels; keep the original path outside the band.
+   const distance=Math.min(t,1-t),u=clamp(1-distance/.125,0,1),w=.5*u*u*(3-2*u);
+   for(let j=0;j<q.length;j++){const delta=t<.5?qmul(end[j],inv(start[j])):qmul(start[j],inv(end[j]));q[j]=qmul(slerp([0,0,0,1],delta,w),q[j])}
+   for(let j=0;j<3;j++)o[j]+=(t<.5?1:-1)*rootError[j]*w;
+   correct(q,o,t,base);v.rotations.push(q);v.offsets.push(o);
+  }
+  return v;
+ }
+ function readGLB(bin){
+  const len=bin.readUInt32LE(12),d=JSON.parse(bin.subarray(20,20+len)),offset=28+len,clip=d.animations.find(a=>a.name==='walk');
+  const acc=id=>{const a=d.accessors[id],view=d.bufferViews[a.bufferView],n=a.type==='SCALAR'?1:a.type==='VEC3'?3:4,base=offset+(view.byteOffset??0)+(a.byteOffset??0);return Array.from({length:a.count},(_,i)=>Array.from({length:n},(_,j)=>bin.readFloatLE(base+i*(view.byteStride??n*4)+4*j)))};
+  const rot=Array.from({length:acc(clip.samplers[0].input).length},()=>[]),root=m.joints.find(j=>j.parent<0);let offsets,times;
+  for(const c of clip.channels){const s=clip.samplers[c.sampler],v=acc(s.output);times=acc(s.input).flat();if(c.target.path==='rotation')for(let i=0;i<v.length;i++)rot[i][c.target.node]=v[i];if(c.target.node===root.id&&c.target.path==='translation')offsets=v.map(p=>sub(p,root.local))}
+  if(!offsets||rot.some(q=>q.length!==m.joints.length))throw Error('Invalid exported tracks');
+  return {rotations:rot,offsets,times};
+ }
+ function audit(bin,model){
+  const v=readGLB(bin),n=384,rows=[],last={},max={drift:0,vertical:0,penetration:0,nativeVertexLandmarkError:0},counts={active:0,keyActive:0},maxRate=0,prev=null;
+  for(let i=0;i<=n;i++){
+   const t=i/n,{q,o}=sample(v,t),q2=animation(model,'walk',t),o2=rootOffset(model,'walk',t),feet={};
+   for(const s of ['L','R']){const a=actual(q,o,s),b=actual(q2,o2,s),act=active(t,s),cs={};max.nativeVertexLandmarkError=Math.max(max.nativeVertexLandmarkError,dist(a.heel,b.heel)*1000,dist(a.toe,b.toe)*1000,Math.abs(a.meshMin-b.meshMin)*1000);max.penetration=Math.max(max.penetration,(groundY-a.meshMin)*1000);
+    for(const k of ['heel','toe']){const id=s+k;if(act.includes(k)){last[id]??=a[k].slice();const drift=Math.hypot(a[k][0]-last[id][0],a[k][2]-last[id][2])*1000,vertical=Math.abs(a[k+'Min']-groundY)*1000;max.drift=Math.max(max.drift,drift);max.vertical=Math.max(max.vertical,vertical);counts.active++;if(i%16===0)counts.keyActive++;cs[k]={drift,vertical}}else delete last[id]}feet[s]={...a,active:act,contacts:cs}}
+   if(prev)maxRate=Math.max(maxRate,dist(o,prev)*n/ref.durationSeconds);prev=o;rows.push({phase:t,offset:o,feet});
+  }
+  const loop=seam(v),gate=max.drift<=10&&max.vertical<=10&&max.penetration<=3&&loop.rootResidualMm<=10&&loop.maxJointDegrees<=10&&max.nativeVertexLandmarkError<.1;
+  return {keyCount:v.rotations.length,additionalAuditSamples:n+1,counts,max,loop,maxRootSpeedMetresPerSecond:maxRate,gate,rows};
+ }
+ const models={},reports={};
+ for(const count of [25,49,97]){
+  const v=generate(count),c=structuredClone(m);c.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};c.spec.actions=['walk'];c.spec.walkDuration=ref.durationSeconds;c.spec.motionRevision='v9';
+  const bin=glb(c);write('v15-walk-'+count+'.glb',bin);json('v15-walk-'+count+'-spec.json',{spec:c.spec,sampledWalk:c.sampledWalk});reports[count]=audit(bin,c);models[count]=c;
+ }
+ const choose=Object.keys(reports).sort((a,b)=>{const score=r=>Math.max(r.max.drift/10,r.max.vertical/10,r.max.penetration/3,r.loop.rootResidualMm/10,r.loop.maxJointDegrees/10);return score(reports[a])-score(reports[b])||Number(a)-Number(b)})[0];
+ const selected=models[choose];
+ // Same camera for all densities, separate neutral anatomy and dressed.
+ function frame(model,t,cycle=0,bodyOnly=false){const q=animation(model,'walk',t),o=add(rootOffset(model,'walk',t),[0,0,cycle*stride]),w=poseFrom(model,q).map(b=>({...b,p:add(b.p,o)}));const parts=(bodyOnly?skin.parts:model.parts).map(p=>{const x=structuredClone(p);x.positions=deform(model,p,w).flat();normals(x);return x});return {parts}}
+ const sameRig=skin.joints.length===m.joints.length&&skin.joints.every((j,i)=>j.name===m.joints[i].name&&dist(j.position,m.joints[i].position)<1e-6),renders={};
+ for(const c of Object.keys(models))renders[c]=Array.from({length:25},(_,i)=>frame(models[c],i/24));
+ renders.Original=native.map(row=>({parts:row.parts.map(p=>{const x={...p,positions:p.positions.map((v,k)=>k%3===2?(v-first[2])*scale:v*scale)};normals(x);return x})}));
+ for(const view of ['front','side']){
+  const bounds=commonBounds(Object.values(renders).flat(),view);
+  for(const [name,frames] of Object.entries(renders)){const dir='v15-walk-'+name+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<frames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(frames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
+  const loops=Array.from({length:73},(_,i)=>frame(selected,(i%24)/24,Math.floor(i/24))),dir='v15-loop-'+view;mkdirSync(join(out,dir),{recursive:true});const loopBounds=commonBounds(loops,view);for(let i=0;i<loops.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(loops[i],{view,bounds:loopBounds,size:640,mode:'B',groundLine:true}).png);
+  if(sameRig){const rows=Array.from({length:25},(_,i)=>frame(selected,i/24,0,true)),dir='v15-anatomy-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<rows.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(rows[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
+ }
+ json('v15-continuous-report.json',{sourceSeam,retargetSeam:seam(author),verticalSeam:seam(vertical),baselineSeam:seam(baseline),reports,selected:choose,sourceRigMatches:sameRig,groundY,stride,duration:ref.durationSeconds,qualification:{contactGate:reports[choose].gate,artApproved:false},limits:['Uniform 25/49/97 keys solve the same constraints; 385 exact exported interpolated samples each.','Seam blend and correction measured independently. Actual loop frames reset clip plus accumulated intended stride.','Native comparison of deformed landmark points and minimum actual sole vertex; independent Blender evaluation separate.']});
+ console.log(JSON.stringify({selected:choose,reports:Object.fromEntries(Object.entries(reports).map(([k,v])=>[k,{max:v.max,loop:v.loop,gate:v.gate}]))}));
+}
