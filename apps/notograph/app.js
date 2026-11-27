@@ -32,5 +32,5 @@ function download(data,type,ext){const u=URL.createObjectURL(new Blob([data],{ty
 $('xml').onclick=()=>download(musicxml(active(),bpm(),$('title').value),'application/vnd.recordare.musicxml+xml','.musicxml');$('midi').onclick=()=>download(midi(active(),bpm()),'audio/midi','.mid');$('print').onclick=()=>window.print();
 function reset(){stop();tracks=[];selected.clear();chosen=null;localStorage.removeItem(key);render()}
 $('clear').onclick=()=>{if(confirm('Удалить сохранённую партитуру?')){reset();say('Партитура очищена.')}};
-createWorkshopMode({appName:'Нотограф',version:'0.1.0',cachePrefix:'notograph-',storageNamespace:'pocket-works:notograph',onReset:reset});
+createWorkshopMode({appName:'Нотограф',version:'0.1.0',cachePrefix: 'notograph-',storageNamespace: 'pocket-works:notograph',onReset:reset});
 try{const d=JSON.parse(localStorage.getItem(key)||'null');if(d&&Array.isArray(d.tracks)){tracks=d.tracks;selected=new Set(d.selected||tracks.map((_,i)=>i));$('bpm').value=d.bpm||120;$('title').value=d.title||'Моя мелодия';$('mode').value=d.mode||'melody';modeHint();render();say('Сохранённая партитура восстановлена.')}}catch{}wave(null);ready();window.addEventListener('pagehide',()=>{stop();worker?.terminate();stream?.getTracks().forEach(t=>t.stop())});
