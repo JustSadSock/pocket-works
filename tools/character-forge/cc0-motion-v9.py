@@ -43,6 +43,21 @@ for frame in range(math.floor(start),math.ceil(end)+1):
  scene.frame_set(frame);bpy.context.view_layer.update();mw=armature.matrix_world
  def pos(p):return mw@p.matrix.translation
  frames.append({"frame":frame,"root":list(pos(root)),"left":list(pos(left)),"right":list(pos(right))})
+# Export actual native joint positions and rest directions for the existing
+# Character Core retarget study, in glTF coordinates rather than Blender Z-up.
+aliases={"pelvis":"pelvis","spine01":"spine_01","spine02":"spine_02","spine03":"spine_03","neck":"neck_01","head":"head"}
+for side in ['l','r']:
+ for name in ['clavicle','upperarm','lowerarm','hand','thigh','calf','foot','ball']:aliases[name+'.'+side.upper()]=name+'_'+side
+bones={key:next((b for b in armature.pose.bones if norm(b.name)==norm(name)),None) for key,name in aliases.items()}
+if any(b is None for b in bones.values()):raise RuntimeError('Missing KinemIQ retarget bones: '+str([k for k,b in bones.items() if b is None]))
+def y_up(v):return [float(v.x),float(v.z),float(-v.y)]
+rest={k:y_up(armature.matrix_world@b.bone.head_local) for k,b in bones.items()}
+trajectory=[]
+for i in range(25):
+ phase=i/24;frame=start+(end-start)*phase;whole=math.floor(frame)
+ scene.frame_set(whole,subframe=frame-whole);bpy.context.view_layer.update()
+ trajectory.append({"phase":phase,"points":{k:y_up(armature.matrix_world@b.matrix.translation) for k,b in bones.items()}})
+(out/"v10-reference-trajectory.json").write_text(json.dumps({"source":chosen[0],"action":chosenAction.name,"archiveSha256":digest,"axis":"glTF Y-up","durationSeconds":(end-start)/fps,"rest":rest,"frames":trajectory},indent=2))
 allz=[x[s][2] for x in frames for s in ['left','right']];ground=min(allz);height=max((mw@p.matrix).translation.z for p in armature.pose.bones)-min((mw@p.matrix).translation.z for p in armature.pose.bones);height=max(height,.1)
 def footstats(key):
  rows=[];windows=[];active=False;first=None;last=None
