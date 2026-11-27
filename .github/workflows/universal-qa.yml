@@ -111,7 +111,6 @@ jobs:
           QA_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           QA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           QA_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          QA_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
         run: |
           node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/receipt-discovery"
           report="$RUNNER_TEMP/receipt-discovery/discovery.json"

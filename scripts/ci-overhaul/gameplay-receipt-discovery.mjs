@@ -41,7 +41,9 @@ export function discoveryTarget(env,checkout){
  if(env.GITHUB_EVENT_NAME==='pull_request'){
   if(env.GITHUB_REF!=='refs/pull/'+APP_PR+'/merge'||env.QA_PR_NUMBER!==String(APP_PR)||env.QA_HEAD_REPO!==REPO||env.QA_HEAD_REF!==APP_BRANCH||!SHA.test(env.QA_HEAD_SHA))return null;
   if(env.QA_SOURCE_SHA!==undefined){if(env.PW_QA_INTEGRATION_SOURCE!=='1'||!SHA.test(env.QA_SOURCE_SHA))return null;return env.QA_SOURCE_SHA;}
-  return SHA.test(env.QA_MERGE_SHA)?env.QA_MERGE_SHA:null;
+  // actions/checkout has resolved refs/pull/<n>/merge. Webhook merge_commit_sha
+  // can lag behind that ref, so the checked-out commit is the only source identity.
+  return checkout;
  }
  if(env.GITHUB_REF==='refs/heads/main'&&['workflow_dispatch','issues','push'].includes(env.GITHUB_EVENT_NAME))return checkout;
  return null;

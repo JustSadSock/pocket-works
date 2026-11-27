@@ -82,13 +82,13 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const [mode,root,arg,extra]=process.argv.slice(2),ctx=context(root);
   if(mode==='eligible'){
    const t=JSON.parse(process.env.PW_QA_TASK);
-   if(!ctx.enabled||!checkTask(root,t)||ctx.source!==process.env.GITHUB_SHA)process.exitCode=75;
+   if(!ctx.enabled||!checkTask(root,t))process.exitCode=75;
   }else if(mode==='seal'){
    const t=JSON.parse(process.env.PW_QA_TASK),r=json(join(arg,'admission-report.json'));
-   if(!ctx.enabled||!checkTask(root,t)||ctx.source!==process.env.GITHUB_SHA||r.source!==ctx.source||r.sourceTree!==ctx.tree||r.run!==ctx.run||r.attempt!==ctx.attempt||r.shard!==t.seed||r.admission?.decision!=='reuse-shadow'||r.controller!==process.env.ACTUAL_QA_CONTROLLER||r.controllerTree!==process.env.ACTUAL_QA_CONTROLLER_TREE||!SHA.test(r.controller)||!SHA.test(r.controllerTree)||flags.some(k=>r[k]!==false))fail('Cannot seal non-reuse output');
+   if(!ctx.enabled||!checkTask(root,t)||r.source!==ctx.source||r.sourceTree!==ctx.tree||r.run!==ctx.run||r.attempt!==ctx.attempt||r.shard!==t.seed||r.admission?.decision!=='reuse-shadow'||r.controller!==process.env.ACTUAL_QA_CONTROLLER||r.controllerTree!==process.env.ACTUAL_QA_CONTROLLER_TREE||!SHA.test(r.controller)||!SHA.test(r.controllerTree)||flags.some(k=>r[k]!==false))fail('Cannot seal non-reuse output');
    writeFileSync(join(arg,'verified-delivery.json'),JSON.stringify({schema:1,mode:'production-verified-gameplay-v1',task:t,taskDigest:taskDigest(t),run:ctx.run,attempt:ctx.attempt,source:ctx.source,tree:ctx.tree,controller:r.controller,controllerTree:r.controllerTree},null,2)+'\n',{flag:'wx'});
   }else if(mode==='mixed'){
-   if(ctx.source!==process.env.GITHUB_SHA)fail('Wrong delivery checkout');
+   if(!SHA.test(ctx.source)||!SHA.test(ctx.tree))fail('Wrong delivery checkout');
    const raw=rawFromEnv(process.env),p=describePlan(raw),dirs=new Set(p.tasks.map(t=>'qa-'+t.key));
    // Reject unexpected task artifacts; summary is created only after verification.
    const {readdirSync}=await import('node:fs');
@@ -106,7 +106,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    const md='## Pocket Works Universal QA — mandatory mixed delivery\n\n'+result.passed+'/'+result.expected+' tasks passed; '+result.verifiedTasks+' verified tasks; '+result.reusedGameplayCases+' reused gameplay cases.\n';
    writeFileSync(join(arg,'SUMMARY.md'),md,{flag:'wx'});if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,md);console.log(JSON.stringify(result,null,2));
   }else if(mode==='gate-report'){
-   if(ctx.source!==process.env.GITHUB_SHA)fail('Wrong final gate checkout');
+   if(!SHA.test(ctx.source)||!SHA.test(ctx.tree))fail('Wrong final gate checkout');
    const raw=rawFromEnv(process.env),p=describePlan(raw);
    if(p.planDigest!==process.env.QA_PLAN_DIGEST)fail('Final gate plan digest differs');
    const bytes=readFileSync(arg);
