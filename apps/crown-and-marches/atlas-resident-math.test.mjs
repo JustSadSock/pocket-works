@@ -1,3 +1,4 @@
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {projectedPixel,residentCrop,exactResidentCrop,depthSafe} from './atlas-resident-math.mjs';
 let tested=0,maxError=0;
