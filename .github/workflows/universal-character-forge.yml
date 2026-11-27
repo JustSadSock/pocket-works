@@ -33,6 +33,7 @@ jobs:
       - name: Convert original previews to PNG and video
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg fonts-dejavu-core
           python3 tools/character-forge/evidence-v4.py
@@ -107,6 +108,7 @@ jobs:
           node tools/character-forge/research-v9.mjs
           CHARACTER_EVIDENCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v9-evidence.test.mjs
           python3 tools/character-forge/evidence-v9.py
+          node tools/character-forge/qualification-v10.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -190,9 +192,27 @@ jobs:
           node tools/character-forge/evidence-cloth-v9.mjs
           python3 tools/character-forge/evidence-cloth-v9.py
           node --test tools/character-forge/cloth-cache-v9.test.mjs
+          for variant in A B C; do
+            ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/v10-cloth-$variant/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-cloth-$variant.mp4"
+          done
       - name: Required native CC0 reference motion
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cc0-motion-v9.py'
+      - name: Required short reference and hybrid walk comparison
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          node tools/character-forge/motion-study-v10.mjs
+          for variant in A B C; do
+            ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/v10-walk-$variant-side/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4" -vf setpts=2*PTS -r 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-05x.mp4"
+          done
+      - name: Required short native animal and mounted composition comparisons
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          CHARACTER_V10_ANIMALS=1 node tools/character-forge/qualification-v10.mjs
+          for animal in horse rider elephant-crew; do
+            ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/v10-$animal-motion/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-$animal-walk.mp4"
+          done
       - name: Required actual source elephant anatomy, foot contact and secondary motion
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
@@ -215,6 +235,7 @@ jobs:
             quality-artifacts/character-bridge/v7-*-overlap-map.png
             quality-artifacts/character-bridge/v8-garment-overlap.json
             quality-artifacts/character-bridge/v9-*
+            quality-artifacts/character-bridge/v10-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
