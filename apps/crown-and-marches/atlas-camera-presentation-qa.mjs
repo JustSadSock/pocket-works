@@ -100,6 +100,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
     if(pageErrors.length)result.errors.push('browser page errors occurred');
     const browserEnd=await shot();writeFileSync(join(output,prefix+'-browser-end.png'),browserEnd);
     const browserDiff=await imageDiff(page,browserStart,browserEnd);writeFileSync(join(output,prefix+'-browser-return-difference.png'),Buffer.from(browserDiff.png,'base64'));delete browserDiff.png;result.browserReturnPixels=browserDiff;if(browserDiff.count)result.errors.push('actual browser map screenshot differs after return');
+    result.endImage=file(prefix+'-camera-end.png');await page.screenshot({path:join(output,result.endImage)});
     // Continuous input: one new input on each RAF, independent of per-pose receipt waits.
     // Two instrumented repetitions and one profiling-disabled control, identical path.
     result.continuous=await page.evaluate(async()=>{const r=window.__atlasReview,c=document.querySelector('#atlas'),origin=r.cameraPresentation().camera,raf=()=>new Promise(ok=>requestAnimationFrame(()=>ok(performance.now()))),runs=[];
@@ -143,8 +144,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
      if(result.discardBuffer.surface.attributes?.preserveDrawingBuffer!==false)result.errors.push('discard drawing buffer context not established');
     }
     result.passed=result.errors.length===0;
-    result.endImage=file(prefix+'-camera-end.png');
-    await page.screenshot({path:join(output,result.endImage)});
+    await page.screenshot({path:join(output,prefix+'-diagnostic-end.png')});
    }catch(e){
     result.errors.push(String(e.stack||e));
     result.dataset=await page.locator('#atlas').evaluate(e=>({...e.dataset})).catch(()=>null);
