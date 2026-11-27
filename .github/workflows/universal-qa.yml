@@ -66,7 +66,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test planning and reporting infrastructure
-        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/universal-qa/fresh-split.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs scripts/ci-overhaul/gameplay-production-delivery.test.mjs
+        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/universal-qa/fresh-split.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs scripts/ci-overhaul/gameplay-production-delivery.test.mjs scripts/universal-qa/attempt-artifacts.test.mjs
       - name: Prepare application QA matrix
         id: plan
         env:
@@ -197,7 +197,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qa-${{ matrix.key }}
+          name: qa-task-${{ github.run_attempt }}-${{ matrix.key }}
           path: qa-artifacts/${{ matrix.key }}/
           retention-days: 7
           if-no-files-found: warn
@@ -233,7 +233,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qa-${{ matrix.key }}
+          name: qa-task-${{ github.run_attempt }}-${{ matrix.key }}
           path: qa-artifacts/${{ matrix.key }}/
           retention-days: 7
           if-no-files-found: warn
@@ -254,11 +254,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Collect all QA artifacts
+      - name: Collect task artifacts from this attempt only
         uses: actions/download-artifact@v4
         with:
-          pattern: qa-*
-          path: qa-collected
+          pattern: qa-task-${{ github.run_attempt }}-*
+          path: qa-attempt-input
           merge-multiple: false
       - uses: actions/setup-node@v4
         with:
@@ -269,6 +269,10 @@ jobs:
         with:
           name: receipt-discovery-${{ github.run_attempt }}
           path: ${{ runner.temp }}/receipt-discovery
+      - name: Require exactly the original plan in this attempt
+        env:
+          QA_EXPECTED: ${{ needs.plan.outputs.expected }}
+        run: node scripts/universal-qa/attempt-artifacts.mjs qa-attempt-input qa-collected
       - name: Independently verify every original task
         env:
           GH_TOKEN: ${{ github.token }}
@@ -294,7 +298,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qa-summary-${{ github.run_id }}
+          name: qa-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             qa-collected/summary.json
             qa-collected/SUMMARY.md
@@ -328,7 +332,7 @@ jobs:
       - uses: actions/download-artifact@v4
         if: needs.plan.outputs.route == 'legacy' && needs.summary.result == 'success'
         with:
-          name: qa-summary-${{ github.run_id }}
+          name: qa-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: mandatory-report
       - name: Recheck bound original-plan delivery report
         if: needs.plan.outputs.route == 'legacy' && needs.summary.result == 'success'

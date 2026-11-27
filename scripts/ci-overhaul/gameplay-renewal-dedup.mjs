@@ -20,7 +20,11 @@ export function renewalDecision(identity,controller,report,now=Date.now()){
 export function checkRenewal(identity,controller,out,{lookup=discover,clock=Date.now}={}){
  let report;
  try{report=lookup(identity.source,controller.sha,out,{requiredIssuer:controller.sha});}catch(e){console.log('Catalog lookup failed: '+String(e.message).slice(0,150));}
- return renewalDecision(identity,controller,report,clock());
+ const decision=renewalDecision(identity,controller,report,clock());
+ // Observational counters never participate in the authorization decision.
+ const stats=report?.lookupStats;
+ if(stats&&['listed','issuerExcluded','metadataChecks','withoutCatalog','candidateDownloads'].every(k=>Number.isSafeInteger(stats[k])&&stats[k]>=0))return {...decision,lookupStats:Object.fromEntries(['listed','issuerExcluded','metadataChecks','withoutCatalog','candidateDownloads'].map(k=>[k,stats[k]]))};
+ return decision;
 }
 const git=args=>execFileSync('git',args,{encoding:'utf8'}).trim();
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

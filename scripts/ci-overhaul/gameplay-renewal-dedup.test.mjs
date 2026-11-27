@@ -23,3 +23,11 @@ test('lookup authenticates the exact requested source; exceptions require renewa
  assert.equal(r.renewalRequired,false);
  assert.equal(checkRenewal(identity,controller,'/unused',{clock:()=>now,lookup:()=>{throw Error('API unavailable');}}).renewalRequired,true);
 });
+
+test('lookup cost counters are observational and cannot suppress renewal',()=>{
+ const lookupStats={listed:26,issuerExcluded:1,metadataChecks:25,withoutCatalog:24,candidateDownloads:1};
+ const r=checkRenewal(identity,controller,'/unused',{clock:()=>now,lookup:()=>({...report,lookupStats})});
+ assert.equal(r.renewalRequired,false);assert.deepEqual(r.lookupStats,lookupStats);
+ const bad=checkRenewal(identity,controller,'/unused',{clock:()=>now,lookup:()=>({...report,status:'fresh-fallback',lookupStats})});
+ assert.equal(bad.renewalRequired,true);assert.deepEqual(bad.lookupStats,lookupStats);
+});

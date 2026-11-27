@@ -46,8 +46,8 @@ test('scheduled no-ops cannot hide an authentic older catalog',()=>{
  const out=mkdtempSync(join(tmpdir(),'pw-discovery-lookback-'));let downloads=0,metadata=0,signatures=0;
  const noop=Array.from({length:24},(_,i)=>({...run,id:100+i,created_at:new Date(now-1000-i).toISOString()}));
  try{
-  const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>[...noop,run],requiredIssuer:issuer,hasCatalog:x=>{metadata++;return x.id===run.id;},getTree:s=>s===source?sourceTree:auditTree,getRun:()=>run,download:(_,dir)=>{downloads++;writeFileSync(join(dir,'catalog.json'),JSON.stringify(catalog));receipts.forEach((x,i)=>writeFileSync(join(dir,'receipt-'+i+'.json'),JSON.stringify(x)));},authenticate:()=>{signatures++;},downloadBundles:()=>{},checkBundles:()=>{}});
-  assert.equal(r.status,'authenticated-candidate');assert.equal(r.attempted,1);assert.equal(metadata,25);assert.equal(downloads,1);assert.equal(signatures,9);
+  const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>[{...run,id:999,head_sha:'f'.repeat(40),created_at:new Date(now-1).toISOString()},...noop,run],requiredIssuer:issuer,hasCatalog:x=>{metadata++;return x.id===run.id;},getTree:s=>s===source?sourceTree:auditTree,getRun:()=>run,download:(_,dir)=>{downloads++;writeFileSync(join(dir,'catalog.json'),JSON.stringify(catalog));receipts.forEach((x,i)=>writeFileSync(join(dir,'receipt-'+i+'.json'),JSON.stringify(x)));},authenticate:()=>{signatures++;},downloadBundles:()=>{},checkBundles:()=>{}});
+  assert.equal(r.status,'authenticated-candidate');assert.equal(r.attempted,1);assert.equal(metadata,25);assert.equal(downloads,1);assert.equal(signatures,9);assert.deepEqual(r.lookupStats,{listed:26,issuerExcluded:1,metadataChecks:25,withoutCatalog:24,candidateDownloads:1});
  }finally{rmSync(out,{recursive:true,force:true});}
 });
 test('metadata is an exact current-attempt, unexpired artifact prefilter only',()=>{
@@ -61,7 +61,7 @@ test('only eight actual catalog candidates are downloaded, metadata failure is f
   const candidates=Array.from({length:12},(_,i)=>({...run,id:100+i}));
   try{
    const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>candidates,hasCatalog:()=>{if(broken)throw Error('metadata API failed');return true;},getTree:()=>sourceTree,getRun:id=>candidates.find(x=>x.id===id),download:()=>{downloads++;throw Error('missing signed catalog');}});
-   assert.equal(r.status,'fresh-fallback');assert.equal(downloads,broken?0:8);assert.equal(r.allowResultReuse,false);assert.equal(existsSync(join(out,'authenticated')),false);
+   assert.equal(r.status,'fresh-fallback');assert.equal(downloads,broken?0:8);assert.equal(r.lookupStats.metadataChecks,broken?1:8);assert.equal(r.lookupStats.candidateDownloads,broken?0:8);assert.equal(r.allowResultReuse,false);assert.equal(existsSync(join(out,'authenticated')),false);
   }finally{rmSync(out,{recursive:true,force:true});}
  }
 });

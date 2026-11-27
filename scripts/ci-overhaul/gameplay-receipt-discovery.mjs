@@ -58,23 +58,27 @@ export function discoveryTarget(env,checkout){
  return null;
 }
 export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list=()=>api('repos/'+REPO+'/actions/workflows/gameplay-receipt-renewal.yml/runs?branch=main&status=success&per_page=100').workflow_runs,hasCatalog=hasPublishedCatalog,requiredIssuer=null,getTree=tree,getRun=id=>api('repos/'+REPO+'/actions/runs/'+id),download=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--name','renewal-signed-catalog-'+r.run_attempt,'--dir',dir]),authenticate=(r,path)=>gh(['attestation','verify',path,'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',r.head_sha,'--deny-self-hosted-runners']),downloadBundles=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--pattern','renewal-bundle-'+r.run_attempt+'-*','--dir',dir],60000),checkBundles=verifyBundles}={}){
- const miss=(reason,attempted=0)=>({schema:1,status:'fresh-fallback',source:source??null,checkout,reason,attempted,...flags});
+ const stats={listed:0,issuerExcluded:0,metadataChecks:0,withoutCatalog:0,candidateDownloads:0};
+ const miss=(reason,attempted=0)=>({schema:1,status:'fresh-fallback',source:source??null,checkout,reason,attempted,lookupStats:{...stats},...flags});
  if(!source)return miss('No eligible Banners task');
  if(!SHA.test(source)||!SHA.test(checkout))return miss('Invalid source identity');
  let checked=0;
  try{
   const sourceTree=getTree(source);
-  for(const listing of eligibleRuns(list(),now)){
-   if(requiredIssuer!==null&&listing.head_sha!==requiredIssuer)continue;
+  const candidates=eligibleRuns(list(),now);stats.listed=candidates.length;
+  for(const listing of candidates){
+   if(checked>=8)break;
+   if(requiredIssuer!==null&&listing.head_sha!==requiredIssuer){stats.issuerExcluded++;continue;}
    // Limit expensive downloads, not successful no-op schedules. Metadata API
    // failures remain fail-closed via the outer fallback.
-   if(!hasCatalog(listing))continue;
-   if(checked>=8)break;
+   stats.metadataChecks++;
+   if(!hasCatalog(listing)){stats.withoutCatalog++;continue;}
    checked++;
    const tmp=mkdtempSync(join(out,'candidate-'));
    try{
     const run=getRun(listing.id);
     if(eligibleRuns([run],now).length!==1||run.id!==listing.id||run.head_sha!==listing.head_sha||run.run_attempt!==listing.run_attempt)fail('Run changed during lookup');
+    stats.candidateDownloads++;
     download(run,tmp);
     if(!eq(readdirSync(tmp).sort(),[...subjects].sort()))fail('Missing or extra signed subjects');
     const c=json(join(tmp,'catalog.json'));
@@ -89,7 +93,7 @@ export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list
     const finalRun=getRun(run.id);
     if(eligibleRuns([finalRun],clock()).length!==1||finalRun.run_attempt!==run.run_attempt||finalRun.head_sha!==run.head_sha||clock()>=r.expiresAt)fail('Run or freshness changed after authentication');
     renameSync(tmp,join(out,'authenticated'));
-    return {...r,verifiedBundles:8,checkout,checkoutMatchesSource:checkout===source,attempted:checked};
+    return {...r,verifiedBundles:8,checkout,checkoutMatchesSource:checkout===source,attempted:checked,lookupStats:{...stats}};
    }catch(e){console.log('Renewal candidate '+listing.id+' declined: '+String(e.message).slice(0,300));}
    finally{rmSync(tmp,{recursive:true,force:true});}
   }
