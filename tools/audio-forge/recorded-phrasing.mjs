@@ -51,7 +51,7 @@ export function compileRecordedPhrasing(phrases,notes,seconds){
   for(let j=1;j<indices.length;j++)if(indices[j]!==indices[j-1]+1)throw Error('Phrase notes must form one continuous score lane');
   for(const i of indices){
    const n=notes[i];
-   if(n.start<p.start||n.start+n.duration>p.end)throw Error('Phrase does not contain its note');
+   if(Math.round(n.start*SR)<Math.round(p.start*SR)||Math.round((n.start+n.duration)*SR)>Math.round(p.end*SR))throw Error('Phrase does not contain its note');
   }
  }
  for(const id of refs.keys())if(!byId.has(id))throw Error('Unknown recorded phrase reference');
