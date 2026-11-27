@@ -821,6 +821,8 @@ jobs:
           assert idx['approval']=='research-only' and len(idx['entries'])==24
           assert report['doubleBassZones']==14 and report['percussionZones']==10
           assert report['doubleBassCoverage']==[28,30,33,37,40,44,47]
+          assert report['rights']['doubleBassLicense']=='CC0-1.0' and report['rights']['vcslLicense']=='CC0-1.0'
+          assert (p/'rights/double-bass-manifest.json').is_file() and (p/'rights/VCSL-LICENSE').is_file()
           for e in idx['entries']:
               f=p/'library'/e['path']
               assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
