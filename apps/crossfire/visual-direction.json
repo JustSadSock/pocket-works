@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "crossfire",
+  "direction": {
+    "premise": "A pocket field exercise with two squads fighting over one marked sector.",
+    "composition": "A compact framed field instrument holds the score readout, seven-column playing board and turn controls together; the title disappears in combat.",
+    "shapeLanguage": "Square terrain tiles and solid diamond counters act as distinct geometric markers.",
+    "surfaceAndMaterial": "Matte sand paper and dark ink frame the grid, without gradients or glass effects.",
+    "paletteLogic": "Blue and rust separate squads, ochre marks the objective, green outlines legal moves.",
+    "typography": "Heavy condensed-looking system headline with compact plain operational labels.",
+    "signature": "Legal move outlines turn into amber attack outlines on the actual opposing counter.",
+    "distinction": "A direct move-or-fire exercise with a scoring objective rather than hidden programmed commands."
+  },
+  "architecture": {
+    "spatialLayout": "single-instrument",
+    "controlLocation": "direct-on-object",
+    "navigation": "other",
+    "chromeTopology": "tiled-grid",
+    "dominantMotion": "spring-settle",
+    "primaryVerb": "Tap a neighboring square to move or tap an outlined enemy to shoot.",
+    "physicalFeedback": "Buttons depress during contact and a changed counter or score confirms the action.",
+    "spatialRationale": "In combat a compact board is the entire tactical instrument, with the scoreboard and turn controls integrated directly into its surrounding frame.",
+    "comparisons": [
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "A single fixed tactical grid replaces the expansive geography and research ledger.",
+        "interactionDifference": "Each input resolves one squad action rather than modifying an autonomous historical simulation."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "A small fixed board takes the place of the documentary map and archive layout.",
+        "interactionDifference": "Players contest the objective through alternating legal actions instead of exploring authored stories."
+      },
+      {
+        "slug": "kaskad-patterns",
+        "spatialDifference": "A fixed seven by seven board contains colored combat counters rather than a pattern workspace.",
+        "interactionDifference": "Targeted movement and attacks replace the observation of evolving mathematical patterns."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Semantic DOM buttons in a seven-column CSS grid render the authoritative tactical state.",
+    "focalAsset": "An original crossed diagonal SVG with an ochre objective disc identifies the field exercise."
+  },
+  "motion": {
+    "character": "A short spring-like counter arrival and pressed tile feedback make each accepted action visible.",
+    "action": "A tap on an outlined destination triggers the corresponding legal move or attack.",
+    "anticipation": "Only legal action destinations are outlined before the player selects a target.",
+    "response": "The counter or its health value changes immediately after an accepted turn.",
+    "followThrough": "The score line and active counter indicate the resulting state and next turn.",
+    "interruption": "Returning to the menu closes the connection and removes the current board.",
+    "reducedMotion": "CSS disables transitions without changing legal actions or board state."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "[data-mode=\"solo\"]"
+    },
+    "expectedChange": "The mode selector is replaced by a seven by seven board with two opposing counters and score.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
