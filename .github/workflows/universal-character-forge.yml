@@ -225,6 +225,12 @@ jobs:
       - name: Independent source and transferred hand triangle audit
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/hand-audit-v16.py'
+      - name: Local index PIP surface correctives and conforming retessellation
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: node tools/character-forge/hand-surface-v17.mjs
+      - name: Independent local index geometry audit
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/hand-surface-audit-v17.py'
       - name: Required gated physical garment reference and remesh recovery
         id: recovery
         if: ${{ !cancelled() && env.BLENDER != '' }}
@@ -331,6 +337,7 @@ jobs:
             quality-artifacts/character-bridge/v14-*
             quality-artifacts/character-bridge/v15-*
             quality-artifacts/character-bridge/v16-*
+            quality-artifacts/character-bridge/v17-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
