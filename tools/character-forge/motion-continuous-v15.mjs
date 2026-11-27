@@ -65,7 +65,7 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   return {rotations:rot,offsets,times};
  }
  function audit(bin,model){
-  const v=readGLB(bin),n=384,rows=[],last={},max={drift:0,vertical:0,penetration:0,nativeVertexLandmarkError:0},counts={active:0,keyActive:0},maxRate=0,prev=null;
+  const v=readGLB(bin),n=384,rows=[],last={},max={drift:0,vertical:0,penetration:0,nativeVertexLandmarkError:0},counts={active:0,keyActive:0};let maxRate=0,prev=null;
   for(let i=0;i<=n;i++){
    const t=i/n,{q,o}=sample(v,t),q2=animation(model,'walk',t),o2=rootOffset(model,'walk',t),feet={};
    for(const s of ['L','R']){const a=actual(q,o,s),b=actual(q2,o2,s),act=active(t,s),cs={};max.nativeVertexLandmarkError=Math.max(max.nativeVertexLandmarkError,dist(a.heel,b.heel)*1000,dist(a.toe,b.toe)*1000,Math.abs(a.meshMin-b.meshMin)*1000);max.penetration=Math.max(max.penetration,(groundY-a.meshMin)*1000);
