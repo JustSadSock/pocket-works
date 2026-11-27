@@ -109,7 +109,11 @@ for frame in range(1,spec["frameCount"]+1):
 for obj in bpy.context.selected_objects:obj.select_set(False)
 cloth.select_set(True);bpy.context.view_layer.objects.active=cloth
 abc=out/"v9-cloth-simulation.abc"
-bpy.ops.wm.alembic_export(filepath=str(abc),selected=True,start=1,end=spec["frameCount"],visible_objects_only=True,flatten=False,uvs=True,normals=True)
+args=dict(filepath=str(abc),selected=True,start=1,end=spec['frameCount'],flatten=False,uvs=True,normals=True)
+properties=bpy.ops.wm.alembic_export.get_rna_type().properties.keys()
+if 'export_hair' in properties:args['export_hair']=False
+if 'export_particles' in properties:args['export_particles']=False
+if bpy.ops.wm.alembic_export(**args)!={'FINISHED'} or not abc.exists() or abc.stat().st_size==0:raise RuntimeError('Alembic export failed')
 blend=out/"v9-cloth-simulation.blend";bpy.ops.wm.save_as_mainfile(filepath=str(blend))
 report={"status":"baked","frames":len(frames),"fps":spec["fps"],"durationSeconds":(len(frames)-1)/spec["fps"],"garment":"complete merchant lower robe outer surface","vertices":len(frames[0]),"triangles":len(clothData["indices"])//3,"pinnedVertices":len(clothData["pinIndices"]),"colliders":[x["name"] for x in spec["colliders"]],"settings":{"quality":settings.quality,"mass":settings.mass,"pinStiffness":settings.pin_stiffness,"collisionDistance":collision.distance_min,"collisionQuality":collision.collision_quality,"selfCollision":collision.use_self_collision,"selfCollisionDistance":collision.self_distance_min},"maxDisplacementMetres":max(displacements),"meanDisplacementMetres":sum(displacements)/len(displacements),"maxCorrectionFromSkinMetres":max(corrections),"meanCorrectionFromSkinMetres":sum(corrections)/len(corrections),"displacementAxis":"glTF Y-up, compared in the same coordinate system","gameCache":meta,"colliderClearance":clearance,"blendBytes":blend.stat().st_size,"alembicBytes":abc.stat().st_size,"note":"Full garment surface driven by 25 actual skeletal poses, colliding with animated tunic, trousers and boots. No runtime simulation dependency."}
 (out/"v9-cloth-simulation-report.json").write_text(json.dumps(report,indent=2))
