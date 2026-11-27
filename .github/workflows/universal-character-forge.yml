@@ -141,7 +141,7 @@ jobs:
         run: |
           rm -f /etc/apt/sources.list.d/microsoft-prod.list
           apt-get update
-          apt-get install -y --no-install-recommends python3-pil xz-utils libgl1 libx11-6 libxi6 libxrender1
+          apt-get install -y --no-install-recommends python3-pil xz-utils libgl1 libx11-6 libxi6 libxrender1 ffmpeg librsvg2-bin
           cd /tmp
           archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
           verified=false
@@ -172,18 +172,29 @@ jobs:
         run: |
           python3 tools/character-forge/sprite-bake.py
           CHARACTER_SURFACE_BAKE=1 python3 tools/character-forge/sprite-bake.py
-      - name: Required Blender collision, full-garment cloth and CC0 motion research
+      - name: Required legacy garment diagnostics
+        if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
-          /usr/bin/python3 -c 'import PIL; print(PIL.__version__)'
-          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py
-          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle.py
-          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study-v9.py
+          status=0
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py || status=1
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle.py || status=1
+          exit "$status"
+      - name: Required v9 garment collision audit
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study-v9.py'
+      - name: Required full cloth bake and standalone playback
+        id: cloth
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle-v9.py
           node tools/character-forge/evidence-cloth-v9.mjs
           python3 tools/character-forge/evidence-cloth-v9.py
           node --test tools/character-forge/cloth-cache-v9.test.mjs
-          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cc0-motion-v9.py
+      - name: Required native CC0 reference motion
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cc0-motion-v9.py'
       - name: Required actual source elephant anatomy, foot contact and secondary motion
+        if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
           apt-get install -y --no-install-recommends librsvg2-bin ffmpeg
           python3 tools/character-forge/animal-source.py
