@@ -756,6 +756,52 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Render note-level historical expression without replacing stereo masters
+        id: historical_expression
+        if: ${{ !cancelled() && steps.historical_consort_stereo.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-expression.py .audio-psaltery-harmonics .audio-historical-consort .audio-historical-consort-stereo .audio-historical-expression
+          test "$(find .audio-historical-expression -maxdepth 1 -name '*.wav' | wc -l)" -eq 9
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expression.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-expression-${{ github.run_id }}
+          path: .audio-historical-expression/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - name: Qualify real recorded vocal intervals and investigate recorder phrase
+        id: historical_intervals
+        if: ${{ !cancelled() && steps.historical_expression.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-intervals.py .audio-historical-intervals
+          test "$(find .audio-historical-intervals/sources -name 'voice-*.wav' | wc -l)" -eq 6
+          test -s .audio-historical-intervals/recorded-interval-reel.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_intervals.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-intervals-${{ github.run_id }}
+          path: .audio-historical-intervals/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_intervals.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-intervals-rejected-${{ github.run_id }}
+          path: .audio-historical-intervals/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
