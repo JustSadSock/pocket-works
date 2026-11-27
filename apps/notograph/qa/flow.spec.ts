@@ -1,2 +1,30 @@
 import {test,expect} from '@playwright/test';
 test('demo, score, edit, export and restore',async({page})=>{await page.goto('/apps/notograph/');await page.locator('#demo').click();await expect(page.locator('#status')).toContainText('Готово: 6 нот');await expect(page.locator('#score')).toBeVisible();await page.locator('.note').first().click();await expect(page.locator('#noteName')).toContainText('C4');await page.locator('#up').click();await expect(page.locator('#noteName')).toContainText('C#4');await page.locator('#closeEdit').click();await page.locator('#play').click();await expect(page.locator('#stop')).toBeEnabled();await page.locator('#stop').click();const xml=page.waitForEvent('download');await page.locator('#xml').click();expect((await xml).suggestedFilename()).toMatch(/\.musicxml$/);await page.reload();await expect(page.locator('#status')).toContainText('восстановлена');await expect(page.locator('.note').first()).toHaveAttribute('aria-label',/^C#4/);});
+import {createHash} from 'node:crypto';
+import {hz,wav} from '../core.mjs';
+test('polyphonic chord through audio upload and independent staff lanes',async({page})=>{
+ await page.goto('/apps/notograph/');
+ const samples=Float32Array.from({length:8192},(_,i)=>[60,64,67].reduce((sum,p)=>sum+.2*Math.sin(2*Math.PI*hz(p)*i/8192),0));
+ await page.locator('#mode').selectOption('polyphonic');
+ await page.locator('#picker').setInputFiles({name:'chord.wav',mimeType:'audio/wav',buffer:Buffer.from(wav(samples))});
+ await expect(page.locator('#status')).toContainText('Запись готова');
+ await page.locator('#analyze').click();
+ await expect(page.locator('#status')).toContainText('Готово: 3 нот');
+ await expect(page.locator('.score-part')).toHaveCount(3);
+ for(const pitch of ['C4','E4','G4'])await expect(page.locator('.note[aria-label^="'+pitch+',"]').first()).toBeVisible();
+});
+test('AI bundle preserves overlapping notes, verifies WAV, exposes original stem and exports Forge',async({page})=>{
+ await page.goto('/apps/notograph/');
+ const buffer=Buffer.from(wav(Float32Array.from({length:8192},(_,i)=>.2*Math.sin(2*Math.PI*hz(60)*i/8192))));
+ const stem={id:'vocals',file:'vocals.wav',sha256:createHash('sha256').update(buffer).digest('hex'),notes:[{pitch:60,start:0,end:1,confidence:.8},{pitch:64,start:0,end:1,confidence:.7}]};
+ const manifest={schema:'notograph-analysis-v1',duration:1,title:'Fixture',stems:[stem]};
+ const json={name:'notograph.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(manifest))};
+ await page.locator('#analysisPicker').setInputFiles([json,{name:'vocals.wav',mimeType:'audio/wav',buffer:Buffer.from('tampered')}]);
+ await expect(page.locator('#status')).toContainText('Контрольная сумма не совпадает');
+ await page.locator('#analysisPicker').setInputFiles([json,{name:'vocals.wav',mimeType:'audio/wav',buffer}]);
+ await expect(page.locator('#status')).toContainText('2 голосов, 1 WAV');
+ await expect(page.locator('#stems audio')).toBeVisible();
+ await expect(page.locator('.score-part')).toHaveCount(2);
+ const download=page.waitForEvent('download');await page.locator('#forge').click();expect((await download).suggestedFilename()).toBe('Fixture.forge.json');
+ await page.locator('#groups button').first().click();await expect(page.locator('.score-part')).toHaveCount(0);await expect(page.locator('#forge')).toBeDisabled();
+});
