@@ -6,10 +6,15 @@ on:
       - 'docs/UNIVERSAL-CHARACTER-FORGE.md'
       - '.github/workflows/universal-character-forge.yml'
   workflow_dispatch:
+    inputs:
+      full_production:
+        description: 'Run the historical full art suite only after the local component review'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
-  group: character-forge-v9-${{ github.ref }}
+  group: character-forge-v11-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   core:
@@ -91,12 +96,21 @@ jobs:
           python3 tools/character-forge/makehuman-adapter.py
           node tools/character-forge/makehuman-export.mjs
           CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v4.test.mjs
-          node tools/character-forge/recovery-v6.mjs
           CHARACTER_V7_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v7.test.mjs
           CHARACTER_EVIDENCE_SOURCE="$CHARACTER_EVIDENCE" node --test tools/character-forge/v9.test.mjs
-          node tools/character-forge/research-v7.mjs
-      - name: Render matched static surface candidates and actual-size comparisons
+      - name: Required isolated hand and exact skeletal cloth driver
         run: |
+          node tools/character-forge/research-v11-input.mjs
+          node tools/character-forge/grip-study-v11.mjs
+      - name: Retrieve licensed KinemIQ archive with exact digest
+        run: |
+          curl -fL --retry 3 --connect-timeout 20 --max-time 240 -o "$CHARACTER_EVIDENCE/v9-cc0-motions.zip" https://huggingface.co/datasets/Kinemiq/free-game-animations/resolve/main/KinemIQ_Free_Animations_CC0_GLB.zip
+          echo '64ca5ab4a92c9da079c5e88ca509391b0a58a24ccf2a1307b16e2f0fc6b23ffc  '"$CHARACTER_EVIDENCE/v9-cc0-motions.zip" | sha256sum --check --strict
+      - name: Render matched static surface candidates and actual-size comparisons (explicit full suite only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_production }}
+        run: |
+          node tools/character-forge/recovery-v6.mjs
+          node tools/character-forge/research-v7.mjs
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin python3-pil ffmpeg
           python3 tools/character-forge/evidence-v6.py
@@ -164,29 +178,42 @@ jobs:
           status=0
           python3 tools/character-forge/forge-bridge.py || status=1
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/makehuman-base.glb" CHARACTER_BRIDGE_LABEL=makehuman python3 tools/character-forge/forge-bridge.py || status=1
+          for role in artisan merchant; do
+            CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/v9-$role.glb" CHARACTER_BRIDGE_LABEL=v9-$role python3 tools/character-forge/forge-bridge.py || status=1
+          done
+          exit "$status"
+      - name: Full suite strict military and v8 round-trip (explicit only)
+        if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
+        run: |
+          status=0
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/v8-artisan.glb" CHARACTER_BRIDGE_LABEL=v8-artisan python3 tools/character-forge/forge-bridge.py || status=1
-          for role in artisan merchant infantry legionary; do
+          for role in infantry legionary; do
             CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/morph/v9-$role.glb" CHARACTER_BRIDGE_LABEL=v9-$role python3 tools/character-forge/forge-bridge.py || status=1
           done
           exit "$status"
       - name: Compare one matched transparent frame through existing Art Forge bake
-        if: always()
-        run: |
-          python3 tools/character-forge/sprite-bake.py
-          CHARACTER_SURFACE_BAKE=1 python3 tools/character-forge/sprite-bake.py
-      - name: Required legacy garment diagnostics
         if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: python3 tools/character-forge/sprite-bake.py
+      - name: Surface Art Forge bake (explicit full suite only)
+        if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
+        run: CHARACTER_SURFACE_BAKE=1 python3 tools/character-forge/sprite-bake.py
+      - name: Legacy garment diagnostics (explicit full suite only)
+        if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
           status=0
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study.py || status=1
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle.py || status=1
           exit "$status"
-      - name: Required v9 garment collision audit
-        if: ${{ !cancelled() && env.BLENDER != '' }}
+      - name: v9 garment collision audit (explicit full suite only)
+        if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-study-v9.py'
-      - name: Required full cloth bake and standalone playback
-        id: cloth
+      - name: Required gated local cloth recovery
+        id: recovery
         if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-recovery-v11.py'
+      - name: Full cloth bake and standalone playback after recovery gate
+        id: cloth
+        if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
           "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-settle-v9.py
           node tools/character-forge/evidence-cloth-v9.mjs
@@ -198,22 +225,29 @@ jobs:
       - name: Validate offline research script syntax
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
-          python3 -m py_compile tools/character-forge/cloth-study-v9.py tools/character-forge/cloth-settle-v9.py tools/character-forge/cc0-motion-v9.py
+          python3 -m py_compile tools/character-forge/cloth-study-v9.py tools/character-forge/cloth-settle-v9.py tools/character-forge/kinemiq-v11.py tools/character-forge/cloth-recovery-v11.py
+          node --check tools/character-forge/grip-study-v11.mjs
           node --check tools/character-forge/motion-study-v10.mjs
           node --check tools/character-forge/qualification-v10.mjs
-      - name: Required native CC0 reference motion
+      - name: Required native CC0 reference motion (skinless GLB channels)
+        id: kinemiq
         if: ${{ !cancelled() && env.BLENDER != '' }}
-        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cc0-motion-v9.py'
+        run: python3 tools/character-forge/kinemiq-v11.py
       - name: Required short reference and hybrid walk comparison
-        if: ${{ !cancelled() && env.BLENDER != '' }}
+        if: ${{ !cancelled() && steps.kinemiq.outcome == 'success' }}
         run: |
           node tools/character-forge/motion-study-v10.mjs
-          for variant in A B C; do
-            ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/v10-walk-$variant-side/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4"
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4" -vf setpts=2*PTS -r 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-05x.mp4"
+          fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
+          for variant in Original A B C; do
+            ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v10-walk-$variant-side/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v10-walk-$variant-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-walk-$variant-05x.mp4"
           done
-      - name: Required short native animal and mounted composition comparisons
-        if: ${{ !cancelled() && env.BLENDER != '' }}
+          ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v11-original-native-side/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-original-native.mp4"
+          ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v11-original-native.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-original-native-05x.mp4"
+          ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v10-walk-Original-1x.mp4" -i "$CHARACTER_EVIDENCE/v10-walk-A-1x.mp4" -i "$CHARACTER_EVIDENCE/v10-walk-B-1x.mp4" -i "$CHARACTER_EVIDENCE/v10-walk-C-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-walk-comparison.mp4"
+          ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v11-walk-comparison.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v11-walk-comparison-05x.mp4"
+      - name: Native animal and mounted composition comparisons (explicit full suite only)
+        if: ${{ !cancelled() && env.BLENDER != '' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
         run: |
           CHARACTER_V10_ANIMALS=1 node tools/character-forge/qualification-v10.mjs
           for animal in horse rider elephant-crew; do
@@ -228,6 +262,10 @@ jobs:
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/source-v9-elephant-active.glb" CHARACTER_BRIDGE_LABEL=v9-elephant python3 tools/character-forge/forge-bridge.py
           for f in "$CHARACTER_EVIDENCE"/source-*.svg; do rsvg-convert "$f" -o "${f%.svg}.png"; done
           ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/source-v9-elephant-motion/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/source-v9-elephant-walk.mp4"
+      - name: Enforce independent isolated grip result (no shield production)
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          node -e 'const r=require(process.env.CHARACTER_EVIDENCE+"/morph/v11-grip-report.json");if(!r.accepted){console.error("Isolated grip contact gate rejected");process.exit(1)}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -242,6 +280,7 @@ jobs:
             quality-artifacts/character-bridge/v8-garment-overlap.json
             quality-artifacts/character-bridge/v9-*
             quality-artifacts/character-bridge/v10-*
+            quality-artifacts/character-bridge/v11-*
             quality-artifacts/character-bridge/animal-source-*
             quality-artifacts/character-bridge/source-*
             quality-artifacts/character-bridge/*-source-morphs.png
