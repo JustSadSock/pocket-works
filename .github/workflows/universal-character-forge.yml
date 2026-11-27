@@ -316,7 +316,7 @@ jobs:
               data=json.loads(path.read_text())
               passed.extend((str(path),s) for s in data.get("stages",[]) if s.get("stage")==3 and s.get("passed"))
           if not passed:raise SystemExit("No isolated Remesh candidate passed full dynamic/root-motion qualification; production remains blocked.")
-          with open(os.environ["GITHUB_OUTPUT"],"a") as f:f.write("passed=true\\n")
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:f.write("passed=true\n")
           print("Qualified Remesh candidates:",[x[0] for x in passed])
           PY
       - name: Full cloth bake and standalone playback after recovery gate
@@ -343,7 +343,7 @@ jobs:
           node --check tools/character-forge/hand-transfer-v16.mjs
           node --check tools/character-forge/hand-surface-v17.mjs
           python3 -m py_compile tools/character-forge/hand-surface-audit-v17.py
-          python3 -m py_compile tools/character-forge/hand-audit-v16.py tools/character-forge/cloth-coupon-v16.py tools/character-forge/cloth-recovery-v11.py
+          python3 -m py_compile tools/character-forge/hand-audit-v16.py tools/character-forge/hand-surface-audit-v17.py tools/character-forge/cloth-coupon-v16.py tools/character-forge/cloth-recovery-v11.py
           node --check tools/character-forge/cloth-coupon-render-v17.mjs
           python3 -m py_compile tools/character-forge/hand-bind-v15.py tools/character-forge/hand-source-v15.py tools/character-forge/motion-independent-v15.py
       - name: Required native CC0 reference motion (skinless GLB channels)

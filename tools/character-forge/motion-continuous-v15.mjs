@@ -189,7 +189,7 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
     v.rotations[k][j]=qmul(q,qexp(add(qdelta(q,v.rotations[k][j]),mul(right[j],f))));
     v.rotations[n-k][j]=qmul(qe,qexp(add(qdelta(qe,v.rotations[n-k][j]),mul(left[j],f))));
    }
-   const tr=k/n,tl=(n-k)/n;correct(v.rotations[k],v.offsets[k],tr,sample(base,tr));correct(v.rotations[n-k],v.offsets[n-k],tl,sample(base,tl));
+   const tr=k/n,tl=(n-k)/n,passes=strength===.25?2:1;for(let pass=0;pass<passes;pass++){correct(v.rotations[k],v.offsets[k],tr,sample(base,tr));correct(v.rotations[n-k],v.offsets[n-k],tl,sample(base,tl));}
   }
   v.trace=undefined;v.velocitySeam=seamVelocity(v);return v;
  }
@@ -259,7 +259,7 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
  const velocityImproved=r=>r.velocity.rootMmPerSecond<accepted.velocity.rootMmPerSecond&&r.velocity.maxJointVectorDegreesPerSecond<accepted.velocity.maxJointVectorDegreesPerSecond;
  const ranked=['velocity49quarter','velocity49half','velocity49'].filter(k=>noRegression(reports[k])&&velocityImproved(reports[k])).sort((a,b)=>reports[a].velocity.rootMmPerSecond+reports[a].velocity.maxJointVectorDegreesPerSecond-reports[b].velocity.rootMmPerSecond-reports[b].velocity.maxJointVectorDegreesPerSecond);
  const choose=ranked[0]??'cyclic49';
- const productionSelection={baseline:'cyclic49',selected:choose,baselineGate:accepted.gate,velocityCandidates:Object.fromEntries(['velocity49half','velocity49'].map(k=>[k,{noRegression:noRegression(reports[k]),velocityImproved:velocityImproved(reports[k])}])),artApproved:false};
+ const productionSelection={baseline:'cyclic49',selected:choose,baselineGate:accepted.gate,velocityCandidates:Object.fromEntries(['velocity49quarter','velocity49half','velocity49'].map(k=>[k,{noRegression:noRegression(reports[k]),velocityImproved:velocityImproved(reports[k])}])),artApproved:false};
  const selected=models[choose];
  // Same camera for all densities, separate neutral anatomy and dressed.
  function frame(model,t,cycle=0,bodyOnly=false){const q=animation(model,'walk',t),o=add(rootOffset(model,'walk',t),[0,0,cycle*stride]),w=poseFrom(model,q).map(b=>({...b,p:add(b.p,o)}));const parts=(bodyOnly?skin.parts:model.parts).map(p=>{const x=structuredClone(p);x.positions=deform(model,p,w).flat();normals(x);return x});return {parts}}
@@ -270,7 +270,7 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   const bounds=commonBounds(Object.values(renders).flat(),view);
   for(const [name,frames] of Object.entries(renders)){const dir='v15-walk-'+name+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<frames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(frames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
   const loops=Array.from({length:73},(_,i)=>frame(selected,(i%24)/24,Math.floor(i/24))),dir='v15-loop-'+view;mkdirSync(join(out,dir),{recursive:true});const loopBounds=commonBounds(loops,view);for(let i=0;i<loops.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(loops[i],{view,bounds:loopBounds,size:640,mode:'B',groundLine:true}).png);
-  for(const label of ['cyclic49','velocity49','elbow49']){
+  for(const label of ['cyclic49','velocity49quarter','velocity49half','velocity49','elbow49']){
    const loopFrames=Array.from({length:73},(_,i)=>frame(models[label],(i%24)/24,Math.floor(i/24))),loopDir='v17-loop-'+label+'-'+view;mkdirSync(join(out,loopDir),{recursive:true});const lb=commonBounds(loopFrames,view);for(let i=0;i<loopFrames.length;i++)write(loopDir+'/'+String(i).padStart(2,'0')+'.png',raster(loopFrames[i],{view,bounds:lb,size:640,mode:'B',groundLine:true}).png);
    if(sameRig){const bodyFrames=Array.from({length:25},(_,i)=>frame(models[label],i/24,0,true)),dir='v17-anatomy-'+label+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<bodyFrames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(bodyFrames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
   }
