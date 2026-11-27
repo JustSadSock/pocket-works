@@ -6,8 +6,13 @@ from mathutils.bvhtree import BVHTree
 out=Path(os.environ["CHARACTER_EVIDENCE"]);spec=json.loads((out/"morph"/"v9-cloth-input.json").read_text())
 def cv(v):return (float(v[0]),-float(v[2]),float(v[1]))
 def gltf(v):return [float(v.x),float(v.z),float(-v.y)]
+def triples(values):
+ if values and isinstance(values[0],(int,float)):
+  if len(values)%3:raise RuntimeError("Flat XYZ position array is not divisible by three")
+  return [values[i:i+3] for i in range(0,len(values),3)]
+ return values
 def mesh_obj(name,positions,indices):
- mesh=bpy.data.meshes.new(name+"Mesh");verts=[cv(v) for v in positions];faces=[indices[i:i+3] for i in range(0,len(indices),3)]
+ mesh=bpy.data.meshes.new(name+"Mesh");verts=[cv(v) for v in triples(positions)];faces=[indices[i:i+3] for i in range(0,len(indices),3)]
  mesh.from_pydata(verts,[],faces);mesh.update();obj=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(obj);return obj
 def animate_shapes(obj,frames):
  basis=obj.shape_key_add(name="Basis")
@@ -53,7 +58,7 @@ for frame in range(1,spec["frameCount"]+1):
  if len(coords)!=clothData["outerVertexCount"]:raise RuntimeError("Cloth evaluated vertex count changed")
  if not all(math.isfinite(x) for v in coords for x in v):raise RuntimeError("Non-finite cloth simulation output")
  frames.append(coords)
-base=[cv(v) for v in clothData["positions"]];displacements=[]
+base=[cv(v) for v in triples(clothData["positions"])];displacements=[]
 for f in frames:
  displacements.extend(math.dist(a,b) for a,b in zip(base,f))
 mins=[min(v[k] for frame in frames for v in frame) for k in range(3)]

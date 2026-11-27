@@ -5,8 +5,13 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 out=Path(__import__('os').environ["CHARACTER_EVIDENCE"])
 data=json.loads((out/"morph"/"v9-collision-input.json").read_text())
+def triples(values):
+    if values and isinstance(values[0],(int,float)):
+        if len(values)%3:raise RuntimeError("Flat XYZ position array is not divisible by three")
+        return [values[i:i+3] for i in range(0,len(values),3)]
+    return values
 def tree(part):
-    verts=[Vector(v) for v in part["positions"]]
+    verts=[Vector(v) for v in triples(part["positions"])]
     faces=[part["indices"][i:i+3] for i in range(0,len(part["indices"]),3)]
     return BVHTree.FromPolygons(verts,faces,all_triangles=True,epsilon=1e-6),verts,faces
 def centroid(v):
