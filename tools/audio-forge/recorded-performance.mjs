@@ -57,7 +57,7 @@ export function renderRecordedPerformance({zones,instrument,notes,seconds,mode='
  }
  let previous=null,maxStep=0,peak=0;
  for(const [i,e] of events.entries()){
-  const {n,start,end,curve,selected}=e,len=end-start,connected=n.connected===true,nextConnected=events[i+1]?.n.connected===true;
+  const {n,start,end,curve,selected,expression}=e,len=end-start,connected=n.connected===true,nextConnected=events[i+1]?.n.connected===true;
   const fade=Math.min(Math.round(transitionSeconds*SR),Math.floor(len/3)),attack=Math.min(240,Math.floor(len/4)),release=Math.min(3840,Math.floor(len/3));
   const offset=connected?Math.round(.16*SR):0;
   let alignment={correlation:0,delay:0};
