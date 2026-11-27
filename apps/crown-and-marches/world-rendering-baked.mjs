@@ -13,7 +13,7 @@ const C=(n,a=0,b=1)=>Math.max(a,Math.min(b,n)),L=(a,b,t)=>a+(b-a)*t,S=t=>{t=C(t)
 function hash(x,y){let n=Math.imul(x+631,374761393)^Math.imul(y+289,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;}
 function noise(x,y){const i=Math.floor(x),j=Math.floor(y),u=S(x-i),v=S(y-j);return L(L(hash(i,j),hash(i+1,j),u),L(hash(i,j+1),hash(i+1,j+1),u),v);}
 const sleep=()=>new Promise(r=>setTimeout(r,0));
-function budget(){let last=performance.now(),max=0;return {async yield(){const now=performance.now();if(now-last>=6){max=Math.max(max,now-last);await sleep();last=performance.now();}},get max(){return Math.max(max,performance.now()-last);}};}
+function budget(){let last=performance.now(),max=0;return {async yield(){const now=performance.now();if(now-last>=6){max=Math.max(max,now-last);await sleep();last=performance.now();return true;}return false;},get max(){return Math.max(max,performance.now()-last);}};}
 export async function prepareBakedTerrain(s,cam,{sourceOverride=null,geology=false,closeLOD=false,auditFields=false,check=()=>{},materialCache=null,materialVisible=null,onMaterialTile=()=>{}}={}){
  const started=performance.now(),source=sourceOverride||await prepareTerrain(s,cam,{detail:8,heightStyle:'smooth',textureOnly:true}),{vertices:v,elevations:z,cols:w,rows:h,detail:res}=source,b=budget(),pixels=new Uint8Array(w*h*4),normals=auditFields?new Float32Array(w*h*3):null,lighting=auditFields?new Float32Array(w*h*2):null,materials=auditFields?new Float32Array(w*h*3):null,detailMask=source.scaleSurface?new Uint8Array(w*h*4):null,overview=source.scaleSurface&&res<=2;
  // Normal and horizon fields are reconstructed from the actual height mesh.
