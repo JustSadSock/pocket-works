@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/gameplay-production-delivery.yml'
       - '.github/workflows/universal-qa.yml'
+      - 'scripts/universal-qa/attempt-artifacts*'
       - 'scripts/ci-overhaul/gameplay-production-delivery*'
 permissions:
   contents: read
@@ -21,7 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/ci-overhaul/gameplay-production-delivery.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/ci-overhaul/gameplay-renewable-admission.test.mjs
+      - run: node --test scripts/ci-overhaul/gameplay-production-delivery.test.mjs scripts/universal-qa/attempt-artifacts.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/ci-overhaul/gameplay-renewable-admission.test.mjs
   prepare:
     needs: contract
     if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'infra/gameplay-production-delivery' || github.event.pull_request.head.ref == 'infra/banners-production-verified-route')
@@ -166,14 +167,14 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always() && matrix.control == false
         with:
-          name: qa-${{ matrix.task.key }}
+          name: qa-task-${{ github.run_attempt }}-${{ matrix.task.key }}
           path: candidate/qa-artifacts/${{ matrix.task.key }}/
           if-no-files-found: error
           retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always() && matrix.control == true
         with:
-          name: delivery-fallback-control
+          name: delivery-fallback-control-${{ github.run_attempt }}
           path: candidate/qa-artifacts/${{ matrix.task.key }}/
           if-no-files-found: error
           retention-days: 7
@@ -210,11 +211,11 @@ jobs:
           path: discovered
       - uses: actions/download-artifact@v4
         with:
-          pattern: qa-*
-          path: qa-collected
+          pattern: qa-task-${{ github.run_attempt }}-*
+          path: qa-attempt-input
       - uses: actions/download-artifact@v4
         with:
-          name: delivery-fallback-control
+          name: delivery-fallback-control-${{ github.run_attempt }}
           path: fallback-control
       - name: Exercise mandatory mixed gate on independently collected task evidence
         env:
@@ -224,6 +225,7 @@ jobs:
           set -euo pipefail
           export GITHUB_REF=refs/pull/1355/merge
           export GITHUB_SHA="$ACTUAL_SOURCE"
+          node scripts/universal-qa/attempt-artifacts.mjs qa-attempt-input qa-collected
           test ! -e fallback-control/verified-delivery.json
           jq -e '.success==true and .key=="banners-of-war-completion-lab-0"' fallback-control/result.json
           node scripts/ci-overhaul/gameplay-production-delivery.mjs mixed "$PWD/candidate" "$PWD/qa-collected" "$PWD/discovered"
