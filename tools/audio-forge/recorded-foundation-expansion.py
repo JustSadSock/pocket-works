@@ -65,11 +65,20 @@ def self_test():
     assert len({h for pair in BASS.values() for h in pair})==14
     print('foundation source manifest self-test passed')
 def run(out):
-    out=pathlib.Path(out);obj=out/'library/objects';obj.mkdir(parents=True,exist_ok=True);entries=[];receipts=[]
+    out=pathlib.Path(out);obj=out/'library/objects';obj.mkdir(parents=True,exist_ok=True);(out/'rights').mkdir(parents=True,exist_ok=True);entries=[];receipts=[]
+    manifest_bytes=get(HF+'manifest.json');manifest=json.loads(manifest_bytes)
+    if manifest.get('license')!='CC0-1.0' or manifest.get('instrument')!='double-bass' or manifest.get('sourceLibrary')!='VSCO 2 Community Edition':raise ValueError('double bass rights manifest rejected')
+    manifest_zones={z['file']:z for z in manifest['zones']}
+    (out/'rights/double-bass-manifest.json').write_bytes(manifest_bytes)
+    vcsl_license=get(VCSL+'LICENSE');vcsl_text=vcsl_license.decode('utf-8','replace')
+    if 'CC0' not in vcsl_text or '1.0' not in vcsl_text:raise ValueError('VCSL rights evidence rejected')
+    (out/'rights/VCSL-LICENSE').write_bytes(vcsl_license)
     for root,hashes in BASS.items():
         for layer,digest in enumerate(hashes):
             vel=(0,63) if layer==0 else (64,127);name=f'samples/{root}_v{vel[0]}-{vel[1]}_rr1.wav'
             b=get(HF+name)
+            zone=manifest_zones.get(name)
+            if not zone or zone.get('sha256')!=digest or zone.get('sizeBytes')!=360044 or zone.get('rootPitch')!=root or zone.get('lowVelocity')!=vel[0] or zone.get('highVelocity')!=vel[1]:raise ValueError('double bass pinned manifest zone mismatch '+name)
             if len(b)!=360044 or hashlib.sha256(b).hexdigest()!=digest:raise ValueError('double bass bytes/hash mismatch '+name)
             info=wav_info(b);midi,freq=measure_midi(b,root)
             if abs(midi-root)>.75:raise ValueError(f'double bass pitch rejected {name}: {midi:.3f} != {root}')
@@ -83,7 +92,7 @@ def run(out):
         e=dict(id=eid,path=target,title=f'VCSL {inst} {art} take',creator='VCSL contributors; Versilian Studios',license='CC0-1.0',redistribution=True,provenance='Pinned VCSL original recording; '+path,sourceUrl='https://github.com/sgossner/VCSL/tree/'+VCSL_REV,rightsEvidence='https://github.com/sgossner/VCSL/blob/'+VCSL_REV+'/LICENSE (CC0-1.0)',sha256=sha,tags=['instrument','recorded','percussion',inst,art,'research-only'],approval='research-only',pin=dict(revision=VCSL_REV,path=path,sha256=sha,bytes=len(b)),instrument=inst,articulation=art,expectedMidi=None,measuredMidi=None,velocity=velocity,recipe=dict(instrument=inst,articulation=art,velocity=velocity,variant=len([e for e in entries if e['instrument']==inst and e['articulation']==art])+1,midi=None))
         entries.append(e);receipts.append(dict(id=eid,sha256=sha,bytes=len(b),sourceUrl=url,**info,velocity=velocity))
     index=dict(approval='research-only',entries=entries);(out/'library/index.json').write_text(json.dumps(index,indent=2)+'\n')
-    report=dict(approval='research-only',sources=len(entries),doubleBassZones=sum(e['instrument']=='double-bass' for e in entries),percussionZones=sum(e['instrument']!='double-bass' for e in entries),doubleBassCoverage=sorted(BASS),sourceRevisions=dict(doubleBass=HF_REV,vcsl=VCSL_REV),receipts=receipts)
+    report=dict(approval='research-only',sources=len(entries),doubleBassZones=sum(e['instrument']=='double-bass' for e in entries),percussionZones=sum(e['instrument']!='double-bass' for e in entries),doubleBassCoverage=sorted(BASS),sourceRevisions=dict(doubleBass=HF_REV,vcsl=VCSL_REV),rights=dict(doubleBassLicense=manifest['license'],doubleBassManifestSha256=hashlib.sha256(manifest_bytes).hexdigest(),vcslLicense='CC0-1.0',vcslLicenseSha256=hashlib.sha256(vcsl_license).hexdigest()),receipts=receipts)
     (out/'metrics.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='receipts'},indent=2))
 if __name__=='__main__':
