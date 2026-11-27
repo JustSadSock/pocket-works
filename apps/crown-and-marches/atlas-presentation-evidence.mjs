@@ -1,8 +1,8 @@
 // Review-only bounded event log. A RAF opportunity is not physical scanout.
 export class PresentationEvidence {
- constructor(limit=4096){this.limit=limit;this.events=[];this.sequence=0;this.inputSequence=0;this.latest=null;this.overflow=0;this.enabled=false;}
- begin(){this.events=[];this.overflow=0;this.latest=null;this.enabled=true;return this.sequence;}
- add(kind,data={}){if(!this.enabled)return;const event={...data,kind,sequence:++this.sequence,at:performance.now()};if(this.events.length===this.limit){this.events.shift();this.overflow++;}this.events.push(event);return event;}
+ constructor(limit=4096){this.limit=limit;this.events=[];this.sequence=0;this.inputSequence=0;this.latest=null;this.overflow=0;this.enabled=false;this.session=0;}
+ begin(){this.session++;this.events=[];this.overflow=0;this.latest=null;this.enabled=true;return this.sequence;}
+ add(kind,data={}){if(!this.enabled)return;const event={...data,kind,session:this.session,sequence:++this.sequence,at:performance.now()};if(this.events.length===this.limit){this.events.shift();this.overflow++;}this.events.push(event);return event;}
  input(pose){if(!this.enabled)return null;const inputId=++this.inputSequence;this.latest=inputId;this.add('input',{inputId,pose});return inputId;}
  end(){this.enabled=false;return {events:this.events.slice(),overflow:this.overflow,limit:this.limit};}
 }

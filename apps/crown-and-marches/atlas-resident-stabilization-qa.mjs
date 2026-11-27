@@ -78,5 +78,5 @@ export async function run(engine,selected=null){
    finally{save();await context.close();}
   }
   assert.equal(report.length,chosen.length);assert.ok(report.every(r=>r.evidenceComplete),'Resident research evidence incomplete: '+JSON.stringify(report.map(r=>({index:r.index,config:r.config,errors:r.errors,qualificationFailures:r.qualificationFailures,summary:r.summary,segments:r.segments}))));
- }finally{await browser?.close();server.kill('SIGTERM');save();}
+ }finally{await browser?.close();server.kill('SIGTERM');save();const replay=report.map(r=>({engine:r.engine,index:r.index,config:r.config,segments:r.segments.map(s=>({label:s.label,...aggregatePresentation(s.journal,r.frames.filter(f=>f.segment===s.label),s.elapsed)})),raster:r.raster?.rows??[],evidenceComplete:r.evidenceComplete,qualificationFailures:r.qualificationFailures}));writeFileSync(join(output,'independent-replay.json'),JSON.stringify(replay,null,2));}
 }
