@@ -195,6 +195,12 @@ jobs:
           for variant in A B C; do
             ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/v10-cloth-$variant/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v10-cloth-$variant.mp4"
           done
+      - name: Validate offline research script syntax
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          python3 -m py_compile tools/character-forge/cloth-study-v9.py tools/character-forge/cloth-settle-v9.py tools/character-forge/cc0-motion-v9.py
+          node --check tools/character-forge/motion-study-v10.mjs
+          node --check tools/character-forge/qualification-v10.mjs
       - name: Required native CC0 reference motion
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cc0-motion-v9.py'
