@@ -9,11 +9,12 @@ import {renderRecordedPerformance} from './recorded-performance.mjs';
 const root=path.resolve(process.argv[2]??'.audio-dedicated-release'),SR=48000;
 mkdirSync(path.join(root,'sources'),{recursive:true});
 const revision='c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e',repo='https://github.com/sgossner/VCSL',dir='Aerophones/Edge-blown Aerophones/Ocarina, Typical';
+// Upstream labels use a different octave convention; both body and release must pass independent pitch admission.
 const pins=[
- [62,'D4','f5b0f1c2d30b26cd52520280bcf81b67256f2884','7921483087a860e641ce575d58850cd621409e8f'],
- [64,'E4','dc938241a8c5f00ec53ce79c1ed0b9e77dc16db0','fb15e7e9e194b360cc45df1463218ed23c97bc13'],
- [69,'A4','70b4d1c20c7acdce9e2405faafa1d0a285cfed2e','f40a8907492f1236e001c0e9be9dc36b57f5ae5e'],
- [72,'C5','7568769951199353ab174baaab3491c41f43bf06','1121a0316fd71fcd6246a4509874aa3333c0cb6c']
+ [74,'D4','f5b0f1c2d30b26cd52520280bcf81b67256f2884','7921483087a860e641ce575d58850cd621409e8f'],
+ [76,'E4','dc938241a8c5f00ec53ce79c1ed0b9e77dc16db0','fb15e7e9e194b360cc45df1463218ed23c97bc13'],
+ [81,'A4','70b4d1c20c7acdce9e2405faafa1d0a285cfed2e','f40a8907492f1236e001c0e9be9dc36b57f5ae5e'],
+ [84,'C5','7568769951199353ab174baaab3491c41f43bf06','1121a0316fd71fcd6246a4509874aa3333c0cb6c']
 ];
 const sha=b=>createHash('sha256').update(b).digest('hex');
 function acquire(relative,blob,file){
@@ -35,7 +36,7 @@ for(const [midi,note,bodyBlob,releaseBlob] of pins){
  const tail=acquire(dir+'/Releases/Sus/StdOcarina_Sus_'+note+'_rel.wav',releaseBlob,'sources/ocarina-'+note+'-release.wav');
  const z={...prepareRecordedNote(decode(body.path).slice(0,12*SR),midi),id:'vcsl-ocarina-'+note.toLowerCase(),instrument:'ocarina',articulation:'sustain',velocity:.65,variant:1,sourceSha256:body.sha256};
  const r=prepareDedicatedRelease(decode(tail.path),z,{id:z.id+'-release',expectedMidi:midi,instrument:z.instrument,articulation:z.articulation,bodySha256:body.sha256,sha256:tail.sha256});
- const {samples,...receipt}=r;zones.push(z);releaseBank.push(r);pairs.push({midi,note,body,tail,receipt});
+ const {samples,...receipt}=r;zones.push(z);releaseBank.push(r);pairs.push({midi,upstreamLabel:note,bodyMeasuredMidi:z.measuredMidi,body,tail,receipt});
 }
 function write(file,a){
  const b=Buffer.alloc(44+a.length*2);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(SR,24);b.writeUInt32LE(SR*2,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(a.length*2,40);
@@ -59,7 +60,7 @@ const note=(midi,start,duration,pressure,connected=false,release=true)=>({midi,s
 const isolated=compare('ocarina-release-study',pins.map(([m],i)=>note(m,i*2.4,.7,.68)),10);
 // Original melody in D minor; only qualified roots used, phrase endings separated.
 const melody=[[62,64,69],[72,69,64],[62,69,72],[69,64,62],[64,69,72],[72,69,64],[69,64,69],[64,62,62]];
-const score=melody.flatMap((p,i)=>p.map((m,j)=>note(m,i*3+j*.55,j===2?.7:.55,[.58,.62,.70,.64,.73,.68,.62,.52][i],j>0,j===2)));
+const score=melody.flatMap((p,i)=>p.map((m,j)=>note(m+12,i*3+j*.55,j===2?.7:.55,[.58,.62,.70,.64,.73,.68,.62,.52][i],j>0,j===2)));
 const piece=compare('clay-and-wind',score,24);
 if(metrics.length!==6||pairs.length!==4)throw Error('Dedicated audition inventory mismatch');
 writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',library:'VCSL',revision,license:{spdx:'CC0-1.0',...license},pairs,comparisons:[isolated,piece],metrics,intervalTransitionCoverage:0},null,2)+'\n');

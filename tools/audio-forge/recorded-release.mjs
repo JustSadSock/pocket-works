@@ -17,6 +17,29 @@ export function prepareRecordedRelease(pcm,z){
 
 // The upstream library distributes this as a dedicated release asset.
 // It may be an edited tail; separate recording sessions are not assumed.
+// Measure a strong early window independently of the body and filename.
+// First qualified autocorrelation maximum avoids using octave multiples.
+export function measureDedicatedReleasePitch(pcm){
+ if(!(pcm instanceof Float32Array)||pcm.length<3840)throw Error('Invalid dedicated pitch PCM');
+ let peak=-1,anchor=0;
+ for(let i=0;i+W<=pcm.length;i+=W){const e=rms(pcm,i,i+W);if(e>peak){peak=e;anchor=i;}}
+ if(peak<.001)throw Error('Silent dedicated release');
+ const start=Math.max(0,anchor-240),maxLag=600,n=Math.min(1200,pcm.length-start-maxLag);
+ if(n<480)throw Error('Insufficient dedicated pitch window');
+ const scores=new Float64Array(maxLag+1);
+ for(let k=16;k<=maxLag;k++){
+  let xx=0,yy=0,xy=0;
+  for(let i=0;i<n;i++){const x=pcm[start+i],y=pcm[start+i+k];xx+=x*x;yy+=y*y;xy+=x*y;}
+  scores[k]=xx*yy>1e-16?xy/Math.sqrt(xx*yy):-1;
+ }
+ for(let k=17;k<maxLag;k++)if(scores[k]>=.8&&scores[k]>scores[k-1]&&scores[k]>=scores[k+1]){
+  const a=scores[k-1],b=scores[k],c=scores[k+1],den=a-2*b+c;
+  const shift=Math.abs(den)>1e-12?clamp(.5*(a-c)/den,-.5,.5):0;
+  return {measuredMidi:69+12*Math.log2(SR/(k+shift)/440),correlation:b,windowStartFrame:start,windowFrames:n};
+ }
+ throw Error('Unqualified dedicated release pitch');
+}
+
 export function prepareDedicatedRelease(pcm,z,source){
  if(!(pcm instanceof Float32Array)||pcm.length<SR*.08||pcm.length>SR*5||!z||typeof z.id!=='string'||!/^[0-9a-f]{64}$/.test(z.sourceSha256??'')||!Number.isInteger(z.expectedMidi)||!Number.isFinite(z.measuredMidi)||Math.abs(z.expectedMidi-z.measuredMidi)>.75||!source||source.expectedMidi!==z.expectedMidi||source.instrument!==z.instrument||source.articulation!==z.articulation||source.bodySha256!==z.sourceSha256||!/^[0-9a-f]{64}$/.test(source.sha256??'')||source.sha256===z.sourceSha256||typeof source.id!=='string'||!source.id)throw Error('Invalid dedicated release pairing');
  for(const v of pcm)if(!Number.isFinite(v)||Math.abs(v)>1)throw Error('Invalid dedicated release PCM');
@@ -28,7 +51,9 @@ export function prepareDedicatedRelease(pcm,z,source){
  if(end-start<SR*.08||end-start>SR*2.5)throw Error('Invalid dedicated release duration');
  const initial=rms(pcm,start,Math.min(start+4*W,end)),final=rms(pcm,end-3*W,end);
  if(initial<ref*.15||final>initial*.15||rms(pcm,pcm.length-3*W,pcm.length)>ref*.10)throw Error('No qualified dedicated recorded ending');
- return {id:z.id,releaseId:source.id,bodySha256:z.sourceSha256,sourceSha256:source.sha256,expectedMidi:z.expectedMidi,measuredMidi:z.measuredMidi,samples:pcm.slice(start,end),sourceStartFrame:start,sourceEndFrame:end,fullSourceFrames:pcm.length,initialRms:initial,finalRms:final,kind:'dedicated-release-asset'};
+ const pitch=measureDedicatedReleasePitch(pcm.slice(start,end));
+ if(Math.abs(pitch.measuredMidi-z.expectedMidi)>.75)throw Error('Dedicated release pitch disagrees with reviewed zone: expected '+z.expectedMidi+', measured '+pitch.measuredMidi.toFixed(3));
+ return {releasePitch:pitch,id:z.id,releaseId:source.id,bodySha256:z.sourceSha256,sourceSha256:source.sha256,expectedMidi:z.expectedMidi,measuredMidi:z.measuredMidi,samples:pcm.slice(start,end),sourceStartFrame:start,sourceEndFrame:end,fullSourceFrames:pcm.length,initialRms:initial,finalRms:final,kind:'dedicated-release-asset'};
 }
 
 export function compileRecordedRelease({selected,releaseBank,midi,pressure,correlation=0,availableFrames}){
@@ -37,7 +62,7 @@ export function compileRecordedRelease({selected,releaseBank,midi,pressure,corre
  const layers=selected.map(({z,v})=>{
   const r=releaseBank.find(x=>x.id===z.id);
   const extracted=r?.kind==='extracted-recorded-ending'&&r.sourceSha256===z.sourceSha256;
-  const dedicated=r?.kind==='dedicated-release-asset'&&r.bodySha256===z.sourceSha256&&r.sourceSha256!==z.sourceSha256&&/^[0-9a-f]{64}$/.test(r.sourceSha256??'')&&typeof r.releaseId==='string'&&r.releaseId.length>0;
+  const dedicated=r?.kind==='dedicated-release-asset'&&r.bodySha256===z.sourceSha256&&r.sourceSha256!==z.sourceSha256&&/^[0-9a-f]{64}$/.test(r.sourceSha256??'')&&typeof r.releaseId==='string'&&r.releaseId.length>0&&Number.isFinite(r.releasePitch?.measuredMidi)&&Math.abs(r.releasePitch.measuredMidi-z.expectedMidi)<=.75&&Number.isFinite(r.releasePitch.correlation)&&r.releasePitch.correlation>=.8;
   if(!r||(!extracted&&!dedicated)||r.measuredMidi!==z.measuredMidi||r.expectedMidi!==z.expectedMidi||!(r.samples instanceof Float32Array)||!Number.isInteger(r.sourceStartFrame)||r.sourceStartFrame<0||!Number.isInteger(r.sourceEndFrame)||r.sourceEndFrame-r.sourceStartFrame!==r.samples.length||!Number.isInteger(r.fullSourceFrames)||r.sourceEndFrame>r.fullSourceFrames||r.samples.length<SR*(dedicated?.08:.12)||r.samples.length>SR*2.5||!Number.isFinite(r.initialRms)||r.initialRms<=0||!Number.isFinite(r.finalRms)||r.finalRms<0||r.finalRms>r.initialRms*.15)throw Error('Missing or mismatched qualified recorded ending: '+z.id);
   const rate=2**((midi-z.measuredMidi)/12),gain=Math.min(.6/z.peak,.18/z.rms);
   return {r,v,rate,gain,frames:Math.floor((r.samples.length-2)/rate)+1};
@@ -75,6 +100,6 @@ export function compileRecordedRelease({selected,releaseBank,midi,pressure,corre
    if(!Number.isFinite(out[i])||Math.abs(out[i])>=.999)throw Error('Invalid release output PCM');
   }
   out[out.length-1]=0;
-  return {samples:out,receipt:{kind:layers.every(l=>l.r.kind==='dedicated-release-asset')?'dedicated-release-asset':layers.every(l=>l.r.kind==='extracted-recorded-ending')?'extracted-recorded-ending':'mixed-recorded-endings',frames,crossfadeFrames:bridge,phaseOffsetFrames:lag,correlation:best,gain,sourceSegments:layers.map(l=>({id:l.r.id,sha256:l.r.sourceSha256,startFrame:l.r.sourceStartFrame,endFrame:l.r.sourceEndFrame,fullSourceFrames:l.r.fullSourceFrames,initialRms:l.r.initialRms,finalRms:l.r.finalRms,playbackRate:l.rate,...(l.r.kind==='dedicated-release-asset'?{releaseId:l.r.releaseId,bodySha256:l.r.bodySha256}: {})}))}};
+  return {samples:out,receipt:{kind:layers.every(l=>l.r.kind==='dedicated-release-asset')?'dedicated-release-asset':layers.every(l=>l.r.kind==='extracted-recorded-ending')?'extracted-recorded-ending':'mixed-recorded-endings',frames,crossfadeFrames:bridge,phaseOffsetFrames:lag,correlation:best,gain,sourceSegments:layers.map(l=>({id:l.r.id,sha256:l.r.sourceSha256,startFrame:l.r.sourceStartFrame,endFrame:l.r.sourceEndFrame,fullSourceFrames:l.r.fullSourceFrames,initialRms:l.r.initialRms,finalRms:l.r.finalRms,playbackRate:l.rate,...(l.r.kind==='dedicated-release-asset'?{releaseId:l.r.releaseId,bodySha256:l.r.bodySha256,releasePitch:l.r.releasePitch}: {})}))}};
  }};
 }

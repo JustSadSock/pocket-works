@@ -55,12 +55,16 @@ test('dedicated assets retain a separate hash and paired body identity',()=>{
  assert.equal(r.kind,'dedicated-release-asset');
  assert.equal(r.bodySha256,z.sourceSha256);
  assert.equal(r.sourceSha256,source.sha256);
+ assert.ok(Math.abs(r.releasePitch.measuredMidi-69)<.1);
+ const wrong=Float32Array.from(pcm,(v,i)=>v*Math.cos(2*Math.PI*440*i/SR));
+ assert.throws(()=>prepareDedicatedRelease(wrong,z,source),/pitch/);
  assert.deepEqual(r.samples,pcm.slice(r.sourceStartFrame,r.sourceEndFrame));
  const opts={zones:[z],instrument:'fixture',notes:[{midi:69,start:0,duration:.6,pressure:.7,articulation:'arco',release:'recorded'}],seconds:2,releaseBank:[r]};
  const result=renderRecordedPerformance(opts),receipt=result.choices[0].release;
  assert.equal(receipt.kind,'dedicated-release-asset');
  assert.equal(receipt.sourceSegments[0].sha256,source.sha256);
  assert.equal(receipt.sourceSegments[0].bodySha256,z.sourceSha256);
+ assert.throws(()=>renderRecordedPerformance({...opts,releaseBank:[{...r,releasePitch:{...r.releasePitch,measuredMidi:81}}]}),/Missing or mismatched/);
  assert.throws(()=>renderRecordedPerformance({...opts,releaseBank:[{...r,bodySha256:'0'.repeat(64)}]}),/Missing or mismatched/);
  assert.throws(()=>prepareDedicatedRelease(pcm,z,{...source,expectedMidi:72}),/pairing/);
  assert.throws(()=>prepareDedicatedRelease(pcm,z,{...source,sha256:z.sourceSha256}),/pairing/);
