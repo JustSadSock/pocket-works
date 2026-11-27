@@ -298,6 +298,12 @@ if os.getenv('CHARACTER_V19_CLOTH_CONFIG'):
  if not v19config.get('diagnosticOnly') or v19config.get('collider')!='trousers R':raise RuntimeError('v0.19 probe must remain diagnostic-only and scoped to trousers R')
  if v19config.get('motionTransfer') not in ['vertex-keys','rigid-only','residual-only','rigid-plus-residual']:raise RuntimeError('Unsupported v0.19 motion transfer mode')
  experiments=[('remesh-static',1,1,6,None),('remesh',2,1,18,None)]
+v20config={}
+if os.getenv('CHARACTER_V20_CLOTH_CONFIG'):
+ v20config=json.loads(Path(os.environ['CHARACTER_V20_CLOTH_CONFIG']).read_text())
+ if not v20config.get('diagnosticOnly') or v20config.get('collider')!='trousers R':raise RuntimeError('v0.20 time-resolution probe must remain diagnostic-only and scoped to trousers R')
+ if int(v20config.get('timeResolution',0)) not in (1,2,4):raise RuntimeError('Unsupported v0.20 time-resolution multiplier')
+ experiments=[('remesh-static',1,1,6,None),('remesh',2,1,18,None)]
 v19DecompositionReport=None
 chosen=None
 for label,stage,slow,ramp,allowed in experiments:
@@ -312,7 +318,7 @@ for label,stage,slow,ramp,allowed in experiments:
   variant=chosen if stage==3 else label
   construction=variant.replace('-static','')
   method=variant if variant in ['static','original'] else 'smooth'
-  if (v18config or v19config) and stage>1:method='smooth' if (v19config or v18config).get('proxy','outer')=='smooth' else 'outer'
+  if (v18config or v19config or v20config) and stage>1:method='smooth' if (v19config or v18config or v20config).get('proxy','outer')=='smooth' else 'outer'
   mapping=[[(i,1.)] for i in range(len(baseInitial))];faces=baseFaces[:]
   wpins=basePins[:]
   if variant=='refined':mapping,faces=refine_boundary()
@@ -338,18 +344,23 @@ for label,stage,slow,ramp,allowed in experiments:
    for j in firstRing:pinWeights[j]=v17config['pinRamp']
   if variant=='transition':
    for j in firstRing:pinWeights[j]=.22
-  bpy.ops.wm.read_factory_settings(use_empty=True);scene=bpy.context.scene;scene.render.fps=spec['fps'];scene.gravity=(0,0,-9.81)
-  # Static settling first, then local leg motion. Stage 3 replays the same
-  # local simulation and explicitly applies measured root translation on export.
-  warm=24 if stage==1 else 24+ramp;count=49 if stage==1 else warm+(spec['frameCount']-1)*slow+1;scene.frame_start=1;scene.frame_end=count
-  times=[-1 if stage==1 or label=='A' or i<warm-ramp else max(0,min(spec['frameCount']-1,(i-warm)/slow)) for i in range(count)]
+  bpy.ops.wm.read_factory_settings(use_empty=True);scene=bpy.context.scene
+  timeResolution=int(v20config.get('timeResolution',1)) if v20config and stage>1 else 1
+  timeScale=slow*timeResolution
+  rampFrames=ramp*timeResolution if stage>1 else ramp
+  scene.render.fps=spec['fps']*timeResolution;scene.gravity=(0,0,-9.81)
+  # Static settling and the contact transition retain their original duration.
+  # v0.20 increases solver evaluations per second without slowing the motion.
+  warm=24 if stage==1 else (24+ramp)*timeResolution
+  count=49 if stage==1 else warm+(spec['frameCount']-1)*timeScale+1;scene.frame_start=1;scene.frame_end=count
+  times=[-1 if stage==1 or label=='A' or i<warm-rampFrames else max(0,min(spec['frameCount']-1,(i-warm)/timeScale)) for i in range(count)]
   def frame_positions(item,idx,t):
    neutral=raw(item['staticPositions'])
    if t<0:return neutral
    a=int(t);b=min(spec['frameCount']-1,a+1);u=t-a
    va=[local(p,a) for p in raw(item['frames'][a])];vb=[local(p,b) for p in raw(item['frames'][b])]
    moving=[[x+(y-x)*u for x,y in zip(p,q)] for p,q in zip(va,vb)]
-   blend=max(0,min(1,(idx-(warm-ramp))/ramp));blend=blend*blend*(3-2*blend)
+   blend=max(0,min(1,(idx-(warm-rampFrames))/max(1,rampFrames)));blend=blend*blend*(3-2*blend)
    return [[a+(b-a)*blend for a,b in zip(p,q)] for p,q in zip(neutral,moving)]
   expected=[]
   for idx,t in enumerate(times):
@@ -357,7 +368,7 @@ for label,stage,slow,ramp,allowed in experiments:
   for row in expected:
    for j in range(len(row)):
     row[j]=[a+b-c for a,b,c in zip(row[j],initial[j],original[j])]
-  if v18config and not v18config.get('pinMotion',True):
+  if (v18config or v20config) and not (v18config or v20config).get('pinMotion',True):
    for row in expected:
     for j in wpins:row[j]=initial[j][:]
   cloth=object_mesh('MerchantRobeWelded',initial,faces)
@@ -374,7 +385,7 @@ for label,stage,slow,ramp,allowed in experiments:
   if variant=='waistband':
    band=cloth.vertex_groups.new(name='ConstructiveWaistband');band.add(wpins,1,'REPLACE');band.add(firstRing,.8,'REPLACE')
   colliders=[];collider_data=[];topologies={};items=spec['colliders']
-  if (v18config or v19config) and stage>1:items=[item for item in items if item['name']==(v19config or v18config)['collider']]
+  if (v18config or v19config or v20config) and stage>1:items=[item for item in items if item['name']==(v19config or v18config or v20config)['collider']]
   if method in ['continuous','fine']:
    items=[i for i in items if i['name']=='tunic']
    for side in ['L','R']:
@@ -387,7 +398,7 @@ for label,stage,slow,ramp,allowed in experiments:
   for item in items:
    if allowed is not None and item['name'] not in allowed:continue
    fs=[tuple(item['indices'][k:k+3]) for k in range(0,len(item['indices']),3)];frames=[frame_positions(item,idx,t) for idx,t in enumerate(times)]
-   if v18config and stage>1 and not v18config.get('colliderMotion',True):frames=[frames[0] for _ in frames]
+   if (v18config or v20config) and stage>1 and not (v18config or v20config).get('colliderMotion',True):frames=[frames[0] for _ in frames]
    sourceTopology=topology(frames[0],fs)
    if stage>1 and item['name']!='tunic' and not item.get('continuousProxy'):
     fs,convert,proxyTopology=outer_proxy(item);frames=[convert(v) for v in frames]
@@ -410,7 +421,7 @@ for label,stage,slow,ramp,allowed in experiments:
    if stage>1 and not (v19config and v19config['motionTransfer']=='rigid-only'):keys(ob,localFrames)
    if rigidTransforms is not None:apply_rigid_keys(ob,rigidTransforms)
    cm=ob.modifiers.new('Collision','COLLISION');cm.settings.thickness_outer=.003 if method=='fine' else .004;cm.settings.thickness_inner=.003 if method=='fine' else .004
-   friction=v17config.get('friction',v18config.get('friction',v19config.get('friction')))
+   friction=v17config.get('friction',v18config.get('friction',v19config.get('friction',v20config.get('friction'))))
    if friction is not None:cm.settings.cloth_friction=friction
    colliders.append(ob);collider_data.append((item['name'],frames,fs,ob,useWorld))
    topologies[item['name']]={'original':sourceTopology,'evaluatedProxy':proxyTopology,'outerThickness':.004,'innerThickness':.004}
@@ -428,7 +439,7 @@ for label,stage,slow,ramp,allowed in experiments:
    if hasattr(s,name):setattr(s,name,val)
   if variant=='waistband':
    s.vertex_group_structural_stiffness=band.name;s.tension_stiffness_max=55;s.compression_stiffness_max=55;s.shear_stiffness_max=30
-  c=mod.collision_settings;c.use_collision=True;c.distance_min=.004;c.collision_quality=10;c.use_self_collision=True;c.self_distance_min=v17config.get('selfDistance',v18config.get('selfDistance',v19config.get('selfDistance',.004)))
+  c=mod.collision_settings;c.use_collision=True;c.distance_min=.004;c.collision_quality=10;c.use_self_collision=True;c.self_distance_min=v17config.get('selfDistance',v18config.get('selfDistance',v19config.get('selfDistance',v20config.get('selfDistance',.004))))
   if variant=='friction':c.friction=3
   cache=mod.point_cache;cache.frame_start=1;cache.frame_end=count
   if hasattr(cache,'use_disk_cache'):cache.use_disk_cache=False
@@ -478,14 +489,14 @@ for label,stage,slow,ramp,allowed in experiments:
   # new non-seam intersections. Initial contacts are reported, not ignored.
   settled=[r for r in rows if r['frame']>= (warm+1 if stage==1 else 25)];initialPairs=sum(rows[0]['nonSeamTrianglePairs'].values())
   gates={'stretch':all(r['p95Stretch']<=1.15 and r['maxStretch']<=1.6 and not r['collapsedEdges'] for r in settled),'pin':all(r['pinErrorMetres']<=.006 for r in settled),'shape':all(.78<=r['hemRadiusRatio']<=1.22 and r['maxDeviationMetres']<=.15 for r in settled),'collision':all(sum(r['nonSeamTrianglePairs'].values())<=initialPairs and sum(r['nonSeamTrianglePairs'].values())<=10 for r in settled)}
-  if v17config or v18config or v19config:
+  if v17config or v18config or v19config or v20config:
    gates['zeroExternal']=all(sum(r['nonSeamTrianglePairs'].values())==0 for r in settled)
    gates['zeroSelf']=all(r.get('selfOverlapPairs',1)==0 for r in settled)
   gates['evaluatedColliderAgreement']=all(x['maxEvaluatedMismatchMetres']<=1e-5 for r in rows for x in r['colliderAudit'].values())
   results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'method':method,'variant':variant,'pinWeights':pinWeights,'transitionWidthMetres':max((min(math.dist(initial[j],initial[k]) for k in wpins) for j in firstRing),default=0),'totalMassKg':experimentMass,'vertexMassKg':vertexMass,'friction':c.friction,'quality':s.quality,'collisionThickness':c.distance_min,'frames':rows,'sampleFrames':len(samples)})
   (out/(('v15-cloth-' if v15 else 'v14-cloth-')+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'refinementMapping':mapping,'restPositions':initial,'faces':faces,'pinIndices':wpins,'pinWeights':pinWeights,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
-  status='diagnostic complete; production qualification not evaluated' if (v18config or v19config) and results[-1]['stage']==2 else ('passed' if results[-1]['stage']==3 and results[-1]['passed'] else 'blocked or incomplete at '+label)
-  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'diagnosticOnly':bool(v18config),'diagnosticConfig':v18config,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':status},indent=2))
+  status='diagnostic complete; production qualification not evaluated' if (v18config or v19config or v20config) and results[-1]['stage']==2 else ('passed' if results[-1]['stage']==3 and results[-1]['passed'] else 'blocked or incomplete at '+label)
+  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'preflight':preflight,'diagnosticOnly':bool(v18config or v19config or v20config),'diagnosticConfig':v20config or v19config or v18config,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':status},indent=2))
   print(json.dumps({'stage':stage,'gates':gates,'last':rows[-1]}),flush=True)
   if stage==3 and all(gates.values()):
    # The existing verified cache format remains available; no production cache
@@ -507,6 +518,9 @@ if v19config:
  transferReport={'version':'v0.19','diagnosticOnly':True,'productionAllowed':False,'mode':v19config['motionTransfer'],'friction':v19config.get('friction',5.0),'worldGeometry':{'frameCount':len(mismatches),'maxMismatchMetres':max(mismatches,default=0),'meanMismatchMetres':sum(mismatches)/max(1,len(mismatches)),'p95MismatchMetres':percentile(mismatches,.95) if mismatches else 0,'allFramesWithin1e-5':bool(mismatches) and max(mismatches)<=1e-5},'surfaceMotion':{'maxFrameSpeedMetresPerSecond':max(surfaceSpeeds,default=0)},'cloth':{'firstDefect':stage.get('firstDefect'),'gates':stage.get('gates'),'maxStretch':max((r.get('maxStretch',0) for r in stageFrames),default=0),'maxP95Stretch':max((r.get('p95Stretch',0) for r in stageFrames),default=0),'maxSelfPairs':max((r.get('selfOverlapPairs',0) for r in stageFrames),default=0),'maxExternalPairs':max((sum(r.get('nonSeamTrianglePairs',{}).values()) for r in stageFrames),default=0)},'decomposition':v19DecompositionReport}
  (out/'v19-motion-transfer.json').write_text(json.dumps(transferReport,indent=2))
  print(json.dumps({'diagnosticOnly':True,'mode':v19config['motionTransfer'],'worldGeometry':transferReport['worldGeometry'],'cloth':transferReport['cloth']}),flush=True)
+elif v20config:
+ if not (results and results[0]['passed'] and results[-1]['stage']==2 and not any(r.get('executionError') for r in results)):raise RuntimeError('v0.20 matched-duration time-resolution diagnostic did not complete; production remains blocked')
+ print(json.dumps({'diagnosticOnly':True,'timeResolution':v20config['timeResolution'],'stage2Passed':results[-1]['passed'],'gates':results[-1].get('gates')}),flush=True)
 elif v18config:
  if not (results and results[0]['passed'] and results[-1]['stage']==2 and not any(r.get('executionError') for r in results)):raise RuntimeError('Right-trouser diagnostic did not complete; production remains blocked')
  print(json.dumps({'diagnosticOnly':True,'name':v18config.get('name'),'stage2Passed':results[-1]['passed'],'gates':results[-1].get('gates')}),flush=True)

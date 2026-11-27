@@ -394,6 +394,22 @@ jobs:
             quality-artifacts/character-bridge/v19-trousers-R-*
             quality-artifacts/character-bridge/v19-motion-transfer-matrix.json
           if-no-files-found: warn
+      - name: v0.20 matched-duration 24/48/96 FPS cloth contact qualification
+        id: clothTimeResolutionV20
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          python3 -m py_compile tools/character-forge/cloth-motion-v20-run.py tools/character-forge/cloth-recovery-v11.py
+          node --check tools/character-forge/cloth-evidence-v12.mjs
+          python3 tools/character-forge/cloth-motion-v20-run.py
+      - name: Upload v0.20 time-resolution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-cloth-v20-time-resolution
+          path: |
+            quality-artifacts/character-bridge/v20-trousers-R-*
+            quality-artifacts/character-bridge/v20-time-resolution-matrix.json
+          if-no-files-found: warn
       - name: Enforce at least one full dynamic Remesh qualification before production
         id: remeshGate
         if: ${{ !cancelled() && env.BLENDER != '' }}
