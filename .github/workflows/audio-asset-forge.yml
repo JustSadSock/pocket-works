@@ -104,7 +104,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs tools/audio-forge/recorded-dynamics.test.mjs tools/audio-forge/recorded-performance.test.mjs tools/audio-forge/recorded-expression.test.mjs tools/audio-forge/recorded-phrasing.test.mjs tools/audio-forge/recorded-release.test.mjs tools/audio-forge/recorded-transients.test.mjs tools/audio-forge/recorded-ensemble.test.mjs tools/audio-forge/merge-recorded-libraries.test.mjs
+          # Isolate each test file; a stalled process must identify itself before the job timeout.
+          for suite in tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs tools/audio-forge/recorded-dynamics.test.mjs tools/audio-forge/recorded-performance.test.mjs tools/audio-forge/recorded-expression.test.mjs tools/audio-forge/recorded-phrasing.test.mjs tools/audio-forge/recorded-release.test.mjs tools/audio-forge/recorded-transients.test.mjs tools/audio-forge/recorded-ensemble.test.mjs tools/audio-forge/merge-recorded-libraries.test.mjs; do
+            echo "::group::Foundation suite: $suite"
+            status=0
+            timeout --signal=TERM --kill-after=5s 90s node --test --test-timeout=60000 "$suite" || status=$?
+            echo "::endgroup::"
+            if (( status != 0 )); then
+              echo "::error file=$suite::Foundation suite exited $status (124/137 indicate a process timeout)"
+              exit "$status"
+            fi
+          done
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -622,6 +632,25 @@ jobs:
           path: .audio-historical-expansion-ii/
           include-hidden-files: true
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve Market at Dusk originals and render balanced comparison
+        id: historical_mix
+        if: ${{ !cancelled() && steps.historical_expansion_ii.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-mix-lab.mjs --self-test
+          node tools/audio-forge/historical-mix-lab.mjs .audio-historical-expansion-ii .audio-historical-mix
+          test "$(find .audio-historical-mix -maxdepth 1 -name '*.wav' | wc -l)" -eq 7
+          test -s .audio-historical-mix/market-at-dusk-mix-AB.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_mix.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-mix-${{ github.run_id }}
+          path: .audio-historical-mix/
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 14
 
       - name: Merge verified recorded instrument libraries
