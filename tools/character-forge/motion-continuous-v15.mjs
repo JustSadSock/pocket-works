@@ -56,6 +56,70 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   }
   return v;
  }
+ // v16: cyclic projected contact solve. Use the same frozen contact labels
+ // and horizontal anchors as v15, including the troublesome phase 7/24.
+ // Endpoints share one periodic state; only the linear travel is added.
+ function cyclic(count){
+  const v=generate(count),n=count-1,legIds=['L','R'].flatMap(side=>['upperleg01','lowerleg01','foot'].map(name=>J(name+'.'+side).id));
+  const base=structuredClone(v),roots=[],trace=[];
+  const phaseCost=(q,o,t)=>{
+   let violation=0,loss=0;
+   for(const side of ['L','R']){
+    const a=actual(q,o,side),act=active(t,side);
+    const pen=Math.max(0,groundY-a.meshMin);
+    violation=Math.max(violation,pen/.003);loss+=(pen/.003)**2;
+    for(const k of act){
+     const target=anchors[Math.round(t*96)+':'+side+':'+k]??a[k],y=Math.abs(a[k+'Min']-groundY),h=Math.hypot(a[k][0]-target[0],a[k][2]-target[2]);
+     violation=Math.max(violation,y/.010,h/.005);loss+=(y/.010)**2+(h/.005)**2;
+    }
+   }
+   return {violation,loss};
+  };
+  const endpoint=(q,o)=>{
+   const a=phaseCost(q,o,0),b=phaseCost(q,add(o,[0,0,stride]),1);
+   return {violation:Math.max(a.violation,b.violation),loss:a.loss+b.loss};
+  };
+  const score=(c,reg=0)=>c.violation*4+c.loss+reg;
+  const closure=()=>{
+   v.rotations[n]=v.rotations[0].map(q=>q.slice());
+   v.offsets[n]=add(v.offsets[0],[0,0,stride]);
+  };
+  v.rotations[0]=v.rotations[0].map((q,k)=>slerp(q,v.rotations[n][k],.5));
+  v.offsets[0]=mul(add(v.offsets[0],sub(v.offsets[n],[0,0,stride])),.5);closure();
+  for(let sweep=0;sweep<3;sweep++){
+   const prev=structuredClone(v);
+   for(let i=0;i<n;i++){
+    const t=i/n,source=sample(baseline,t),left=(i+n-1)%n,right=(i+1)%n;
+    const q0=prev.rotations[i].map(x=>x.slice()),o0=prev.offsets[i].slice();
+    const weight=Math.min(i,n-i)<Math.ceil(n*.125)?.30:.10;
+    for(const id of legIds)q0[id]=slerp(q0[id],slerp(prev.rotations[left][id],prev.rotations[right][id],.5),weight);
+    const nearY=(prev.offsets[left][1]+prev.offsets[right][1])/2;
+    o0[1]=o0[1]*(1-weight)+nearY*weight;
+    let best={q:prev.rotations[i],o:prev.offsets[i]},cost=Infinity;
+    function consider(q,o){
+     const c=i===0?endpoint(q,o):phaseCost(q,o,t);
+     const smooth=legIds.reduce((s,id)=>s+(angle(q[id],prev.rotations[left][id])**2+angle(q[id],prev.rotations[right][id])**2),0)*.0002;
+     const vscore=score(c,smooth+Math.abs(o[1]-base.offsets[i][1])*8);
+     if(vscore<cost){cost=vscore;best={q:q.map(x=>x.slice()),o:o.slice()}}
+    }
+    consider(best.q,best.o);
+    // Search bounded pelvis height, then project both legs against real soles.
+    for(const dy of [0,-.008,.008,-.018,.018]){
+     const q=q0.map(x=>x.slice()),o=o0.slice();o[1]=clamp(o[1]+dy,base.offsets[i][1]-.045,base.offsets[i][1]+.045);
+     correct(q,o,t,source);consider(q,o);
+     if(i===0){
+      const qEnd=q0.map(x=>x.slice()),endO=add(o,[0,0,stride]);correct(qEnd,endO,1,sample(baseline,1));
+      consider(qEnd,o);consider(q.map((x,k)=>slerp(x,qEnd[k],.5)),o);
+     }
+    }
+    v.rotations[i]=best.q;v.offsets[i]=best.o;
+   }
+   closure();trace.push({sweep,endpoint:endpoint(v.rotations[0],v.offsets[0])});
+  }
+  const velocitySeam={rootMmPerSecond:dist(sub(v.offsets[1],v.offsets[0]),sub(v.offsets[n],v.offsets[n-1]))*n/ref.durationSeconds*1000,
+   maxJointAngularSpeedDifferenceDegreesPerSecond:Math.max(...v.rotations[0].map((q,k)=>Math.abs(angle(q,v.rotations[1][k])-angle(v.rotations[n-1][k],q))*n/ref.durationSeconds))};
+  return {...v,trace,velocitySeam};
+ }
  function readGLB(bin){
   const len=bin.readUInt32LE(12),d=JSON.parse(bin.subarray(20,20+len)),offset=28+len,clip=d.animations.find(a=>a.name==='walk');
   const acc=id=>{const a=d.accessors[id],view=d.bufferViews[a.bufferView],n=a.type==='SCALAR'?1:a.type==='VEC3'?3:4,base=offset+(view.byteOffset??0)+(a.byteOffset??0);return Array.from({length:a.count},(_,i)=>Array.from({length:n},(_,j)=>bin.readFloatLE(base+i*(view.byteStride??n*4)+4*j)))};
@@ -76,11 +140,14 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   return {keyCount:v.rotations.length,additionalAuditSamples:n+1,counts,max,loop,maxRootSpeedMetresPerSecond:maxRate,gate,rows};
  }
  const models={},reports={};
- for(const count of [25,49,97]){
-  const v=generate(count),c=structuredClone(m);c.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};c.spec.actions=['walk'];c.spec.walkDuration=ref.durationSeconds;c.spec.motionRevision='v9';
+ const variants=[25,49,97,'cyclic49','cyclic97'];
+ const cyclicDiagnostics={};
+ for(const count of variants){
+  const v=String(count).startsWith('cyclic')?cyclic(Number(String(count).slice(6))):generate(count),c=structuredClone(m);
+  if(v.trace)cyclicDiagnostics[count]={trace:v.trace,velocitySeam:v.velocitySeam};c.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};c.spec.actions=['walk'];c.spec.walkDuration=ref.durationSeconds;c.spec.motionRevision='v9';
   const bin=glb(c);write('v15-walk-'+count+'.glb',bin);json('v15-walk-'+count+'-spec.json',{spec:c.spec,sampledWalk:c.sampledWalk});reports[count]=audit(bin,c);models[count]=c;
  }
- const choose=Object.keys(reports).sort((a,b)=>{const score=r=>Math.max(r.max.drift/10,r.max.vertical/10,r.max.penetration/3,r.loop.rootResidualMm/10,r.loop.maxJointDegrees/10);return score(reports[a])-score(reports[b])||Number(a)-Number(b)})[0];
+ const choose=Object.keys(reports).sort((a,b)=>{const score=r=>Math.max(r.max.drift/10,r.max.vertical/10,r.max.penetration/3,r.loop.rootResidualMm/10,r.loop.maxJointDegrees/10);return score(reports[a])-score(reports[b])||reports[a].keyCount-reports[b].keyCount||a.localeCompare(b)})[0];
  const selected=models[choose];
  // Same camera for all densities, separate neutral anatomy and dressed.
  function frame(model,t,cycle=0,bodyOnly=false){const q=animation(model,'walk',t),o=add(rootOffset(model,'walk',t),[0,0,cycle*stride]),w=poseFrom(model,q).map(b=>({...b,p:add(b.p,o)}));const parts=(bodyOnly?skin.parts:model.parts).map(p=>{const x=structuredClone(p);x.positions=deform(model,p,w).flat();normals(x);return x});return {parts}}
@@ -93,6 +160,12 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   const loops=Array.from({length:73},(_,i)=>frame(selected,(i%24)/24,Math.floor(i/24))),dir='v15-loop-'+view;mkdirSync(join(out,dir),{recursive:true});const loopBounds=commonBounds(loops,view);for(let i=0;i<loops.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(loops[i],{view,bounds:loopBounds,size:640,mode:'B',groundLine:true}).png);
   if(sameRig){const rows=Array.from({length:25},(_,i)=>frame(selected,i/24,0,true)),dir='v15-anatomy-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<rows.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(rows[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
  }
+ const phaseAudit=[];
+ for(let i=Math.max(0,Math.floor(N*7/24)-2);i<=Math.min(N,Math.ceil(N*7/24)+2);i++){
+  const current=sourceMarks[i].L.toe,previous=sourceMarks[Math.max(0,i-1)].L.toe,next=sourceMarks[Math.min(N,i+1)].L.toe;
+  phaseAudit.push({phase:i/N,sourceToe:current,sourceHeel:sourceMarks[i].L.heel,sourceToeSpeed:dist(next,previous)/((Math.min(N,i+1)-Math.max(0,i-1))*ref.durationSeconds/N),classification:sourceSupport[i].L});
+ }
+ json('v16-motion-diagnostics.json',{phaseAudit,cyclicDiagnostics,classificationChanged:false,selected:choose,comparison:Object.fromEntries(Object.entries(reports).map(([k,r])=>[k,{max:r.max,loop:r.loop,gate:r.gate,phase29:r.rows[112]}]))});
  json('v15-continuous-report.json',{sourceSeam,retargetSeam:seam(author),verticalSeam:seam(vertical),baselineSeam:seam(baseline),reports,selected:choose,sourceRigMatches:sameRig,groundY,stride,duration:ref.durationSeconds,qualification:{contactGate:reports[choose].gate,artApproved:false},limits:['Uniform 25/49/97 keys solve the same constraints; 385 exact exported interpolated samples each.','Seam blend and correction measured independently. Actual loop frames reset clip plus accumulated intended stride.','Native comparison of deformed landmark points and minimum actual sole vertex; independent Blender evaluation separate.']});
  console.log(JSON.stringify({selected:choose,reports:Object.fromEntries(Object.entries(reports).map(([k,v])=>[k,{max:v.max,loop:v.loop,gate:v.gate}]))}));
 }
