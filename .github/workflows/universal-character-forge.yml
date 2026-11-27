@@ -248,6 +248,12 @@ jobs:
       - name: Render local cloth experiment evidence even after a rejected gate
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: CHARACTER_V15_CLOTH=1 node tools/character-forge/cloth-evidence-v12.mjs
+      - name: Isolated Remesh defect trajectory and one-factor physical matrix
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-coupon-v16.py'
+      - name: Render actual physical coupon onset and local self-collision strain
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: node tools/character-forge/cloth-coupon-render-v17.mjs
       - name: Upload isolated garment recovery evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -257,12 +263,6 @@ jobs:
             quality-artifacts/character-bridge/v17-cloth-*
             quality-artifacts/character-bridge/v16-cloth-coupon.json
           if-no-files-found: warn
-      - name: Isolated Remesh defect trajectory and one-factor physical matrix
-        if: ${{ !cancelled() && env.BLENDER != '' }}
-        run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-coupon-v16.py'
-      - name: Render actual physical coupon onset and local self-collision strain
-        if: ${{ !cancelled() && env.BLENDER != '' }}
-        run: node tools/character-forge/cloth-coupon-render-v17.mjs
       - name: Re-test selected physical factor on Remesh only after coupon qualification
         id: remesh17
         continue-on-error: true

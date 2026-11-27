@@ -265,8 +265,8 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
  function frame(model,t,cycle=0,bodyOnly=false){const q=animation(model,'walk',t),o=add(rootOffset(model,'walk',t),[0,0,cycle*stride]),w=poseFrom(model,q).map(b=>({...b,p:add(b.p,o)}));const parts=(bodyOnly?skin.parts:model.parts).map(p=>{const x=structuredClone(p);x.positions=deform(model,p,w).flat();normals(x);return x});return {parts}}
  const sameRig=skin.joints.length===m.joints.length&&skin.joints.every((j,i)=>j.name===m.joints[i].name&&dist(j.position,m.joints[i].position)<1e-6),renders={};
  for(const c of Object.keys(models))renders[c]=Array.from({length:25},(_,i)=>frame(models[c],i/24));
- const displayNames=['cyclic49','cyclic97','velocity49quarter','velocity49half','elbow49'],displayRenders=Object.fromEntries(Object.entries(renders).filter(([name])=>displayNames.includes(name)));
  renders.Original=native.map(row=>({parts:row.parts.map(p=>{const x={...p,positions:p.positions.map((v,k)=>k%3===2?(v-first[2])*scale:v*scale)};normals(x);return x})}));
+ const displayNames=['Original','cyclic49','cyclic97','velocity49quarter','velocity49half','elbow49'],displayRenders=Object.fromEntries(Object.entries(renders).filter(([name])=>displayNames.includes(name)));
  for(const view of ['front','side']){
   const bounds=commonBounds(Object.values(displayRenders).flat(),view);
   for(const [name,frames] of Object.entries(displayRenders)){const dir='v15-walk-'+name+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<frames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(frames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
