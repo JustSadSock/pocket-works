@@ -54,20 +54,27 @@ function curvedBand(m,tunic,name,t0,t1,color=[.40,.43,.43],offset=.032){
  for(const t of [t0,t1])for(let k=0;k<=N;k++){const a=panelAt(tunic,2,t,k),center=mix(tunic.pattern.sections[2].center,tunic.pattern.sections[3].center,t),n=radial(a.v,center),v=add(a.v,mul(n,offset+.004*Math.sin(k*tau/N)));push(p,v,a.ws)}
  grid(p,2,N+1);return finish(p,.006);
 }
+// Dura-Europos central-grip analogue and a separate medieval enarmes
+// arrangement. Geometry and all fittings belong to one rigid bone.
 function shield(m,roman){
- const wrist=J(m,'wrist.L'),fore=J(m,'lowerarm01.L'),curvature=roman?.105:.045,thick=.034,center=[wrist.position[0],wrist.position[1]-(roman?.045:.035),wrist.position[2]-curvature+thick+.02],w=roman?.245:.175,h=roman?.46:.29,N=16,R=20,ws=[[fore.id,.35],[wrist.id,.65]],p=addPart(m,roman?'curved Roman scutum':'heater shield',[.34,.075,.035],'leather','shield');
- const point=(u,v,back=false)=>{const shape=roman?(.96+.04*Math.cos(v*Math.PI/2)):(1-.27*Math.max(0,-v)),x=center[0]+u*w*shape,y=center[1]+v*h,z=center[2]+curvature*(1-u*u)+.012*Math.cos(v*Math.PI/2)-(back?thick:0);return [x,y,z]};
- for(const back of [false,true])for(let r=0;r<=R;r++)for(let c=0;c<=N;c++){const u=-1+2*c/N,v=-1+2*r/R;push(p,point(u,v,back),ws)}
- const stride=(R+1)*(N+1);
- for(let r=0;r<R;r++)for(let c=0;c<N;c++){let a=r*(N+1)+c,b=a+1,d=a+N+1,e=d+1;p.indices.push(a,b,e,a,e,d);let A=stride+a,B=stride+b,D=stride+d,E=stride+e;p.indices.push(A,E,B,A,D,E)}
- for(let r=0;r<R;r++)for(let c of [0,N]){let a=r*(N+1)+c,b=a+N+1;p.indices.push(a,b,stride+b,a,stride+b,stride+a)}
- for(let c=0;c<N;c++){let a=c,b=c+1;p.indices.push(a,stride+a,stride+b,a,stride+b,b);a=R*(N+1)+c;b=a+1;p.indices.push(a,b,stride+b,a,stride+b,stride+a)}
- finish(p,.003);
- const gripZ=center[2]+curvature-thick+.006,gripY=wrist.position[1],gripX=wrist.position[0];
- tube(m,roman?'scutum hand grip':'heater shield hand grip',[{p:[gripX,gripY-.085,gripZ],r:.015,ws:[[wrist.id,1]]},{p:[gripX,gripY+.085,gripZ],r:.015,ws:[[wrist.id,1]]}],[.16,.075,.035],'leather',10,.002);
- for(const t of [.28,.72]){const c=mix(fore.position,wrist.position,t),u=unit(sub(wrist.position,fore.position));tube(m,'shield forearm retaining strap '+t,[{p:add(c,mul(u,-.012)),r:.050,ws:[[fore.id,1-t],[wrist.id,t]]},{p:add(c,mul(u,.012)),r:.050,ws:[[fore.id,1-t],[wrist.id,t]]}],[.15,.08,.035],'leather',12,.002)}
- ellipsoid(m,roman?'scutum umbo':'heater shield boss',[center[0],center[1],center[2]+(roman?.105:.045)+.012],[roman?.055:.034,roman?.055:.034,.022],ws,[.48,.43,.31],'metal',6,12);
- m.attachments??=[];m.attachments.push({name:roman?'scutum grip':'heater shield grip',joint:'wrist.L',local:sub([gripX,gripY,gripZ],wrist.position),contactError:Math.hypot(...sub([gripX,gripY,gripZ],wrist.position))});
+ const wrist=J(m,'wrist.L'),fore=J(m,'lowerarm01.L'),digits=[2,3,4,5].map(n=>J(m,'finger'+n+'-1.L')),palm=digits.reduce((a,j)=>add(a,mul(j.position,.25)),[0,0,0]),barAxis=unit(sub(digits[3].position,digits[0].position)),along=unit(sub(palm,wrist.position)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],normal=unit(cross(barAxis,along));
+ // Place the handle across the actual palm, not at the wrist origin.
+ const grip=add(palm,mul(normal,.018)),anchor=roman?wrist:fore,ws=[[anchor.id,1]],curvature=roman?.105:.045,thick=roman?.012:.016,w=roman?.245:.175,h=roman?.46:.29,N=24,R=32,center=[grip[0],grip[1],grip[2]-curvature+thick+.045],p=addPart(m,roman?'curved Roman scutum':'heater shield',[.34,.075,.035],'leather','shield');
+ // Central hand clearance behind the Roman umbo. The medieval shield
+ // instead has a handle and one separate forearm enarme.
+ const point=(u,v,back=false)=>{const shape=roman?1:(1-.48*Math.max(0,-v)),x=center[0]+u*w*shape,y=center[1]+v*h,z=center[2]+curvature*(1-u*u)-(back?thick:0);return [x,y,z]};
+ for(const back of [false,true])for(let r=0;r<=R;r++)for(let c=0;c<=N;c++)push(p,point(-1+2*c/N,-1+2*r/R,back),ws);
+ const stride=(R+1)*(N+1),hole=(r,c)=>roman&&Math.abs((c+.5-N/2)*2*w/N)<.067&&Math.abs((r+.5-R/2)*2*h/R)<.057;
+ for(let r=0;r<R;r++)for(let c=0;c<N;c++){let a=r*(N+1)+c,b=a+1,d=a+N+1,e=d+1;if(hole(r,c))continue;p.indices.push(a,b,e,a,e,d);let A=stride+a,B=stride+b,D=stride+d,E=stride+e;p.indices.push(A,E,B,A,D,E);for(const [x,y,rr,cc] of [[a,b,r-1,c],[b,e,r,c+1],[e,d,r+1,c],[d,a,r,c-1]])if(rr<0||rr>=R||cc<0||cc>=N||hole(rr,cc))p.indices.push(x,y,stride+y,x,stride+y,stride+x)}
+ normals(p);
+ const ends=[add(grip,mul(barAxis,-.057)),add(grip,mul(barAxis,.057))];
+ tube(m,roman?'scutum horizontal central hand grip':'heater shield hand grip',ends.map(p=>({p,r:.012,ws})),[.21,.11,.05],'wood',12,.002);
+ if(!roman){const c=mix(fore.position,wrist.position,.35),u=unit(sub(wrist.position,fore.position));tube(m,'heater shield forearm enarme',[{p:add(c,mul(u,-.016)),r:.049,ws},{p:add(c,mul(u,.016)),r:.049,ws}],[.15,.08,.035],'leather',16,.004)}
+ ellipsoid(m,roman?'scutum umbo':'heater shield boss',[center[0],center[1],center[2]+curvature+.016],[roman?.085:.039,roman?.077:.039,roman?.065:.024],ws,[.48,.43,.31],'metal',8,20);
+ // Real finger-joint curl direction, derived from each phalanx and the
+ // palm plane. Grip distances are evaluated from posed vertices later.
+ m.gripPose={side:'L',anchor:anchor.name,handle:grip,axis:barAxis,radius:.012,palmNormal:normal,mode:roman?'central-grip':'enarmes'};
+ m.attachments??=[];m.attachments.push({name:roman?'scutum grip':'heater shield grip',joint:anchor.name,local:sub(grip,anchor.position),contactError:Math.hypot(...sub(grip,palm)),gripMethod:m.gripPose.mode,rigid:true,handleEnds:ends});
 }
 function bascinet(m){
  const h=J(m,'head'),head=m.parts[0],pts=[];
