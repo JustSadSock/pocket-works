@@ -103,6 +103,7 @@ try{
 }finally{library.close();}
 const bank=createRecordedInstrumentBank(zones);
 function write(file,a,channels=1){
+ mkdirSync(path.dirname(path.join(root,file)),{recursive:true});
  const b=Buffer.alloc(44+a.length*2);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(channels,22);b.writeUInt32LE(sr,24);b.writeUInt32LE(sr*channels*2,28);b.writeUInt16LE(channels*2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(a.length*2,40);
  let peak=0,e=0;for(let i=0;i<a.length;i++){const x=a[i];if(!Number.isFinite(x)||Math.abs(x)>=1)throw Error('Invalid audition '+file);peak=Math.max(peak,Math.abs(x));e+=x*x;b.writeInt16LE(Math.round(x*32767),44+i*2);}
  if(!peak)throw Error('Silent audition '+file);
@@ -115,8 +116,8 @@ for(const z of zones.filter(z=>z.instrument==='violin'&&z.articulation==='arco-v
 }
 const curve=[{at:0,value:.35},{at:.5,value:.85},{at:1,value:.35}];
 const notes=[69,72,69].map((midi,i)=>({midi,start:i*3,duration:3,articulation:'arco-vib',curve,morph:true,sustain:true,connected:i>0}));
-function render(name,notes,seconds,mode='morph'){
- const r=renderRecordedPerformance({zones,instrument:'violin',notes,seconds,mode});
+function render(name,notes,seconds,mode='morph',instrument='violin'){
+ const r=renderRecordedPerformance({zones,instrument,notes,seconds,mode});
  choices[name]=r.choices;return {samples:r.samples,metric:write(name+'.wav',r.samples)};
 }
 function ab(name,a,b){
@@ -142,4 +143,26 @@ render('violin-pizzicato',pizz,4);
 if(choices['violin-pizzicato'].map(c=>c.variants[0]).join(',')!=='1,2,1,2,1,2,1,2')throw Error('Pizzicato round robin missing');
 const study=[...notes,...trem.map(n=>({...n,start:n.start+9.3})),...pizz.map(n=>({...n,start:n.start+14.3}))];
 render('violin-articulation-suite',study,18.5);
-writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',sourceManifestSha256:sha(readFileSync(path.join(base,'metrics.json'))),coverage:bank.coverage(),zones:zones.map(({samples,...z})=>z),loopResults,choices,metrics,comparisons:[{file:'unified-dynamics-AB.wav',secondStarts:9.9,order:['discrete','morph']},{file:'unified-legato-AB.wav',secondStarts:9.9,order:['detached','connected']}]},null,2)+'\n');
+
+// Expression study uses the verified non-vibrato flute recordings so the
+// synthetic pitch contour is not layered over a source already tagged vibrato.
+const fluteExpressionNotes=[69,72,72,69,81,72,69,72].map((midi,i)=>({
+ midi,start:i*.65,duration:.50,pressure:.62,articulation:'non-vibrato'
+}));
+const fluteVibrato={vibrato:{depthCents:16,rateHz:5.1,delaySeconds:.10,fadeInSeconds:.14,releaseSeconds:.10}};
+const fluteOrnamented={...fluteVibrato,attackBend:{cents:-16,durationSeconds:.065}};
+const dryExpression=render('flute-expression-dry',fluteExpressionNotes,5.3,'morph','flute');
+const vibratoExpression=render('flute-expression-vibrato',fluteExpressionNotes.map(n=>({...n,expression:fluteVibrato})),5.3,'morph','flute');
+const ornamentedExpression=render('flute-expression-ornamented',fluteExpressionNotes.map(n=>({...n,expression:fluteOrnamented})),5.3,'morph','flute');
+if(dryExpression.samples.every((x,i)=>x===vibratoExpression.samples[i])||
+ vibratoExpression.samples.every((x,i)=>x===ornamentedExpression.samples[i])||
+ choices['flute-expression-ornamented'].some(x=>x.expression?.maxDeviationCents!==32))
+ throw Error('Recorded expression was not exercised');
+const expressionGap=Math.round(sr*.7),expressionTarget=Math.min(dryExpression.metric.rms,ornamentedExpression.metric.rms);
+const expressionAB=new Float32Array(dryExpression.samples.length*2+expressionGap);
+for(const [i,p] of [dryExpression,ornamentedExpression].entries()){
+ const gain=expressionTarget/p.metric.rms;
+ for(let j=0;j<p.samples.length;j++)expressionAB[(i?dryExpression.samples.length+expressionGap:0)+j]=p.samples[j]*gain;
+}
+write('expression/flute-expression-AB.wav',expressionAB);
+writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',sourceManifestSha256:sha(readFileSync(path.join(base,'metrics.json'))),coverage:bank.coverage(),zones:zones.map(({samples,...z})=>z),loopResults,choices,metrics,comparisons:[{file:'unified-dynamics-AB.wav',secondStarts:9.9,order:['discrete','morph']},{file:'unified-legato-AB.wav',secondStarts:9.9,order:['detached','connected']},{file:'expression/flute-expression-AB.wav',secondStarts:6.0,order:['dry','vibrato-plus-attack-bend'],levelMatched:true}]},null,2)+'\n');
