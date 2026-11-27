@@ -825,6 +825,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Compare score-aware historical orchestration and dynamic arc
+        id: historical_score_review
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical_score_review.py .audio-historical-score .audio-historical-score-review
+          test "$(find .audio-historical-score-review -maxdepth 1 -name '*.wav' | wc -l)" -eq 3
+          test -s .audio-historical-score-review/review.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_score_review.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-score-review-${{ github.run_id }}
+          path: .audio-historical-score-review/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
