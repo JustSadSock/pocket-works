@@ -974,6 +974,47 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Compose and qualify The Weight of a Crown from frozen direction
+        id: weight_of_crown
+        if: ${{ !cancelled() && steps.foundation_expansion.outcome == 'success' && steps.historical_score.outcome == 'success' && steps.victory_score.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/weight-of-crown.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/weight-of-crown.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-weight-of-crown
+          test "$(find .audio-weight-of-crown -maxdepth 1 -name '*.wav' | wc -l)" -eq 7
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib,wave
+          import numpy as np
+          p=pathlib.Path('.audio-weight-of-crown')
+          m=json.loads((p/'metrics.json').read_text())
+          s=m['score']
+          assert s['mode']=='E Phrygian' and s['totalTicks']==6336 and s['bars']==56
+          assert [x['meter'] for x in s['sections']]==[[5,4],[5,4],[3,4],[5,4],[5,4],[5,4]]
+          assert len(s['events'])>700 and m['sourceCount']>=15
+          assert m['approximateCrossfades']>100 and m['recordedIntervalCoverage']==0
+          assert m['pcmReconstructionError']==0 and m['monoPeak']<1 and m['stereoWidth']>0
+          def read(e):
+              f=p/e['file']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,8073600)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          master=read(m['metrics'][0]);acc=np.zeros_like(master)
+          for e in m['metrics'][1:]:acc+=read(e)
+          assert np.max(np.abs(acc-master))==0 and np.max(np.abs(master))<32768
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.weight_of_crown.outcome == 'success' }}
+        with:
+          name: sound-forge-weight-of-a-crown-${{ github.run_id }}
+          path: .audio-weight-of-crown/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
