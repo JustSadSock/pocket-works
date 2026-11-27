@@ -1,0 +1,209 @@
+name: Gameplay Receipt Renewal
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/gameplay-receipt-renewal.yml'
+      - 'scripts/ci-overhaul/gameplay-renewal*'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/gameplay-receipt-renewal.yml'
+      - 'scripts/ci-overhaul/**'
+      - 'apps/banners-of-war/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gameplay-renewal-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/gameplay-renewal.test.mjs
+  select:
+    needs: contract
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/gameplay-receipt-renewal')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      source: ${{ steps.freeze.outputs.source }}
+      identity: ${{ steps.freeze.outputs.identity }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Resolve approved same-repository app candidate
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RENEWAL_MAIN_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/pulls/1355" > "$RUNNER_TEMP/app-pr.json"
+          if [[ "$GITHUB_EVENT_NAME" == push || "$GITHUB_EVENT_NAME" == schedule ]]; then jq -e --arg main "$RENEWAL_MAIN_SHA" '.base.sha==$main' "$RUNNER_TEMP/app-pr.json" >/dev/null; fi
+          node scripts/ci-overhaul/gameplay-renewal.mjs select "$RUNNER_TEMP/app-pr.json" "$RUNNER_TEMP/selection.json"
+          source="$(jq -er '.source' "$RUNNER_TEMP/selection.json")"
+          if [[ "$(jq -er '.sourceRef' "$RUNNER_TEMP/selection.json")" == refs/pull/1355/merge ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/git/commits/$source" > "$RUNNER_TEMP/app-merge.json"
+            base="$(jq -er '.base.sha' "$RUNNER_TEMP/app-pr.json")"
+            head="$(jq -er '.head.sha' "$RUNNER_TEMP/app-pr.json")"
+            jq -e --arg source "$source" --arg base "$base" --arg head "$head" '.sha==$source and (.parents|length)==2 and .parents[0].sha==$base and .parents[1].sha==$head' "$RUNNER_TEMP/app-merge.json" >/dev/null
+          fi
+          echo "source=$source" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.source }}
+          path: audit-source
+          persist-credentials: false
+      - name: Freeze exact source commit and tree
+        id: freeze
+        run: |
+          set -euo pipefail
+          source="$(jq -er '.source' "$RUNNER_TEMP/selection.json")"
+          test "$(git -C audit-source rev-parse HEAD)" = "$source"
+          test -f audit-source/apps/banners-of-war/qa.plan.json
+          tree="$(git -C audit-source rev-parse HEAD^{tree})"
+          echo "source=$source" >> "$GITHUB_OUTPUT"
+          echo "identity=$(jq -c --arg tree "$tree" '.+{sourceTree:$tree}' "$RUNNER_TEMP/selection.json")" >> "$GITHUB_OUTPUT"
+  execute:
+    needs: select
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    env:
+      SHARD: ${{ matrix.shard }}
+      IDENTITY: ${{ needs.select.outputs.identity }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.select.outputs.source }}
+          path: audit-source
+          persist-credentials: false
+      - name: Execute fresh gameplay and performance in offline pinned container
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RENEWAL_SOURCE_JSON="$RUNNER_TEMP/source.json"
+          printf '%s\n' "$IDENTITY" > "$RENEWAL_SOURCE_JSON"
+          source scripts/ci-overhaul/gameplay-renewal-offline.sh
+          prepare_gameplay source
+          run_gameplay_phase gameplay
+          run_gameplay_phase performance
+          verify_gameplay_mounts
+          node "$tool" issue "$RENEWAL_SOURCE_JSON" "$out" "$RUNNER_TEMP/receipt.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renewal-bundle-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/gameplay-output-source/
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renewal-receipt-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/receipt.json
+          if-no-files-found: error
+          retention-days: 7
+  catalog:
+    needs: [select, execute]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    env:
+      IDENTITY: ${{ needs.select.outputs.identity }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: renewal-bundle-${{ github.run_attempt }}-*
+          path: bundles
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: renewal-receipt-${{ github.run_attempt }}-*
+          path: receipts
+      - name: Reconstruct all receipts from original records and validate full coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$IDENTITY" > source.json
+          mkdir matrix publish
+          for shard in {0..7}; do
+            mkdir "matrix/$shard"
+            mv "bundles/renewal-bundle-$GITHUB_RUN_ATTEMPT-$shard" "matrix/$shard/bundle"
+            cp "receipts/renewal-receipt-$GITHUB_RUN_ATTEMPT-$shard/receipt.json" "matrix/$shard/receipt.json"
+            cp "matrix/$shard/receipt.json" "publish/receipt-$shard.json"
+          done
+          test -z "$(ls -A bundles)"
+          node scripts/ci-overhaul/gameplay-renewal.mjs catalog source.json matrix publish/catalog.json
+          cat publish/catalog.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renewal-catalog-unsigned-${{ github.run_attempt }}
+          path: publish/
+          if-no-files-found: error
+          retention-days: 7
+  attest:
+    needs: catalog
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: renewal-catalog-unsigned-${{ github.run_attempt }}
+          path: publish
+      - name: Require exactly eight receipts and catalog
+        run: |
+          set -euo pipefail
+          test "$(find publish -maxdepth 1 -type f | wc -l)" -eq 9
+          for shard in {0..7}; do test -f "publish/receipt-$shard.json"; done
+          test -f publish/catalog.json
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            publish/receipt-*.json
+            publish/catalog.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renewal-signed-catalog-${{ github.run_attempt }}
+          path: publish/
+          if-no-files-found: error
+          retention-days: 7

@@ -1,6 +1,6 @@
 // Execute exactly one task emitted by plan.mjs. Shell expansion is never used.
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT, loadSuites, resolveTasks, safeApp } from './plan.mjs';
@@ -91,6 +91,7 @@ async function main() {
     const [binary, args] = jobArgs(task, suite, output);
     const run = await execute(binary, args, { output, task, timeoutMs: suite.kind === 'node' ? 2_100_000 : 1_200_000 });
     Object.assign(result, run);
+    if(existsSync(join(output,'verified-split-contract.json')))result.verificationMode='verified-split-shadow';
   } catch (error) {
     result.error = error?.stack || String(error);
     console.error(result.error);
