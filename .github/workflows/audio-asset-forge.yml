@@ -991,7 +991,7 @@ jobs:
           p=pathlib.Path('.audio-weight-of-crown')
           m=json.loads((p/'metrics.json').read_text())
           s=m['score']
-          assert s['mode']=='E Phrygian' and s['totalTicks']==6336 and s['bars']==56
+          assert s['mode']=='E Phrygian' and s['directionBrief']=='the-weight-of-a-crown-v2' and s['totalTicks']==6336 and s['bars']==56
           assert [x['meter'] for x in s['sections']]==[[5,4],[5,4],[3,4],[5,4],[5,4],[5,4]]
           assert len(s['events'])>700 and m['sourceCount']>=15
           assert m['approximateCrossfades']>100 and m['recordedIntervalCoverage']==0
