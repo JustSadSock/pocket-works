@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs tools/audio-forge/recorded-dynamics.test.mjs tools/audio-forge/recorded-performance.test.mjs tools/audio-forge/recorded-transients.test.mjs tools/audio-forge/recorded-ensemble.test.mjs tools/audio-forge/merge-recorded-libraries.test.mjs
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs tools/audio-forge/recorded-dynamics.test.mjs tools/audio-forge/recorded-performance.test.mjs tools/audio-forge/recorded-expression.test.mjs tools/audio-forge/recorded-transients.test.mjs tools/audio-forge/recorded-ensemble.test.mjs tools/audio-forge/merge-recorded-libraries.test.mjs
           rm -rf .audio-forge-foundation
           mkdir -p .audio-forge-foundation
           node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
@@ -465,6 +465,9 @@ jobs:
           test "$(find .audio-recorded-performance/sources -name '*.wav' | wc -l)" -eq 8
           test "$(find .audio-recorded-performance -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
           test -s .audio-recorded-performance/violin-articulation-suite.wav
+          test "$(find .audio-recorded-performance/expression -maxdepth 1 -name '*.wav' | wc -l)" -eq 4
+          test -s .audio-recorded-performance/expression/flute-expression-AB.wav
+          test -s .audio-recorded-performance/expression/flute-expression-ornamented.wav
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.recorded_performance.outcome == 'success' }}
         with:
