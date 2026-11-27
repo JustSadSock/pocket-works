@@ -44,7 +44,7 @@ test('rejects orphaned, discontinuous, overlapping and malformed phrase definiti
  assert.throws(()=>validateRecordedGestures([{id:'a',start:0,end:1,curve},{id:'b',start:.9,end:2,curve}],2));
  assert.throws(()=>validateRecordedGestures([{id:'a',start:0,end:1,curve:[{at:0,value:.2},{at:1,value:1}]}],2));
  assert.throws(()=>compileRecordedPhrasing([phrase],[notes[0]],3),/at least two/);
- assert.throws(()=>compileRecordedPhrasing([phrase],[notes[0],{...notes[2],start:1.6}],3),/range/);
+ assert.throws(()=>compileRecordedPhrasing([phrase],[notes[0],notes[1]],3),/range/);
  assert.throws(()=>compileRecordedPhrasing([phrase],[notes[0],notes[1],{...notes[2],phraseId:'other'}],3),/range|reference/);
  assert.throws(()=>compileRecordedPhrasing([phrase],notes.map((n,i)=>i===2?{...n,phraseId:'missing'}:n),3),/reference/);
 });
