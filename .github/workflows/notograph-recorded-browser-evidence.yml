@@ -1,0 +1,75 @@
+name: Notograph Recorded and Browser Evidence
+on:
+  pull_request:
+    paths: ['tools/notograph-neural-lab/recorded-audition.mjs','tools/notograph-neural-lab/browser-evidence.mjs','.github/workflows/notograph-recorded-browser-evidence.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recorded-forge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 01309b997b56e57106838576d3399e42e072ce85
+          path: notograph-source
+      - uses: actions/checkout@v4
+        with:
+          ref: 8dec420c7df00f87764ca88e28402a947083cd57
+          path: forge-source
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: notograph-neural-evidence
+          run-id: 45929675096
+          github-token: ${{ github.token }}
+          path: original
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-recorded-dynamics-45929695956
+          run-id: 45929695956
+          github-token: ${{ github.token }}
+          path: recorded-bank
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+      - run: node tools/notograph-neural-lab/recorded-audition.mjs notograph-source/apps/notograph forge-source recorded-bank original/evidence/separated/notograph.json recorded-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: notograph-recorded-audition
+          path: recorded-evidence/
+  browser-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 01309b997b56e57106838576d3399e42e072ce85
+          path: notograph-source
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: notograph-neural-evidence
+          run-id: 45929675096
+          github-token: ${{ github.token }}
+          path: original
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/notograph-browser" --no-save --no-package-lock playwright@1.55.0
+          "$RUNNER_TEMP/notograph-browser/node_modules/.bin/playwright" install --with-deps ${{ matrix.engine }}
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/notograph-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - run: node tools/notograph-neural-lab/browser-evidence.mjs notograph-source/apps/notograph original/evidence/mix.wav browser-evidence ${{ matrix.engine }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: notograph-browser-${{ matrix.engine }}
+          path: browser-evidence/

@@ -1,0 +1,52 @@
+name: Notograph Neural Evidence
+on:
+  pull_request:
+    paths: ['tools/notograph-neural-lab/**', '.github/workflows/notograph-neural-evidence.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  model-and-forge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 1aef9f83385f530a07081d1a74ea828f9c7f61bc
+          path: notograph-source
+      - uses: actions/checkout@v4
+        with:
+          ref: f4a0f497f706d6072e985c93e6e918eec9d88ded
+          path: forge-source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install audio runtime and model dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fluidsynth fluid-soundfont-gm sox libsox-fmt-all
+          python -m pip install 'numpy<2' 'torch==2.5.1' 'torchaudio==2.5.1' --extra-index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'demucs==4.0.1' 'basic-pitch[onnx]==0.4.0' 'numpy<2'
+          python -m pip freeze > model-dependencies.txt
+      - name: Run measured model and Forge benchmark
+        env:
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+        run: |
+          sf2=$(find /usr/share/sounds -name '*.sf2' | head -n1)
+          test -n "$sf2"
+          export AUDIO_FORGE_SOUNDFONT="$sf2"
+          python tools/notograph-neural-lab/benchmark.py notograph-source/apps/notograph forge-source evidence "$sf2"
+      - name: Upload evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notograph-neural-evidence
+          path: |
+            evidence/
+            model-dependencies.txt
+          if-no-files-found: warn
