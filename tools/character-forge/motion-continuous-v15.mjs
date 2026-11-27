@@ -265,14 +265,16 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
  function frame(model,t,cycle=0,bodyOnly=false){const q=animation(model,'walk',t),o=add(rootOffset(model,'walk',t),[0,0,cycle*stride]),w=poseFrom(model,q).map(b=>({...b,p:add(b.p,o)}));const parts=(bodyOnly?skin.parts:model.parts).map(p=>{const x=structuredClone(p);x.positions=deform(model,p,w).flat();normals(x);return x});return {parts}}
  const sameRig=skin.joints.length===m.joints.length&&skin.joints.every((j,i)=>j.name===m.joints[i].name&&dist(j.position,m.joints[i].position)<1e-6),renders={};
  for(const c of Object.keys(models))renders[c]=Array.from({length:25},(_,i)=>frame(models[c],i/24));
+ const displayNames=['cyclic49','cyclic97','velocity49quarter','velocity49half','elbow49'],displayRenders=Object.fromEntries(Object.entries(renders).filter(([name])=>displayNames.includes(name)));
  renders.Original=native.map(row=>({parts:row.parts.map(p=>{const x={...p,positions:p.positions.map((v,k)=>k%3===2?(v-first[2])*scale:v*scale)};normals(x);return x})}));
  for(const view of ['front','side']){
-  const bounds=commonBounds(Object.values(renders).flat(),view);
-  for(const [name,frames] of Object.entries(renders)){const dir='v15-walk-'+name+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<frames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(frames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
-  const loops=Array.from({length:73},(_,i)=>frame(selected,(i%24)/24,Math.floor(i/24))),dir='v15-loop-'+view;mkdirSync(join(out,dir),{recursive:true});const loopBounds=commonBounds(loops,view);for(let i=0;i<loops.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(loops[i],{view,bounds:loopBounds,size:640,mode:'B',groundLine:true}).png);
-  for(const label of ['cyclic49','velocity49quarter','velocity49half','velocity49','elbow49']){
-   const loopFrames=Array.from({length:73},(_,i)=>frame(models[label],(i%24)/24,Math.floor(i/24))),loopDir='v17-loop-'+label+'-'+view;mkdirSync(join(out,loopDir),{recursive:true});const lb=commonBounds(loopFrames,view);for(let i=0;i<loopFrames.length;i++)write(loopDir+'/'+String(i).padStart(2,'0')+'.png',raster(loopFrames[i],{view,bounds:lb,size:640,mode:'B',groundLine:true}).png);
-   if(sameRig){const bodyFrames=Array.from({length:25},(_,i)=>frame(models[label],i/24,0,true)),dir='v17-anatomy-'+label+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<bodyFrames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(bodyFrames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
+  const bounds=commonBounds(Object.values(displayRenders).flat(),view);
+  for(const [name,frames] of Object.entries(displayRenders)){const dir='v15-walk-'+name+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<frames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(frames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
+  const loops=Array.from({length:73},(_,i)=>frame(selected,(i%24)/24,Math.floor(i/24))),dir='v15-loop-'+view;mkdirSync(join(out,dir),{recursive:true});const loopBounds=commonBounds(loops,view);for(let i=0;i<loops.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(loops[i],{view,bounds:loopBounds,size:512,mode:'B',groundLine:true}).png);
+  const loopLabels=[...new Set(['cyclic49','velocity49quarter',choose,'elbow49'])].filter(label=>models[label]);
+  for(const label of loopLabels){
+   const loopFrames=Array.from({length:73},(_,i)=>frame(models[label],(i%24)/24,Math.floor(i/24))),loopDir='v17-loop-'+label+'-'+view;mkdirSync(join(out,loopDir),{recursive:true});const lb=commonBounds(loopFrames,view);for(let i=0;i<loopFrames.length;i++)write(loopDir+'/'+String(i).padStart(2,'0')+'.png',raster(loopFrames[i],{view,bounds:lb,size:512,mode:'B',groundLine:true}).png);
+   if(sameRig&&loopLabels.includes(label)){const bodyFrames=Array.from({length:25},(_,i)=>frame(models[label],i/24,0,true)),dir='v17-anatomy-'+label+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<bodyFrames.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(bodyFrames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
   }
   if(sameRig){const rows=Array.from({length:25},(_,i)=>frame(selected,i/24,0,true)),dir='v15-anatomy-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<rows.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(rows[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}
  }

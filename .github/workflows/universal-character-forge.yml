@@ -136,7 +136,7 @@ jobs:
     needs: [core, morph-source]
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash
@@ -231,6 +231,15 @@ jobs:
       - name: Independent local index geometry audit
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/hand-surface-audit-v17.py'
+      - name: Upload local anatomical surface evidence immediately
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-hand-v17
+          path: |
+            quality-artifacts/character-bridge/v17-hand-*
+            quality-artifacts/character-bridge/v17-index-*
+          if-no-files-found: warn
       - name: Required gated physical garment reference and remesh recovery
         id: recovery
         continue-on-error: true
@@ -239,6 +248,15 @@ jobs:
       - name: Render local cloth experiment evidence even after a rejected gate
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: CHARACTER_V15_CLOTH=1 node tools/character-forge/cloth-evidence-v12.mjs
+      - name: Upload isolated garment recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-cloth-v17
+          path: |
+            quality-artifacts/character-bridge/v17-cloth-*
+            quality-artifacts/character-bridge/v16-cloth-coupon.json
+          if-no-files-found: warn
       - name: Isolated Remesh defect trajectory and one-factor physical matrix
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-coupon-v16.py'
@@ -362,23 +380,37 @@ jobs:
         run: |
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v10-reference-trajectory.json"))["durationSeconds"])')
           for view in side front; do
-            for variant in Original 25 49 97 cyclic49 cyclic97 cyclic49Upper velocity49quarter velocity49half velocity49 elbow49; do
+            for variant in Original cyclic49 cyclic97 velocity49quarter velocity49half elbow49; do
               ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-walk-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-$variant-$view-1x.mp4"
             done
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-25-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-97-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-1x.mp4"
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-1x.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-walk-comparison-$view-05x.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic97-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-velocity49quarter-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v17-walk-comparison-$view.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v17-walk-comparison-$view.mp4" -vf setpts=2*PTS -r 30 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v17-walk-comparison-$view-05x.mp4"
             ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-loop-$view/%02d.png" -frames:v 72 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-loop-$view.mp4"
             if [ -d "$CHARACTER_EVIDENCE/v15-anatomy-$view" ]; then
               ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v15-anatomy-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v15-anatomy-$view.mp4"
             fi
-            ffmpeg -hide_banner -loglevel error -y -i "$CHARACTER_EVIDENCE/v15-walk-Original-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49-$view-1x.mp4" -i "$CHARACTER_EVIDENCE/v15-walk-cyclic49Upper-$view-1x.mp4" -filter_complex hstack=inputs=4 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v16-walk-cyclic-comparison-$view.mp4"
-            for variant in cyclic49 velocity49quarter velocity49half velocity49 elbow49; do
-              ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v17-loop-$variant-$view/%02d.png" -frames:v 72 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v17-loop-$variant-$view.mp4"
+            selected=$(python3 -c 'import json,os;print(json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v17-motion-diagnostics.json"))["productionSelection"]["selected"])')
+            for variant in cyclic49 velocity49quarter "$selected" elbow49; do
+              if [ -d "$CHARACTER_EVIDENCE/v17-loop-$variant-$view" ]; then
+                ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v17-loop-$variant-$view/%02d.png" -frames:v 72 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v17-loop-$variant-$view.mp4"
+              fi
               if [ -d "$CHARACTER_EVIDENCE/v17-anatomy-$variant-$view" ]; then
                 ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v17-anatomy-$variant-$view/%02d.png" -frames:v 24 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v17-anatomy-$variant-$view.mp4"
               fi
             done
           done
+      - name: Upload continuous motion evidence immediately
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-motion-v17
+          path: |
+            quality-artifacts/character-bridge/v17-motion-diagnostics.json
+            quality-artifacts/character-bridge/v15-continuous-report.json
+            quality-artifacts/character-bridge/v15-motion-independent.json
+            quality-artifacts/character-bridge/v17-loop-*.mp4
+            quality-artifacts/character-bridge/v17-walk-comparison-*.mp4
+          if-no-files-found: warn
       - name: Enforce continuous exported contact qualification
         if: ${{ !cancelled() }}
         run: |
