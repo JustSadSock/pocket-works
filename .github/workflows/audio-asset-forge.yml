@@ -903,6 +903,42 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Render original recorded-instrument victory anthem
+        id: victory_score
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/victory_score.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-victory-score
+          test "$(find .audio-victory-score -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib,wave
+          import numpy as np
+          p=pathlib.Path('.audio-victory-score')
+          m=json.loads((p/'metrics.json').read_text())
+          assert m['score']['bars']==48 and len(m['receipts'])==1074
+          assert m['sourceCount']==32 and m['recordedIntervalCoverage']==0
+          def read(e):
+              f=p/e['file']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,5312000)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          master=read(m['metrics'][0]); acc=np.zeros_like(master)
+          for e in m['metrics'][1:]: acc+=read(e)
+          assert np.max(np.abs(acc-master))<=3 and np.max(np.abs(master))<32767
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.victory_score.outcome == 'success' }}
+        with:
+          name: sound-forge-victory-score-${{ github.run_id }}
+          path: .audio-victory-score/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
