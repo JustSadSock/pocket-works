@@ -186,7 +186,7 @@ const violinPhrase=[{id:'bow-line',technique:'bowed',start:0,end:2,curve:phraseC
 const flutePhrase=[{id:'breath-line',technique:'breath',start:0,end:2,curve:phraseCurve}];
 const dryNotes=items=>items.map(({phraseId,reattack,...n})=>n);
 function renderPhrase(name,instrument,items,phrases){
- const result=renderRecordedPerformance({zones,instrument,notes:items,seconds:2.2,phrases});
+ const result=renderRecordedPerformance({zones,instrument,notes:items,seconds:2.0,phrases});
  choices[name]=result.choices;
  return {samples:result.samples,metric:write('phrasing/'+name+'.wav',result.samples)};
 }
@@ -213,8 +213,8 @@ const ensembleTracks=[
  {id:'breath-woodwind',instrument:'flute',group:'woodwind',pan:.34,gain:.46,phrasingTechnique:'breath',notes:fluteLine.map(n=>({...n,phraseId:'ensemble-line'}))}
 ];
 const ensembleDryTracks=ensembleTracks.map(t=>({...t,phrasingTechnique:undefined,notes:dryNotes(t.notes)}));
-const ensembleDry=renderRecordedEnsemble({zones,tracks:ensembleDryTracks,seconds:2.2,includeTrackStems:true});
-const ensemblePhrased=renderRecordedEnsemble({zones,tracks:ensembleTracks,seconds:2.2,gestures:sharedGesture,includeTrackStems:true});
+const ensembleDry=renderRecordedEnsemble({zones,tracks:ensembleDryTracks,seconds:2.0,includeTrackStems:true});
+const ensemblePhrased=renderRecordedEnsemble({zones,tracks:ensembleTracks,seconds:2.0,gestures:sharedGesture,includeTrackStems:true});
 const ensembleDryMetric=write('phrasing/ensemble-phrase-dry.wav',ensembleDry.mix,2);
 const ensemblePhraseMetric=write('phrasing/ensemble-phrase-expressive.wav',ensemblePhrased.mix,2);
 write('phrasing/ensemble-phrase-strings.wav',ensemblePhrased.stems.strings,2);
@@ -228,4 +228,4 @@ if(ensemblePhrased.gestureReceipts.length!==1||
  ensemblePhrased.choices['bowed-strings'][2].reattack?.kind!=='bow-change'||
  ensemblePhrased.choices['breath-woodwind'][2].reattack?.kind!=='breath')
  throw Error('Shared bow/breath ensemble gesture was not exercised');
-writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',sourceManifestSha256:sha(readFileSync(path.join(base,'metrics.json'))),coverage:bank.coverage(),zones:zones.map(({samples,...z})=>z),loopResults,choices,metrics,comparisons:[{file:'unified-dynamics-AB.wav',secondStarts:9.9,order:['discrete','morph']},{file:'unified-legato-AB.wav',secondStarts:9.9,order:['detached','connected']},{file:'expression/flute-expression-AB.wav',secondStarts:6.0,order:['dry','vibrato-plus-attack-bend'],levelMatched:true},{file:'phrasing/violin-bow-phrase-AB.wav',secondStarts:2.7,order:['dry','continuous-bow-phrase'],levelMatched:true},{file:'phrasing/flute-breath-phrase-AB.wav',secondStarts:2.7,order:['dry','continuous-breath-phrase'],levelMatched:true},{file:'phrasing/ensemble-phrase-AB.wav',secondStarts:2.7,order:['dry','shared-bow-breath-gesture'],levelMatched:true}],phraseReceipts:ensemblePhrased.gestureReceipts},null,2)+'\n');
+writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',sourceManifestSha256:sha(readFileSync(path.join(base,'metrics.json'))),coverage:bank.coverage(),zones:zones.map(({samples,...z})=>z),loopResults,choices,metrics,comparisons:[{file:'unified-dynamics-AB.wav',secondStarts:9.9,order:['discrete','morph']},{file:'unified-legato-AB.wav',secondStarts:9.9,order:['detached','connected']},{file:'expression/flute-expression-AB.wav',secondStarts:6.0,order:['dry','vibrato-plus-attack-bend'],levelMatched:true},{file:'phrasing/violin-bow-phrase-AB.wav',secondStarts:2.7,order:['dry','continuous-bow-phrase'],levelMatched:true},{file:'phrasing/flute-breath-phrase-AB.wav',secondStarts:2.7,order:['dry','continuous-breath-phrase'],levelMatched:true},{file:'phrasing/ensemble-phrase-AB.wav',secondStarts:2.7,order:['dry','shared-bow-breath-gesture'],levelMatched:true}],phraseReceipts:ensemblePhrased.gestureReceipts,ensembleChoices:ensemblePhrased.choices},null,2)+'\n');
