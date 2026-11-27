@@ -681,6 +681,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Recover psaltery harmonic roots and render Cloister Procession
+        id: psaltery_harmonics
+        if: ${{ !cancelled() && steps.historical_pitch.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/psaltery-harmonics"
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" -m pip install --disable-pip-version-check numpy==2.2.6
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/psaltery-harmonics.py .audio-historical-pitch .audio-psaltery-harmonics
+          test "$(find .audio-psaltery-harmonics/library/objects -name '*.wav' | wc -l)" -eq 46
+          test "$(find .audio-psaltery-harmonics -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' }}
+        with:
+          name: sound-forge-psaltery-harmonics-${{ github.run_id }}
+          path: .audio-psaltery-harmonics/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'failure' }}
+        with:
+          name: sound-forge-psaltery-harmonics-rejected-${{ github.run_id }}
+          path: .audio-psaltery-harmonics/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
