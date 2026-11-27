@@ -27,6 +27,7 @@ function oldDiagnostics(source,kit){
 const legacy=dress(base,{...opt,surfaceRevision:4}),candidate=dress(base,{...opt,surfaceRevision:6});
 const outer=candidate.parts.find(p=>p.name==='tunic'),belt=candidate.parts.find(p=>p.name==='waist belt');
 assertTailoredSections(outer.pattern.sections,'tunic',oldDiagnostics(base,'tunic').H);
+if(process.env.CHARACTER_V11_FOCUS==='1'){json('v6-citizen.model.json',candidate);console.log('v6 fixture regenerated without art rendering');process.exit(0)}
 const rest=m=>m.joints.map(()=>[0,0,0,1]),view='three-quarter';
 const bounds=preview(legacy,{view,rotations:rest(legacy)}).bounds,b=preview(candidate,{view,rotations:rest(candidate)}).bounds;
 const fixedBounds=[Math.min(bounds[0],b[0]),Math.max(bounds[1],b[1]),Math.min(bounds[2],b[2]),Math.max(bounds[3],b[3])];
