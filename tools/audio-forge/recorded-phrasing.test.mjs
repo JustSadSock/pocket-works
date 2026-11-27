@@ -26,8 +26,8 @@ test('bow changes and breath rearticulations have distinct bounded envelopes',()
  const p=compileRecordedPhrasing([phrase],notes,3).get('line');
  const bow=compileRecordedReattack(notes[2],notes[1],p);
  assert.equal(bow.gainAt(0),1);
- assert.ok(Math.abs(bow.gainAt(.05)-.72)<1e-12);
- assert.equal(bow.gainAt(.1),1);
+ assert.ok(Math.abs(bow.gainAt(.0375)-.72)<1e-12);
+ assert.equal(bow.gainAt(.075),1);
  assert.equal(bow.metadata.sourceOffsetFrames,0);
  const windPhrase={...phrase,technique:'breath'};
  const windNotes=notes.map(n=>({...n,reattack:undefined}));
