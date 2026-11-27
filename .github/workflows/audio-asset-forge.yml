@@ -540,6 +540,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Qualify historical instrument bank and render Lantern Road
+        id: historical_expansion
+        if: ${{ !cancelled() && steps.dedicated_release.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-expansion-lab.mjs --self-test
+          node tools/audio-forge/historical-expansion-lab.mjs .audio-historical-expansion .audio-dedicated-release
+          test "$(find .audio-historical-expansion/sources -name '*.wav' | wc -l)" -eq 17
+          test "$(find .audio-historical-expansion -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+          test -s .audio-historical-expansion/lantern-road.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-expansion-${{ github.run_id }}
+          path: .audio-historical-expansion/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-rejected-${{ github.run_id }}
+          path: .audio-historical-expansion/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
