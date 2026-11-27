@@ -653,6 +653,34 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Investigate psaltery and Renaissance organ pitch admission
+        id: historical_pitch
+        if: ${{ !cancelled() && steps.historical_mix.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-pitch-lab.mjs --self-test
+          node tools/audio-forge/historical-pitch-lab.mjs .audio-historical-pitch .audio-historical-expansion-ii
+          test "$(find .audio-historical-pitch/sources -name '*.wav' | wc -l)" -eq 18
+          test "$(find .audio-historical-pitch -maxdepth 1 -name '*-native-probe.wav' | wc -l)" -eq 6
+          test -s .audio-historical-pitch/library/catalog.sqlite
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_pitch.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-pitch-${{ github.run_id }}
+          path: .audio-historical-pitch/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_pitch.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-pitch-rejected-${{ github.run_id }}
+          path: .audio-historical-pitch/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
