@@ -1,6 +1,7 @@
 """Research-only interval acquisition. Real source transitions, not synthetic note joins."""
 import hashlib, json, pathlib, subprocess, sys, wave
 import numpy as np
+from historical_interval_phrase import render_interval_phrase
 SR=48000
 REV='fac6461ee4c7f498b23246eced644616fa58d2ec'
 PINS=json.loads('''[{"id":"voice-50-52","path":"Samples/vowel_transition/a/vowel_a_e4_fromd4.wav","blob":"f2097ef58b844f8c330e346917c7ff63d3ba59ff","size":317600,"upstreamFrom":62,"upstreamTo":64,"fromMidi":50,"toMidi":52},{"id":"voice-52-53","path":"Samples/vowel_transition/a/vowel_a_f4_frome4.wav","blob":"799f768f3043675a17b1526b2d223509547c531d","size":317600,"upstreamFrom":64,"upstreamTo":65,"fromMidi":52,"toMidi":53},{"id":"voice-53-55","path":"Samples/vowel_transition/a/vowel_a_g4_fromf4.wav","blob":"888cd2cb6c1c7b8772ed3d8bb300df89762b0487","size":317600,"upstreamFrom":65,"upstreamTo":67,"fromMidi":53,"toMidi":55},{"id":"voice-55-53","path":"Samples/vowel_transition/a/vowel_a_f4_fromg4.wav","blob":"94f0e9ce82560e102dd765fb0f4db33bf8b932b6","size":317600,"upstreamFrom":67,"upstreamTo":65,"fromMidi":55,"toMidi":53},{"id":"voice-53-52","path":"Samples/vowel_transition/a/vowel_a_e4_fromf4.wav","blob":"1a9bc99e56ce23f54e06fca011f4694026a4d9d4","size":317600,"upstreamFrom":65,"upstreamTo":64,"fromMidi":53,"toMidi":52},{"id":"voice-52-50","path":"Samples/vowel_transition/a/vowel_a_d4_frome4.wav","blob":"cde061a58ec8f140346ee02e2edd4bfe909f2d41","size":317600,"upstreamFrom":64,"upstreamTo":62,"fromMidi":52,"toMidi":50}]''')
@@ -78,7 +79,10 @@ def recorder_candidate(root):
     receipt=dict(source=page,author='Thparkth',rights='PD-user',expectedBytes=244296,expectedTimestamp='2012-03-15T07:00:00Z',approval='candidate-only',admitted=0)
     try:
         evidence=json.loads(fetch(api,100000)); info=next(iter(evidence['query']['pages'].values()))['imageinfo'][0]
-        if info['url']!=url or info['size']!=244296 or info['timestamp']!='2012-03-15T07:00:00Z':raise ValueError('file revision differs from documented source')
+        receipt['observedImageInfo']={k:info.get(k) for k in ('url','size','timestamp','sha1')}
+        (root/'recorder-imageinfo.json').write_text(json.dumps(evidence,indent=2)+'\n')
+        # The public history displays minute precision, not the seconds field.
+        if info['url']!=url or info['size']!=244296 or not info['timestamp'].startswith('2012-03-15T07:00:'):raise ValueError('file revision differs from documented source')
         b=fetch(url,300000)
         # MediaWiki returns SHA-1 in hexadecimal or base36 depending on endpoint.
         digest=hashlib.sha1(b).hexdigest(); h=info['sha1']
@@ -112,7 +116,7 @@ def main(root):
     mapping=fetch(BASE+MAPPING,80000)
     if blob(mapping)!=MAPPING_BLOB:raise ValueError('mapping identity')
     (root/'mapping.sfz').write_bytes(mapping)
-    receipts=[]; accepted=[]; clips={}
+    receipts=[]; accepted=[]; clips={}; native_clips={}
     def save():
         (root/'admission.json').write_text(json.dumps(dict(approval='research-only',revision=REV,rights=RIGHTS,sourceCreator='Karoryfer Samples / Hadzi-Fia',mappingBlob=MAPPING_BLOB,candidates=receipts,admitted=len(accepted)),indent=2)+'\n')
     for p in PINS:
@@ -125,7 +129,8 @@ def main(root):
         # A diagnostic is a gain-normalized excerpt of one native recording, not a synthesized transition.
         x=a.copy();g=min(3,.65/np.max(np.abs(x)));fade=np.minimum(1,np.minimum(np.arange(len(x))/240,(len(x)-1-np.arange(len(x)))/960));x*=fade[:,None]*g
         receipt['audition']=write(root,p['id']+'-native.wav',x); receipts.append(receipt)
-        if result['accepted']:accepted.append(receipt);clips[(p['fromMidi'],p['toMidi'])]=x
+        if result['accepted']:
+            accepted.append(receipt);clips[(p['fromMidi'],p['toMidi'])]=x;native_clips[(p['fromMidi'],p['toMidi'])]=a
         save()
     # A sequence of native intervals (not a continuous multi-note performance): 0.35s silence between clips.
     # Every source clip has its measured physical pitch change intact, at native playback speed.
@@ -135,8 +140,23 @@ def main(root):
         p=r['pin'];x=clips[(p['fromMidi'],p['toMidi'])];positions.append(dict(id=p['id'],startFrame=cursor,frames=len(x),nativeRate=1))
         reel.extend((x,np.zeros((round(.35*SR),2))));cursor+=len(x)+round(.35*SR)
     output=write(root,'recorded-interval-reel.wav',np.concatenate(reel))
+    phrase_path=[50,52,53,55,53,52,50]
+    if all(pair in native_clips for pair in zip(phrase_path,phrase_path[1:])):
+        audio,phrase=render_interval_phrase(native_clips,phrase_path)
+        for event in phrase['events']:
+            event['sourceSha256']=next(r['sourceSha256'] for r in accepted if (r['pin']['fromMidi'],r['pin']['toMidi'])==(event['fromMidi'],event['toMidi']))
+        phrase['output']=write(root,'recorded-vocal-connected-phrase.wav',audio)
+        for bad in ([50,55],[50,52,50,50]):
+            try:render_interval_phrase(native_clips,bad)
+            except ValueError:pass
+            else:raise AssertionError('unsupported transition accepted')
+        repeat,_=render_interval_phrase(native_clips,phrase_path)
+        if not np.array_equal(audio,repeat):raise ValueError('phrase nondeterminism')
+        (root/'phrase-receipt.json').write_text(json.dumps(phrase,indent=2)+'\n')
+        print('Native connected phrase',len(phrase['events']),'protected intervals',len(phrase['joins']),'joins')
+    else:raise ValueError('complete admitted interval path required')
     recorder=recorder_candidate(root)
-    (root/'metrics.json').write_text(json.dumps(dict(approval='research-only',voiceIntervalCount=len(accepted),historicalInstrumentIntervalCount=0,voiceReel=output,positions=positions,recorderCandidate=recorder,sourceInventory=len(receipts)),indent=2)+'\n')
+    (root/'metrics.json').write_text(json.dumps(dict(approval='research-only',voiceIntervalCount=len(accepted),historicalInstrumentIntervalCount=0,voiceReel=output,positions=positions,connectedPhrase=phrase,recorderCandidate=recorder,sourceInventory=len(receipts)),indent=2)+'\n')
     print('Admitted recorded vocal intervals',len(accepted),'recorder candidates',len(recorder.get('connectedCandidates',[])))
 if __name__=='__main__':
     self_test()
