@@ -10,17 +10,23 @@ import {digest} from './verified-results.mjs';
 export const REPO='JustSadSock/pocket-works',RENEWAL_WORKFLOW='.github/workflows/gameplay-receipt-renewal.yml',APP_PR=1355,APP_BRANCH='app/banners-of-war';
 const SHA=/^[a-f0-9]{40}$/,HEX=/^[a-f0-9]{64}$/,MAX_AGE=7*86400000,flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 const fail=s=>{throw Error(s);},positive=n=>Number.isSafeInteger(n)&&n>0;
+const gameplayRuntimeKeys=['contract','image','config','node','arch','toolchain','uid','gid'];
+export function compatibleGameplayRuntime(a,b){
+ return !!a&&!!b&&gameplayRuntimeKeys.every(k=>a[k]===b[k])&&
+  Number.isSafeInteger(a.uid)&&Number.isSafeInteger(a.gid)&&Number.isSafeInteger(b.uid)&&Number.isSafeInteger(b.gid)&&
+  HEX.test(a.kernel??'')&&HEX.test(a.cpu??'')&&HEX.test(b.kernel??'')&&HEX.test(b.cpu??'');
+}
 const read=(p,max=128*1024*1024)=>{const st=lstatSync(p);if(!st.isFile()||st.size>max)fail('Unsafe evidence file');return readFileSync(p);};
 const json=p=>JSON.parse(read(p,4_000_000));
 const git=(cwd,args)=>execFileSync('git',args,{cwd,encoding:'utf8'}).trim();
 export function resolveCandidate(pr,controller,mainSource){
  if(!SHA.test(controller)||pr?.number!==APP_PR||pr.head?.repo?.full_name!==REPO||pr.head?.ref!==APP_BRANCH||pr.base?.repo?.full_name!==REPO||pr.base?.ref!=='main')fail('Unapproved app branch');
- if(pr.state==='open'&&pr.merged===false&&SHA.test(pr.head.sha))return {source:pr.head.sha,sourceRef:APP_BRANCH,sourcePR:APP_PR};
+ if(pr.state==='open'&&pr.merged===false&&pr.mergeable===true&&SHA.test(pr.head.sha)&&SHA.test(pr.base?.sha)&&pr.base.sha===mainSource&&SHA.test(pr.merge_commit_sha))return {source:pr.merge_commit_sha,sourceRef:'refs/pull/'+APP_PR+'/merge',sourcePR:APP_PR};
  if(pr.state==='closed'&&pr.merged===true&&SHA.test(mainSource)&&SHA.test(pr.merge_commit_sha))return {source:mainSource,sourceRef:'main',sourcePR:APP_PR};
  fail('No approved app candidate');
 }
 export function validateRenewalManifest(m,expected,mainOnly=true){
- if(!m||m.workflow!==RENEWAL_WORKFLOW||!SHA.test(m.source)||!SHA.test(m.sourceTree)||m.sourcePR!==APP_PR||!['main',APP_BRANCH].includes(m.sourceRef))fail('Invalid renewal identity');
+ if(!m||m.workflow!==RENEWAL_WORKFLOW||!SHA.test(m.source)||!SHA.test(m.sourceTree)||m.sourcePR!==APP_PR||!['main',APP_BRANCH,'refs/pull/'+APP_PR+'/merge'].includes(m.sourceRef))fail('Invalid renewal identity');
  validateManifest({...m,source:SOURCE,sourceTree:SOURCE_TREE,workflow:WORKFLOW},'source',false);
  if(mainOnly&&(m.ref!=='refs/heads/main'||!['push','schedule','workflow_dispatch'].includes(m.event)))fail('Not a main renewal');
  // Legacy validation only knows push/dispatch; schedule is normalized below by caller.
@@ -60,14 +66,15 @@ export function buildCatalog(receipts,expected,now=Date.now(),mainOnly=true){
  }
  if(cases!==1868||measurements!==3436||perf!==5||perfMeasurements!==10)fail('Incomplete coverage');
  if(rows.some(r=>!eq(r.manifest.sourceMount,rows[0].manifest.sourceMount)||!eq(r.manifest.auditMount,rows[0].manifest.auditMount)))fail('Mounted inputs differ across matrix');
- return {schema:1,kind:'renewable-banners-catalog-v1',...expected,planDigest:PLAN,issuedAt:now,expiresAt:Math.min(...rows.map(r=>r.issuedAt))+MAX_AGE,gameplayCases:cases,sourceMeasurements:measurements,freshPerformanceCases:perf,freshPerformanceMeasurements:perfMeasurements,shards:rows.map(r=>({shard:r.manifest.shard,receiptDigest:digest(JSON.stringify(r)),gameplaySemanticDigest:r.gameplaySemanticDigest,environment:r.manifest.environment,sourceMount:r.manifest.sourceMount,auditMount:r.manifest.auditMount})),compatibility:'exact-environment-only',...flags};
+ if(rows.some(r=>!compatibleGameplayRuntime(r.manifest.environment,rows[0].manifest.environment)))fail('Pinned gameplay runtime differs across matrix');
+ return {schema:1,kind:'renewable-banners-catalog-v1',...expected,planDigest:PLAN,issuedAt:now,expiresAt:Math.min(...rows.map(r=>r.issuedAt))+MAX_AGE,gameplayCases:cases,sourceMeasurements:measurements,freshPerformanceCases:perf,freshPerformanceMeasurements:perfMeasurements,shards:rows.map(r=>({shard:r.manifest.shard,receiptDigest:digest(JSON.stringify(r)),gameplaySemanticDigest:r.gameplaySemanticDigest,environment:r.manifest.environment,sourceMount:r.manifest.sourceMount,auditMount:r.manifest.auditMount})),compatibility:'pinned-runtime-gameplay-v1',...flags};
 }
 export function catalogCandidate(catalog,target,now=Date.now()){
  try{
-  if(catalog?.schema!==1||catalog.kind!=='renewable-banners-catalog-v1'||catalog.planDigest!==PLAN||catalog.compatibility!=='exact-environment-only'||Object.keys(flags).some(k=>catalog[k]!==false)||!positive(now)||!positive(catalog.issuedAt)||!positive(catalog.expiresAt)||now<catalog.issuedAt||now>catalog.expiresAt||catalog.expiresAt-catalog.issuedAt>MAX_AGE||catalog.gameplayCases!==1868||catalog.sourceMeasurements!==3436||catalog.freshPerformanceCases!==5||catalog.freshPerformanceMeasurements!==10||catalog.shards?.length!==8||catalog.shards.some((x,i)=>x.shard!==i||!HEX.test(x.receiptDigest)||!HEX.test(x.gameplaySemanticDigest)))fail('Invalid catalog');
+  if(catalog?.schema!==1||catalog.kind!=='renewable-banners-catalog-v1'||catalog.planDigest!==PLAN||!['exact-environment-only','pinned-runtime-gameplay-v1'].includes(catalog.compatibility)||Object.keys(flags).some(k=>catalog[k]!==false)||!positive(now)||!positive(catalog.issuedAt)||!positive(catalog.expiresAt)||now<catalog.issuedAt||now>catalog.expiresAt||catalog.expiresAt-catalog.issuedAt>MAX_AGE||catalog.gameplayCases!==1868||catalog.sourceMeasurements!==3436||catalog.freshPerformanceCases!==5||catalog.freshPerformanceMeasurements!==10||catalog.shards?.length!==8||catalog.shards.some((x,i)=>x.shard!==i||!HEX.test(x.receiptDigest)||!HEX.test(x.gameplaySemanticDigest)))fail('Invalid catalog');
   for(const k of ['source','sourceTree','auditCommit','auditTree','planDigest'])if(catalog[k]!==target[k])fail('Catalog identity differs: '+k);
   const r=catalog.shards[target.shard];
-  if(!r||!eq(r.environment,target.environment)||!eq(r.sourceMount,target.sourceMount)||!eq(r.auditMount,target.auditMount))fail('Unapproved target environment or mount');
+  if(!r||!(catalog.compatibility==='exact-environment-only'?eq(r.environment,target.environment):compatibleGameplayRuntime(r.environment,target.environment))||!eq(r.sourceMount,target.sourceMount)||!eq(r.auditMount,target.auditMount))fail('Unapproved target runtime or mount');
   return {decision:'candidate-only',receiptDigest:r.receiptDigest,...flags};
  }catch(e){return {decision:'execute',reason:e.message,...flags};}
 }

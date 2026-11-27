@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {shadowFromLegacy} from './sharding.mjs';
 import {canonical,digest,taskDigest} from './verified-results.mjs';
 import {verdict} from './canary-evidence.mjs';
+import {REPO,APP_PR,APP_BRANCH} from './gameplay-renewal.mjs';
 
 export function describePlan(raw){
  const p=shadowFromLegacy(raw);
@@ -15,9 +16,19 @@ export function describePlan(raw){
   hasBrowser:tasks.some(t=>['visual','playwright','browser-node'].includes(t.kind))};
 }
 
-export function selectDeliveryRoute({policy,request,eventName,sameRepo,count}){
+export function isApprovedBannersPullRequest(event,repository){
+ const p=event?.pull_request;
+ return repository===REPO&&p?.number===APP_PR&&
+  p.head?.repo?.full_name===REPO&&p.head?.ref===APP_BRANCH&&
+  p.base?.repo?.full_name===REPO&&p.base?.ref==='main';
+}
+
+export function selectDeliveryRoute({policy,request,eventName,sameRepo,count,forceLegacy=false}){
  if(!Number.isSafeInteger(count)||count<0)throw Error('Invalid task count');
  if(count===0)return 'no-app-suites';
+ // The approved Banners PR must pass the legacy mandatory mixed-delivery gate;
+ // the repository-wide sharded route remains unchanged for every other PR.
+ if(forceLegacy===true)return 'legacy';
  return policy?.schema===1&&policy.enabled===true&&policy.allowResultReuse===false&&
    policy.allowImpactSkipping===false&&request==='sharded'&&eventName==='pull_request'&&sameRepo===true
    ?'sharded':'legacy';
@@ -60,8 +71,9 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
    const p=describePlan(rawFromEnv(e));
    const event=JSON.parse(readFileSync(e.GITHUB_EVENT_PATH,'utf8'));
    const policy=JSON.parse(readFileSync('scripts/ci-overhaul/delivery-policy.json','utf8'));
+   const forceLegacy=e.GITHUB_EVENT_NAME==='pull_request'&&isApprovedBannersPullRequest(event,e.GITHUB_REPOSITORY);
    const route=selectDeliveryRoute({policy,request:e.PW_QA_ROUTE,eventName:e.GITHUB_EVENT_NAME,
-    sameRepo:event.pull_request?.head?.repo?.full_name===e.GITHUB_REPOSITORY,count:p.count});
+    sameRepo:event.pull_request?.head?.repo?.full_name===e.GITHUB_REPOSITORY,count:p.count,forceLegacy});
    appendFileSync(e.GITHUB_OUTPUT,'route='+route+'\ncount='+p.count+'\nplan_digest='+p.planDigest+'\n');
    console.log(JSON.stringify({route,count:p.count,planDigest:p.planDigest}));
   }else if(mode==='legacy'){

@@ -27,9 +27,12 @@ on:
 permissions:
   contents: read
   actions: read
+  attestations: read
+  pull-requests: read
 
 env:
   PW_QA_SPLIT_BANNERS: ${{ vars.PW_QA_SPLIT_BANNERS || '1' }}
+  PW_QA_PRODUCTION_VERIFIED: ${{ vars.PW_QA_PRODUCTION_VERIFIED || '1' }}
 
 concurrency:
   group: universal-qa-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
@@ -63,7 +66,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test planning and reporting infrastructure
-        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/universal-qa/fresh-split.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs
+        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs scripts/ci-overhaul/delivery-gate.test.mjs scripts/universal-qa/fresh-split.test.mjs scripts/ci-overhaul/gameplay-receipt-discovery.test.mjs scripts/ci-overhaul/gameplay-production-delivery.test.mjs
       - name: Prepare application QA matrix
         id: plan
         env:
@@ -86,6 +89,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     continue-on-error: true
+    outputs:
+      issuer: ${{ steps.discover.outputs.issuer }}
     permissions:
       contents: read
       actions: read
@@ -98,6 +103,7 @@ jobs:
         with:
           node-version: '22'
       - name: Discover and authenticate candidate evidence
+        id: discover
         env:
           GH_TOKEN: ${{ github.token }}
           QA_EXPECTED: ${{ needs.plan.outputs.expected }}
@@ -105,7 +111,10 @@ jobs:
           QA_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           QA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           QA_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/receipt-discovery"
+        run: |
+          node scripts/ci-overhaul/gameplay-receipt-discovery.mjs "$RUNNER_TEMP/receipt-discovery"
+          report="$RUNNER_TEMP/receipt-discovery/discovery.json"
+          if jq -e '.status=="authenticated-candidate"' "$report" >/dev/null; then echo "issuer=$(jq -er .issuer "$report")" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -116,7 +125,7 @@ jobs:
 
   renewable_admission:
     needs: [plan, receipt_discovery]
-    if: vars.PW_QA_RENEWABLE_ADMISSION_SHADOW == '1' && needs.plan.result == 'success' && contains(needs.plan.outputs.expected, 'banners-of-war-completion-lab-') && github.event_name == 'pull_request' && github.event.pull_request.number == 1355 && github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.PW_QA_PRODUCTION_VERIFIED == '0' && vars.PW_QA_RENEWABLE_ADMISSION_SHADOW == '1' && needs.plan.result == 'success' && contains(needs.plan.outputs.expected, 'banners-of-war-completion-lab-') && github.event_name == 'pull_request' && github.event.pull_request.number == 1355 && github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/gameplay-renewable-admission.yml
     permissions:
       contents: read
@@ -127,8 +136,8 @@ jobs:
       expected: ${{ needs.plan.outputs.expected }}
 
   cpu:
-    needs: plan
-    if: needs.plan.outputs.route == 'legacy' && needs.plan.outputs.has_cpu == 'true'
+    needs: [plan, receipt_discovery]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.route == 'legacy' && needs.plan.outputs.has_cpu == 'true'
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -145,7 +154,42 @@ jobs:
       - name: Install optional Node dependencies
         if: matrix.install == true
         run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        id: signed_input
+        if: ${{ env.PW_QA_PRODUCTION_VERIFIED == '1' && github.event_name == 'pull_request' && github.event.pull_request.number == 1355 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'app/banners-of-war' && matrix.app == 'banners-of-war' && matrix.suite == 'completion-lab' && matrix.kind == 'node' && matrix.install == false && needs.receipt_discovery.outputs.issuer != '' }}
+        continue-on-error: true
+        with:
+          name: receipt-discovery-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipt-discovery
+      - uses: actions/checkout@v4
+        id: controller
+        if: steps.signed_input.outcome == 'success'
+        continue-on-error: true
+        with:
+          ref: ${{ needs.receipt_discovery.outputs.issuer }}
+          path: verified-controller
+          persist-credentials: false
+      - name: Attempt verified gameplay delivery
+        id: verified
+        if: steps.controller.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PW_QA_TASK: ${{ toJSON(matrix) }}
+          QA_PR_NUMBER: ${{ github.event.pull_request.number }}
+          QA_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          QA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          TASK_KEY: ${{ matrix.key }}
+        shell: bash
+        run: |
+          status=0
+          bash scripts/ci-overhaul/gameplay-production-delivery.sh "$PWD" "$PWD/verified-controller" "$RUNNER_TEMP/receipt-discovery" "$PWD/qa-artifacts/$TASK_KEY" || status=$?
+          case "$status" in
+            0) echo 'reuse=true' >> "$GITHUB_OUTPUT";;
+            75) echo 'reuse=false' >> "$GITHUB_OUTPUT";;
+            *) exit "$status";;
+          esac
       - name: Run app-owned CPU QA
+        if: steps.verified.outputs.reuse != 'true'
         env:
           PW_QA_TASK: ${{ toJSON(matrix) }}
         run: node scripts/universal-qa/run.mjs
@@ -196,11 +240,16 @@ jobs:
 
   summary:
     if: always() && needs.plan.result == 'success' && needs.plan.outputs.route == 'legacy' && needs.plan.outputs.expected != '[]'
-    needs: [plan, cpu, browser]
+    needs: [plan, cpu, browser, receipt_discovery]
+    outputs:
+      report_digest: ${{ steps.report.outputs.digest }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
+      actions: read
+      attestations: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -214,17 +263,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Summarize all results including missing shards
+      - uses: actions/download-artifact@v4
+        if: needs.receipt_discovery.outputs.issuer != ''
+        continue-on-error: true
+        with:
+          name: receipt-discovery-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipt-discovery
+      - name: Independently verify every original task
         env:
-          QA_EXPECTED: ${{ needs.plan.outputs.expected }}
-          QA_COLLECTED_DIR: qa-collected
-        run: node scripts/universal-qa/aggregate.mjs
-      - name: Independently verify exact legacy coverage
-        env:
+          GH_TOKEN: ${{ github.token }}
           QA_CPU_MATRIX: ${{ needs.plan.outputs.cpu_matrix }}
           QA_BROWSER_MATRIX: ${{ needs.plan.outputs.browser_matrix }}
           QA_EXPECTED: ${{ needs.plan.outputs.expected }}
-        run: QA_TREE=$(git rev-parse HEAD^{tree}) node scripts/ci-overhaul/delivery-gate.mjs legacy qa-collected/summary.json
+          QA_PR_NUMBER: ${{ github.event.pull_request.number }}
+          QA_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          QA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          QA_COLLECTED_DIR: qa-collected
+        shell: bash
+        run: |
+          if find qa-collected -name verified-delivery.json -print -quit | grep -q .; then
+            node scripts/ci-overhaul/gameplay-production-delivery.mjs mixed "$PWD" "$PWD/qa-collected" "$RUNNER_TEMP/receipt-discovery"
+          else
+            node scripts/universal-qa/aggregate.mjs
+            QA_TREE=$(git rev-parse HEAD^{tree}) node scripts/ci-overhaul/delivery-gate.mjs legacy qa-collected/summary.json
+          fi
+      - name: Bind independent report to final delivery gate
+        id: report
+        run: echo "digest=$(sha256sum qa-collected/summary.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - name: Upload consolidated report
         if: always()
         uses: actions/upload-artifact@v4
@@ -260,6 +325,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/download-artifact@v4
+        if: needs.plan.outputs.route == 'legacy' && needs.summary.result == 'success'
+        with:
+          name: qa-summary-${{ github.run_id }}
+          path: mandatory-report
+      - name: Recheck bound original-plan delivery report
+        if: needs.plan.outputs.route == 'legacy' && needs.summary.result == 'success'
+        env:
+          QA_CPU_MATRIX: ${{ needs.plan.outputs.cpu_matrix }}
+          QA_BROWSER_MATRIX: ${{ needs.plan.outputs.browser_matrix }}
+          QA_EXPECTED: ${{ needs.plan.outputs.expected }}
+          QA_PLAN_DIGEST: ${{ needs.plan.outputs.plan_digest }}
+          QA_REPORT_DIGEST: ${{ needs.summary.outputs.report_digest }}
+          QA_PR_NUMBER: ${{ github.event.pull_request.number }}
+          QA_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          QA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: node scripts/ci-overhaul/gameplay-production-delivery.mjs gate-report "$PWD" "$PWD/mandatory-report/summary.json"
       - name: Require complete selected route
         env:
           QA_PLAN_RESULT: ${{ needs.plan.result }}

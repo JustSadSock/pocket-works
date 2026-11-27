@@ -43,7 +43,7 @@ function validateContext(context,policy){
 function validateEvidence(bytes,task){
   if(!Buffer.isBuffer(bytes)||bytes.length===0||bytes.length>2_000_000)throw Error('Invalid evidence bytes');
   const r=JSON.parse(bytes.toString('utf8'));
-  if(r.verificationMode==='verified-split-shadow'||r.schema!==1||r.success!==true||r.exitCode!==0||r.signal!==null||r.timedOut!==false||r.error)
+  if(r.verificationMode!==undefined||r.schema!==1||r.success!==true||r.exitCode!==0||r.signal!==null||r.timedOut!==false||r.error)
     throw Error('Not an unambiguous successful legacy result');
   const actual=Object.fromEntries(Object.keys(task).map(k=>[k,r[k]]));
   if(canonical(actual)!==canonical(task))throw Error('Evidence task mismatch');
