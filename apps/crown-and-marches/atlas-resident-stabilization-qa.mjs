@@ -7,8 +7,8 @@ import {tmpdir} from 'node:os';
 import assert from 'node:assert/strict';
 import {loadLibrary} from './geographic-dem-library.mjs';
 import {packExemplars} from './genesis-natural.mjs';
-export async function run(engine){
- const root=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/atlas-resident-stabilization',output=join(root,'resident-'+engine);mkdirSync(output,{recursive:true});
+export async function run(engine,selected=null){
+ const root=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/atlas-resident-stabilization',output=join(root,'resident-'+engine+(selected?'-'+selected.join('-'):''));mkdirSync(output,{recursive:true});
  const report=[],save=()=>writeFileSync(join(output,'stabilization.json'),JSON.stringify(report,null,2)),port=engine==='chromium'?4217:4218,url='http://127.0.0.1:'+port+'/apps/crown-and-marches/?atlas-review=1';
  const server=spawn(process.execPath,['scripts/serve-site.mjs'],{env:{...process.env,PORT:String(port),POCKET_WORKS_SITE_ROOT:process.env.PW_QA_SITE_ROOT||process.cwd()},stdio:'ignore'});
  let browser;
@@ -17,8 +17,9 @@ export async function run(engine){
   let ready=false;for(let i=0;i<60;i++){try{if((await fetch(url)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,200));}assert.ok(ready);
   browser=await (engine==='chromium'?chromium:webkit).launch(engine==='chromium'?{args:['--no-sandbox']}:{});
   const configs=[{policy:'allocate',pad:96,maxEntries:6},{policy:'recycle',pad:96,maxEntries:6},{policy:'prewarm',pad:96,maxEntries:6},{policy:'recycle',pad:64,maxEntries:6},{policy:'recycle',pad:128,maxEntries:6},{policy:'recycle',pad:96,maxEntries:4},{policy:'recycle',pad:96,maxEntries:6,eviction:'phase-diverse'}];
-  for(const [index,config] of configs.entries()){
-   const rec={engine,config,candidate:'organic',frames:[],segments:[],errors:[],passed:false};report.push(rec);save();
+  const chosen=configs.map((config,index)=>({config,index})).filter(x=>!selected||selected.includes(x.index));if(!chosen.length||selected&&chosen.length!==selected.length)throw Error('Invalid resident group');
+  for(const {index,config} of chosen){
+   const rec={engine,index,config,candidate:'organic',frames:[],segments:[],errors:[],qualificationFailures:[],evidenceComplete:false,qualified:false,passed:false};report.push(rec);save();
    const context=await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'}),page=await context.newPage();page.on('pageerror',e=>{rec.errors.push(String(e.stack||e));save();});
    try{
     await page.goto(url);await page.locator('[data-act="atlaslab"]').click();await page.locator('#atlasseed').fill('atlas-mountain-173');await page.locator('#atlasshape').selectOption('continents');await page.locator('#atlasdem').setInputFiles(payload);await page.locator('[data-act="atlasstart"]').click();await page.waitForFunction(()=>document.querySelector('.app-shell')?.dataset.campaign==='atlas'&&document.querySelector('#atlas')?.dataset.atlasSurface==='ready',null,{timeout:90000});
@@ -55,14 +56,21 @@ export async function run(engine){
     rec.summary={uniquePoses:poses.size,uniqueRatio:poses.size/rec.frames.length,regions:regions.size,currentFrames:rec.frames.length-stale,spatialHits:hits,nonzeroSpatialShifts:spatialShifts,builds,fallbacks,exactPoseHits:exact,maxBytes,totals};save();
     const restored=await page.evaluate(o=>window.__atlasReview.restoreCamera(o.camera),rec.origin);await page.waitForFunction(q=>{const d=document.querySelector('#atlas')?.dataset;try{const p=JSON.parse(d.atlasReceipt);return d.atlasSurface==='ready'&&d.atlasReadyId===d.atlasRequestId&&p.intent===q.intent&&Math.abs(p.view.x-q.expectedView.x)<1e-7&&Math.abs(p.view.y-q.expectedView.y)<1e-7&&Math.abs(p.view.s-q.expectedView.s)<1e-9;}catch{return false;}},restored,{timeout:90000});
     rec.gpu=await page.evaluate(()=>window.__atlasReview.gpuProbe());const raster=await page.evaluate(()=>window.__atlasReview.residentRasterProbe());for(const [name,png] of Object.entries(raster.images))writeFileSync(join(output,index+'-'+name+'.png'),Buffer.from(png,'base64'));delete raster.images;rec.raster=raster;save();
-    if(rec.frames.length!==300||rec.segments.some(s=>s.advanced!==50||s.fps<55||s.p95>33.3))rec.errors.push('long motion gate failed');
-    if(!spatialShifts||regions.size<2)rec.errors.push('nonzero spatial crop or region crossing not demonstrated');
-    if(raster.rows.some(r=>r.error||r.count!==0))rec.errors.push('raster diagnostics differ from default framebuffer');
-    if(!totals.allocations)rec.errors.push('no GPU allocations observed');if(config.policy==='recycle'&&!totals.recycles)rec.errors.push('no actual evicted GPU allocation reuse');if(config.policy==='prewarm'&&!totals.poolTakes)rec.errors.push('no preallocated GPU slot consumed');
-    rec.passed=rec.errors.length===0;
+    // Research admission is about complete trustworthy evidence, not a fast control.
+    if(rec.frames.length!==300||rec.segments.length!==6||rec.frames.some(f=>!Number.isFinite(f.gapMs)||f.gapMs<=0)||rec.segments.some(s=>!Number.isFinite(s.fps)||!Number.isFinite(s.p95)))rec.errors.push('incomplete or invalid motion evidence');
+    if(!raster.rows.length||raster.rows.some(r=>r.error||!Number.isInteger(r.count)||!Number.isFinite(r.max)))rec.errors.push('incomplete raster diagnostic evidence');
+    if(!totals.allocations)rec.errors.push('no GPU allocations observed');
+    if(rec.segments.some(s=>s.advanced!==50||s.fps<55||s.p95>33.3))rec.qualificationFailures.push('long motion gate failed');
+    if(!spatialShifts||regions.size<2)rec.qualificationFailures.push('nonzero spatial crop or region crossing not demonstrated');
+    if(raster.rows.some(r=>r.error||r.count!==0))rec.qualificationFailures.push('raster diagnostics differ from default framebuffer');
+    if(config.policy==='recycle'&&!totals.recycles)rec.qualificationFailures.push('no actual evicted GPU allocation reuse');
+    if(config.policy==='prewarm'&&!totals.poolTakes)rec.qualificationFailures.push('no preallocated GPU slot consumed');
+    rec.evidenceComplete=rec.errors.length===0;
+    rec.qualified=rec.evidenceComplete&&rec.qualificationFailures.length===0;
+    rec.passed=rec.evidenceComplete;
    }catch(e){rec.errors.push(String(e.stack||e));rec.dataset=await page.locator('#atlas').evaluate(el=>({...el.dataset})).catch(()=>null);await page.screenshot({path:join(output,index+'-failure.png')}).catch(()=>{});}
    finally{save();await context.close();}
   }
-  assert.equal(report.length,configs.length);assert.ok(report.every(r=>r.passed),'Resident stabilization unqualified: '+JSON.stringify(report.map(r=>({config:r.config,errors:r.errors,summary:r.summary,segments:r.segments}))));
+  assert.equal(report.length,chosen.length);assert.ok(report.every(r=>r.evidenceComplete),'Resident research evidence incomplete: '+JSON.stringify(report.map(r=>({index:r.index,config:r.config,errors:r.errors,qualificationFailures:r.qualificationFailures,summary:r.summary,segments:r.segments}))));
  }finally{await browser?.close();server.kill('SIGTERM');save();}
 }

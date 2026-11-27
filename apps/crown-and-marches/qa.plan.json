@@ -26,7 +26,8 @@
         "atlas-cultural.test.mjs",
         "atlas-historical.test.mjs",
         "atlas-resident-pool.test.mjs",
-        "atlas-resident-math.test.mjs"
+        "atlas-resident-math.test.mjs",
+        "atlas-qa-admission.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -238,20 +239,6 @@
       ]
     },
     {
-      "id": "wealth-decades",
-      "kind": "node",
-      "entry": "qa-batch.mjs",
-      "args": [
-        "wealth",
-        "{seed}"
-      ],
-      "seeds": [
-        0,
-        1
-      ],
-      "tier": "smoke"
-    },
-    {
       "id": "economy-sandbox",
       "kind": "visual",
       "tier": "smoke",
@@ -313,20 +300,6 @@
           "selector": "[data-act=\"econlab\"]"
         }
       ]
-    },
-    {
-      "id": "sinews-campaign-experiments",
-      "kind": "node",
-      "entry": "qa-batch.mjs",
-      "args": [
-        "sinews",
-        "{seed}"
-      ],
-      "seeds": [
-        0,
-        1
-      ],
-      "tier": "smoke"
     },
     {
       "id": "campaign-sandbox",
@@ -449,15 +422,38 @@
       "tier": "deep"
     },
     {
-      "id": "resident-stabilization-chromium",
-      "kind": "browser-node",
-      "entry": "atlas-resident-chromium-qa.mjs",
+      "id": "wealth-sinews-experiments",
+      "kind": "node",
+      "entry": "qa-batch.mjs",
+      "args": [
+        "wealth-sinews",
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3
+      ],
       "tier": "smoke"
     },
     {
-      "id": "resident-stabilization-webkit",
+      "id": "resident-stabilization",
       "kind": "browser-node",
-      "entry": "atlas-resident-webkit-qa.mjs",
+      "entry": "atlas-resident-matrix-qa.mjs",
+      "args": [
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
       "tier": "smoke"
     }
   ]
