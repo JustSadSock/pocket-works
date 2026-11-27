@@ -6,6 +6,7 @@ import path from 'node:path';
 import {prepareRecordedNote} from './recorded-instruments.mjs';
 import {createRecordedInstrumentBank} from './recorded-articulations.mjs';
 import {renderRecordedPerformance} from './recorded-performance.mjs';
+import {renderRecordedEnsemble} from './recorded-ensemble.mjs';
 import {findSustainLoop} from './recorded-sustain.mjs';
 import {prepareTransientNote} from './recorded-transients.mjs';
 import {prepareModulatedNote} from './recorded-modulated.mjs';
@@ -164,5 +165,67 @@ for(const [i,p] of [dryExpression,ornamentedExpression].entries()){
  const gain=expressionTarget/p.metric.rms;
  for(let j=0;j<p.samples.length;j++)expressionAB[(i?dryExpression.samples.length+expressionGap:0)+j]=p.samples[j]*gain;
 }
+
 write('expression/flute-expression-AB.wav',expressionAB);
-writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',sourceManifestSha256:sha(readFileSync(path.join(base,'metrics.json'))),coverage:bank.coverage(),zones:zones.map(({samples,...z})=>z),loopResults,choices,metrics,comparisons:[{file:'unified-dynamics-AB.wav',secondStarts:9.9,order:['discrete','morph']},{file:'unified-legato-AB.wav',secondStarts:9.9,order:['detached','connected']},{file:'expression/flute-expression-AB.wav',secondStarts:6.0,order:['dry','vibrato-plus-attack-bend'],levelMatched:true}]},null,2)+'\n');
+
+// Shared bow/breath score gesture: one continuous crescendo and taper over
+// four notes. Repeated notes re-use the original recorded onset, with a
+// controlled bow-change or breath re-attack rather than a synthetic transient.
+const phraseCurve=[{at:0,value:.82},{at:.34,value:1.14},{at:.70,value:1.04},{at:1,value:.76}];
+const violinLine=[69,72,72,69].map((midi,i)=>({
+ midi,start:i*.5,duration:.5,pressure:.62,articulation:'arco-vib',
+ morph:true,sustain:true,connected:i>0,phraseId:'bow-line',
+ ...(i===2?{reattack:{kind:'bow-change',strength:.26,durationSeconds:.085}}:{})
+}));
+const fluteLine=[69,72,72,69].map((midi,i)=>({
+ midi,start:i*.5,duration:.5,pressure:.62,articulation:'non-vibrato',
+ connected:i>0,phraseId:'breath-line',
+ ...(i===2?{reattack:{kind:'breath',strength:.48,durationSeconds:.095}}:{})
+}));
+const violinPhrase=[{id:'bow-line',technique:'bowed',start:0,end:2,curve:phraseCurve}];
+const flutePhrase=[{id:'breath-line',technique:'breath',start:0,end:2,curve:phraseCurve}];
+const dryNotes=items=>items.map(({phraseId,reattack,...n})=>n);
+function renderPhrase(name,instrument,items,phrases){
+ const result=renderRecordedPerformance({zones,instrument,notes:items,seconds:2.2,phrases});
+ choices[name]=result.choices;
+ return {samples:result.samples,metric:write('phrasing/'+name+'.wav',result.samples)};
+}
+function levelMatchedAB(name,a,b,channels=1){
+ if(a.samples.length!==b.samples.length||a.samples.length%channels)throw Error('Phrase A/B grid mismatch');
+ const target=Math.min(a.metric.rms,b.metric.rms),gap=Math.round(sr*.7)*channels;
+ const out=new Float32Array(a.samples.length*2+gap);
+ for(const [i,p] of [a,b].entries()){
+  const gain=target/p.metric.rms;
+  for(let j=0;j<p.samples.length;j++)out[(i?a.samples.length+gap:0)+j]=p.samples[j]*gain;
+ }
+ write('phrasing/'+name+'-AB.wav',out,channels);
+}
+const bowDry=renderPhrase('violin-bow-dry','violin',dryNotes(violinLine));
+const bowPhrase=renderPhrase('violin-bow-phrase','violin',violinLine,violinPhrase);
+levelMatchedAB('violin-bow-phrase',bowDry,bowPhrase);
+const breathDry=renderPhrase('flute-breath-dry','flute',dryNotes(fluteLine));
+const breathPhrase=renderPhrase('flute-breath-phrase','flute',fluteLine,flutePhrase);
+levelMatchedAB('flute-breath-phrase',breathDry,breathPhrase);
+
+const sharedGesture=[{id:'ensemble-line',start:0,end:2,curve:phraseCurve}];
+const ensembleTracks=[
+ {id:'bowed-strings',instrument:'violin',group:'strings',pan:-.34,gain:.46,phrasingTechnique:'bowed',notes:violinLine.map(n=>({...n,phraseId:'ensemble-line'}))},
+ {id:'breath-woodwind',instrument:'flute',group:'woodwind',pan:.34,gain:.46,phrasingTechnique:'breath',notes:fluteLine.map(n=>({...n,phraseId:'ensemble-line'}))}
+];
+const ensembleDryTracks=ensembleTracks.map(t=>({...t,phrasingTechnique:undefined,notes:dryNotes(t.notes)}));
+const ensembleDry=renderRecordedEnsemble({zones,tracks:ensembleDryTracks,seconds:2.2,includeTrackStems:true});
+const ensemblePhrased=renderRecordedEnsemble({zones,tracks:ensembleTracks,seconds:2.2,gestures:sharedGesture,includeTrackStems:true});
+const ensembleDryMetric=write('phrasing/ensemble-phrase-dry.wav',ensembleDry.mix,2);
+const ensemblePhraseMetric=write('phrasing/ensemble-phrase-expressive.wav',ensemblePhrased.mix,2);
+write('phrasing/ensemble-phrase-strings.wav',ensemblePhrased.stems.strings,2);
+write('phrasing/ensemble-phrase-woodwind.wav',ensemblePhrased.stems.woodwind,2);
+write('phrasing/ensemble-phrase-bowed-player.wav',ensemblePhrased.trackStems['bowed-strings'],2);
+write('phrasing/ensemble-phrase-breath-player.wav',ensemblePhrased.trackStems['breath-woodwind'],2);
+levelMatchedAB('ensemble-phrase', {samples:ensembleDry.mix,metric:ensembleDryMetric},
+ {samples:ensemblePhrased.mix,metric:ensemblePhraseMetric},2);
+if(ensemblePhrased.gestureReceipts.length!==1||
+ ensemblePhrased.gestureReceipts[0].participants.length!==2||
+ ensemblePhrased.choices['bowed-strings'][2].reattack?.kind!=='bow-change'||
+ ensemblePhrased.choices['breath-woodwind'][2].reattack?.kind!=='breath')
+ throw Error('Shared bow/breath ensemble gesture was not exercised');
+writeFileSync(path.join(root,'metrics.json'),JSON.stringify({approval:'research-only',sourceManifestSha256:sha(readFileSync(path.join(base,'metrics.json'))),coverage:bank.coverage(),zones:zones.map(({samples,...z})=>z),loopResults,choices,metrics,comparisons:[{file:'unified-dynamics-AB.wav',secondStarts:9.9,order:['discrete','morph']},{file:'unified-legato-AB.wav',secondStarts:9.9,order:['detached','connected']},{file:'expression/flute-expression-AB.wav',secondStarts:6.0,order:['dry','vibrato-plus-attack-bend'],levelMatched:true},{file:'phrasing/violin-bow-phrase-AB.wav',secondStarts:2.7,order:['dry','continuous-bow-phrase'],levelMatched:true},{file:'phrasing/flute-breath-phrase-AB.wav',secondStarts:2.7,order:['dry','continuous-breath-phrase'],levelMatched:true},{file:'phrasing/ensemble-phrase-AB.wav',secondStarts:2.7,order:['dry','shared-bow-breath-gesture'],levelMatched:true}],phraseReceipts:ensemblePhrased.gestureReceipts},null,2)+'\n');
