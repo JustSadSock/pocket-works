@@ -16,7 +16,7 @@ test('shared gesture timeline validates and preserves a continuous score-domain 
  assert.equal(compiled.valueAt(0),.8);
  assert.equal(compiled.valueAt(1.2),1.15);
  assert.equal(compiled.valueAt(2.4),.72);
- assert.equal(compiled.valueAt(.8),compiled.valueAt(.8));
+ assert.ok(Math.abs(compiled.valueAt(.8-1e-6)-compiled.valueAt(.8+1e-6))<1e-4);
  assert.deepEqual(g.curve,curve);
  assert.equal(compiled.startFrame,0);
  assert.equal(compiled.endFrame,115200);
