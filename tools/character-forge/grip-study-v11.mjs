@@ -7,6 +7,15 @@ import {part,push,weights,normals} from './hybrid-human.mjs';
 import {raster,commonBounds} from './material-study.mjs';
 const out=process.env.CHARACTER_EVIDENCE;
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((n,v,i)=>n+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+// Distance to the finite cylinder axis from every clipped triangle. The
+// nearest surface point may be between vertices and is not a centroid.
+function triangleRadial(tri,c){
+ let poly=tri.map(v=>v.slice());
+ for(const sign of [-1,1]){const next=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=.075-sign*a[0],db=.075-sign*b[0];if(da>=0)next.push(a);if((da>=0)!==(db>=0))next.push(add(a,mul(sub(b,a),da/(da-db))))}poly=next;if(!poly.length)return Infinity}
+ const xy=poly.map(v=>[v[1]-c[0],v[2]-c[1]]),cross2=(a,b)=>a[0]*b[1]-a[1]*b[0],signs=xy.map((a,i)=>cross2(a,xy[(i+1)%xy.length])),area=signs.reduce((a,b)=>a+b,0);
+ if(Math.abs(area)>1e-12&&(signs.every(x=>x>=-1e-12)||signs.every(x=>x<=1e-12)))return 0;
+ let min=Infinity;for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length],d=sub(b,a),t=clamp(-dot(a,d)/Math.max(1e-18,dot(d,d)),0,1);min=Math.min(min,Math.hypot(...add(a,mul(d,t))))}return min;
+}
 export function gripStudy(m,r){
  const J=n=>{const j=m.joints.find(j=>j.name===n+'.L');if(!j)throw Error(n);return j},chains=Array.from({length:5},(_,i)=>[1,2,3].map(s=>J('finger'+(i+1)+'-'+s))),wrist=J('wrist'),p=m.parts[0],palm=chains.slice(1).reduce((a,c)=>add(a,mul(c[0].position,.25)),[0,0,0]),bar=unit(sub(chains[4][0].position,chains[1][0].position)),f=unit(sub(palm,wrist.position)),along=unit(sub(f,mul(bar,dot(f,bar)))),normal=unit(cross(bar,along)),basis=[bar,along,normal],local=v=>basis.map(b=>dot(sub(v,palm),b)),global=v=>add(palm,basis.reduce((a,b,i)=>add(a,mul(b,v[i])),[0,0,0]));
  const ids=new Set([wrist.id,...[1,2,3,4].map(k=>J('metacarpal'+k).id),...chains.flat().map(j=>j.id)]),regions=chains.map(c=>new Set(c.map(j=>j.id))),selected=[],remap=new Map(),faces=[];
@@ -21,14 +30,21 @@ export function gripStudy(m,r){
  cost+=2*closest(signed.filter((_,i)=>subset[i].palm));cost+=.0000004*x.slice(0,15).reduce((n,v,i)=>n+(v-[.75,1,.5][i%3])**2,0);
  return {cost,q,vertices,signed}}
  const limits=[...Array.from({length:5},()=>[[0,1.48],[0,1.48],[0,1.35]]).flat(),[-.7,.95],[-.04,.035],[.009,.06]];
+ const seed=[.3514254851,.4021415360,.3520454565,.8075196822,.9478738034,.6088002316,.9549803218,.9980971252,.6281869677,.8888940411,.9774072544,.6264369945,.8529601481,.7082617535,.3736134718,.7435492121,-.02251227395,.03261053433+(r-.010)];
  let best=[.65,.65,.45,...Array.from({length:4},()=>[.6,1.05,.65]).flat(),.35,-.01,r+.014],score=evaluate(best).cost;
  // Deterministic bounded pattern search: no cross-morph copying or global finger rotations.
  for(const step of [.24,.12,.06,.03,.015])for(let pass=0;pass<3;pass++)for(let k=0;k<best.length;k++){for(const sign of [-1,1]){const trial=best.slice();trial[k]=clamp(trial[k]+sign*step*(k>=16?.04:1),...limits[k]);const v=evaluate(trial).cost;if(v<score){best=trial;score=v}}}
  // Exact full mesh validation, including triangle centroids. No approval based on optimizer samples.
+ // Final refinement uses all actual skin vertices, not the coarse sample.
+ // Preserve an independently measured reference pose as a candidate, never
+ // copy its approval to other morphs or handle diameters.
+ const fullCost=x=>{const e=evaluate(x,selected,true),tri=faces.map(f=>f.reduce((a,i)=>add(a,mul(e.vertices[i],1/3)),[0,0,0])),pen=[...e.signed,...tri.map(v=>Math.hypot(v[1]-x[16],v[2]-x[17])-r)].map(v=>Math.max(0,-v-.0001));return e.cost+650*pen.reduce((n,v)=>n+v*v,0)/pen.length+90*Math.max(...pen)**2};
+ let fullScore=fullCost(best),seedScore=fullCost(seed);if(seedScore<fullScore){best=seed.slice();fullScore=seedScore}
+ for(const step of [.12,.06,.03,.015,.0075])for(let pass=0;pass<2;pass++)for(let k=0;k<best.length;k++)for(const sign of [-1,1]){const t=best.slice();t[k]=clamp(t[k]+sign*step*(k>=16?.04:1),...limits[k]);const v=fullCost(t);if(v<fullScore){best=t;fullScore=v}}
  const e=evaluate(best,selected,true),signed=e.signed,centroids=faces.map(f=>f.reduce((a,i)=>add(a,mul(e.vertices[i],1/3)),[0,0,0])).map(v=>Math.hypot(v[1]-best[16],v[2]-best[17])-r),fingers=chains.map((c,k)=>{const a=signed.filter((_,i)=>selected[i].rs[k]),d=signed.filter((_,i)=>selected[i].ds[k]);return {finger:k+1,samples:a.length,closestGapMm:Math.min(...a.map(Math.abs))*1000,distalGapMm:Math.min(...d.map(Math.abs))*1000,penetrationSamples:a.filter(v=>v<-.001).length}});
- const maxPenetrationMm=Math.max(0,-Math.min(...signed,...centroids))*1000,passed=maxPenetrationMm<=1&&fingers.every(f=>f.distalGapMm<=3&&f.penetrationSamples===0);
+ const exact=faces.map(f=>triangleRadial(f.map(i=>e.vertices[i]),best.slice(16,18))-r),maxPenetrationMm=Math.max(0,-Math.min(...signed,...centroids))*1000,maxTrianglePenetrationMm=Math.max(0,-Math.min(...exact))*1000,passed=maxPenetrationMm<=.5&&maxTrianglePenetrationMm<=.5&&fingers.every(f=>f.distalGapMm<=3&&f.penetrationSamples===0);
  const hand=part('actual MakeHuman isolated left hand',[.68,.40,.27],'body');for(let i=0;i<selected.length;i++)push(hand,e.vertices[i],[[0,1]]);hand.indices=faces.flat();normals(hand);
  const handle=part('independent rigid test cylinder',[.29,.16,.075],'equipment'),N=32;for(let s of [-.075,.075])for(let i=0;i<N;i++){const a=2*Math.PI*i/N;push(handle,[s,best[16]+r*Math.cos(a),best[17]+r*Math.sin(a)],[[0,1]])}for(let i=0;i<N;i++){let j=(i+1)%N;handle.indices.push(i,j,j+N,i,j+N,i+N)}for(let i=1;i<N-1;i++)handle.indices.push(0,i+1,i,N,N+i,N+i+1);normals(handle);
- return {model:{parts:[hand,handle]},report:{diameterMm:r*2000,vertices:selected.length,triangles:faces.length,optimizerSamples:sample.length,angles:best.slice(0,16),jointAxes:axes,palmBasis:basis,handleCenterWorld:global([0,best[16],best[17]]),handleAxis:bar,localRotations:Object.fromEntries(chains.flat().map(j=>[j.name,e.q[j.id]])),fingers,maxPenetrationMm,verticesInside1mm:signed.filter(v=>v<-.001).length,centroidsInside1mm:centroids.filter(v=>v<-.001).length,passed,scope:'sampled surface distances; no triangle-solid proof or artistic approval'}};
+ return {model:{parts:[hand,handle]},report:{diameterMm:r*2000,vertices:selected.length,triangles:faces.length,optimizerSamples:sample.length,angles:best.slice(0,16),jointAxes:axes,palmBasis:basis,handleCenterWorld:global([0,best[16],best[17]]),handleAxis:bar,localRotations:Object.fromEntries(chains.flat().map(j=>[j.name,e.q[j.id]])),fingers,maxPenetrationMm,maxTrianglePenetrationMm,trianglesInsideHalfMm:exact.filter(v=>v<-.0005).length,verticesInside1mm:signed.filter(v=>v<-.001).length,centroidsInside1mm:centroids.filter(v=>v<-.001).length,passed,scope:'All skin triangles clipped to finite cylinder length and checked for radial penetration; tolerance 0.5 mm. No hand self-intersection or art approval implied.'}};
 }
 if(process.env.CHARACTER_EVIDENCE){const rows=[];for(const name of ['base','short-light','tall-heavy']){const m=JSON.parse(readFileSync(join(out,'makehuman-'+name+'.json')));for(const r of [.010,.014,.018]){const {model,report}=gripStudy(m,r);rows.push({...report,morph:name});for(const view of ['front','side','back','three-quarter'])writeFileSync(join(out,'v11-grip-'+name+'-'+r*2000+'-'+view+'.png'),raster(model,{view,size:640,mode:'B'}).png)}}writeFileSync(join(out,'v11-grip-report.json'),JSON.stringify({rows,accepted:rows.every(x=>x.passed),shieldProductionAllowed:false,reason:'Human visual approval required even when numerical gate passes'},null,2));console.log(JSON.stringify(rows.map(({morph,diameterMm,maxPenetrationMm,passed})=>({morph,diameterMm,maxPenetrationMm,passed}))));}
