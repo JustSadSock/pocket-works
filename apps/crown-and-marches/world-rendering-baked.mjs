@@ -123,6 +123,24 @@ export class BakedTerrainGL{
      }finally{g.bindFramebuffer(g.FRAMEBUFFER,null);bank.drop(e);bank.clear();}
     }
    }
+   // Isolated stable projection: identical clip-space denominator and world
+   // center; integer displacement is expressed only as viewport translation.
+   // Do not quantize the camera or adopt the experimental raster as baseline.
+   if(originalDither)g.enable(g.DITHER);else g.disable(g.DITHER);
+   const width=w+2*pad,height=h+2*pad,rect={...v,x:0,y:0,width,height},fixed={...rect,x:v.x-pad,y:v.y-pad},shift=4;
+   const experimental={experimental:true,projection:'fixed-extent-integer-viewport-translation',width,height,anchor:{x:cam.x,y:cam.y,s:cam.s},fixedViewport:fixed};
+   const e=bank.acquire(width,height);
+   if(!e){rows.push({...experimental,label:'stable-allocation',error:'allocation unavailable'});}
+   else try{
+    g.bindFramebuffer(g.FRAMEBUFFER,null);finish(()=>this.draw(cam,{tilt}));const original=read(v.x,v.y);
+    finish(()=>this.draw(cam,{tilt,framebufferViewport:fixed}));const stable=read(v.x,v.y);
+    compare('stable-fresh-vs-original',stable,original,experimental);
+    g.bindFramebuffer(g.FRAMEBUFFER,e.fb);finish(()=>this.draw(cam,{tilt,framebufferViewport:rect}));const build=read(pad,pad),hitX=read(pad+shift,pad),hitY=read(pad,pad+shift);
+    compare('stable-build',build,stable,experimental);
+    g.bindFramebuffer(g.DRAW_FRAMEBUFFER,null);g.clear(g.COLOR_BUFFER_BIT|g.DEPTH_BUFFER_BIT);g.bindFramebuffer(g.READ_FRAMEBUFFER,e.fb);g.blitFramebuffer(pad,pad,pad+w,pad+h,v.x,v.y,v.x+w,v.y+h,g.COLOR_BUFFER_BIT,g.NEAREST);g.bindFramebuffer(g.FRAMEBUFFER,null);g.finish();compare('stable-blit',read(v.x,v.y),stable,experimental);
+    finish(()=>this.draw(cam,{tilt,framebufferViewport:{...fixed,x:fixed.x-shift}}));compare('stable-integer-x',hitX,read(v.x,v.y),{...experimental,exactTarget:{x:cam.x+shift/cam.s,y:cam.y,s:cam.s}});
+    finish(()=>this.draw(cam,{tilt,framebufferViewport:{...fixed,y:fixed.y-shift}}));compare('stable-integer-y',hitY,read(v.x,v.y),{...experimental,exactTarget:{x:cam.x,y:cam.y-shift/(cam.s*Math.sqrt(1-tilt*tilt)),s:cam.s},depthAnchorUnchanged:true});
+   }finally{g.bindFramebuffer(g.FRAMEBUFFER,null);bank.drop(e);bank.clear();}
   }finally{bank.clear();g.bindFramebuffer(g.FRAMEBUFFER,null);if(originalDither)g.enable(g.DITHER);else g.disable(g.DITHER);this.draw(cam,{tilt});}
   return {rows,images,device:this.device,attributes:g.getContextAttributes(),viewport:v,originalDither,precision:g.getShaderPrecisionFormat(g.VERTEX_SHADER,g.HIGH_FLOAT)?.precision,browserCompositionMs:null};
  }

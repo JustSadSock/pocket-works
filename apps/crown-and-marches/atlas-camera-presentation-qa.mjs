@@ -1,4 +1,5 @@
 import {chromium,webkit} from '@playwright/test';
+import {aggregatePresentation} from './atlas-presentation-evidence.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
@@ -105,11 +106,11 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
     // Two instrumented repetitions and one profiling-disabled control, identical path.
     result.continuous=await page.evaluate(async()=>{const r=window.__atlasReview,c=document.querySelector('#atlas'),origin=r.cameraPresentation().camera,raf=()=>new Promise(ok=>requestAnimationFrame(()=>ok(performance.now()))),runs=[];
       const restore=async()=>{r.restoreCamera(origin);const started=performance.now();while(performance.now()-started<15000){await raf();const d=c.dataset;try{const rec=JSON.parse(d.atlasReceipt);if(d.atlasSurface==='ready'&&rec.id===Number(d.atlasRequestId)&&Math.abs(rec.view.x-origin.x)<1e-7&&Math.abs(rec.view.y-origin.y)<1e-7)return true;}catch{}}return false;};
-      for(const enabled of [true,true,false]){r.cameraProfiling(enabled);const frames=[],before=Number(c.dataset.atlasFrame),started=await raf();let prev=started,previousFrame=before;
-       for(let i=0;i<60;i++){const pose=r.motion(Math.floor(i/5)%2===0?2.4:-2.4,Math.floor(i/10)%2===0?1.2:-1.2,1),t=await raf(),frame=Number(c.dataset.atlasFrame);frames.push({input:i,gapMs:t-prev,frame,advanced:frame>previousFrame,pose:pose.camera,profile:enabled?r.cameraProfile():null,active:c.dataset.atlasCompositionActive,pair:c.dataset.atlasPair?JSON.parse(c.dataset.atlasPair):null});previousFrame=frame;prev=t;}
-       const elapsed=prev-started,advanced=frames.filter(f=>f.advanced).length,sorted=frames.map(f=>f.gapMs).sort((a,b)=>a-b);runs.push({profiling:enabled,frames,elapsedMs:elapsed,advanced,fps:1000*advanced/elapsed,p95:sorted[Math.ceil(sorted.length*.95)-1],restored:await restore()});}
+      for(const enabled of [true,true,false]){r.cameraProfiling(enabled);const frames=[],before=Number(c.dataset.atlasFrame),started=await raf();let prev=started,previousFrame=before;r.presentationEvidence('begin');
+       for(let i=0;i<60;i++){const pose=r.motion(Math.floor(i/5)%2===0?2.4:-2.4,Math.floor(i/10)%2===0?1.2:-1.2,1),t=await raf(),frame=Number(c.dataset.atlasFrame);frames.push({input:i,inputId:pose.inputId,inputAt:pose.inputAt,gapMs:t-prev,frame,advanced:frame>previousFrame,pose:pose.camera,profile:enabled?r.cameraProfile():null,active:c.dataset.atlasCompositionActive,pair:c.dataset.atlasPair?JSON.parse(c.dataset.atlasPair):null});previousFrame=frame;prev=t;}
+       const elapsed=prev-started;await raf();await raf();await raf();const journal=r.presentationEvidence('end');runs.push({profiling:enabled,frames,elapsedMs:elapsed,journal,frameUpdates:frames.filter(f=>f.advanced).length,restored:await restore()});}
       r.cameraProfiling(true);return runs;});
-    save();if(result.continuous.some(x=>x.frames.length!==60||!x.restored||x.advanced!==60||x.fps<55||x.p95>33.3))result.errors.push('continuous motion threshold or frame delivery failed');
+    result.continuous=result.continuous.map(x=>({...x,...aggregatePresentation(x.journal,x.frames,x.elapsedMs)}));save();if(result.continuous.some(x=>x.errors.length||x.frames.length!==60||!x.restored||x.advanced!==60||x.fps<55||!Number.isFinite(x.p95)||x.p95>33.3))result.errors.push('continuous motion threshold or frame delivery failed');
     // Independent diagnostics are deliberately outside all measured RAF loops.
     result.gpuDiagnostic=await page.evaluate(()=>window.__atlasReview.gpuProbe());
     result.architectureExperiment=await page.evaluate(async()=>{const r=window.__atlasReview,c=document.querySelector('#atlas'),origin=r.cameraPresentation().camera,raf=()=>new Promise(ok=>requestAnimationFrame(ok)),rows=[];

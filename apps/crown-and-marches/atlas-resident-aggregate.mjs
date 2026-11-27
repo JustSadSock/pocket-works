@@ -1,0 +1,11 @@
+// Run against extracted current-attempt artifacts, not stale or mixed runs.
+import {readdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {join} from 'node:path';
+import assert from 'node:assert/strict';
+import {aggregatePresentation} from './atlas-presentation-evidence.mjs';
+const root=process.argv[2],out=process.argv[3];if(!root||!out)throw Error('usage: node atlas-resident-aggregate.mjs <extracted-attempt> <report.json>');
+const paths=[];function walk(dir){for(const e of readdirSync(dir,{withFileTypes:true})){const p=join(dir,e.name);if(e.isDirectory())walk(p);else if(e.name==='stabilization.json')paths.push(p);}}walk(root);
+const rows=[],errors=[],seen=new Set();for(const p of paths){for(const r of JSON.parse(readFileSync(p,'utf8'))){const key=r.engine+':'+r.index;if(seen.has(key))errors.push('duplicate '+key);seen.add(key);const segments=[];for(const s of r.segments){const frames=r.frames.filter(f=>f.segment===s.label),a=aggregatePresentation(s.journal,frames,s.elapsed);segments.push({label:s.label,...a});if(a.errors.length||a.advanced!==s.advanced||a.fps!==s.fps||a.p95!==s.p95)errors.push('replay mismatch '+key+' '+s.label);}const frames=r.frames.length;const originalRaster=r.raster?.rows?.filter(x=>!x.experimental)??[],experimentalRaster=r.raster?.rows?.filter(x=>x.experimental)??[];if(frames!==300||segments.length!==6||originalRaster.length!==10||experimentalRaster.length!==5||!r.evidenceComplete)errors.push('incomplete '+key);rows.push({key,config:r.config,frames,segments,summary:r.summary,originalRaster,experimentalRaster,qualificationFailures:r.qualificationFailures,qualified:r.qualified});}}
+for(const engine of ['chromium','webkit'])for(let i=0;i<7;i++)if(!seen.has(engine+':'+i))errors.push('missing '+engine+':'+i);
+const report={schema:1,contexts:rows.length,frames:rows.reduce((n,r)=>n+r.frames,0),originalRasterCases:rows.reduce((n,r)=>n+r.originalRaster.length,0),experimentalRasterCases:rows.reduce((n,r)=>n+r.experimentalRaster.length,0),errors,rows,qualifiedPolicies:[0,1,2,3,4,5,6].filter(i=>['chromium','webkit'].every(e=>rows.find(r=>r.key===e+':'+i)?.qualified))};
+writeFileSync(out,JSON.stringify(report,null,2));assert.equal(rows.length,14);assert.equal(report.frames,4200);assert.deepEqual(errors,[]);
