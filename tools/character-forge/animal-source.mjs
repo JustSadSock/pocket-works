@@ -63,6 +63,7 @@ function elephantRebind(model){
  candidate.spec.sourceAdapter='V6 same surface, side-specific chain binding and local adjacency smoothing; unapproved';
  return candidate;
 }
+let compositeSource=null;
 for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','elephant']){
  let source=JSON.parse(readFileSync(join(out,'animal-source-'+family+'.json'))),baseBounds=bounds(source.parts),base=build({...resolveProfile(reg,family,'base'),anatomy:family==='elephant'?'v10':'v4'}),targetBounds=bounds(base.parts);
  for(let name of ['base',family==='horse'?'draft':'massive',family==='horse'?'courser':'light']){
@@ -77,7 +78,7 @@ for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','el
     const r=segmentElephant(m,{name,out,write:(file,data)=>writeFileSync(join(out,file),data)});
     writeFileSync(join(out,'source-v9-elephant-'+name+'-segmentation.json'),JSON.stringify(r.report,null,2));
     writeFileSync(join(out,'source-v9-elephant-'+name+'-segmented.glb'),glb(r.model));
-    if(name==='base'){writeFileSync(join(out,'source-v9-elephant-active.glb'),glb(r.active));writeFileSync(join(out,'source-v10-elephant-active.model.json'),JSON.stringify(r.active));;if(process.env.CHARACTER_V12_COMPOSITE==='1')compositionProbe(r.active);}
+    if(name==='base'){writeFileSync(join(out,'source-v9-elephant-active.glb'),glb(r.active));writeFileSync(join(out,'source-v10-elephant-active.model.json'),JSON.stringify(r.active));;if(process.env.CHARACTER_V12_COMPOSITE==='1')compositeSource=r.active;}
     console.log(JSON.stringify({name,surfaceContacts:m.surfaceContacts,before:r.report.before,after:r.report.after,forbidden:r.report.forbidden,accepted:r.report.approvedTechnical,selectedConfig:r.report.selectedConfig}));
   }else if(family==='elephant'){
     // Keep B's original source topology; C is a bounded, procedural
@@ -110,12 +111,15 @@ for(let family of process.env.CHARACTER_V9_FOCUS==='1'?['elephant']:['horse','el
 }
 writeFileSync(join(out,'animal-source-study.json'),JSON.stringify({report,limitations:'Original source geometry retained; candidate shape uses bounded template deformation and approximate nearest-segment skinning. No source-derived animation acceptance or calibrated anatomical rig.'},null,2));console.log(JSON.stringify(report));
 
+if(compositeSource)compositionProbe(compositeSource);
 function compositionProbe(source){
- const native=build({...source.spec,composite:true,modules:['animal-tack']}),n=source.joints.length;
- if(!source.joints.every((j,i)=>native.joints[i]?.name===j.name&&native.joints[i].parent===j.parent&&norm(sub(native.joints[i].position,j.position))<1e-8))throw Error('Source composite shared rig mismatch');
+ // Source geometry was fitted on the historical-miniature rig, then its
+ // presentation style was set to low-poly. Reconstruct the ORIGINAL rig style.
+ const native=build({...source.spec,style:reg.defaults.style,composite:true,modules:['animal-tack']}),n=source.joints.length;
+ const mismatches=source.joints.map((j,i)=>({name:j.name,native:native.joints[i]?.name,parent:j.parent,nativeParent:native.joints[i]?.parent,distance:native.joints[i]?norm(sub(native.joints[i].position,j.position)):null})).filter(j=>j.name!==j.native||j.parent!==j.nativeParent||j.distance===null||j.distance>=1e-8);writeFileSync(join(out,'v12-elephant-rig-agreement.json'),JSON.stringify({expected:n,matched:n-mismatches.length,originalBuildStyle:reg.defaults.style,sourcePresentationStyle:source.spec.style,mismatches},null,2));if(mismatches.length)throw Error('Source composite shared rig mismatch: '+JSON.stringify(mismatches.slice(0,3)));
  const equipment=native.parts.filter(p=>/^(saddle |howdah |tack )/.test(p.name)||Array.from({length:p.positions.length/3},(_,i)=>weights(p,i)).some(ws=>ws.some(([j])=>j>=n)));
  if(!equipment.some(p=>p.name.includes('howdah floor'))||!equipment.some(p=>p.name.startsWith('tack')))throw Error('Missing composite modules');
- const m=structuredClone(native);m.parts=[...structuredClone(source.parts),...structuredClone(equipment)];m.contacts=structuredClone(source.contacts);m.surfaceContacts=structuredClone(source.surfaceContacts);m.spec={...native.spec,...source.spec,composite:true,modules:['animal-tack']};m.spec.sourceAdapter+=' + existing Native equipment and crew, experimental fit';m.statistics={triangleCount:m.parts.reduce((a,p)=>a+p.indices.length/3,0),vertices:m.parts.reduce((a,p)=>a+p.positions.length/3,0),joints:m.joints.length};
+ const m=structuredClone(native);m.parts=[...structuredClone(source.parts),...structuredClone(equipment)];m.modules=m.parts.map(p=>({part:p.name,kind:p.component,binding:p.binding,slot:p.slot??null}));m.contacts=structuredClone(source.contacts);m.surfaceContacts=structuredClone(source.surfaceContacts);m.spec={...native.spec,...source.spec,composite:true,modules:['animal-tack']};m.spec.sourceAdapter+=' + existing Native equipment and crew, experimental fit';m.statistics={triangleCount:m.parts.reduce((a,p)=>a+p.indices.length/3,0),vertices:m.parts.reduce((a,p)=>a+p.positions.length/3,0),joints:m.joints.length};
  const skinIndex=source.parts.findIndex(p=>p.name.includes('Continuous anatomical skin')),floorIndex=m.parts.findIndex(p=>p.name==='howdah floor'),blanketIndex=m.parts.findIndex(p=>p.name==='saddle blanket'),seat=m.joints.find(j=>j.name==='saddle');if(skinIndex<0||floorIndex<0||blanketIndex<0||!seat)throw Error('Composition markers');
  function topAt(p,x,z){let best=-Infinity;for(let i=0;i<p.indices.length;i+=3){const [a,b,c]=p.indices.slice(i,i+3).map(j=>p.positions.slice(3*j,3*j+3)),d=(b[2]-c[2])*(a[0]-c[0])+(c[0]-b[0])*(a[2]-c[2]);if(Math.abs(d)<1e-9)continue;const u=((b[2]-c[2])*(x-c[0])+(c[0]-b[0])*(z-c[2]))/d,v=((c[2]-a[2])*(x-c[0])+(a[0]-c[0])*(z-c[2]))/d;if(u>=-1e-7&&v>=-1e-7&&u+v<=1+1e-7)best=Math.max(best,u*a[1]+v*b[1]+(1-u-v)*c[1])}return Number.isFinite(best)?best:null}
  function measure(q){const skin=q.parts[skinIndex],blanket=q.parts[blanketIndex],v=Array.from({length:blanket.positions.length/3},(_,i)=>blanket.positions.slice(i*3,i*3+3)),min=Math.min(...v.map(p=>p[1])),bottom=v.filter(p=>p[1]<min+.035),gaps=bottom.map(p=>{const y=topAt(skin,p[0],p[2]);return y===null?null:p[1]-y}).filter(x=>x!==null);return {samples:gaps.length,minGap:gaps.length?Math.min(...gaps):null,maxGap:gaps.length?Math.max(...gaps):null,meanGap:gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:null}}
