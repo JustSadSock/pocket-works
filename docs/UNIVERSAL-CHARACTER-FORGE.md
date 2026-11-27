@@ -46,3 +46,27 @@ CI core: seven recipes × three profiles, three same-recipe variants, indexed GL
 3. Data-defined specialized anatomy, constraints and semantic animation graph; surface contact, actual sole trajectories, coordinated mount/reins and multi-creature choreography.
 4. Character Studio research preview controls and export; optional editor, no mandatory GUI. Port to Art Forge manifest input with explicit source hashes and licenses. Add existing Universal QA app-specific gates only after a consumer is approved.
 5. Benchmark Blender/Eevee/Cycles, WebGL/Babylon/Godot, WebGPU fallback, offline atlas at target scales; local RTX 3080 10GB / RAM32GB, report actual VRAM and CPU. Banners engine unchanged and 30 FPS gate unchanged. No purchase.
+
+
+## v0.19 — Rigid Motion / Residual Deformation Qualification
+
+Status: isolated research only. Character Core, production GLB, Art Forge publication and Banners of War remain unchanged.
+
+### Cloth and collision experiment
+
+The v0.18 evidence isolated the moving right-trouser collider as the dominant contact variable. v0.19 decomposes its 92-point outer collision surface into a best-fit proper rigid transform (translation + rotation) and the remaining local surface deformation. An exact reconstruction check verifies that the two components reproduce the original world-space geometry.
+
+The Blender transfer matrix compares per-vertex shape keys, rigid object transform only, residual shape keys only, and rigid object transform plus residual shape keys. Exact modes must reproduce every evaluated world-space frame within 1e-5 m. Approximation modes are diagnostic controls only. The physical solver is compared at friction 5 and 20 on the lossless split representation. No friction value is accepted unless stretch, self-contact, external contact and hem-shape gates all pass.
+
+### Hand comparison
+
+C-matched and D-matched reuse the per-joint MakeHuman flexion magnitudes measured for B-matched. MCP, PIP and DIP are matched independently across five phases. The audit checks all 15 joint/phase samples and independently verifies GLB playback. This separates corrective-surface effects from differences in input pose severity.
+
+### Acceptance boundaries
+
+- Continuous Motion / Cyclic 49 remains frozen.
+- No Remesh production gate is relaxed.
+- Geometric reconstruction alone does not grant production reuse.
+- Cloth acceptance still requires full dynamic/root-motion qualification, independent contact audit and artistic review.
+- Hand acceptance still requires anatomical and visual approval; matching angles is only a fair comparison control.
+- Banners of War remains untouched.

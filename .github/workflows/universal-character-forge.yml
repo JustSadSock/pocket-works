@@ -379,6 +379,21 @@ jobs:
             quality-artifacts/character-bridge/v18-trousers-R-*
             quality-artifacts/character-bridge/v18-trousers-R-contact.json
           if-no-files-found: warn
+      - name: v0.19 rigid-motion / residual-deformation and Blender transfer matrix
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          python3 -m py_compile tools/character-forge/cloth_motion_v19.py tools/character-forge/cloth-motion-v19-test.py tools/character-forge/cloth-motion-v19-run.py
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-motion-v19-test.py
+          python3 tools/character-forge/cloth-motion-v19-run.py
+      - name: Upload isolated v0.19 motion-transfer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-cloth-v19-motion
+          path: |
+            quality-artifacts/character-bridge/v19-trousers-R-*
+            quality-artifacts/character-bridge/v19-motion-transfer-matrix.json
+          if-no-files-found: warn
       - name: Enforce at least one full dynamic Remesh qualification before production
         id: remeshGate
         if: ${{ !cancelled() && env.BLENDER != '' }}
