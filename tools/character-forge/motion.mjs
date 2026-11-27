@@ -24,7 +24,17 @@ function miniatureFrame(model,action,phase,quat){
    if(name==='root'){y=walk?.035*Math.sin(t):0;z=walk?.025*Math.sin(t):0}
    if(name==='spine03'){x=.025;y=walk?-.055*Math.sin(t):0}
    if(name==='head')y=walk?.025*Math.sin(t):.03;
-   return mul(quat([0,0,1],z),mul(quat([0,1,0],y),quat([1,0,0],x)));
+   if(j.role==='digit'){
+   const match=/^finger([1-5])-([1-3])\.(L|R)$/.exec(name);
+   if(match){
+    const finger=Number(match[1]),segment=Number(match[2]),side=match[3],grip=model.gripPose?.side===side,tip=model.joints.find(k=>k.name==='finger'+finger+'-'+(segment+1)+'.'+side),parent=model.joints[j.parent],wrist=model.joints.find(k=>k.name==='wrist.'+side),a=model.joints.find(k=>k.name==='finger2-1.'+side),b=model.joints.find(k=>k.name==='finger5-1.'+side);
+    if(wrist&&a&&b&&parent){
+     const sub=(a,b)=>a.map((x,i)=>x-b[i]),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],bar=sub(b.position,a.position),along=sub(a.position,wrist.position),normal=cross(bar,along),dir=tip?sub(tip.position,j.position):sub(j.position,parent.position),axis=cross(dir,normal);
+     if(Math.hypot(...axis)>1e-8)return quat(axis,grip?(finger===1?[.18,.32,.32]:[.78,1.15,.72])[segment-1]:[.16,.27,.18][segment-1]);
+    }
+   }
+  }
+  return mul(quat([0,0,1],z),mul(quat([0,1,0],y),quat([1,0,0],x)));
  });
 }
 function miniatureFrameV9(model,action,phase,quat){
