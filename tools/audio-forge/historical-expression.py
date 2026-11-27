@@ -3,7 +3,7 @@ import hashlib, importlib.util, json, pathlib, sys, wave
 import numpy as np
 SR=48000
 sha=lambda b:hashlib.sha256(b).hexdigest()
-REF='db67458f5db26128632e5421c6720abb65ec06ea1aae7c5e3d41d517f8a13108'
+REF='eb61977b3752038a99ea1bda3d938b2af7ffd2c635645068fd75b693a919a038'
 CAT='bed9488a1507e2eff128430a3eee54fbbfd3610a2b29165f54fa7d0bb9e8dff0'
 PLAYERS=('alto-recorder','recorder','folk-harp','frame-drum','tambourine','psaltery','renaissance-organ')
 
