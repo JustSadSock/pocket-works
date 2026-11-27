@@ -406,7 +406,14 @@
       "id": "balance-journeys",
       "kind": "browser-node",
       "entry": "balance-journeys.mjs",
-      "tier": "smoke"
+      "tier": "smoke",
+      "seeds": [
+        0,
+        1
+      ],
+      "args": [
+        "{seed}"
+      ]
     },
     {
       "id": "grand-history",

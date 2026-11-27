@@ -17,21 +17,21 @@ export function materialTiles(source,size,halo,visible=null){
 // floating point interpolation fractions in the original local coordinates.
 // This is intentionally conservative: no hash collision can authorize a hit.
 export function materialDependencies(source,t,halo){
- const {cols:w,detail:r,vertices:v,elevations:z,normalField:n,water,ink}=source,{x,y,x1,y1}=t,steps=r<=2?[.7,2.8,5.6]:[.35,.7,1.2,1.9,2.8,4,5.6,7.4],values=[];
- for(let yy=y-halo;yy<y1+halo;yy++)for(let xx=x-halo;xx<x1+halo;xx++)values.push(z[yy*w+xx]);
- for(let yy=y;yy<y1;yy++)for(let xx=x;xx<x1;xx++){const k=yy*w+xx;for(let i=0;i<9;i++)values.push(v[k*9+i]);if(n)for(let i=0;i<3;i++)values.push(n[k*3+i]);if(water)values.push(water.kind[k],water.depth[k],water.shore[k]);if(ink)values.push(ink[k]);}
- for(const [lo,hi,d] of [[x,x1,light[0]],[y,y1,light[1]]])for(let i=lo;i<hi;i++)for(const step of steps){const p=i+d/len*step*r,base=Math.floor(p);values.push(base-i,p-base);}
- return Float64Array.from(values);
+ const {cols:w,detail:r,vertices:v,elevations:z,normalField:n,water,ink}=source,{x,y,x1,y1}=t,steps=r<=2?[.7,2.8,5.6]:[.35,.7,1.2,1.9,2.8,4,5.6,7.4],tw=x1-x,th=y1-y,values=new Float64Array((tw+2*halo)*(th+2*halo)+tw*th*(9+(n?3:0)+(water?3:0)+(ink?1:0))+(tw+th)*steps.length*2);let at=0;
+ for(let yy=y-halo;yy<y1+halo;yy++)for(let xx=x-halo;xx<x1+halo;xx++)values[at++]=z[yy*w+xx];
+ for(let yy=y;yy<y1;yy++)for(let xx=x;xx<x1;xx++){const k=yy*w+xx;for(let i=0;i<9;i++)values[at++]=v[k*9+i];if(n)for(let i=0;i<3;i++)values[at++]=n[k*3+i];if(water){values[at++]=water.kind[k];values[at++]=water.depth[k];values[at++]=water.shore[k];}if(ink)values[at++]=ink[k];}
+ for(const [lo,hi,d] of [[x,x1,light[0]],[y,y1,light[1]]])for(let i=lo;i<hi;i++)for(const step of steps){const p=i+d/len*step*r,base=Math.floor(p);values[at++]=base-i;values[at++]=p-base;}
+ if(at!==values.length)throw Error('Material dependency inventory mismatch');return values;
 }
 export function equalMaterialDependencies(a,b){if(!a||a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(!Object.is(a[i],b[i]))return false;return true;}
 export async function bakeMaterialTiles({source,cache,visible,pixels,detailMask,shade,budget,check,onTile=()=>{}}){
  const start=performance.now(),halo=materialHalo(source.detail,cache.extra),tiles=materialTiles(source,cache.size,halo,visible),w=source.cols,stats={size:cache.size,halo,hits:0,misses:0,boundaryTiles:0,recomputed:0,reused:0,neededTiles:tiles.filter(t=>t.needed).length,firstNeededMs:null,neededCompleteMs:null,dependencyMs:0,copyMs:0,shadeMs:0,cacheBytes:0,cacheLimit:cache.limit};
  let needed=stats.neededTiles;
- for(const t of tiles){check();const tw=t.x1-t.x,th=t.y1-t.y,n=tw*th,key=[source.detail,+!!source.normalField,+!!source.ink,+!!source.water,+!!source.identity,+!!source.polish,t.gx,t.gy,tw,th,halo].join(':'),at=performance.now(),deps=t.interior?materialDependencies(source,t,halo):null,hit=deps?cache.get(key):null;stats.dependencyMs+=performance.now()-at;
+ for(const t of tiles){check();const tw=t.x1-t.x,th=t.y1-t.y,n=tw*th,key=[source.detail,+!!source.normalField,+!!source.ink,+!!source.water,+!!source.identity,+!!source.polish,t.gx,t.gy,tw,th,halo].join(':'),at=performance.now(),deps=t.interior?materialDependencies(source,t,halo):null,hit=deps?cache.get(key):null,validHit=!!hit&&equalMaterialDependencies(hit.deps,deps);stats.dependencyMs+=performance.now()-at;
  const copy=(buf,out)=>{if(!buf||!out)return;for(let j=0;j<th;j++){const dst=((t.y+j)*w+t.x)*4;out.set(buf.subarray(j*tw*4,(j+1)*tw*4),dst);}};
- if(hit&&equalMaterialDependencies(hit.deps,deps)){const began=performance.now();copy(hit.pixels,pixels);copy(hit.mask,detailMask);stats.copyMs+=performance.now()-began;stats.hits++;stats.reused+=n;}
+ if(validHit){const began=performance.now();copy(hit.pixels,pixels);copy(hit.mask,detailMask);stats.copyMs+=performance.now()-began;stats.hits++;stats.reused+=n;}
  else{if(t.interior)stats.misses++;else stats.boundaryTiles++;const began=performance.now();for(let y=t.y;y<t.y1;y++){for(let x=t.x;x<t.x1;x++)shade(x,y);await budget.yield();check();}stats.shadeMs+=performance.now()-began;stats.recomputed+=n;if(deps){const grab=out=>{if(!out)return null;const buf=new Uint8Array(n*4);for(let j=0;j<th;j++){const src=((t.y+j)*w+t.x)*4;buf.set(out.subarray(src,src+tw*4),j*tw*4);}return buf;},p=grab(pixels),mask=grab(detailMask);cache.put(key,{deps,pixels:p,mask},deps.byteLength+p.byteLength+(mask?.byteLength??0));}}
- if(t.needed){if(stats.firstNeededMs===null)stats.firstNeededMs=performance.now()-start;if(--needed===0)stats.neededCompleteMs=performance.now()-start;}stats.cacheBytes=cache.bytes;onTile({needed:t.needed,hit:!!hit&&equalMaterialDependencies(hit.deps,deps),gx:t.gx,gy:t.gy,elapsedMs:performance.now()-start,cacheBytes:cache.bytes});await budget.yield();
+ if(t.needed){if(stats.firstNeededMs===null)stats.firstNeededMs=performance.now()-start;if(--needed===0)stats.neededCompleteMs=performance.now()-start;}stats.cacheBytes=cache.bytes;onTile({needed:t.needed,hit:validHit,gx:t.gx,gy:t.gy,elapsedMs:performance.now()-start,cacheBytes:cache.bytes});await budget.yield();
  }
  return {...stats,totalMs:performance.now()-start,evictions:cache.evictions};
 }
