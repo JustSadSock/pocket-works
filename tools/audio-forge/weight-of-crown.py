@@ -17,6 +17,7 @@ PARTS={
  'frame-open':('frame-drum','open',-.08,.44,'percussion',.06),
  'frame-muted':('frame-drum','muted',.16,.32,'percussion',.06),
  'bassdrum':('bass-drum','hit',0,.66,'percussion',.05),
+ 'bassdrum-crescendo':('bass-drum','crescendo',0,.70,'percussion',.08),
  'timpani-hit':('timpani','hit',-.12,.52,'percussion',.08),
  'timpani-roll':('timpani','roll',.12,.35,'percussion',.08)}
 GROUPS=('low-strings','upper-strings','brass','woodwinds','plucked-organ','percussion')
@@ -110,7 +111,7 @@ def make_score():
             at(3,j,2,'violin',71 if j%4==0 else 69,1.5,.32)
         at(3,j,1.5,'frame-muted',None,.5,.36);at(3,j,3.5,'frame-open',None,.5,.38)
         if j in (0,5,9):at(3,j,4.5,'bassdrum',None,.5,.62)
-        if j==9:at(3,j,2.5,'timpani-roll',None,2.5,.76)
+        if j==9:at(3,j,2.5,'timpani-roll',None,2.5,.76);at(3,j,2,'bassdrum-crescendo',None,3,.72)
         if j in (3,7):at(3,j,0,'timpani-hit',None,1,.55)
     # V. The Weight: broad register, independent lines, staggered brass and a dense pulse.
     weight_bass=[
@@ -148,6 +149,7 @@ def make_score():
         if j%4==3:at(4,j,3.5,'timpani-roll',None,1.5,.76)
         if j in (0,4,8,12):
             at(4,j,0,'organ',76,5,.22);at(4,j,0,'organ',77,5,.14)
+        if j==6:at(4,j,1,'bassdrum-crescendo',None,4,.80)
     # VI. The price: remove the pulse, leave a suspended modal cluster.
     for j in range(8):
         at(5,j,0,'bass',28 if j<6 else 35,5,.39-.025*j)
@@ -238,7 +240,7 @@ def render(dyn,hist,exp,out):
             start=max(0,start-(overlap if connected else 0))
             length=dur+(overlap if connected else 0)+(overlap if next_conn else 0)
             if finite:
-                tail={'folk-harp':1.15,'frame-drum':1.0,'bass-drum':1.55,'timpani':1.8}[inst]
+                tail={'folk-harp':1.15,'frame-drum':1.0,'bass-drum':2.75,'timpani':1.8}[inst]
                 length=min(int((len(x)-2)/rate),max(dur,round(tail*SR)))
             offset=round(.065*SR) if connected else 0
             if (length-1)*rate+offset>=len(x)-1:
