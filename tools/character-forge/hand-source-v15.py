@@ -87,7 +87,15 @@ def render_pose(name,bases,source):
   # Blender coordinates -> glTF axes, for the existing diagnostic raster.
   parts.append({'name':obj.name,'component':'body','color':[.68,.4,.27],'positions':[c for p in positions for c in [p[0],p[2],-p[1]]],'indices':[int(i) for t in mesh.loop_triangles for i in t.vertices]})
   ev.to_mesh_clear()
- return {'name':name,'source':source,'parts':parts,'bones':{b.name:[[float(x) for x in row] for row in b.matrix] for b in displayArm.pose.bones}}
+ # Export source rest-world axes and relative authored motion in glTF coordinates.
+ C=Matrix(((1,0,0),(0,0,1),(0,-1,0)))
+ transfer={}
+ for b in displayArm.pose.bones:
+  r=rest(displayArm,b.name);F=r.to_quaternion()
+  local=b.matrix_basis.to_quaternion()
+  delta=C.to_quaternion()@F@local@F.inverted()@C.to_quaternion().inverted()
+  transfer[b.name]={'center':list(C@r.translation),'tail':list(C@(displayArm.matrix_world@b.bone.tail_local)),'parent':b.parent.name if b.parent else None,'delta':[delta.x,delta.y,delta.z,delta.w]}
+ return {'name':name,'source':source,'parts':parts,'transfer':transfer,'bones':{b.name:[[float(x) for x in row] for row in b.matrix] for b in displayArm.pose.bones}}
 def blend(f,digits=None):
  result={}
  for b in arm.pose.bones:
