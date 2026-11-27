@@ -75,12 +75,12 @@ jobs:
           start="$(date +%s%3N)"
           outer="$PWD"
           controller_sha="$GITHUB_SHA"
-          tool="$outer/scripts/ci-overhaul/heavy-scoped-mixed-delivery.mjs"
+          pilot_tool="$outer/scripts/ci-overhaul/heavy-scoped-mixed-delivery.mjs"
           source_evidence="$RUNNER_TEMP/signed-source"
           result="$RUNNER_TEMP/scoped-result"
           issuer_dir="$RUNNER_TEMP/issuer"
           mkdir "$result" "$result/mount-proofs"
-          identity="$(node "$tool" identity)"
+          identity="$(node "$pilot_tool" identity)"
           target="$(jq -er .target <<< "$identity")"
           issuer="$(jq -er .issuer <<< "$identity")"
           git clone --quiet --shared --no-checkout "$outer" "$issuer_dir"
@@ -97,7 +97,7 @@ jobs:
             source scripts/ci-overhaul/gameplay-renewal-offline.sh
             prepare_gameplay source
             prepared="$(date +%s%3N)"
-            (cd "$outer"; GITHUB_SHA="$controller_sha" node "$tool" decide "$out" "$source_evidence" "$SHARD") > "$result/decision.json"
+            (cd "$outer"; GITHUB_SHA="$controller_sha" node "$pilot_tool" decide "$out" "$source_evidence" "$SHARD") > "$result/decision.json"
             cat "$result/decision.json"
             authenticated="$(date +%s%3N)"
             run_gameplay_phase performance
