@@ -1,7 +1,7 @@
 name: Notograph Neural Evidence
 on:
-  push:
-    branches: [infra/notograph-neural-lab]
+  pull_request:
+    paths: ['tools/notograph-neural-lab/**', '.github/workflows/notograph-neural-evidence.yml']
   workflow_dispatch:
 permissions:
   contents: read
