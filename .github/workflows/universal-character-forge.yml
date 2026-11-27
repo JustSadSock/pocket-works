@@ -213,6 +213,9 @@ jobs:
         id: recovery
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: '"$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/cloth-recovery-v11.py'
+      - name: Render local cloth experiment evidence even after a rejected gate
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: node tools/character-forge/cloth-evidence-v12.mjs
       - name: Full cloth bake and standalone playback after recovery gate
         id: cloth
         if: ${{ !cancelled() && env.BLENDER != '' && steps.recovery.outcome == 'success' && github.event_name == 'workflow_dispatch' && inputs.full_production }}
@@ -263,10 +266,11 @@ jobs:
         run: |
           apt-get install -y --no-install-recommends librsvg2-bin ffmpeg
           python3 tools/character-forge/animal-source.py
-          CHARACTER_V9_FOCUS=1 node tools/character-forge/animal-source.mjs
+          CHARACTER_V9_FOCUS=1 CHARACTER_V12_COMPOSITE=1 node tools/character-forge/animal-source.mjs
           CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/source-v9-elephant-active.glb" CHARACTER_BRIDGE_LABEL=v9-elephant python3 tools/character-forge/forge-bridge.py
           for f in "$CHARACTER_EVIDENCE"/source-*.svg; do rsvg-convert "$f" -o "${f%.svg}.png"; done
           ffmpeg -hide_banner -loglevel error -y -framerate 24 -i "$CHARACTER_EVIDENCE/source-v9-elephant-motion/%02d.png" -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/source-v9-elephant-walk.mp4"
+          ffmpeg -hide_banner -loglevel error -y -framerate 12 -i "$CHARACTER_EVIDENCE/v12-elephant-source-crew/%02d.png" -frames:v 12 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v12-elephant-source-crew.mp4"
       - name: Enforce independent isolated grip result (no shield production)
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
