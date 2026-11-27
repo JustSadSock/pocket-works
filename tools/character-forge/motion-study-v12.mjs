@@ -18,7 +18,7 @@ const targets=new Map(mapping.map(([t,b,child,next])=>{const align=child?swing(s
 function full(frame){const qs=m.joints.map(()=>I.slice()),world=[];for(const j of m.joints){const parent=j.parent<0?I:world[j.parent],t=targets.get(j.id);if(t){const desired=qmul(qmul(matrixQ(frame.worldMatrices[t.b]),inv(t.restQ)),t.align);qs[j.id]=qmul(inv(parent),desired)}world[j.id]=qmul(parent,qs[j.id])}return qs}
 // Check actual complete orientation transfer, including twist. The alignment
 // maps the target's rest segment into the source rest segment before delta.
-const scale=(m.spec.morphology.height??1.7)/(ref.rest.head[1]-ref.rest['foot.L'][1]+.10),first=ref.frames[0].points.pelvis,travel=sub(ref.frames[N].points.pelvis,first),strideA=travel[2]*scale,strideB=m.spec.gaitStride,ratio=strideB/strideA;
+const legLengths=['L','R'].map(s=>({target:dist(J('upperleg01.'+s).position,J('lowerleg01.'+s).position)+dist(J('lowerleg01.'+s).position,J('foot.'+s).position),source:dist(ref.rest['thigh.'+s],ref.rest['calf.'+s])+dist(ref.rest['calf.'+s],ref.rest['foot.'+s])})),scale=legLengths.reduce((n,r)=>n+r.target/r.source,0)/legLengths.length,first=ref.frames[0].points.pelvis,travel=sub(ref.frames[N].points.pelvis,first),strideA=travel[2]*scale,strideB=m.spec.gaitStride,ratio=strideB/strideA;
 function solveLeg(q,s,target){
  const hip=J('upperleg01.'+s),knee=J('lowerleg01.'+s),foot=J('foot.'+s),w=poseFrom(m,q),p=w[hip.id].p,k=w[knee.id].p,a=w[foot.id].p,l1=dist(p,k),l2=dist(k,a),dir=unit(sub(target,p)),d=clamp(dist(target,p),Math.abs(l1-l2)+.002,l1+l2-.001);
  const plane=sub(sub(k,p),mul(dir,dot(sub(k,p),dir))),bend=Math.hypot(...plane)>.0001?unit(plane):unit(sub([0,0,1],mul(dir,dir[2]))),along=(l1*l1+d*d-l2*l2)/(2*d),height=Math.sqrt(Math.max(0,l1*l1-along*along)),newK=add(p,add(mul(dir,along),mul(bend,height))),newA=add(p,mul(dir,d));
@@ -46,11 +46,31 @@ function diagnose(v){const rows=[],anchors={};for(let i=0;i<=N;i++){const phase=
 const aDiag=diagnose(variants.A),bDiag=diagnose(variants.B);
 // A is the fidelity-first candidate. B is deliberately shortened. Minimal
 // correction on A; no procedural Author blend or forced flat foot rotation.
-const anchors={},adjustments=[];
-for(let i=0;i<=N;i++){const q=variants.A.rotations[i].map(x=>x.slice()),o=variants.A.offsets[i].slice();for(const s of ['L','R']){const active=['heel','toe'].filter(k=>contact[i][s][k].active),errors=[];for(const k of ['heel','toe']){const key=s+k;if(active.includes(k)){const p=point(q,o,s,k);anchors[key]??=[p[0],.008,p[2]];errors.push(sub(anchors[key],p))}else delete anchors[key]}if(!errors.length)continue;const adjacent=[Math.max(0,i-1),Math.min(N,i+1)].every(j=>active.some(k=>contact[j][s][k].active)),strength=adjacent?1:.55;let d=mul(errors.reduce(add,[0,0,0]),strength/errors.length),len=Math.hypot(...d);if(len>.045)d=mul(d,.045/len);const w=poseFrom(m,q),f=J('foot.'+s),before=q.map(x=>x.slice());solveLeg(q,s,add(w[f.id].p,d));adjustments.push({phase:i/N,side:s,requestedMm:len*1000,appliedMm:Math.hypot(...d)*1000,maxJointChangeDegrees:Math.max(...q.map((v,k)=>2*Math.acos(clamp(Math.abs(dot(v,before[k])),0,1))*180/Math.PI))})}variants.C.rotations.push(q);variants.C.offsets.push(o)}
+const anchors={},adjustments=[],corrections={L:[],R:[]};
+const median=v=>{const a=v.slice().sort((a,b)=>a-b),n=a.length;return n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2};
+for(const s of ['L','R'])for(const k of ['heel','toe']){
+ const runs=[];for(let i=0;i<=N;i++)if(contact[i][s][k].active){if(!runs.length||runs.at(-1).at(-1)!==i-1)runs.push([]);runs.at(-1).push(i)}
+ for(const run of runs){const p=run.map(i=>point(variants.A.rotations[i],variants.A.offsets[i],s,k)),anchor=[0,1,2].map(k=>median(p.map(v=>v[k])));for(const i of run)anchors[i+':'+s+':'+k]=anchor}
+}
+for(const s of ['L','R'])for(let i=0;i<=N;i++){
+ const e=['heel','toe'].filter(k=>anchors[i+':'+s+':'+k]).map(k=>sub(anchors[i+':'+s+':'+k],point(variants.A.rotations[i],variants.A.offsets[i],s,k)));
+ corrections[s][i]=e.length?mul(e.reduce(add,[0,0,0]),1/e.length):null;
+ if(corrections[s][i])corrections[s][i][1]=0; // preserve reference heel/toe rocker
+}
+for(let i=0;i<=N;i++){
+ const q=variants.A.rotations[i].map(x=>x.slice()),o=variants.A.offsets[i].slice();
+ for(const s of ['L','R']){
+  let d=corrections[s][i];
+  if(!d){const prev=corrections[s][i-1],next=corrections[s][i+1];d=prev&&next?mul(add(prev,next),.25):prev?mul(prev,.35):next?mul(next,.35):null}
+  if(!d)continue;const len=Math.hypot(...d);if(len>.045)d=mul(d,.045/len);
+  const w=poseFrom(m,q),f=J('foot.'+s),before=q.map(x=>x.slice());solveLeg(q,s,add(w[f.id].p,d));
+  adjustments.push({phase:i/N,side:s,requestedMm:len*1000,appliedMm:Math.hypot(...d)*1000,maxJointChangeDegrees:Math.max(...q.map((v,k)=>2*Math.acos(clamp(Math.abs(dot(v,before[k])),0,1))*180/Math.PI))});
+ }
+ variants.C.rotations.push(q);variants.C.offsets.push(o);
+}
 const reports={A:aDiag,B:bDiag,C:diagnose(variants.C)},rendered={};
 for(const [name,v] of Object.entries(variants)){const candidate=structuredClone(m);candidate.sampledWalk=v;candidate.spec.walkDuration=ref.durationSeconds;candidate.spec.actions=['idle','walk'];write('v12-walk-'+name+'.glb',glb(candidate));json('v12-walk-'+name+'-spec.json',{spec:candidate.spec,sampledWalk:v});rendered[name]=v.rotations.map((q,i)=>{const w=poseFrom(candidate,q).map(b=>({...b,p:add(b.p,v.offsets[i])})),model=structuredClone(candidate);for(let j=0;j<model.parts.length;j++){model.parts[j].positions=deform(candidate,candidate.parts[j],w).flat();normals(model.parts[j])}return model})}
 rendered.Original=native.map((row,i)=>({parts:row.parts.map(p=>{const q={...p,positions:p.positions.map((v,k)=>k%3===2?(v-first[2])*scale:v*scale)};normals(q);return q})}));
 for(const view of ['side','front']){const bounds=commonBounds(Object.values(rendered).flat(),view);for(const [key,models] of Object.entries(rendered)){const dir='v12-walk-'+key+'-'+view;mkdirSync(join(out,dir),{recursive:true});for(let i=0;i<models.length;i++)write(dir+'/'+String(i).padStart(2,'0')+'.png',raster(models[i],{view,bounds,size:512,mode:'B',groundLine:true}).png)}}
-json('v12-motion-report.json',{source:ref.source,duration:ref.durationSeconds,sourceTravel:travel,scale,strideA,strideB,strideRatio:ratio,staticRows,marks,sourceContact:contact,variants:reports,adjustments,qualification:{contactGate:reports.C.activeSamples>0&&reports.C.maxDriftMm<=10,artApproved:false},limits:['Full bind-relative world orientation plus segment alignment, not a native MakeHuman anatomical-axis calibration.','Source heel/toe use actual original skinned vertices, not force-plate contacts; contact thresholds are 45 mm / 0.28 m/s.','Target heel/toe are sampled boot landmarks.','C uses A as provisional fidelity-first base and preserves foot orientation. Correction capped at 45 mm; no art approval.','Original preview scaled to target size; B intentionally has a shorter path. Native source GLB unchanged.']});
+json('v12-motion-report.json',{source:ref.source,duration:ref.durationSeconds,sourceTravel:travel,legLengths,scale,strideA,strideB,strideRatio:ratio,staticRows,marks,sourceContact:contact,variants:reports,adjustments,qualification:{contactGate:reports.C.activeSamples>0&&reports.C.maxDriftMm<=10,artApproved:false},limits:['Full bind-relative world orientation plus segment alignment, not a native MakeHuman anatomical-axis calibration.','Source heel/toe use actual original skinned vertices, not force-plate contacts; contact thresholds are 45 mm / 0.28 m/s.','Target heel/toe are sampled boot landmarks.','C uses A as provisional fidelity-first base, median horizontal anchors per measured contact interval and preserves foot orientation/vertical rocker. Correction capped at 45 mm; no art approval.','Original preview scaled to target size; B intentionally has a shorter path. Native source GLB unchanged.']});
 console.log(JSON.stringify({strideA,strideB,variants:Object.fromEntries(Object.entries(reports).map(([k,v])=>[k,{maxDriftMm:v.maxDriftMm,activeSamples:v.activeSamples,maxVerticalErrorMm:v.maxVerticalErrorMm}]))}));
