@@ -61,7 +61,7 @@ function shield(m,roman){
  const grip=add(add(palm,mul(normal,.024)),mul(along,.009)),anchor=roman?wrist:fore,ws=[[anchor.id,1]],curvature=roman?.105:.035,thick=roman?.012:.016,w=roman?.245:.175,h=roman?.46:.29,N=24,R=32;
  // The board and all fittings are in a single palm-aligned rigid frame.
  // Its back is in front of the curled knuckles, not a global Z plane cutting through them.
- const front=normal,up=unit(sub([0,1,0],mul(front,dot([0,1,0],front)))),right=unit(cross(up,front)),clearance=roman?.058:.071,center=add(grip,mul(front,clearance+thick-curvature)),p=addPart(m,roman?'curved Roman scutum':'heater shield',[.34,.075,.035],'leather','shield');
+ const outward=[-normal[0],0,-normal[2]],front=Math.hypot(...outward)>.1?unit(outward):[0,0,1],up=[0,1,0],right=unit(cross(up,front)),clearance=roman?.058:.071,center=add(grip,mul(front,clearance+thick-curvature)),p=addPart(m,roman?'curved Roman scutum':'heater shield',[.34,.075,.035],'leather','shield');
  const point=(u,v,back=false)=>{const shape=roman?1:(1-.48*Math.max(0,-v));return add(center,add(mul(right,u*w*shape),add(mul(up,v*h),mul(front,curvature*(1-u*u)-(back?thick:0)))))};
  // Only allocate vertices that belong to faces. Blender must preserve
  // the complete weighted vertex set on import, including the umbo aperture.
@@ -85,7 +85,7 @@ function bascinet(m){
  const top=Math.max(...pts.map(v=>v[1])),rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.22,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.18,base=top-.086,centerZ=h.position[2]-.005,N=24,p=addPart(m,'rounded bascinet skull',[.30,.34,.35],'metal','head armour');
  const rows=[[base,1.08],[base+.025,1.04],[base+.065,.91],[base+.078,.68],[base+.098,.34],[base+.108,.03]];
  for(const [y,s] of rows)for(let k=0;k<=N;k++){const a=tau*k/N;push(p,[h.position[0]+rx*s*Math.cos(a),y,centerZ+rz*s*Math.sin(a)],[[h.id,1]])}
- grid(p,rows.length,N+1);const cap=push(p,[h.position[0],rows.at(-1)[0]+.003,typeof centerZ==='number'?centerZ:h.position[2]],[[h.id,1]]);for(let k=0;k<N;k++)p.indices.push((rows.length-1)*(N+1)+k,(rows.length-1)*(N+1)+k+1,cap);finish(p,.004);
+ grid(p,rows.length,N+1);const cap=push(p,[h.position[0],rows.at(-1)[0]+.003,typeof centerZ==='number'?centerZ:h.position[2]],[[h.id,1]]);for(let k=0;k<N;k++)p.indices.push((rows.length-1)*(N+1)+k,(rows.length-1)*(N+1)+k+1,cap);for(let i=0;i<p.indices.length;i+=3)[p.indices[i+1],p.indices[i+2]]=[p.indices[i+2],p.indices[i+1]];finish(p,.004);
  const z=centerZ+rz*.86,visor=addPart(m,'bascinet brow and visor',[.27,.30,.31],'metal','face protection');
  for(const [x,y] of [[-.060,base+.025],[.060,base+.025],[.055,base+.066],[-.055,base+.066]])push(visor,[h.position[0]+x,y,z],[[h.id,1]]);
  visor.indices=[0,1,2,0,2,3];finish(visor,.003);
@@ -102,7 +102,7 @@ function imperialHelmet(m){
  const top=Math.max(...pts.map(v=>v[1])),rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.18,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.16,base=top-.078,N=24,p=addPart(m,'imperial Gallic helmet bowl',[.36,.38,.38],'metal','head armour');
  const rows=[[base,1.10],[base+.025,1.08],[base+.065,.96],[base+.072,.72],[base+.088,.36],[base+.098,.025]];
  for(const [y,s] of rows)for(let k=0;k<=N;k++){const a=tau*k/N;push(p,[h.position[0]+rx*s*Math.cos(a),y,h.position[2]+rz*s*Math.sin(a)],[[h.id,1]])}
- grid(p,rows.length,N+1);const cap=p.positions.length/3;push(p,[h.position[0],rows.at(-1)[0]+.002,h.position[2]],[[h.id,1]]);for(let k=0;k<N;k++)p.indices.push((rows.length-1)*(N+1)+k,(rows.length-1)*(N+1)+k+1,cap);finish(p,.004);
+ grid(p,rows.length,N+1);const cap=p.positions.length/3;push(p,[h.position[0],rows.at(-1)[0]+.002,h.position[2]],[[h.id,1]]);for(let k=0;k<N;k++)p.indices.push((rows.length-1)*(N+1)+k,(rows.length-1)*(N+1)+k+1,cap);for(let i=0;i<p.indices.length;i+=3)[p.indices[i+1],p.indices[i+2]]=[p.indices[i+2],p.indices[i+1]];finish(p,.004);
  tube(m,'imperial helmet brow',[{p:[h.position[0]-rx,base+.026,h.position[2]+rz*.52],r:.010,ws:[[h.id,1]]},{p:[h.position[0],base+.030,h.position[2]+rz*1.04],r:.010,ws:[[h.id,1]]},{p:[h.position[0]+rx,base+.026,h.position[2]+rz*.52],r:.010,ws:[[h.id,1]]}],[.55,.39,.16],'metal',8,.002);
  for(const side of [-1,1]){
   const cheek=addPart(m,'imperial cheek guard '+side,[.37,.38,.34],'metal','head armour'),x=h.position[0]+side*rx*.82;
