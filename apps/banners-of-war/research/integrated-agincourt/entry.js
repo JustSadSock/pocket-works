@@ -30,7 +30,7 @@ globalThis.__bowIntegratedPreview={
   const units=visible.map(u=>({id:u.id,side:u.side,type:u.type,n:u.n,x:u.x,y:u.y,a:u.a,projected:projected(u),form:u.form,rout:!!u.rout,escaped:!!u.escaped,contact:u.contact,order:u.order?.kind,ammo:u.ammo}));
   const center=tactical?unproject({x:w/2,y:h/2}):null;
   const cam={axis:tactical?'tactical':portrait?'tall':'wide',mode:'C',k,u:(w/2-o.x)/k-((portrait||tactical)?F.H:0),v:(h/2-o.y)/k,x:center?.x??(portrait?(h/2-o.y)/k:(w/2-o.x)/k),y:center?.y??(portrait?F.H-(w/2-o.x)/k:(h/2-o.y)/k)};
-  if(phase==='play'&&s.round!==markerRound){markerRound=s.round;markers={}}if(phase==='play'&&playing){if(s.shots?.some(q=>visible.some(u=>u.id===q.id)))markers.ranged??=frame;if(visible.some(u=>u.contact>0&&u.type==='sword'))markers.infantry??=frame;if(visible.some(u=>u.rout))markers.retreat??=frame}last={phase,playing,frame,lastFrame,markers:{...markers},time:s.time,round:s.round,result:s.result,signature:before,terrainHash,camera:{k,o,dpr,portrait},art:false,units,selected:[...selected],commandable:[...commandable],roundTripMax:Math.max(0,...units.map(u=>{let q=unproject(u.projected);return Math.hypot(q.x-u.x,q.y-u.y)})),orders:JSON.parse(JSON.stringify(orders)),fallback:fallback.map(u=>u.id),stats:null,reason:null};
+  if(phase==='play'&&s.round!==markerRound){markerRound=s.round;markers={}}if(phase==='play'&&playing){if(s.shots?.some(q=>visible.some(u=>u.id===q.id)))markers.ranged??=frame;if(visible.some(u=>u.contact>0&&u.type==='sword'))markers.infantry??=frame;if(visible.some(u=>u.rout))markers.retreat??=frame}last={phase,playing,frame,lastFrame,markers:{...markers},time:s.time,round:s.round,result:s.result,signature:before,terrainHash,camera:{k,o,dpr,portrait,tactical},art:false,units,selected:[...selected],commandable:[...commandable],roundTripMax:Math.max(0,...units.map(u=>{let q=unproject(u.projected);return Math.hypot(q.x-u.x,q.y-u.y)})),orders:JSON.parse(JSON.stringify(orders)),fallback:fallback.map(u=>u.id),stats:null,reason:null};
   if(!enabled||!active||!ready||failed||layer!=='normal'||paletteAlt||study){last.reason=failed||(!ready?'loading':layer!=='normal'?'diagnostic layer':paletteAlt?'alternative palette':'schematic');status.textContent=failed?'Схема · ошибка ресурсов':active&&!ready?'Загрузка миниатюр':'Схематический атлас';return null}
   try{
    // Visibility comes from the native UI. Unsupported troops use native renderRegiment.
@@ -51,3 +51,4 @@ globalThis.__bowIntegratedPreview={
 // Read-only evidence, no synthetic orders or state injection.
 globalThis.integratedQA={receipt:()=>globalThis.__bowIntegratedPreview.receipt()};
 await import('../../app.js');
+globalThis.integratedQA.ready=true;

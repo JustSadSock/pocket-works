@@ -10,7 +10,7 @@ async function files(dir){let r=[];for(let d of await readdir(dir,{withFileTypes
 if(root){
  let analysis=[];
  for(let p of await files(root)){
-  if(!/agincourt.*\.json$/.test(p)||p.endsWith('summary.json'))continue;
+  if(!/^agincourt-.*\.json$/.test(p.split('/').at(-1))||p.endsWith('summary.json'))continue;
   let a=JSON.parse(await readFile(p,'utf8'));if(!a.initial||!a.frames?.length||!a.final)continue;
   let F=E.forState(a.initial),units=new Map(),last=null,changes=[],timeline=[];
   for(let f of a.frames){let score=historicalScore(F,f),control=score.zones[0]?.control;if(control!==last){changes.push({time:f.time,control,influence:score.zones[0]?.influence});last=control}

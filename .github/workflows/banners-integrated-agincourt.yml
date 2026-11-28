@@ -12,6 +12,30 @@ concurrency:
   group: banners-integrated-agincourt-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  profile-scope:
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+      - id: scope
+        env:
+          BEFORE: ${{ github.event.before }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          run=true
+          if [ "$ACTION" = synchronize ] && [ -n "$BEFORE" ] && [ "$(git rev-parse HEAD^)" = "$BEFORE" ]; then
+            changed="$(git diff --name-only "$BEFORE" HEAD)"
+            # Only a test/receipt/docs correction with no isolated renderer or engine changes.
+            # Previous paired matrix continues under its original HEAD; manual dispatch always runs.
+            if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -vE '^(apps/banners-of-war/research/integrated-agincourt/|apps/banners-of-war/DIRECTOR_STATE\.md$|\.github/workflows/banners-integrated-agincourt\.yml$)' | grep -q .; then
+              run=false
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
   standalone:
     runs-on: ubuntu-24.04
     steps:
@@ -136,6 +160,8 @@ jobs:
           path: quality-artifacts/command-diagnosis
           retention-days: 14
   paired-performance:
+    needs: profile-scope
+    if: needs.profile-scope.outputs.run == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 180

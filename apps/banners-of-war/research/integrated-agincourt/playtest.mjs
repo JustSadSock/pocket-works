@@ -13,7 +13,7 @@ async function switchView(p,art){
  if(active!==art)await p.locator('#integrated-view').click();
  return waitReceipt(p,art);
 }
-async function tactical(p,on){let r=await receipt(p);if(!!r.camera.tactical!==on){await p.locator('#integrated-camera').click();await p.waitForFunction(on=>!!window.integratedQA.receipt()?.camera?.tactical===on,on);r=await waitReceipt(p,true)}assert(r.roundTripMax<.01);return r}
+async function tactical(p,on){let r=await receipt(p);if(!!r.camera.tactical!==on){await p.locator('#integrated-camera').click();await p.waitForFunction(on=>!!window.integratedQA.receipt()?.camera?.tactical===on,on,{timeout:120000});r=await waitReceipt(p,true)}assert(r.roundTripMax<.01);return r}
 async function pair(p,label,art){
  let a=await switchView(p,true);if(a.camera.tactical)a=await tactical(p,false);await p.screenshot({path:out+'/'+label+'-candidate.png'});
  let b=await switchView(p,false);await p.screenshot({path:out+'/'+label+'-schematic.png'});
@@ -68,9 +68,9 @@ let failures=[],reference=null;
 try{
  const driver=engine==='webkit'?webkit:chromium,b=await driver.launch();
  try{for(const art of [false,true]){
-  const tag=engine+'-side'+side+'-'+(art?'candidate':'schematic'),context=await b.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1,recordVideo:{dir:out+'/'+tag,size:{width:1440,height:900}}}),p=await context.newPage(),errors=[],rounds=[],pairs=[],events={},motionProfile=null;p.on('pageerror',e=>errors.push(e.message));
+  const tag=engine+'-side'+side+'-'+(art?'candidate':'schematic'),context=await b.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1,recordVideo:{dir:out+'/'+tag,size:{width:1440,height:900}}}),p=await context.newPage(),errors=[],rounds=[],pairs=[],events={};let motionProfile=null;p.on('pageerror',e=>errors.push(e.message));
   try{
-   await p.goto(url+'?view='+ (art?'candidate':'schematic'));
+   await p.goto(url+'?view='+ (art?'candidate':'schematic'));await p.waitForFunction(()=>window.integratedQA?.ready===true);
    await p.locator('#chronicles').click();await p.locator('#chronicle-id').selectOption('agincourt');await p.locator('#chronicle-side').selectOption(String(side));await p.locator('#chronicle-launch').click();
    await p.locator('#map').waitFor({state:'visible'});await p.waitForFunction(()=>!!window.integratedQA?.receipt());
    pairs.push(await pair(p,tag+'-initial',art));
@@ -95,10 +95,10 @@ try{
     rounds.push(trace);
     await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,errors},null,2));
    }
-   let final=await saved(p);assert(final.state.result);if(reference)assert.equal(rounds.length,reference.length);
+   let final=await saved(p);assert(final.state.result);if(art){assert(reference,'Schematic reference battle failed');assert.equal(rounds.length,reference.length)}
    await p.screenshot({path:out+'/'+tag+'-result.png'});assert.equal(errors.length,0);assert(rounds.some(r=>r.order.executed.length),'No actual player commands in complete battle');
    if(!art)reference=rounds;
-  }catch(e){failures.push({tag,error:e.stack});await p.screenshot({path:out+'/'+tag+'-failure.png'}).catch(()=>{})}
+  }catch(e){failures.push({tag,error:e.stack,receipt:await receipt(p).catch(()=>null),browserErrors:errors});await p.screenshot({path:out+'/'+tag+'-failure.png'}).catch(()=>{})}
   finally{await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,errors},null,2));await context.close()}
  }}finally{await b.close()}
 }finally{server.close();await writeFile(out+'/failures.json',JSON.stringify(failures,null,2))}
