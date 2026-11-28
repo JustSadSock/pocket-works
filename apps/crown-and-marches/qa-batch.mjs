@@ -15,3 +15,6 @@ if(kind==='balance'&&shard===5){const child=spawnSync(process.execPath,[fileURLT
 
 // Keep the complete society series within the app's existing five computation shards.
 if(kind==='balance'&&shard<5){const child=spawnSync(process.execPath,[fileURLToPath(new URL('society-experiment.mjs',import.meta.url)),String(shard)],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
+
+// One natural-start causality role per existing balance shard; no old task removed.
+if(kind==='balance'){const child=spawnSync(process.execPath,[fileURLToPath(new URL('grand-scenario-preflight.mjs',import.meta.url)),'360',String(shard)],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}

@@ -282,6 +282,8 @@ function saveAtlasCampaign(quiet=false){if(state?.sandboxKind!=='atlas')return f
 async function loadAtlasCampaign(){atlasStatus('restore-start');try{await storageQueue;const raw=await atlasRecord('get');if(!raw)throw Error('Нет сохранения Living Atlas');const data=JSON.parse(raw),next=restore(data.state);if(next.sandboxKind!=='atlas'||next.geographyV3?.revision!=='genesis-3.4.0')throw Error('Несовместимый атлас');enterAtlas(next);atlasStatus('restored');if(data.battle&&next.battle){battle=data.battle;bcam=new Camera(BW,BH);dirty=true;renderUI();}}catch(e){atlasStatus('error',e.message);toast(e.message);}}
 function exportAtlasCampaign(){if(state?.sandboxKind!=='atlas')return;const url=URL.createObjectURL(new Blob([serialize(state)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='living-atlas.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
+// Read-only browser journey telemetry, never present on deployed hosts.
+if(['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).get('grand-journey-review')==='1')window.__grandJourneyReview={snapshot(){if(!grandActive())throw Error('Grand Campaign required');return {raw:serialize(state),speed,notice:document.querySelector('#notice')?.textContent??'',camera:{x:cam.x,y:cam.y,zoom:cam.zoom},viewport:{...cam.viewport}};},point(i){const [x,y]=cam.point(xx(i)+.5,yy(i)+.5);return {x,y,viewport:{...cam.viewport}};}};
 if(['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).get('atlas-review')==='1'){
  window.__atlasReview={
   async scene(name,{tilt=false,full=false,surfaceScale=true,identity=true,human=true,urban=true,culture='urban',keepCache=false,zoom=null}={}){

@@ -2,6 +2,7 @@ import {chromium,webkit} from '@playwright/test';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {runDiscoveryJourneys} from './discovery-journeys.mjs';
+import {runGrandCausalityJourney} from './grand-causality-browser-qa.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {join} from 'node:path';
@@ -29,5 +30,7 @@ try{let ready=false,last='no response';for(let i=0;i<80;i++){if(serverError||ser
  await tap('econexit',null,'#panel');await p.locator('#modalbody [data-act="diplab"]').waitFor({state:'visible'});
  }finally{await context.close();}}finally{await browser.close();}}
  if(mode!=='0')await runDiscoveryJourneys(url);
+ if(mode!=='1')await runGrandCausalityJourney(url,'agrarian');
+ if(mode!=='0')await runGrandCausalityJourney(url,'maritime');
 }finally{if(server.exitCode===null){server.kill('SIGTERM');await Promise.race([once(server,'exit'),new Promise(r=>setTimeout(r,2000))]);}writeFileSync(join(output,'journeys.json'),JSON.stringify(reports,null,2));}
 
