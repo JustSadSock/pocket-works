@@ -90,3 +90,14 @@ Every run now records and checks:
 - agreement of collider and pin-path speeds across all three frame rates.
 
 A run is invalid if solver elapsed time differs from the expected 2.75 seconds or if collider/pin path speeds differ materially from the 24 FPS baseline. The original v0.20 JSON and renders remain untouched. No production qualification is inferred from a successful time-resolution experiment.
+
+
+## v0.20.1 — closed negative time-resolution experiment
+
+Research run 46086149619, artifact 15239821391, source HEAD d7a61f2. At time_scale=1.0, 24/48/96 FPS replay 67/133/265 frames over 2.75 s with matched source velocity. Peak stretch 3.074/3.538/4.826, self pairs 20/63/30, external pairs 13/19/44. All fail. Do not continue blind FPS, stiffness or friction sweeps. The v0.20 inverse-time-scale attempt was superseded by v0.20.1.
+
+## v0.21 — dynamic contact investigation (research, no admission)
+
+The same free-surface edges recur roughly 150–249 mm from the pinned seam. Prior archived frames show contact near the terminal cap and abrupt triangle normal transitions; this is a hypothesis, not a measured solver impulse. Contact diagnostics preserve old scalar metrics and add elapsed seconds, source phase, barycentric velocity, signed closed-proxy geometric penetration at sampled points, adjacent-normal dihedral angle, area ratios, and independent exhaustive nearest-triangle checks. No direct impulses are exposed by the Blender Python path. Point probes do not certify continuous swept collision.
+
+One-factor 24 FPS matrix A original outer, B bounded geometric smoothing, C measured axis-section projection, D numerical collider outer margin 3 mm (cloth distance unchanged), E flip diagonal 106–139 without adding vertices, F partial first-ring pin transition. B/C are limited to 2 mm vertex displacement and 4 mm bidirectional sampled surface discrepancy. The triangle solver still uses piecewise normals, not interpolated shading normals. No production gates are changed and no isolated run can grant production approval. The original full dynamic gate, root motion and artistic acceptance remain required. Every matrix binds the source and code hashes and actual Blender version. Independent job reruns may be explored, but do not reuse unverified artifacts or skip final CI.

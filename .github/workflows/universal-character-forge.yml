@@ -410,6 +410,20 @@ jobs:
             quality-artifacts/character-bridge/v20-trousers-R-*
             quality-artifacts/character-bridge/v20-time-resolution-matrix.json
           if-no-files-found: warn
+      - name: v0.21 isolated contact mechanism and geometry matrix
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          python3 -m py_compile tools/character-forge/cloth_contact_v21.py tools/character-forge/cloth-contact-v21-run.py tools/character-forge/cloth-recovery-v11.py
+          node --check tools/character-forge/cloth-evidence-v12.mjs
+          python3 tools/character-forge/cloth-contact-v21-run.py
+      - name: Upload isolated v0.21 contact evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-cloth-v21-contact
+          path: |
+            quality-artifacts/character-bridge/v21-contact-*
+          retention-days: 14
       - name: Enforce at least one full dynamic Remesh qualification before production
         id: remeshGate
         if: ${{ !cancelled() && env.BLENDER != '' }}
