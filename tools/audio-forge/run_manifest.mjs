@@ -7,6 +7,7 @@ import process from 'node:process';
 import { expandManifest, renderPhysics, arrangeTracks } from './foundation.mjs';
 import { compileExpression } from './expression.mjs';
 import { renderRecipe } from './programmable.mjs';
+import { acousticCatalog, acousticExtensions } from './acoustic-authoring.mjs';
 import { createCatalog, mixHybrid } from './sample-library.mjs';
 
 const ROOT = process.cwd();
@@ -296,6 +297,7 @@ function generateManifest(manifestPath, baseDir, generated) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const jobs = expandManifest(manifest);
   const catalog = jobs.some(job => job.type === 'hybrid' || (job.type==='recipe' && job.recipe?.layers?.some(l=>l.type==='sample'))) ? createCatalog(manifest.samples, path.dirname(manifestPath)) : null;
+  const acoustic = acousticCatalog(manifest.acousticModels ?? [], path.dirname(manifestPath));
   const resolvedSamples = new Map();
   const targets = new Set();
   for (const job of jobs) {
@@ -307,6 +309,9 @@ function generateManifest(manifestPath, baseDir, generated) {
     }
     if(job.type==='recipe'){
       if(manifest.version!==2||job.recipe?.version!==1||!Array.isArray(job.recipe.layers)||job.recipe.layers.length>32)throw Error('Invalid programmable recipe job');
+      const acousticLayers=job.recipe.layers.filter(l=>l.type==='acoustic');
+      if(acousticLayers.length>8)throw Error('Too many acoustic layers');
+      for(const layer of acousticLayers)acoustic.resolve(layer.model);
       for(const layer of job.recipe.layers)if(layer.type==='sample'){
         if(typeof layer.source!=='string')throw Error('Recipe sample id required');
         if(!resolvedSamples.has(layer.source))resolvedSamples.set(layer.source,catalog.resolve(layer.source));
@@ -314,6 +319,7 @@ function generateManifest(manifestPath, baseDir, generated) {
     }
     const target = assertInside(baseDir, job.output, `Output for ${job.name}`);
     if (manifest.version === 2 && targets.has(target)) throw new Error('Duplicate resolved audio output: '+target);
+    if(acoustic.directories.some(d=>target===d||target.startsWith(d+path.sep)))throw Error('Generated output would overwrite an acoustic package');
     targets.add(target);
   }
   for (const {file} of resolvedSamples.values()) if (targets.has(file)) throw new Error('Generated output would overwrite a source sample');
@@ -354,7 +360,7 @@ function generateManifest(manifestPath, baseDir, generated) {
           const x=new Float32Array(pcm.length/4);for(let i=0;i<x.length;i++)x[i]=pcm.readFloatLE(i*4);
           samples[l.source]=x;console.log('Sample provenance: '+entry.id+' '+entry.license+' sha256:'+entry.sha256);
         }
-        const a=renderRecipe(job.recipe,{samples});writePcm16Wav(rawOutput,a.samples,a.sampleRate,a.channels);
+        const a=renderRecipe(job.recipe,{samples,extensions:acousticExtensions(acoustic)});writePcm16Wav(rawOutput,a.samples,a.sampleRate,a.channels);
       } else synthesizeMusic(job, rawOutput, tempDir);
       processWithSox(rawOutput, output, job);
       if (!existsSync(output) || statSync(output).size < 128) throw new Error(`Generated audio is empty: ${output}`);

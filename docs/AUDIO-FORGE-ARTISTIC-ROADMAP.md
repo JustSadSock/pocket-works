@@ -53,3 +53,7 @@ Dawn Beyond the Pass artistically accepted as uplifting martial music, rhythm/cl
 
 ## Acoustic Reference & Resynthesis
 Material Contact Lab rejected for realism: metal sounds like hollow plastic tubes, differentiation adequate, living sounds unnatural; exhale most promising but not realistic; exact human recipe mapping unknown; fictional latch unjudged; no score. Preserve exact original. End blind modal/noise tuning. 45% acoustic reference/analysis/resynthesis, 25% material interactions, 15% breath, 10% musical expression, 5% QA/runtime/archive. Distinguish documentary originals, Foley analogues, sample replay, parameter extraction and independent resynthesis. Test separate held-out events, fixed-gain and matched-RMS controls; no metric substitutes human listening. No compulsory new music/battle or audition without promising evidence. Existing musical artistic acceptance unchanged; production legal gate closed.
+
+
+## Acoustic Models & Open Authoring
+Priorities 35% integrated agent authoring, 30% acoustic analysis, 15% living sound, 15% musical research, 5% QA/archive. Director confirmed 103/103 archived hashes and five class holdout improvements; owner comparison pending, not artistically approved. Portable mixed recipe and editable time-varying model initial implementation; novel stylized shutter is an engineering transfer test, not a realism claim. Preserve accepted Lanterns/Dawn, rejected Material Contact Lab and Battle, and all prior comparisons. No new mandatory review or music master. SoundFont rights unresolved; no production activation.
