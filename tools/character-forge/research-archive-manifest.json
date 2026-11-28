@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "scope": "verified GitHub artifact metadata; download before expiry; no binary archives committed",
+  "runs": [
+    {
+      "head": "d7a61f2f325fa12f9de9457b9beaebf77717b7b9",
+      "run": 46086149619,
+      "artifacts": [
+        {
+          "id": 15240365883,
+          "name": "character-forge-motion-v17",
+          "sha256": "29cec2a054ce9bd700667000c0495e713d303204fe5ccc85b589d5a8b0045f41",
+          "sizeBytes": 2370113,
+          "expiresAt": "2027-02-26T00:07:01Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15240365883"
+        },
+        {
+          "id": 15240066555,
+          "name": "character-forge-roundtrip",
+          "sha256": "06adeb752eb5302a9b2c1cdef72262c68be7467f9c8cddc5e3d91438332988c5",
+          "sizeBytes": 155659605,
+          "expiresAt": "2026-12-12T00:30:54Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15240066555"
+        },
+        {
+          "id": 15239821391,
+          "name": "character-forge-cloth-v20-time-resolution-corrected",
+          "sha256": "12c7d1abcdfb982234b38d83d5096b6e4f670305cf1f0a3a0f7a50d26ff45619",
+          "sizeBytes": 19149197,
+          "expiresAt": "2027-02-26T00:07:01Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239821391"
+        },
+        {
+          "id": 15239632520,
+          "name": "character-forge-cloth-v18-contact",
+          "sha256": "4b350f07918609b6130a81578fe749f1181c093b97189311ef5bc0986cc8a5bb",
+          "sizeBytes": 31527816,
+          "expiresAt": "2027-02-26T00:07:01Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239632520"
+        },
+        {
+          "id": 15239505948,
+          "name": "character-forge-browser",
+          "sha256": "938a7cb8c3d993f327da83bfe7ffaad240a8d4d4c955415c7c1465203cd32714",
+          "sizeBytes": 822228,
+          "expiresAt": "2026-12-12T00:09:26Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239505948"
+        },
+        {
+          "id": 15239416549,
+          "name": "character-forge-studio",
+          "sha256": "a738f7aa91301cc05019ddd3f0d7c6f078227c194f910c80474a3f40709a7e5f",
+          "sizeBytes": 1744394,
+          "expiresAt": "2026-12-12T00:10:25Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239416549"
+        },
+        {
+          "id": 15239412869,
+          "name": "character-forge-cloth-v17",
+          "sha256": "289c613e3e65ef8e9eda31b52980199aae8d486813f9e069bb2a645effa734c9",
+          "sizeBytes": 8151533,
+          "expiresAt": "2027-02-26T00:07:01Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239412869"
+        },
+        {
+          "id": 15239386392,
+          "name": "character-forge-morph-v9",
+          "sha256": "6a0fa1ebe9f457c0e38dec862364ef57cc80274cd63f6663fb3ad0b8f61ee167",
+          "sizeBytes": 33670401,
+          "expiresAt": "2026-12-12T00:08:56Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239386392"
+        },
+        {
+          "id": 15239129444,
+          "name": "character-forge-cloth-v19-motion",
+          "sha256": "7de750a4498ef279be7f14e4d55e80e231ed15de364c0d8cb11be08dfa9f677d",
+          "sizeBytes": 19855023,
+          "expiresAt": "2027-02-26T00:07:01Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239129444"
+        },
+        {
+          "id": 15239008408,
+          "name": "character-forge-hand-v17",
+          "sha256": "fdde8ce07534cdb1e887e61a7fa84a36d973dcc5e1a20b49ae8bab08bb0fb766",
+          "sizeBytes": 18849586,
+          "expiresAt": "2027-02-26T00:07:01Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15239008408"
+        },
+        {
+          "id": 15238908366,
+          "name": "character-forge-core",
+          "sha256": "359b325f39dc75ad09879e1b428d532c1a1c1fdb79945688fab7bcfc3544473e",
+          "sizeBytes": 9062781,
+          "expiresAt": "2026-12-12T00:08:05Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46086149619/artifacts/15238908366"
+        }
+      ]
+    },
+    {
+      "head": "604ed3279532a5642651c88e5a5559abd7cb3446",
+      "run": 46092337386,
+      "artifacts": [
+        {
+          "id": 15242320311,
+          "name": "character-forge-hand-v17",
+          "sha256": "bba76bd1f1c938741470ef5cfb570ada2644618c42b0b618fbf08664759b3cfa",
+          "sizeBytes": 42879847,
+          "expiresAt": "2027-02-26T01:17:19Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15242320311"
+        },
+        {
+          "id": 15242196763,
+          "name": "character-forge-morph-v9",
+          "sha256": "a3ec652a730c7ba7c37d9b5aea3623bac55a75bc6c3ad4c8e8c09a071d8c973c",
+          "sizeBytes": 33670392,
+          "expiresAt": "2026-12-12T01:19:35Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15242196763"
+        },
+        {
+          "id": 15242028744,
+          "name": "character-forge-cloth-v18-contact",
+          "sha256": "2bff4cf7e8b024c0ebf1bae918c35b954d5c157965b4c5c58d4a55235fa13515",
+          "sizeBytes": 31734482,
+          "expiresAt": "2027-02-26T01:17:19Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15242028744"
+        },
+        {
+          "id": 15241944202,
+          "name": "character-forge-cloth-v19-motion",
+          "sha256": "689086fb4f604300123ad33387721a34b8a0d0a8158c383eadb6c641293e9e8c",
+          "sizeBytes": 19866550,
+          "expiresAt": "2027-02-26T01:17:19Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241944202"
+        },
+        {
+          "id": 15241771888,
+          "name": "character-forge-core",
+          "sha256": "612e7010cdefd5fd99340b9d2bdaefbf8cf2eb9fb5354bab38395cb36d2ebb08",
+          "sizeBytes": 9062785,
+          "expiresAt": "2026-12-12T01:18:35Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241771888"
+        },
+        {
+          "id": 15241333221,
+          "name": "character-forge-studio",
+          "sha256": "4ace3bf737f9e236bdaa9a6a88f3d55a8c9b984d485522465fc393ab78c6dc0c",
+          "sizeBytes": 1750410,
+          "expiresAt": "2026-12-12T01:21:12Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241333221"
+        },
+        {
+          "id": 15241304637,
+          "name": "character-forge-cloth-v20-time-resolution-corrected",
+          "sha256": "25cf9b4e3189afcd732a503fb8b3eea5bf8f351c7f85eb86e2ff2343e7f54d36",
+          "sizeBytes": 21198716,
+          "expiresAt": "2027-02-26T01:17:19Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241304637"
+        },
+        {
+          "id": 15241229969,
+          "name": "character-forge-browser",
+          "sha256": "5ab97ca0c43520dd4b0fb78f7ff6272c683275f861f1840eea9185aa6e005eaa",
+          "sizeBytes": 822204,
+          "expiresAt": "2026-12-12T01:20:02Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241229969"
+        },
+        {
+          "id": 15241169058,
+          "name": "character-forge-cloth-v17",
+          "sha256": "61ecfe483f92e5abf827710f4d8f1320310abfddab87e94fecec725f7abdfa7b",
+          "sizeBytes": 8151119,
+          "expiresAt": "2027-02-26T01:17:19Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241169058"
+        }
+      ]
+    }
+  ],
+  "source": {
+    "makehuman": {
+      "revision": "a8bc2d54ff0ac92e78ff71431b1023eda42bf482",
+      "license": "CC0-1.0",
+      "details": "makehuman-adapter.json"
+    },
+    "kinemiq": {
+      "sha256": "64ca5ab4a92c9da079c5e88ca509391b0a58a24ccf2a1307b16e2f0fc6b23ffc",
+      "license": "CC0"
+    },
+    "godotXR": {
+      "revision": "6c6189bdfcdf855052ef1aeb9f3e0ec4c7a7eb60",
+      "license": "CC0",
+      "details": "v15 reference pose report"
+    }
+  },
+  "tools": {
+    "blender": "5.2.1",
+    "node": "22",
+    "playwright": "1.64.0",
+    "three": "0.180.0"
+  },
+  "configurations": {
+    "v20_1": "24/48/96 FPS, time_scale 1, same physical duration; all failed",
+    "v21": "isolated A-F matrix, original raw JSON configuration in artifacts; incomplete at snapshot"
+  },
+  "retention": "Existing Research 14 days; P0 30 days; durable archive storage not configured."
+}

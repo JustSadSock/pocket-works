@@ -1,0 +1,151 @@
+name: Character Forge P0 Civilian Pack
+on:
+  pull_request:
+    paths:
+      - 'tools/character-forge/**'
+      - '.github/workflows/character-forge-p0.yml'
+      - 'tools/art-forge/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: character-forge-p0-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/p0-source/morph
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Required shared Core and scoped admission contract
+        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs tools/character-forge/p0-profile.test.mjs
+      - name: Fresh exact MakeHuman and licensed KinemIQ source
+        run: |
+          mkdir -p "$CHARACTER_EVIDENCE"
+          python3 tools/character-forge/makehuman-adapter.py
+          curl -fL --retry 3 --connect-timeout 20 --max-time 240 -o "$CHARACTER_EVIDENCE/v9-cc0-motions.zip" https://huggingface.co/datasets/Kinemiq/free-game-animations/resolve/main/KinemIQ_Free_Animations_CC0_GLB.zip
+          echo '64ca5ab4a92c9da079c5e88ca509391b0a58a24ccf2a1307b16e2f0fc6b23ffc  '"$CHARACTER_EVIDENCE/v9-cc0-motions.zip" | sha256sum --check --strict
+          CHARACTER_EVIDENCE="$CHARACTER_EVIDENCE/.." python3 tools/character-forge/kinemiq-v11.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p0-source
+          path: quality-artifacts/p0-source
+          retention-days: 30
+  civilian:
+    needs: source
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        role: [artisan, merchant]
+        morph: [base, short-light, tall-heavy]
+    defaults:
+      run:
+        shell: bash
+    env:
+      CHARACTER_EVIDENCE: ${{ github.workspace }}/quality-artifacts/p0
+      P0_REPEAT: ${{ github.workspace }}/quality-artifacts/p0-repeat
+      P0_ROLE: ${{ matrix.role }}
+      P0_MORPH: ${{ matrix.morph }}
+      P0_CORE_PASSED: '1'
+      BLENDER_VERSION: '5.2.1'
+      CHARACTER_P0_MOTION: '1'
+      CHARACTER_V15_MOTION: '1'
+      CHARACTER_P0_MODEL: p0-input-model.json
+      CHARACTER_P0_SOURCE: morph/makehuman-${{ matrix.morph }}.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-source
+          path: quality-artifacts/p0
+      - name: Two independent clean model and Cyclic49 builds
+        run: |
+          mkdir -p "$P0_REPEAT"
+          cp -a "$CHARACTER_EVIDENCE/morph" "$P0_REPEAT/"
+          for f in v10-reference-trajectory.json v11-native-mesh-frames.json v12-source-foot-surface.json; do cp "$CHARACTER_EVIDENCE/$f" "$P0_REPEAT/"; done
+          node tools/character-forge/p0-build.mjs
+          node tools/character-forge/motion-study-v12.mjs
+          CHARACTER_EVIDENCE="$P0_REPEAT" node tools/character-forge/p0-build.mjs
+          CHARACTER_EVIDENCE="$P0_REPEAT" node tools/character-forge/motion-study-v12.mjs
+      - name: Native geometry and matched image evidence
+        run: node tools/character-forge/p0-native-qa.mjs
+      - name: Upload candidate geometry before independent checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-candidate-${{ matrix.role }}-${{ matrix.morph }}
+          path: |
+            quality-artifacts/p0/character.glb
+            quality-artifacts/p0/spec.json
+            quality-artifacts/p0/p0-*.json
+            !quality-artifacts/p0/p0-evaluated.json
+            quality-artifacts/p0/*.png
+          retention-days: 30
+      - name: Install verified editor
+        run: |
+          rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil xz-utils libgl1 libx11-6 libxi6 libxrender1 ffmpeg librsvg2-bin
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          verified=false
+          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" blender.sha256
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          test "$verified" = true
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Actual three-cycle videos
+        run: |
+          fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v15-continuous-report.json"))["duration"])')
+          for view in front side; do ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/walk-$view/%02d.png" -frames:v 73 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/walk-$view.mp4"; done
+      - name: Independent Blender contact and playback
+        id: blenderQA
+        run: |
+          status=0
+          "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/p0-surface-audit.py || status=1
+          for clip in idle walk; do P0_CLIP="$clip" "$BLENDER" --background --factory-startup --disable-autoexec --python-exit-code 1 --python tools/character-forge/p0-blender-playback.py || status=1; done
+          exit "$status"
+      - name: Art Forge plan build check and independent reimport
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: CHARACTER_BRIDGE_INPUT="$CHARACTER_EVIDENCE/character.glb" CHARACTER_BRIDGE_LABEL=p0 python3 tools/character-forge/forge-bridge.py
+      - name: Chromium and WebKit exact imported GLB playback
+        if: ${{ !cancelled() }}
+        run: |
+          npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0 three@0.180.0
+          node tools/character-forge/p0-browser-qa.mjs
+      - name: Fail-closed scoped candidate receipt
+        if: ${{ !cancelled() }}
+        run: P0_BLENDER_VERSION="$("$BLENDER" --version | head -1)" node tools/character-forge/p0-manifest.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p0-qualification-${{ matrix.role }}-${{ matrix.morph }}
+          path: |
+            quality-artifacts/p0/character.glb
+            quality-artifacts/p0/spec.json
+            quality-artifacts/p0/p0-*.json
+            !quality-artifacts/p0/p0-evaluated.json
+            quality-artifacts/p0/admission-*.json
+            quality-artifacts/p0/roundtrip-*
+            quality-artifacts/p0/forge-*.log
+            quality-artifacts/p0/*.mp4
+            quality-artifacts/p0/*.png
+          retention-days: 30

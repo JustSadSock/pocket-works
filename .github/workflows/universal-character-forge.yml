@@ -15,7 +15,7 @@ permissions:
   contents: read
 concurrency:
   group: character-forge-v11-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   core:
     runs-on: ubuntu-24.04
