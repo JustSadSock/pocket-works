@@ -34,6 +34,10 @@ class ContactSurface:
             for a,b in zip(f,f[1:]+f[:1]):self.adj.setdefault(tuple(sorted((a,b))),[]).append(i)
         self.normals=[(self.v[b]-self.v[a]).cross(self.v[c]-self.v[a]).normalized() for a,b,c in fs]
         self.closed=all(len(x)==2 for x in self.adj.values())
+        counts={}
+        for f in fs:
+            for j in f:counts[j]=counts.get(j,0)+1
+        self.capVertices={j for j,n in counts.items() if n>=12}
     def nearest(self,p,velocity,independent=False):
         p=Vector(p);q,n,fi,d=self.bvh.find_nearest(p)
         if q is None:raise RuntimeError("empty contact surface")
@@ -44,7 +48,7 @@ class ContactSurface:
         adjacent=set(j for x,y in zip(ids,ids[1:]+ids[:1]) for j in self.adj[tuple(sorted((x,y)))] if j!=fi)
         angles=[math.degrees(math.acos(max(-1.,min(1.,normal.dot(self.normals[j]))))) for j in adjacent]
         inside=abs(closed_winding(p,self.v,self.f))>.5 if self.closed and d>1e-7 else None
-        out={'face':fi,'faceVertices':list(ids),'point':list(q),'distanceMetres':d,'insideClosedProxy':inside,
+        out={'face':fi,'faceVertices':list(ids),'virtualCapFace':any(j in self.capVertices for j in ids),'point':list(q),'distanceMetres':d,'insideClosedProxy':inside,
              'penetrationMetres':d if inside else (0. if inside is False else None),'normal':list(normal),'barycentric':list(w),
              'surfaceVelocity':list(sv),'relativeNormalSpeed':normalSpeed,'relativeTangentialSpeed':(rel-normal*normalSpeed).length,
              'contactPointPrevious':list(old),'dihedralMaxDegrees':max(angles,default=0.),
@@ -60,6 +64,8 @@ class ContactSurface:
 def watch_edges(v,old,rest,faces,edges,pins,cs,previous,source_cs,previous_source,fps):
     surfaces={name:ContactSurface(vv,ff,previous.get(name,vv),fps) for name,vv,ff in cs}
     originals={name:ContactSurface(vv,ff,previous_source.get(name,vv),fps) for name,vv,ff in source_cs}
+    # The measured garment surface is open at the two virtual closure caps.
+    openOriginals={name:ContactSurface(vv,[f for f in ff if not any(j in originals[name].capVertices for j in f)],previous_source.get(name,vv),fps) for name,vv,ff in source_cs}
     rows=[]
     # Watch the exact named edges plus the four worst active edges; preserve removed edge identity.
     rank=sorted(edges,key=lambda e:math.dist(v[e[0]],v[e[1]])/math.dist(rest[e[0]],rest[e[1]]),reverse=True)
@@ -73,7 +79,8 @@ def watch_edges(v,old,rest,faces,edges,pins,cs,previous,source_cs,previous_sourc
             q=Vector(v[a]).lerp(Vector(v[b]),u);q0=Vector(old[a]).lerp(Vector(old[b]),u);vel=(q-q0)*fps
             contacts={name:s.nearest(q,vel,independent=(u==.5)) for name,s in surfaces.items()}
             original={name:s.nearest(q,vel,independent=(u==.5)) for name,s in originals.items()}
-            samples.append({'edgeFraction':u,'position':list(q),'velocity':list(vel),'proxy':contacts,'sourceOuter':original})
+            openSource={name:s.nearest(q,vel,independent=(u==.5)) for name,s in openOriginals.items()}
+            samples.append({'edgeFraction':u,'position':list(q),'velocity':list(vel),'proxy':contacts,'sourceOuterClosed':original,'sourceOuterOpen':openSource})
         rows.append({'edge':[a,b],'present':True,'ratio':math.dist(v[a],v[b])/math.dist(rest[a],rest[b]),
                      'pinDistancesMetres':[min(math.dist(rest[j],rest[k]) for k in pins) for j in ids],
                      'incidentAreas':[{'face':list(f),'ratio':area(v,f)/max(area(rest,f),1e-12)} for f in incident],
@@ -103,6 +110,22 @@ def bounded_proxy(rows,kind,limit=.002):
             target.append(list(p+delta))
         result.append(target)
     return result
+
+def filleted_cap_rings(rows,radius=.002):
+    # Quarter-circle rounding inside the measured end boundary. No outward offset.
+    vv=[[Vector(p) for p in row] for row in rows]
+    def cap(end,neighbor):
+        center=sum(end,Vector((0,0,0)))/len(end);result=[]
+        for k in range(5):
+            angle=k*math.pi/8
+            ring=[]
+            for p,q in zip(end,neighbor):
+                radial=(p-center).normalized();axial=(q-p).normalized()
+                r=min(radius,(q-p).length*.2,(p-center).length*.2)
+                ring.append(list(p-radial*r*(1-math.sin(angle))+axial*r*(1-math.cos(angle))))
+            result.append(ring)
+        return result
+    return cap(vv[0],vv[1])+[[list(p) for p in row] for row in vv[1:-1]]+list(reversed(cap(vv[-1],vv[-2])))
 
 def flip_diagonal(faces,a,b):
     hits=[i for i,f in enumerate(faces) if a in f and b in f]

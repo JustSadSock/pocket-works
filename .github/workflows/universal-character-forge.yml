@@ -417,7 +417,7 @@ jobs:
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
           python3 -m py_compile tools/character-forge/cloth_contact_v21.py tools/character-forge/cloth-contact-v21-run.py tools/character-forge/cloth-recovery-v11.py
-          node --check tools/character-forge/cloth-evidence-v12.mjs
+          node --check tools/character-forge/cloth-contact-render-v21.mjs
           python3 tools/character-forge/cloth-contact-v21-run.py
       - name: Upload isolated v0.21 contact evidence
         if: always()
@@ -514,9 +514,11 @@ jobs:
       - name: Encode integrated character three-cycle research evidence
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
+          node tools/character-forge/demonstrator-v21.mjs
           test -f "$CHARACTER_EVIDENCE/v21-demonstrator/manifest.json"
+          fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v21-demonstrator/manifest.json"))["walkDuration"])')
           for view in front side; do
-            ffmpeg -hide_banner -loglevel error -y -framerate 18.461538 -i "$CHARACTER_EVIDENCE/v21-demonstrator/walk-$view/%02d.png" -frames:v 73 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v21-demonstrator/walk-$view.mp4"
+            ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$CHARACTER_EVIDENCE/v21-demonstrator/walk-$view/%02d.png" -frames:v 73 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v21-demonstrator/walk-$view.mp4"
           done
       - name: Upload integrated research character
         if: always()

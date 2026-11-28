@@ -35,7 +35,7 @@ export function writeDemonstrator(cyclic,source,out){
  const manifest={version:'v0.21',diagnosticOnly:true,productionAllowed:false,artApproved:false,gripAllowed:false,
   motion:'Cyclic49 unchanged exact 49-key joint and root paths; technical acceptance applies to source walk',anatomy:'C-matched eight-weight MCP correction on exact source vertices; hand morph only active in isolated flexion mode',
   clothing:'Historical artisan skinned wardrobe, not a qualified dynamic cloth cache; failed Remesh evidence remains separate and visible in the research report',
-  mappedSourceVertices:changed,bodyVertexCount:part.positions.length/3,parts:walk.parts.map(p=>p.name),walkPathUnchanged:JSON.stringify(walk.sampledWalk)===JSON.stringify(cyclic.sampledWalk),
+  walkDuration:cyclic.spec.walkDuration,mappedSourceVertices:changed,bodyVertexCount:part.positions.length/3,parts:walk.parts.map(p=>p.name),walkPathUnchanged:JSON.stringify(walk.sampledWalk)===JSON.stringify(cyclic.sampledWalk),
   originalCyclicGlbSha256:sha(readFileSync(join(out,'v15-walk-cyclic49.glb'))),walkGlbSha256:sha(walkBin),handGlbSha256:sha(flexBin)};
  if(!manifest.walkPathUnchanged)throw Error('Cyclic49 was mutated');
  writeFileSync(join(dir,'manifest.json'),JSON.stringify(manifest,null,2));
@@ -51,3 +51,5 @@ export function writeDemonstrator(cyclic,source,out){
  }
  return manifest;
 }
+
+if(process.argv[1]&&process.argv[1].endsWith('demonstrator-v21.mjs')){const out=process.env.CHARACTER_EVIDENCE;const read=n=>JSON.parse(readFileSync(join(out,n),'utf8'));writeDemonstrator(read('v21-cyclic49-source-model.json'),read('morph/makehuman-base.json'),out)}

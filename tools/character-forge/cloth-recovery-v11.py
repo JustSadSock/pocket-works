@@ -7,7 +7,7 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from cloth_motion_v19 import decompose_frames,apply_rigid_keys,world_vertices_gltf
-from cloth_contact_v21 import watch_edges,bounded_proxy,flip_diagonal,selftest as contact_selftest
+from cloth_contact_v21 import watch_edges,bounded_proxy,filleted_cap_rings,flip_diagonal,selftest as contact_selftest
 out=Path(os.environ['CHARACTER_EVIDENCE']);spec=json.loads((out/'morph/v9-cloth-input.json').read_text())
 g=spec['garment'];N=g['outerVertexCount'];raw=lambda a:[a[i:i+3] for i in range(0,len(a),3)] if a and isinstance(a[0],(float,int)) else a
 cv=lambda p:(p[0],-p[2],p[1]);gltf=lambda p:[p.x,p.z,-p.y]
@@ -421,10 +421,22 @@ for label,stage,slow,ramp,allowed in experiments:
     if v21config:
      source_frames[item['name']]=(frames,fs)
      if v21config['candidate'] in ('B','C'):
-      mode='bounded-smooth' if v21config['candidate']=='B' else 'axis-section'
-      generated=[ringmesh(bounded_proxy(rings(v,18),mode)) for v in frames]
-      frames=[x[0] for x in generated];fs=generated[0][1];proxyTopology=topology(frames[0],fs)
       refFrames,refFaces=source_frames[item['name']]
+      if v21config['candidate']=='B':
+       generated=[ringmesh(filleted_cap_rings(rings(v,18))) for v in frames]
+       frames=[x[0] for x in generated];fs=generated[0][1]
+       if any(x[1]!=fs for x in generated):raise RuntimeError('Fillet winding changed across motion')
+      else:
+       # C keeps original triangles, alters only the measured ring planes.
+       frames=[]
+       for v in refFrames:
+        vv=[p for row in bounded_proxy(rings(v,18),'axis-section') for p in row]
+        for j in range(len(vv),len(v)):
+         ids=sorted({k for f in refFaces if j in f for k in f if k<90})
+         vv.append([sum(vv[k][axis] for k in ids)/len(ids) for axis in range(3)])
+        frames.append(vv)
+       fs=refFaces
+      proxyTopology=topology(frames[0],fs)
       # Compare both surfaces, including edge midpoints, against the measured outer source.
       fit=[]
       for source,target in zip(refFrames,frames):
@@ -493,7 +505,7 @@ for label,stage,slow,ramp,allowed in experiments:
     cs.append((name,actual,idx))
    seconds=i/sceneFps;phase='static' if stage==1 else ('warmup' if i<warm-rampFrames else ('pin-transition' if i<warm else 'animation'))
    # Historical 40..48 and 44..46 windows expressed in source-frame time, inclusive.
-   referenceFrame=1+i/timeResolution;contactWindow=39.999999<=referenceFrame<=48.000001;strainWindow=43.999999<=referenceFrame<=46.000001
+   sourcePhase=(i-warm)/sourceFrameStride;contactWindow=-3.000001<=sourcePhase<=5.000001;strainWindow=.999999<=sourcePhase<=3.000001
    row=stats(v,expected[i],cs);row={'frame':frame,'timeSeconds':seconds,'phase':phase,'sourceFrame':times[i],**row,'colliderAudit':audit};rows.append(row)
    if v15 and construction=='remesh':
     selfTree=tree(v,faces)
@@ -530,6 +542,8 @@ for label,stage,slow,ramp,allowed in experiments:
   if peakSample:samples.append(peakSample[1])
   if v21config and stage>1:
    timeline['firstDefectSeconds']=None if firstDefect is None else (firstDefect-1)/sceneFps
+   strictFirst=next((r for r in rows if r['timeSeconds']+1e-9>=timeline['settledStartSeconds'] and (r['p95Stretch']>1.15 or r['maxStretch']>1.6 or r['collapsedEdges'] or r.get('selfOverlapPairs',0) or sum(r['nonSeamTrianglePairs'].values()) or r['pinErrorMetres']>.006 or not .78<=r['hemRadiusRatio']<=1.22 or r['maxDeviationMetres']>.15)),None)
+   timeline['firstAnyGateDefect']=None if strictFirst is None else {'frame':strictFirst['frame'],'timeSeconds':strictFirst['timeSeconds'],'phase':strictFirst['phase']}
    (out/'v21-contact.json').write_text(json.dumps({'candidate':v21config['candidate'],'diagnosticOnly':True,'productionAllowed':False,'timeline':timeline,'proxyFit':proxy_fit,'contactRows':contactRows,'impulseMeasurement':'not exposed by Blender Python; no inferred impulse reported'},indent=2))
   # Require all settled samples to preserve weave and hem, anchor, and avoid
   # new non-seam intersections. Initial contacts are reported, not ignored.

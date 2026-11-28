@@ -5,7 +5,7 @@ root=Path(os.environ['CHARACTER_EVIDENCE'])
 source=root/'morph/v9-cloth-input.json'
 spec=json.loads(source.read_text())
 blender=os.environ['BLENDER']
-labels={'A':'outer-control','B':'bounded-geometric-smoothing','C':'axis-cross-section','D':'collider-margin-3mm','E':'local-diagonal-flip','F':'first-ring-pin-transition'}
+labels={'A':'outer-control','B':'bounded-inward-cap-fillet','C':'axis-cross-section','D':'collider-margin-3mm','E':'local-diagonal-flip','F':'first-ring-pin-transition'}
 summary=[]
 for candidate,label in labels.items():
     out=root/('v21-contact-'+candidate);(out/'morph').mkdir(parents=True,exist_ok=True)
@@ -28,20 +28,19 @@ for candidate,label in labels.items():
     if contact.exists():
         d=json.loads(contact.read_text());row['timeline']=d['timeline'];row['proxyFit']=d['proxyFit'];row['contactFrameCount']=len(d['contactRows'])
     summary.append(row)
-    # Keep raw samples and render actual geometry; failures still retain their evidence.
-    if frames:
-        subprocess.run(['node','tools/character-forge/cloth-evidence-v12.mjs'],env=env,check=True)
-        for view in ('front','side'):
-            framesdir=out/'v15-cloth-remesh-frames'
-            seq=out/('v21-'+view+'-sequence');seq.mkdir(exist_ok=True)
-            for i,p in enumerate(sorted(framesdir.glob(view+'-[0-9][0-9][0-9].png'))):shutil.copy2(p,seq/('%03d.png'%i))
-            if list(seq.glob('*.png')):
-                subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-framerate',str(spec['fps']),'-i',str(seq/'%03d.png'),'-c:v','libx264','-pix_fmt','yuv420p',str(out/('v21-'+view+'.mp4'))],check=True)
     print(json.dumps(row),flush=True)
-files=['cloth-recovery-v11.py','cloth_contact_v21.py','cloth-contact-v21-run.py','cloth-evidence-v12.mjs']
+files=['cloth-recovery-v11.py','cloth_contact_v21.py','cloth-contact-v21-run.py','cloth-contact-render-v21.mjs']
 hashes={f:hashlib.sha256((Path('tools/character-forge')/f).read_bytes()).hexdigest() for f in files}
 version=subprocess.check_output([blender,'--version'],text=True).splitlines()[0]
 (root/'v21-contact-matrix.json').write_text(json.dumps({'diagnosticOnly':True,'productionAllowed':False,'sourceSha256':hashlib.sha256(source.read_bytes()).hexdigest(),'codeSha256':hashes,'blenderVersion':version,'candidates':summary},indent=2))
+# Render all completed candidates together using a single camera per view.
+subprocess.run(['node','tools/character-forge/cloth-contact-render-v21.mjs'],check=True)
+for row in summary:
+    out=root/('v21-contact-'+row['candidate'])
+    for view in ('front','side'):
+        seq=out/('v21-'+view+'-sequence')
+        if seq.exists() and list(seq.glob('*.png')):
+            subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-framerate',str(spec['fps']),'-i',str(seq/'%03d.png'),'-c:v','libx264','-pix_fmt','yuv420p',str(out/('v21-'+view+'.mp4'))],check=True)
 # A rejected geometry candidate is useful evidence, but an incomplete baseline is not.
 if len(summary)!=6 or summary[0]['exit']!=0 or not summary[0].get('contactFrameCount'):
     raise SystemExit('Missing qualified diagnostic execution of the baseline')
