@@ -76,7 +76,7 @@ def render(field,foundation,music,out):
     for t,k,dist,pan in sorted(timeline):
         i,a=pick(k);st=round(t*SR);active=[end for end in active if end>st]
         if len(active)>=6:drops+=1;continue
-        en=min(N,st+len(a));active.append(en);peakvoices=max(peakvoices,len(active));gain=min(1,3/max(3,dist));a=a[:en-st].mean(axis=1);a=sosfilt(butter(2,max(900,11000/(1+dist/9)),fs=SR,output='sos'),a);stereo=a[:,None]*np.sqrt([(1-pan)/2,(1+pan)/2])*gain*.46
+        en=min(N,st+len(a));active.append(min(N,en+round(.079*SR)));peakvoices=max(peakvoices,len(active));gain=min(1,3/max(3,dist));a=a[:en-st].mean(axis=1);a=sosfilt(butter(2,max(900,11000/(1+dist/9)),fs=SR,output='sos'),a);stereo=a[:,None]*np.sqrt([(1-pan)/2,(1+pan)/2])*gain*.46
         dest=near if dist<10 else far;dest[st:en]+=stereo
         for delay,level in ((.031,.11),(.079,.065)):
             k0=round(delay*SR);end2=min(N,en+k0);dest[st+k0:end2]+=stereo[:end2-st-k0,::-1]*level
@@ -91,6 +91,6 @@ def render(field,foundation,music,out):
     def read(p):
         with wave.open(str(p),'rb') as w:return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
     error=int(np.max(abs(sum(read(out/f'scene-{k}.wav') for k in stems)-read(out/'scene-master.wav'))));assert error==0
-    m=dict(approval='research-only',seed=SEED,sourceReceipts=used,variants=records,ambience=amb_meta,scene=scene,events=events,sceneSeconds=60,voiceLimit=6,peakVoices=peakvoices,dropped=drops,cacheLimit=8,cacheHits=hits,minimumMusicGain=float(duck.min()),pcmError=error,wallSeconds=time.perf_counter()-start,maxRssKiB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,limitations='Blade and steps procedural, shield hybrid recorded drum body not actual shield recording; offline scene not browser render.')
+    m=dict(approval='research-only',seed=SEED,musicSha256=sha(pathlib.Path(music).read_bytes()),sourceReceipts=used,variants=records,ambience=amb_meta,scene=scene,events=events,sceneSeconds=60,voiceLimit=6,peakVoices=peakvoices,dropped=drops,cacheLimit=8,cacheHits=hits,minimumMusicGain=float(duck.min()),pcmError=error,wallSeconds=time.perf_counter()-start,maxRssKiB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,limitations='Blade and steps procedural, shield hybrid recorded drum body not actual shield recording; offline scene not browser render.')
     (out/'manifest.json').write_text(json.dumps(m,indent=2)+'\n');print({k:m[k] for k in ('peakVoices','dropped','cacheHits','minimumMusicGain','pcmError','wallSeconds','maxRssKiB')})
 if __name__=='__main__':render(*sys.argv[1:])
