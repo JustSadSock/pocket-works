@@ -32,6 +32,7 @@ export function overlay({ctx:g,s,visible,painted,projected:P,selected,orders,dra
  function line(points,close=false){let p=[];for(let i=0;i<points.length-1;i++)p.push(...segment(points[i],points[i+1]).slice(0,-1));if(points.length)p.push(points.at(-1));if(close&&points.length)p.push(...segment(points.at(-1),points[0]).slice(1));path(p,close)}
  const rectangle=(x,y,w,h,a=0)=>[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([u,v])=>({x:x+u*Math.cos(a)-v*Math.sin(a),y:y+u*Math.sin(a)+v*Math.cos(a)}));
  const circle=(x,y,r)=>Array.from({length:64},(_,i)=>({x:x+r*Math.cos(i*Math.PI/32),y:y+r*Math.sin(i*Math.PI/32)}));
+ if(phase==='deploy'){line([{x:F.W*.4,y:0},{x:F.W*.4,y:F.H}]);g.strokeStyle='#b9d8ea';g.lineWidth=1.8;g.setLineDash([7,5]);g.stroke();g.setLineDash([])}
  for(const q of s.terrain.stakes||[]){line(rectangle(q.x,q.y,q.w,q.h),true);g.fillStyle='#68523d88';g.fill();g.strokeStyle='#e0c49b';g.lineWidth=1;g.stroke();for(let y=q.y-q.h/2;y<=q.y+q.h/2;y+=4){let p=P({x:q.x,y});g.strokeStyle='#503e2b';g.beginPath();g.moveTo(p.x,p.y);g.lineTo(p.x-1.5*k,p.y-1.5*k);g.stroke()}}
  for(const q of s.objective?.zones||[]){line(circle(q.x,q.y,q.r),true);g.strokeStyle='#ead8a7';g.lineWidth=1.5;g.setLineDash([7,5]);g.stroke();g.setLineDash([]);let p=P(q);g.font='11px system-ui';g.textAlign='center';g.fillStyle='#ead8a7';g.fillText(q.name,p.x,p.y-12)}
  if(s.fog&&!observer){for(let q of Object.values(s.known?.[0]||{})){if(s.vision?.[0]?.includes(q.id))continue;let p=P(q);g.fillStyle='#645c4e';g.font='bold 12px system-ui';g.fillText('?',p.x,p.y)}}

@@ -58,6 +58,14 @@ async function command(p,reference){
  if(reference)assert.deepEqual(executed,reference,'Native commands diverged');
  return {executed,orders:(await saved(p)).orders,diagnostics,uncommandable:r.units.filter(u=>u.side===0&&u.rout).map(u=>u.id)};
 }
+async function nativeRouteCheck(p){
+ let initial=(await saved(p)).orders;await p.locator('#fit').click();await p.waitForTimeout(150);
+ let r=await receipt(p),eligible=r.units.filter(u=>u.side===0&&!u.rout&&u.type!=='guard');
+ for(let u of eligible){await clearSelection(p);if(!await clickUnit(p,u))continue;let q={x:u.x+45,y:u.y+18},target=await p.evaluate(async({q,key})=>{let r=window.integratedQA.receipt(),{k,o,portrait,tactical}=r.camera,s=JSON.parse(localStorage.getItem(key)).state;if(tactical){let m=await import('/apps/banners-of-war/research/integrated-agincourt/tactical-camera.js');return m.project(s,q,o,k)}let H=s.bounds?.height||900;return portrait?{x:o.x+(H-q.y)*k,y:o.y+q.x*k}:{x:o.x+q.x*k,y:o.y+q.y*k}},{q,key});let box=await p.locator('#map').boundingBox();if(target.x<10||target.y<10||target.x>box.width-10||target.y>box.height-10)continue;
+ let free=await p.evaluate(({x,y})=>{let e=document.getElementById('map'),b=e.getBoundingClientRect();return document.elementFromPoint(b.left+x,b.top+y)===e},target);if(!free)continue;
+ let control=p.locator('#orders [data-kind="move"]');assert(await control.isVisible()&&await control.isEnabled());await control.click();await p.locator('#map').click({position:target});let savedOrder=(await saved(p)).orders[u.id],end=savedOrder?.path?.at(-1);assert(savedOrder?.kind==='move'&&end,'Native move path missing');let error=Math.hypot(q.x-end.x,q.y-end.y);assert(error<4,'Route world-coordinate error '+error);await p.locator('#undo').click();assert.deepEqual((await saved(p)).orders,initial,'Undo must restore exact initial orders');await clearSelection(p);return {id:u.id,requested:q,actual:end,error,camera:r.camera}
+ }throw Error('No reachable native route test point')
+}
 async function nativeMotionProfile(p){
  let before=await receipt(p),box=await p.locator('#map').boundingBox();let point={x:box.x+box.width*.34,y:box.y+box.height*.42};
  await p.evaluate(()=>{window.__bowMotion=[];let start=performance.now(),last=start;function tick(t){window.__bowMotion.push(t-last);last=t;if(t-start<3200)requestAnimationFrame(tick)}requestAnimationFrame(tick)});
@@ -69,18 +77,18 @@ let failures=[],reference=null;
 try{
  const driver=engine==='webkit'?webkit:chromium,b=await driver.launch();
  try{for(const art of [false,true]){
-  const tag=engine+'-side'+side+'-'+(art?'candidate':'schematic'),context=await b.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1,recordVideo:{dir:out+'/'+tag,size:{width:1440,height:900}}}),p=await context.newPage(),errors=[],rounds=[],pairs=[],events={};let motionProfile=null;p.on('pageerror',e=>errors.push(e.message));
+  const tag=engine+'-side'+side+'-'+(art?'candidate':'schematic'),context=await b.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1,recordVideo:{dir:out+'/'+tag,size:{width:1440,height:900}}}),p=await context.newPage(),errors=[],rounds=[],pairs=[],events={};let motionProfile=null,routeEvidence=null,campaignEvidence=null;p.on('pageerror',e=>errors.push(e.message));
   try{
    await p.goto(url+'?view='+ (art?'candidate':'schematic'));await p.waitForFunction(()=>window.integratedQA?.ready===true);
    if(configuration){
-    await p.locator('#seed').fill(configuration.seed);await p.locator('#landscape').selectOption(configuration.landscape);await p.locator('#objective').selectOption(configuration.objective);await p.locator('#duration').selectOption(String(configuration.seconds));await p.locator('#visibility').selectOption(configuration.fog?'fog':'open');
+    await p.locator('#seed').fill(configuration.seed);await p.locator('#landscape').selectOption(configuration.landscape);await p.locator('#objective').selectOption(configuration.objective);await p.locator('#duration').selectOption(String(configuration.seconds));await p.locator('#visibility').selectOption(configuration.fog?'fog':'open');if(process.env.BOW_CAMPAIGN_UI==='1')await p.locator('#campaign').check();
     for(let side of [0,1]){let a=configuration.armies[side];await p.locator('#army-side').selectOption(String(side));await p.locator('#'+a.preset).click();await p.locator('#army-size').selectOption(String(a.size));await p.locator('#army-quality').selectOption(a.quality)}
     await p.screenshot({path:out+'/'+tag+'-muster.png'});await p.locator('#start').click();await p.locator('#phase').waitFor({state:'visible'});assert.equal((await saved(p)).state.seed,configuration.seed);assert.deepEqual((await saved(p)).state.custom.config.armies.map(a=>a.roster),configuration.armies.map(a=>a.roster));
    }else{await p.locator('#chronicles').click();await p.locator('#chronicle-id').selectOption('agincourt');await p.locator('#chronicle-side').selectOption(String(side));await p.locator('#chronicle-launch').click();}
    await p.locator('#map').waitFor({state:'visible'});await p.waitForFunction(()=>!!window.integratedQA?.receipt());
    pairs.push(await pair(p,tag+'-initial',art));
    if(art){await p.locator('#focus').click();await p.waitForTimeout(250);await waitReceipt(p,true);await p.screenshot({path:out+'/'+tag+'-close60.png'});await p.locator('#fit').click();await p.waitForTimeout(200)}
-   motionProfile=await nativeMotionProfile(p);if(configuration){await p.locator('#confirm').click();await p.waitForFunction(()=>window.integratedQA.receipt()?.phase==='plan');}
+   motionProfile=await nativeMotionProfile(p);if(configuration){await p.locator('#confirm').click();await p.waitForFunction(()=>window.integratedQA.receipt()?.phase==='plan');routeEvidence=await nativeRouteCheck(p);}
    for(let i=0;i<31;i++){
     let before=await saved(p);if(before.state.result)break;
     let order=await command(p,reference?.[i]?.order.executed);
@@ -98,13 +106,13 @@ try{
     let timing=await p.evaluate(()=>({raf:window.__bowFrameTimes||[],render:performance.getEntriesByName('banners:render').map(x=>x.duration)}));let trace={round:after.state.round,time:after.state.time,order,signature:end.signature,state:after.state,timing,camera:end.camera,stats:end.stats};
     if(reference){assert.equal(trace.signature,reference[i].signature);assert.deepEqual(trace.state,reference[i].state,'Authoritative round state differs by renderer')}
     rounds.push(trace);
-    await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,errors},null,2));
+    await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,routeEvidence,campaignEvidence,errors},null,2));
    }
    let final=await saved(p);assert(final.state.result);if(art){assert(reference,'Schematic reference battle failed');assert.equal(rounds.length,reference.length)}
    await p.screenshot({path:out+'/'+tag+'-result.png'});assert.equal(errors.length,0);assert(rounds.some(r=>r.order.executed.length),'No actual player commands in complete battle');
-   if(!art)reference=rounds;if(configuration){await p.locator('#custom-return').click();await p.locator('#setup').waitFor({state:'visible'});assert.equal(await p.locator('#seed').inputValue(),configuration.seed);}
+   if(!art)reference=rounds;if(configuration){if(process.env.BOW_CAMPAIGN_UI==='1'){let old=final.state;await p.locator('#campaign-recruit').click();await p.waitForFunction(()=>window.integratedQA.receipt()?.phase==='deploy');let next=(await saved(p)).state;assert.equal(next.custom.campaign.stage,2);assert.equal(next.custom.campaign.records[0].result,old.result);assert(next.units.some(u=>u.campaignId==='R1000'&&u.n===80));for(let u of old.units.filter(u=>u.side===0&&Math.floor(u.n)>0)){let v=next.units.find(v=>v.campaignId===u.campaignId);assert(v&&v.n===Math.floor(u.n))}campaignEvidence={stage:next.custom.campaign.stage,previous:next.custom.campaign.records[0],units:next.units.filter(u=>u.side===0).map(u=>[u.campaignId,u.n])};await p.screenshot({path:out+'/'+tag+'-campaign-next.png'});await p.reload();await p.waitForFunction(()=>window.integratedQA?.ready===true);await p.locator('#resume').click();assert.equal((await saved(p)).state.custom.campaign.stage,2)}else{await p.locator('#custom-return').click();await p.locator('#setup').waitFor({state:'visible'});assert.equal(await p.locator('#seed').inputValue(),configuration.seed);}}
   }catch(e){failures.push({tag,error:e.stack,receipt:await receipt(p).catch(()=>null),browserErrors:errors});await p.screenshot({path:out+'/'+tag+'-failure.png'}).catch(()=>{})}
-  finally{await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,errors},null,2));await context.close()}
+  finally{await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,routeEvidence,campaignEvidence,errors},null,2));await context.close()}
  }}finally{await b.close()}
 }finally{server.close();await writeFile(out+'/failures.json',JSON.stringify(failures,null,2))}
 if(failures.length)throw Error(JSON.stringify(failures));
