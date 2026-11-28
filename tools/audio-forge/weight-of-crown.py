@@ -126,10 +126,12 @@ def make_score():
       [(0,72,1.5),(1.5,74,.5),(2,76,1),(3,77,1),(4,76,1)]]
     horn_a=[55,57,59,60,62,64,62,60,59,57,55,53,52,53]
     horn_b=[59,60,62,64,60,59,57,55,57,59,60,62,64,60]
+    cello_weight_a=[50,53,55,57,59,57,55,53,52,53,57,59,60,57]
+    cello_weight_b=[53,55,57,59,57,55,53,52,53,55,59,60,57,53]
     for j in range(14):
         for beat,m,d in weight_bass[(j+j//3)%4]:at(4,j,beat,'bass',m,d,.78+.10*(j%4==3))
-        at(4,j,0,'cello',horn_a[j],2.5,.66)
-        at(4,j,2.5,'cello',horn_b[j],2.5,.59)
+        at(4,j,0,'cello',cello_weight_a[j],2.5,.66)
+        at(4,j,2.5,'cello',cello_weight_b[j],2.5,.59)
         for beat,m,d in weight_melodies[(j+j//4)%4]:at(4,j,beat,'violin',m,d,.56+.06*(j%4==0))
         at(4,j,0,'horn',horn_b[j],2.5,.64)
         at(4,j,2.5,'horn',horn_a[j],2.5,.55)
