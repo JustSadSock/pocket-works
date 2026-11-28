@@ -1,6 +1,7 @@
 // Actual imported GLB; compare stable primitive/vertex identities and read GPU
 // skinning output from the standard Three.js skinning shader into a float FBO.
 import {chromium,webkit} from 'playwright';import {createServer} from 'node:http';import {readFileSync,writeFileSync} from 'node:fs';import {resolve,join} from 'node:path';
+import {eightWeightControlGLB,controlDisplacement,controlExpectedMm} from './eight-weight-control.mjs';
 const out=resolve(process.env.CHARACTER_EVIDENCE),root=resolve('node_modules/three'),samples=JSON.parse(readFileSync(join(out,'p0-browser-samples.json')));
 const html=`<!doctype html><style>body{margin:0;background:#dad5cb}canvas{display:block}</style><script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/"}}</script><script type="module">
 import * as T from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {installEightInfluenceSkin,patchEightInfluenceMaterial} from '/eight-weight-browser.mjs';
@@ -39,7 +40,24 @@ function gpuProbe(m,points){
  try{renderer.setRenderTarget(target);renderer.clear();renderer.render(scene,camera);renderer.readRenderTargetPixels(target,0,0,n,1,data);let max=0;for(let i=0;i<n;i++){if(Math.abs(data[i*4+3]-1)>1e-5)throw Error('Missing actual GPU sample '+i);max=Math.max(max,dist(Array.from(data.slice(i*4,i*4+3)),points[i].position))}return max}
  finally{renderer.setRenderTarget(null);target.dispose();g.dispose();mat.dispose()}
 }
+async function fiveInfluenceControl(){
+ const url=${JSON.stringify('data:model/gltf-binary;base64,'+eightWeightControlGLB().toString('base64'))}, displacement=${controlDisplacement}, expectedMm=${controlExpectedMm};
+ const stock=await load(url),patched=await load(url),m=patched.byIndex.get(0),e=stock.byIndex.get(0),attrs=patched.doc.meshes[0].primitives[0].attributes,count=m.geometry.attributes.position.count;
+ const collect=id=>Array.from({length:count},(_,i)=>patched.raw(id,i)).flat();
+ installEightInfluenceSkin(T,m,{joints0:collect(attrs.JOINTS_0),joints1:collect(attrs.JOINTS_1),weights0:collect(attrs.WEIGHTS_0),weights1:collect(attrs.WEIGHTS_1)});
+ for(const [c,mesh] of [[stock,e],[patched,m]]){mesh.skeleton.bones[4].position.x+=displacement;c.g.scene.updateMatrixWorld(true);mesh.skeleton.update()}
+ let stockMinMm=Infinity,patchedMaxMm=0,rawMaxMm=0;const points=[];
+ for(let i=0;i<count;i++){
+  const rest=patched.raw(attrs.POSITION,i),position=[rest[0]+expectedMm/1000,rest[1],rest[2]],raw=rawPoint(patched,0,i);
+  if(raw.influences!==5)throw Error('Control must contain exactly five positive weights');
+  stockMinMm=Math.min(stockMinMm,dist(cpu(e,i),position));patchedMaxMm=Math.max(patchedMaxMm,dist(cpu(m,i),position));rawMaxMm=Math.max(rawMaxMm,dist(raw.position,position));points.push({index:i,position});
+ }
+ const gpuMaxMm=gpuProbe(m,points),stockGpuMaxMm=gpuProbe(e,points);
+ const gate=count===3&&stockMinMm>=expectedMm-.5&&stockGpuMaxMm>=expectedMm-.5&&patchedMaxMm<=.5&&rawMaxMm<=.5&&gpuMaxMm<=.5;
+ return {gate,count,positiveInfluences:5,expectedMm,stockMinMm,stockGpuMaxMm,patchedMaxMm,rawMaxMm,gpuMaxMm};
+}
 window.run=async(samples)=>{
+ const independentControl=await fiveInfluenceControl();
  const primary=await load('/character.glb'),stock=await load('/p0-eight-original.glb'),four=await load('/p0-four-control.glb'),rows=[],controls=[];
  for(const [i,m] of primary.byIndex){const a=primary.doc.meshes[0].primitives[i].attributes;if(a.JOINTS_1===undefined)continue;const count=m.geometry.attributes.position.count,collect=id=>Array.from({length:count},(_,k)=>primary.raw(id,k)).flat();installEightInfluenceSkin(T,m,{joints0:collect(a.JOINTS_0),weights0:collect(a.WEIGHTS_0),joints1:collect(a.JOINTS_1),weights1:collect(a.WEIGHTS_1)})}
  for(const r of samples){setPose(primary,r.action,r.phase);setPose(stock,r.action,r.phase);setPose(four,r.action,r.phase);let cpuMax=0,rawEightMax=0,eightStockMax=0,fourControlMax=0,gpuMax=0,gpuCount=0,overFour=0;
@@ -62,7 +80,7 @@ window.run=async(samples)=>{
  // Actual adapted eight-weight renderer image at a walk pose.
  setPose(primary,'walk',.25);const scene=new T.Scene();scene.background=new T.Color(0xddd7ca);scene.add(primary.g.scene);scene.add(new T.HemisphereLight(0xfff2de,0x79838c,2));const light=new T.DirectionalLight(0xfff0db,3);light.position.set(3,5,4);scene.add(light);
  const box=new T.Box3().setFromObject(primary.g.scene),c=box.getCenter(new T.Vector3()),h=box.getSize(new T.Vector3()).y,camera=new T.PerspectiveCamera(35,1,.01,100);camera.position.copy(c).add(new T.Vector3(h*.7,h*.2,h*1.9));camera.lookAt(c);renderer.render(scene,camera);
- return {threeRevision:T.REVISION,rows,controls,gate:rows.every(x=>x.cpuMax<=.5&&x.rawEightMax<=.5&&x.gpuMax<=.5)&&rows.some(x=>x.gpuCount>0)&&controls.length>0,method:'stable primitive and vertex identity, independent raw eight-weight calculation, CPU getVertexPosition, actual adapted eight-weight standard-material shader float GPU readback; stock and four-weight controls'};
+ return {threeRevision:T.REVISION,rows,controls,independentControl,gate:independentControl.gate&&rows.every(x=>x.cpuMax<=.5&&x.rawEightMax<=.5&&x.gpuMax<=.5)&&rows.some(x=>x.gpuCount>0)&&controls.length>0,method:'stable primitive and vertex identity, independent raw eight-weight calculation, CPU getVertexPosition, actual adapted eight-weight standard-material shader float GPU readback; stock and four-weight controls'};
 };
 </script>`;
 const server=createServer((req,res)=>{try{const p=new URL(req.url,'http://localhost').pathname;if(p==='/'){res.setHeader('Content-Type','text/html');return res.end(html)}if(p==='/eight-weight-browser.mjs'){res.setHeader('Content-Type','text/javascript');return res.end(readFileSync(new URL('./eight-weight-browser.mjs',import.meta.url)))}if(['/character.glb','/p0-eight-original.glb','/p0-four-control.glb'].includes(p)){res.setHeader('Content-Type','model/gltf-binary');return res.end(readFileSync(join(out,p.slice(1))))}const f=resolve(root,p.slice('/three/'.length));if(!p.startsWith('/three/')||!f.startsWith(root+'/'))throw Error('path');res.setHeader('Content-Type','text/javascript');res.end(readFileSync(f))}catch(e){res.statusCode=404;res.end(String(e))}});

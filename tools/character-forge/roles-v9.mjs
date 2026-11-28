@@ -4,7 +4,7 @@
 import {produceRole,roles as roleProfiles} from './roles-v8.mjs';
 import {part,push,weights,normals} from './hybrid-human.mjs';
 import {sewLining} from './garment.mjs';
-import {authoredPatch,ringSampler} from './authored-surface.mjs';
+import {authoredPatch,ringSampler,reweightLinedSurface} from './authored-surface.mjs';
 import {profiles} from './material-study.mjs';
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),mix=(a,b,t)=>add(mul(a,1-t),mul(b,t)),unit=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),tau=Math.PI*2;
 const J=(m,n)=>{const j=m.joints.find(x=>x.name===n);if(!j)throw Error('Missing joint '+n);return j};
@@ -263,6 +263,10 @@ export function produceRoleV9(source,id,identityOverride=null,{style='historical
  if(id==='infantry')role=infantryKit(m);
  if(id==='legionary')role=legionaryKit(m);
  if(style==='low-poly')lowPolyTransform(m);else if(style==='anatomical-realism'){m.spec.style=style;for(const p of m.parts){p.color=p.color.map(v=>Math.max(0,Math.min(1,v*.88+.035)));if(p.material?.kind==='skin')p.material.roughness=.57;if(p.material?.kind==='cloth')p.material.roughness=.96;}}else {m.spec.style='historical-miniature';if(styleRevision===10)miniatureStyleV10(m);}
+ // P0.2 A: bounded weight-field recovery on the existing continuous tunic.
+ // Keep exact rest positions and topology, role-specific cuts, and Cyclic49.
+ // Other garment recipes and research modes are deliberately unchanged.
+ if(civilianP0){const tunic=m.parts.find(p=>p.name==='tunic');reweightLinedSurface(tunic,{sigma:.10});m.spec.garmentSkinRevision='p0.2-a-continuous-field';}
  m.spec.styleRevision=styleRevision;contacts(m);
  m.spec.artHistoricalReferences=['https://isaw.nyu.edu/exhibitions/edge-of-empires/highlights/shield','https://www.metmuseum.org/art/collection/search/35771','https://fashionhistory.fitnyc.edu/chaperon/'];m.spec.artHistoricalReference=id==='infantry'?'late-14th-century coat-of-plates, mail and bascinet':id==='legionary'?'2nd-century CE lorica segmentata and scutum':'medieval civilian craft/trade clothing';
  m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'v0.9 role-specific cut, equipment and material construction'}];

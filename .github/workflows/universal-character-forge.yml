@@ -514,6 +514,7 @@ jobs:
       - name: Encode integrated character three-cycle research evidence
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
+          node --check tools/character-forge/demonstrator-v21.mjs
           node tools/character-forge/demonstrator-v21.mjs
           test -f "$CHARACTER_EVIDENCE/v21-demonstrator/manifest.json"
           fps=$(python3 -c 'import json,os;print(24/json.load(open(os.environ["CHARACTER_EVIDENCE"]+"/v21-demonstrator/manifest.json"))["walkDuration"])')

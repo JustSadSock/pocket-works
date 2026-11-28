@@ -425,6 +425,124 @@
           "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46094281651/artifacts/15242641835"
         }
       ]
+    },
+    {
+      "head": "5595b0cf10c2317bf42b88daa74bf73e7b81f59f",
+      "run": 46101700693,
+      "artifacts": [
+        {
+          "id": 15246560390,
+          "name": "p0-candidate-artisan-base",
+          "sha256": "c6a108f6cfffc36ebac10cc5e613fc1b7585edf564c1c5337d62d6bc4e7da461",
+          "sizeBytes": 9038247,
+          "expiresAt": "2026-12-28T03:16:02Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246560390"
+        },
+        {
+          "id": 15246531393,
+          "name": "p0-civilian-pack-review",
+          "sha256": "02b2815169c1b66f8a11cafdfdc3d6fad6ca5c370b6909ef89e952541b967097",
+          "sizeBytes": 2765505,
+          "expiresAt": "2026-12-28T03:22:33Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246531393"
+        },
+        {
+          "id": 15246520558,
+          "name": "p0-qualification-merchant-short-light",
+          "sha256": "95f2268240fcae95ac28d38f0c8e9f9fe2e2edd901d687170d0e754946b8e158",
+          "sizeBytes": 12624108,
+          "expiresAt": "2026-12-28T03:17:02Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246520558"
+        },
+        {
+          "id": 15246515461,
+          "name": "p0-candidate-merchant-tall-heavy",
+          "sha256": "d758e2792ded9a4e00b89c03576b48944881478b29e6e7fbc522b2cebcf85066",
+          "sizeBytes": 9282519,
+          "expiresAt": "2026-12-28T03:16:08Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246515461"
+        },
+        {
+          "id": 15246480467,
+          "name": "p0-candidate-merchant-base",
+          "sha256": "ffd375b6f44094c9075f8d335182d486561a1a9362a051b09cf25f7398618edd",
+          "sizeBytes": 9321965,
+          "expiresAt": "2026-12-28T03:15:57Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246480467"
+        },
+        {
+          "id": 15246475263,
+          "name": "p0-source",
+          "sha256": "19dda49e5566f60e257971ee99d5bcf3d2fff7f6f9aa75d6a81306642275aaff",
+          "sizeBytes": 16503548,
+          "expiresAt": "2026-12-28T03:14:37Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246475263"
+        },
+        {
+          "id": 15246465475,
+          "name": "p0-candidate-artisan-tall-heavy",
+          "sha256": "740ab31d9b7e9192aea636473e5bb0b8a3bc6ec6aa93d486f5fb5d6a3b5faebf",
+          "sizeBytes": 8999328,
+          "expiresAt": "2026-12-28T03:15:56Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246465475"
+        },
+        {
+          "id": 15246460418,
+          "name": "p0-candidate-merchant-short-light",
+          "sha256": "11a1c59222a9370530668d1309294abdf233b10f199d5b3c058bec9ee8d8a87e",
+          "sizeBytes": 9394831,
+          "expiresAt": "2026-12-28T03:15:56Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246460418"
+        },
+        {
+          "id": 15246360895,
+          "name": "p0-qualification-artisan-tall-heavy",
+          "sha256": "49df5b2f9a428982427041707e35ce7f66c4ce363c8fd74bb99326e5565b4b65",
+          "sizeBytes": 11983272,
+          "expiresAt": "2026-12-28T03:17:02Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15246360895"
+        },
+        {
+          "id": 15245931934,
+          "name": "p0-candidate-artisan-short-light",
+          "sha256": "81bb5b2d2068cee7d56cbb6b09b6393593f9a5473490709d1850198384fc3b2f",
+          "sizeBytes": 9113293,
+          "expiresAt": "2026-12-28T03:16:05Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15245931934"
+        },
+        {
+          "id": 15245731553,
+          "name": "p0-qualification-merchant-tall-heavy",
+          "sha256": "3bbe37205c3c2835a0fa118de89265ae89d2a5c78c82c6259e57edcf841b1c1a",
+          "sizeBytes": 12442560,
+          "expiresAt": "2026-12-28T03:17:21Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15245731553"
+        },
+        {
+          "id": 15245463805,
+          "name": "p0-qualification-artisan-short-light",
+          "sha256": "c069ad82ec41d32769539d689cc38254b2eb019d23337774c63af3c85b3484af",
+          "sizeBytes": 12154398,
+          "expiresAt": "2026-12-28T03:17:20Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15245463805"
+        },
+        {
+          "id": 15245427981,
+          "name": "p0-qualification-merchant-base",
+          "sha256": "ca0f45779794cdea4bb96c5056b836beff783572eaa8d9b61ee4b808ae54286e",
+          "sizeBytes": 12513330,
+          "expiresAt": "2026-12-28T03:19:00Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15245427981"
+        },
+        {
+          "id": 15245424273,
+          "name": "p0-qualification-artisan-base",
+          "sha256": "4be5fd57d79a0b27c270466e5d8bd926ef4e036dad7dd19afb4f7b5a5f9af7d6",
+          "sizeBytes": 12050808,
+          "expiresAt": "2026-12-28T03:17:11Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46101700693/artifacts/15245424273"
+        }
+      ]
     }
   ],
   "source": {
@@ -453,7 +571,8 @@
     "v20_1": "24/48/96 FPS, time_scale 1, same physical duration; all failed",
     "v21": "A-F isolated 24 FPS contact matrix completed, artifact 15242327586, all six rejected. No full dynamic or grip admission.",
     "p0": "First six candidates generated twice; canonical and byte identity, Native contact and idle passed; independent admission rejected, superseded by corrected tailoring head 7769baf. No acceptance.",
-    "p0_1_previous": "run 46094281651 blocked before motion by missing /usr/bin/time; no visual qualification."
+    "p0_1_previous": "run 46094281651 blocked before motion by missing /usr/bin/time; no visual qualification.",
+    "p0_1_final": "Six deterministic candidates; all technical gates except clothing and attachments pass. Owner Artisan 6/10, Merchant 6/10. No admission. Preserve exact archives. P0.2 A is an experimental skin-field candidate, not accepted."
   },
   "retention": "Existing Research 14 days; P0 30 days; durable archive storage not configured."
 }

@@ -44,3 +44,37 @@ export function fourInfluenceCandidate(model){
  }
  m.spec.skinProfile='p0-four-influence-candidate';return {model:m,rows};
 }
+
+/** Continuous rest-space skin field for a caller-selected connected outer surface.
+ * No anatomical or garment-type assumptions. Do not use across separate panels
+ * without the caller choosing their source domains. Coordinates are metres.
+ * Source samples are immutable; lining pairs receive identical distributions.
+ */
+export function surfaceWeightField(p,{sigma,outerCount=p.outerVertexCount??p.positions.length/3}={}){
+ if(!Number.isFinite(sigma)||sigma<=0||!Number.isInteger(outerCount)||outerCount<=0||outerCount*3>p.positions.length)throw Error('Invalid surface skin field domain');
+ const points=Array.from({length:outerCount},(_,i)=>p.positions.slice(i*3,i*3+3)),source=points.map((_,i)=>weights(p,i));
+ const radius2=9*sigma*sigma,den=2*sigma*sigma;
+ return v=>{
+  if(v.length!==3||!v.every(Number.isFinite))throw Error('Invalid skin field sample');
+  const out=new Map();
+  for(let i=0;i<points.length;i++){
+   const q=points[i],dx=v[0]-q[0],dy=v[1]-q[1],dz=v[2]-q[2],d2=dx*dx+dy*dy+dz*dz;
+   if(d2>radius2)continue;
+   const influence=Math.exp(-d2/den);
+   for(const [j,w] of source[i])out.set(j,(out.get(j)??0)+influence*w);
+  }
+  const selected=[...out].filter(([,w])=>w>0).sort((a,b)=>b[1]-a[1]||a[0]-b[0]).slice(0,8),sum=selected.reduce((s,x)=>s+x[1],0);
+  if(!Number.isFinite(sum)||sum<=0)throw Error('Unbound skin field sample');
+  return selected.map(([j,w])=>[j,w/sum]);
+ };
+}
+export function reweightLinedSurface(p,{sigma}){
+ const n=p.outerVertexCount;
+ if(!Number.isInteger(n)||n<=0||p.positions.length!==n*6)throw Error('Expected matched outer and lining vertices: '+p.name);
+ const field=surfaceWeightField(p,{sigma,outerCount:n}),rows=Array.from({length:n},(_,i)=>field(p.positions.slice(i*3,i*3+3)));
+ const q=part(p.name,p.color,p.component);
+ for(let shell=0;shell<2;shell++)for(let i=0;i<n;i++)push(q,p.positions.slice((shell*n+i)*3,(shell*n+i+1)*3),rows[i]);
+ for(const k of ['joints','weights','joints8','weights8'])p[k]=q[k];
+ p.skinField={method:'rest-space Gaussian, three sigma support, eight influences, paired lining',sigma,outerCount:n};
+ return p;
+}

@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 22
       - name: Required shared Core and scoped admission contract
-        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs tools/character-forge/p0-profile.test.mjs tools/character-forge/authored-surface.test.mjs
+        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs tools/character-forge/p0-profile.test.mjs tools/character-forge/authored-surface.test.mjs tools/character-forge/eight-weight-control.test.mjs
       - name: Fresh exact MakeHuman and licensed KinemIQ source
         run: |
           mkdir -p "$CHARACTER_EVIDENCE"

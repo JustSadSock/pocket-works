@@ -31,8 +31,18 @@ for frame in d['frames']:
         bodyhits=[(a,b) for a,b in pairs if strict(v,body,f[a],bf[b])];crossing=len(bodyhits)
         selfhits=[(a,b) for a,b in t.overlap(t) if a<b and not set(f[a])&set(f[b]) and strict(v,v,f[a],f[b])];selfcross=len(selfhits)
         rs=rest[p['name']]['positions'];edges={tuple(sorted((face[i],face[(i+1)%3]))) for face in f for i in range(3)}
-        ratios=sorted(math.dist(v[a],v[b])/math.dist(rs[a],rs[b]) for a,b in edges if math.dist(rs[a],rs[b])>1e-6)
-        parts.append({'name':p['name'],'strictBodyCrossings':crossing,'strictSelfCrossings':selfcross,'bodyTrianglePairs':bodyhits,'selfTrianglePairs':selfhits,'maxStretch':max(ratios,default=1),'p95Stretch':ratios[int((len(ratios)-1)*.95)] if ratios else 1,'collapsedEdges':sum(x<.1 for x in ratios)})
+        edgeRows=sorted((math.dist(v[a],v[b])/math.dist(rs[a],rs[b]),a,b,math.dist(rs[a],rs[b]),math.dist(v[a],v[b])) for a,b in edges if math.dist(rs[a],rs[b])>1e-6)
+        ratios=[x[0] for x in edgeRows]
+        outer=rest[p['name']].get('outerVertexCount')
+        def shell(face):
+            if outer is None:return 'unclassified'
+            return 'outer' if max(face)<outer else 'lining' if min(face)>=outer else 'seam'
+        classes={}
+        for a,b in selfhits:
+            key='/'.join(sorted((shell(f[a]),shell(f[b]))))
+            classes[key]=classes.get(key,0)+1
+        worst=[{'vertices':[a,b],'ratio':ratio,'restLengthMetres':l0,'posedLengthMetres':l1,'restPositions':[rs[a],rs[b]],'posedPositions':[v[a],v[b]],'shell':shell([a,b])} for ratio,a,b,l0,l1 in edgeRows[-20:][::-1]]
+        parts.append({'name':p['name'],'strictBodyCrossings':crossing,'strictSelfCrossings':selfcross,'bodyTrianglePairs':bodyhits,'selfTrianglePairs':selfhits,'rawSelfCrossingsByShell':classes,'worstStretchEdges':worst,'maxStretch':max(ratios,default=1),'p95Stretch':ratios[int((len(ratios)-1)*.95)] if ratios else 1,'collapsedEdges':sum(x<.1 for x in ratios)})
     overlaps=[]
     for i,p in enumerate(garments):
         for q in garments[i+1:]:

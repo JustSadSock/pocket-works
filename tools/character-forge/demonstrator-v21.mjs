@@ -40,7 +40,7 @@ export function writeDemonstrator(cyclic,source,out){
  if(!manifest.walkPathUnchanged)throw Error('Cyclic49 was mutated');
  writeFileSync(join(dir,'manifest.json'),JSON.stringify(manifest,null,2));
  // Matching original and integrated frames. No pose or cloth failure is retouched.
- const at=(m,t,mode,cycle=0)=>{const world=pose(m,'walk',t).map(b=>({...b,p:b.p.map((x,k)=>x+(k===2?cycle*(cyclic.sampledWalk.offsets.at(-1)[2]-cyclic.sampledWalk.offsets[0][2]):0)))});let activation=0;if(mode==='hand'){const u=t*(hand.activation.length-1),i=Math.floor(u),f=u-i;activation=hand.activation[i]*(1-f)+hand.activation[Math.min(i+1,hand.activation.length-1)]*f}
+ const at=(m,t,mode,cycle=0)=>{const world=pose(m,'walk',t).map(b=>({...b,p:b.p.map((x,k)=>x+(k===2?cycle*(cyclic.sampledWalk.offsets.at(-1)[2]-cyclic.sampledWalk.offsets[0][2]):0))}));let activation=0;if(mode==='hand'){const u=t*(hand.activation.length-1),i=Math.floor(u),f=u-i;activation=hand.activation[i]*(1-f)+hand.activation[Math.min(i+1,hand.activation.length-1)]*f}
   return {parts:m.parts.map(p=>{const q={...p,positions:p.positions.map((x,i)=>x+(mode==='hand'&&p.name===bodyName?delta[i]*activation:0))};q.positions=deform(m,q,world).flat();normals(q);return q})}};
  for(const view of ['front','side']){
   const original=Array.from({length:73},(_,i)=>at(cyclic,(i%24)/24,'walk',Math.floor(i/24))),frames=Array.from({length:73},(_,i)=>at(walk,(i%24)/24,'walk',Math.floor(i/24))),bounds=commonBounds([...original,...frames],view);
