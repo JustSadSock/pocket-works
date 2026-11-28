@@ -1,5 +1,6 @@
 import {chromium,webkit} from '@playwright/test';
 import {aggregatePresentation} from './atlas-presentation-evidence.mjs';
+import {boundedWorkloadProbe} from './atlas-bounded-workload-qa.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
@@ -113,6 +114,7 @@ for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
     result.continuous=result.continuous.map(x=>{const gaps=x.frames.map(f=>f.gapMs).sort((a,b)=>a-b),valid=gaps.length===60&&gaps.every(v=>Number.isFinite(v)&&v>0);return {...x,...aggregatePresentation(x.journal,x.frames,x.elapsedMs),rafFps:valid?1000*gaps.length/gaps.reduce((a,b)=>a+b,0):0,rafP95:valid?gaps[Math.ceil(.95*gaps.length)-1]:null};});save();if(result.continuous.some(x=>x.errors.length||x.frames.length!==60||!x.restored||x.advanced!==60||x.fps<55||!Number.isFinite(x.p95)||x.p95>33.3||x.rafFps<55||!Number.isFinite(x.rafP95)||x.rafP95>33.3))result.errors.push('continuous motion threshold or frame delivery failed');
     // Independent diagnostics are deliberately outside all measured RAF loops.
     result.gpuDiagnostic=await page.evaluate(()=>window.__atlasReview.gpuProbe());
+    if(candidate==='organic'){result.boundedRecovery=await boundedWorkloadProbe(page,{engine,candidate,composition,prefix,output});save();console.log('[bounded-recovery] '+JSON.stringify(result.boundedRecovery.summary));}
     result.architectureExperiment=await page.evaluate(async()=>{const r=window.__atlasReview,c=document.querySelector('#atlas'),origin=r.cameraPresentation().camera,raf=()=>new Promise(ok=>requestAnimationFrame(ok)),rows=[];
      const settle=async expected=>{const start=performance.now();while(performance.now()-start<15000){await raf();try{const d=c.dataset,p=JSON.parse(d.atlasReceipt);if(d.atlasSurface==='ready'&&p.id===Number(d.atlasRequestId)&&Math.abs(p.view.x-expected.x)<1e-7&&Math.abs(p.view.y-expected.y)<1e-7&&Math.abs(p.view.s-expected.s)<1e-7)return;}catch{}}throw Error('Architecture experiment receipt timeout');};
      const poses=[['origin',0,0],['same-pose',0,0],['integer',4,0],['fractional',2.4,1.2],['return',0,0]];
