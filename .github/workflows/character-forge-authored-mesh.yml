@@ -1,0 +1,58 @@
+name: Character Forge Authored Mesh Study
+on:
+  pull_request:
+    paths:
+      - 'tools/character-forge/authored-mesh/**'
+      - '.github/workflows/character-forge-authored-mesh.yml'
+  workflow_dispatch:
+    inputs:
+      baseline_run:
+        description: Archived P0 run with Artisan Base and source artifacts
+        type: string
+        default: '46138654367'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  artisan-base:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.5'
+      - name: Import contract
+        run: node --test tools/character-forge/authored-mesh/import.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-source
+          path: quality-artifacts/authored/source
+          run-id: ${{ inputs.baseline_run || '46138654367' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-candidate-artisan-base
+          path: quality-artifacts/authored/control
+          run-id: ${{ inputs.baseline_run || '46138654367' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Independent authored geometry twice
+        run: |
+          python -m pip install -r tools/character-forge/authored-mesh/requirements.txt
+          export OPENBLAS_NUM_THREADS=1
+          mkdir -p quality-artifacts/authored/result
+          python tools/character-forge/authored-mesh/author-artisan.py quality-artifacts/authored/source/morph/makehuman-base.json quality-artifacts/authored/result/document.json
+          python tools/character-forge/authored-mesh/author-artisan.py quality-artifacts/authored/source/morph/makehuman-base.json quality-artifacts/authored/repeat.json
+          cmp quality-artifacts/authored/result/document.json quality-artifacts/authored/repeat.json
+          sha256sum quality-artifacts/authored/result/document.json
+      - name: Existing Forge native export and sampled playback
+        run: node tools/character-forge/authored-mesh/export-study.mjs quality-artifacts/authored/control/p0-model.json quality-artifacts/authored/result/document.json quality-artifacts/authored/result/study.glb
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: artisan-authored-mesh-study
+          path: quality-artifacts/authored/result
+          retention-days: 30

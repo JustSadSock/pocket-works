@@ -779,6 +779,52 @@
           "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46134338880/artifacts/15258709412"
         }
       ]
+    },
+    {
+      "head": "ee2aac72a3912d39924bd859e2dcbc6f36435f11",
+      "run": 46138654367,
+      "artifacts": [
+        {
+          "id": 15261171542,
+          "name": "p0-qualification-merchant-base",
+          "sha256": "aaacfe798090b1b2b3c301cf76cfea0fcf88ce81242042f59206377a0dfc90b2",
+          "sizeBytes": 18606434,
+          "expiresAt": "2026-12-28T11:16:34Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46138654367/artifacts/15261171542"
+        },
+        {
+          "id": 15261146468,
+          "name": "p0-candidate-merchant-base",
+          "sha256": "41a7b46818cef85ed2b1c20e995e5f2d3eb678f5bec023d409ad94eaceaf2686",
+          "sizeBytes": 10363347,
+          "expiresAt": "2026-12-28T11:15:16Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46138654367/artifacts/15261146468"
+        },
+        {
+          "id": 15260796514,
+          "name": "p0-candidate-artisan-base",
+          "sha256": "b16273460e7b54c91d859d292626b78fe3a4adcc61c20105647ceef2540d2d56",
+          "sizeBytes": 10148323,
+          "expiresAt": "2026-12-28T11:15:13Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46138654367/artifacts/15260796514"
+        },
+        {
+          "id": 15260618576,
+          "name": "p0-qualification-artisan-base",
+          "sha256": "3ae93c6bf9bb806bc1e69ecc60f8808be9c40b314c1944d2e15798c1fed005ea",
+          "sizeBytes": 17749062,
+          "expiresAt": "2026-12-28T11:16:48Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46138654367/artifacts/15260618576"
+        },
+        {
+          "id": 15260329649,
+          "name": "p0-source",
+          "sha256": "46c853a8ff2aac608270fe637aa404eff1dbd185a17b6a1ae3f56406bdb17c8f",
+          "sizeBytes": 16503549,
+          "expiresAt": "2026-12-28T11:11:38Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46138654367/artifacts/15260329649"
+        }
+      ]
     }
   ],
   "source": {
@@ -809,7 +855,8 @@
     "p0": "First six candidates generated twice; canonical and byte identity, Native contact and idle passed; independent admission rejected, superseded by corrected tailoring head 7769baf. No acceptance.",
     "p0_1_previous": "run 46094281651 blocked before motion by missing /usr/bin/time; no visual qualification.",
     "p0_1_final": "Six deterministic candidates; all technical gates except clothing and attachments pass. Owner Artisan 6/10, Merchant 6/10. No admission. Preserve exact archives. P0.2 A is an experimental skin-field candidate, not accepted.",
-    "p0_2_final": "Six candidates fail clothing and attachments; all other gates pass. Both browsers synthetic control passed. Research demonstrator restored, Dynamic Remesh gate remains failed. P0.3 base-first candidates only; no admission."
+    "p0_2_final": "Six candidates fail clothing and attachments; all other gates pass. Both browsers synthetic control passed. Research demonstrator restored, Dynamic Remesh gate remains failed. P0.3 base-first candidates only; no admission.",
+    "p0_3_final": "Two base candidates rejected clothing and attachments; other gates pass, rest tunic 46 strict crossings, owner Artisan 6/10 and Merchant 5.5/10. Mantle rejected (max stretch 5.255 on expanded sample). No acceptance. Four other morphotypes not requalified."
   },
   "retention": "Existing Research 14 days; P0 30 days; durable archive storage not configured."
 }
