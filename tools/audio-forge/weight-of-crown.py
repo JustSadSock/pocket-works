@@ -261,7 +261,7 @@ def render(dyn,hist,exp,out):
             required=int((length-1)*rate+offset)+2;looped=False
             if required>=len(x):
                 x,looped=loop_sustain(x,required,inst)
-                if required>=len(x):raise ValueError('recorded sustain too short '+part)
+                if required>len(x):raise ValueError('recorded sustain too short '+part)
             if looped:looped_sustain+=1
             if length<480 or start+length>N:raise ValueError('sample too short or event outside render '+part)
             y=np.interp((np.arange(length)+offset)*rate,np.arange(len(x)),x).astype(np.float32)
