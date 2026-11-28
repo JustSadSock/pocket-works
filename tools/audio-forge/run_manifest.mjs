@@ -6,6 +6,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { expandManifest, renderPhysics, arrangeTracks } from './foundation.mjs';
 import { compileExpression } from './expression.mjs';
+import { renderRecipe } from './programmable.mjs';
 import { createCatalog, mixHybrid } from './sample-library.mjs';
 
 const ROOT = process.cwd();
@@ -260,7 +261,7 @@ function synthesizeMusic(job, rawOutput, tempDir) {
 
 function processWithSox(rawInput, output, job) {
   const post = job.post || {};
-  const args = ['physics','hybrid'].includes(job.type) || job.tracks ? ['-R', rawInput, output] : [rawInput, output];
+  const args = ['physics','hybrid','recipe'].includes(job.type) || job.tracks ? ['-R', rawInput, output] : [rawInput, output];
 
   if (post.sampleRate) args.push('rate', String(Math.max(8000, Number(post.sampleRate))));
   if (post.channels) args.push('channels', String(Math.max(1, Math.min(2, Number(post.channels)))));
@@ -286,7 +287,7 @@ function processWithSox(rawInput, output, job) {
 function validateJob(job) {
   if (!job || typeof job !== 'object') throw new Error('Audio job must be an object.');
   if (!job.name || typeof job.name !== 'string') throw new Error('Audio job requires a string name.');
-  if (!['sfx', 'ambient', 'music', 'physics', 'hybrid'].includes(job.type)) throw new Error(`Unsupported audio job type for ${job.name}: ${job.type}`);
+  if (!['sfx', 'ambient', 'music', 'physics', 'hybrid', 'recipe'].includes(job.type)) throw new Error(`Unsupported audio job type for ${job.name}: ${job.type}`);
   if (!job.output || typeof job.output !== 'string') throw new Error(`Audio job ${job.name} requires output.`);
   if (!/\.(wav|ogg)$/i.test(job.output)) throw new Error(`Audio job ${job.name} output must be .wav or .ogg.`);
 }
@@ -294,7 +295,7 @@ function validateJob(job) {
 function generateManifest(manifestPath, baseDir, generated) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const jobs = expandManifest(manifest);
-  const catalog = jobs.some(job => job.type === 'hybrid') ? createCatalog(manifest.samples, path.dirname(manifestPath)) : null;
+  const catalog = jobs.some(job => job.type === 'hybrid' || (job.type==='recipe' && job.recipe?.layers?.some(l=>l.type==='sample'))) ? createCatalog(manifest.samples, path.dirname(manifestPath)) : null;
   const resolvedSamples = new Map();
   const targets = new Set();
   for (const job of jobs) {
@@ -303,6 +304,13 @@ function generateManifest(manifestPath, baseDir, generated) {
       if (manifest.version !== 2 || typeof job.sampleId !== 'string' || typeof job.sampleMix !== 'number' || !Number.isFinite(job.sampleMix) || job.sampleMix < 0 || job.sampleMix > 1) throw new Error('Invalid hybrid recipe');
       if (job.sampleStart !== undefined && (typeof job.sampleStart !== 'number' || !Number.isFinite(job.sampleStart) || job.sampleStart < 0 || job.sampleStart > 3600)) throw new Error('Invalid sampleStart');
       if (!resolvedSamples.has(job.sampleId)) resolvedSamples.set(job.sampleId,catalog.resolve(job.sampleId));
+    }
+    if(job.type==='recipe'){
+      if(manifest.version!==2||job.recipe?.version!==1||!Array.isArray(job.recipe.layers)||job.recipe.layers.length>32)throw Error('Invalid programmable recipe job');
+      for(const layer of job.recipe.layers)if(layer.type==='sample'){
+        if(typeof layer.source!=='string')throw Error('Recipe sample id required');
+        if(!resolvedSamples.has(layer.source))resolvedSamples.set(layer.source,catalog.resolve(layer.source));
+      }
     }
     const target = assertInside(baseDir, job.output, `Output for ${job.name}`);
     if (manifest.version === 2 && targets.has(target)) throw new Error('Duplicate resolved audio output: '+target);
@@ -337,6 +345,16 @@ function generateManifest(manifestPath, baseDir, generated) {
           console.log('Sample provenance: '+entry.id+' '+entry.license+' sha256:'+entry.sha256);
         }
         writePcm16Wav(rawOutput, samples, audio.sampleRate, audio.channels);
+      } else if(job.type==='recipe'){
+        const samples=Object.create(null);
+        for(const l of job.recipe.layers)if(l.type==='sample'&&!Object.hasOwn(samples,l.source)){
+          const {file,entry}=resolvedSamples.get(l.source);
+          const pcm=execFileSync('sox',['-R',file,'-t','raw','-e','floating-point','-b','32','-L','-c','1','-r','48000','-','trim','0','20'],{maxBuffer:4*1024*1024});
+          if(!pcm.length||pcm.length%4)throw Error('Invalid sample PCM');
+          const x=new Float32Array(pcm.length/4);for(let i=0;i<x.length;i++)x[i]=pcm.readFloatLE(i*4);
+          samples[l.source]=x;console.log('Sample provenance: '+entry.id+' '+entry.license+' sha256:'+entry.sha256);
+        }
+        const a=renderRecipe(job.recipe,{samples});writePcm16Wav(rawOutput,a.samples,a.sampleRate,a.channels);
       } else synthesizeMusic(job, rawOutput, tempDir);
       processWithSox(rawOutput, output, job);
       if (!existsSync(output) || statSync(output).size < 128) throw new Error(`Generated audio is empty: ${output}`);
