@@ -1,0 +1,6 @@
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import assert from 'node:assert/strict';
+import {newGame,serialize,restore} from './world.mjs';
+const [size,approach,path,revision='genesis-3.2.0',detailArg='4']=process.argv.slice(2),detail=Number(detailArg),seed='atlas-mountain-173',exemplars=JSON.parse(readFileSync(path,'utf8')),options={worldSize:size,states:6,mapShape:'continents',experimentalGeography:{revision,detail,approach,...(approach==='field'?{exemplars}:{})}},digest=m=>Object.fromEntries(Object.entries(m).filter(([k,v])=>ArrayBuffer.isView(v)).map(([k,v])=>[k,createHash('sha256').update(v).digest('hex')]));
+const start=performance.now(),s=newGame(seed,options),generationMs=performance.now()-start,peakGenerationRSSKiB=process.resourceUsage().maxRSS,coarse=digest(s.map),fine=digest(s.map.geography),save=serialize(s),t=performance.now(),r=restore(save),restoreMs=performance.now()-t;assert.deepEqual(digest(r.map),coarse);assert.deepEqual(digest(r.map.geography),fine);assert.deepEqual(r.geographyV3,s.geographyV3);console.log(JSON.stringify({size,approach,revision,detail,generationMs,restoreMs,peakGenerationRSSKiB,peakProcessRSSKiB:process.resourceUsage().maxRSS,saveBytes:Buffer.byteLength(save),coarse,fine}));

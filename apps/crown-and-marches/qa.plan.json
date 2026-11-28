@@ -1,0 +1,478 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "files": [
+        "engine.test.mjs",
+        "living.test.mjs",
+        "wealth.test.mjs",
+        "sinews.test.mjs",
+        "balance.test.mjs",
+        "discovery.test.mjs",
+        "genesis-living-regression.test.mjs",
+        "genesis-living-visual.test.mjs",
+        "genesis-waters.test.mjs",
+        "genesis-contours.test.mjs",
+        "genesis-hydrography.test.mjs",
+        "genesis-atlas-visual.test.mjs",
+        "atlas-projection.test.mjs",
+        "atlas-camera-geometry.test.mjs",
+        "atlas-scale.test.mjs",
+        "atlas-surface-requests.test.mjs",
+        "atlas-human-layout.test.mjs",
+        "atlas-urban.test.mjs",
+        "atlas-cultural.test.mjs",
+        "atlas-historical.test.mjs",
+        "atlas-resident-pool.test.mjs",
+        "atlas-resident-math.test.mjs",
+        "atlas-qa-admission.test.mjs",
+        "atlas-presentation-evidence.test.mjs",
+        "atlas-streaming-plan.test.mjs",
+        "atlas-material-tiles.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "fill",
+          "selector": "#seed",
+          "value": "crown0"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"new\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#panel .panelhead"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"build\"][data-value=\"0\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"recruit\"][data-value=\"0\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"tab\"][data-value=\"diplomacy\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"menu\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"save\"]"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "custom-battle",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-act=\"lab\"]"
+        },
+        {
+          "action": "visible",
+          "selector": ".lab-sides"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"labstart\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#panel .panelhead"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"1\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"all\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"line\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"menu\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"labexit\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"lab\"]"
+        }
+      ]
+    },
+    {
+      "id": "mobile-performance",
+      "kind": "browser-node",
+      "entry": "mobile-benchmark.mjs",
+      "tier": "smoke"
+    },
+    {
+      "id": "art-slices",
+      "kind": "browser-node",
+      "entry": "art-slices.mjs",
+      "tier": "smoke"
+    },
+    {
+      "id": "geography-review",
+      "kind": "browser-node",
+      "entry": "genesis-atlas-fidelity-gate.mjs",
+      "tier": "smoke"
+    },
+    {
+      "id": "living-lands",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "fill",
+          "selector": "#seed",
+          "value": "living-valley"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"new\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"specialize\"][data-value=\"mining\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"specialize\"][data-value=\"mining\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"layer\"][data-value=\"development\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"connect\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"cancel\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"cancel\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"tab\"][data-value=\"realm\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"autonomy\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"3\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "economy-sandbox",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-act=\"econlab\"]"
+        },
+        {
+          "action": "fill",
+          "selector": "#estates",
+          "value": "3"
+        },
+        {
+          "action": "visible",
+          "selector": "#epop"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econstart\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"econexport\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econnext\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"goodsmap\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"8\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econexit\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"econlab\"]"
+        }
+      ]
+    },
+    {
+      "id": "campaign-sandbox",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-act=\"campaignlab\"]"
+        },
+        {
+          "action": "fill",
+          "selector": "#wseed",
+          "value": "sinews-trial-1"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"campaignstart\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"warplayer\"][data-value=\"0\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"togglearmy\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"opdays\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"opplace\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"cancel\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"observer\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"8\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"campaignretry\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"econexit\"]"
+        }
+      ]
+    },
+    {
+      "id": "sinews-journeys",
+      "kind": "browser-node",
+      "entry": "sinews-journeys.mjs",
+      "tier": "smoke"
+    },
+    {
+      "id": "sinews-memory",
+      "kind": "node",
+      "entry": "sinews-memory.mjs",
+      "tier": "smoke"
+    },
+    {
+      "id": "balance-experiments",
+      "kind": "node",
+      "entry": "qa-batch.mjs",
+      "args": [
+        "balance",
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "balance-journeys",
+      "kind": "browser-node",
+      "entry": "balance-journeys.mjs",
+      "tier": "smoke",
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "args": [
+        "{seed}"
+      ]
+    },
+    {
+      "id": "grand-history",
+      "kind": "node",
+      "entry": "grand-experiment.mjs",
+      "args": [
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "tier": "deep"
+    },
+    {
+      "id": "wealth-sinews-experiments",
+      "kind": "node",
+      "entry": "qa-batch.mjs",
+      "args": [
+        "wealth-sinews",
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "resident-stabilization",
+      "kind": "browser-node",
+      "entry": "atlas-resident-matrix-qa.mjs",
+      "args": [
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "tier": "smoke"
+    }
+  ]
+}

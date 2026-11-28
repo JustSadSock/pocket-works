@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "slug": "crown-and-marches",
+  "name": "Crown & Marches",
+  "shortName": "Crown",
+  "description": "Историческая стратегия: экономика, война, дипломатия, открытия, общество и государственное устройство.",
+  "version": "0.8.0",
+  "releaseDate": "2026-11-25",
+  "releaseDateTime": "2026-11-25T11:48:00+02:00",
+  "changelog": [
+    "Lords & Subjects: сословия, собственность, династии, государственные институты, автономия и гражданские конфликты.",
+    "Реформы с реальными административными резервами; компенсированный материальный учёт и пограничные контакты.",
+    "The Grand Campaign в разработке: единая кампания, три экспериментальных масштаба мира и делегирование.",
+    "IndexedDB с резервной копией, импорт/экспорт; финальная браузерная и мобильная проверка ещё не завершена."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#ad7b3f",
+  "backgroundColor": "#273d41",
+  "themeColor": "#29372e",
+  "orientation": "any",
+  "cacheName": "crown-and-marches-v0.8.0",
+  "storageNamespace": "pocket-works:crown-and-marches",
+  "tags": [
+    "strategy",
+    "history",
+    "simulation",
+    "tactics",
+    "offline"
+  ],
+  "order": 291
+}

@@ -1,0 +1,25 @@
+{
+  "id": "/apps/crown-and-marches/",
+  "name": "Crown & Marches",
+  "short_name": "Crown",
+  "description": "Историческая стратегия: экономика, война, дипломатия, открытия, общество и государственное устройство.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#273d41",
+  "theme_color": "#29372e",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

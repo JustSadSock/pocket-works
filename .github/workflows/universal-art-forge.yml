@@ -25,7 +25,8 @@ jobs:
       ART_FORGE_EVIDENCE: ${{ github.workspace }}/quality-artifacts/art-forge-source
       BLENDER_VERSION: "5.2.1"
       TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      BLENDER_BASE_URL: "https://download.blender.org/release/Blender5.2"
+      BLENDER_BASE_URL: "https://mirror.blender.org/release/Blender5.2"
+      BLENDER_SHA256: "a31f524fa99a527d3d52b7f5aaa68c34e1a19d5a1c9473f79c5cc610fd5b10e9"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,14 +41,30 @@ jobs:
           tar -xf /tmp/pixelorama.tar.gz -C /tmp
           echo '/tmp/Pixelorama-Linux-64bit' >> "$GITHUB_PATH"
           ln -s /tmp/Pixelorama-Linux-64bit/Pixelorama.x86_64 /usr/local/bin/pixelorama
+      - name: Restore pinned Blender archive
+        uses: actions/cache@v4
+        with:
+          path: /tmp/art-forge-blender-cache
+          key: blender-linux-x64-5.2.1-a31f524fa99a527d3
       - name: Install pinned Blender LTS
         run: |
+          set -euo pipefail
           archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          curl -fsSL -o "/tmp/$archive" "${BLENDER_BASE_URL}/${archive}"
-          curl -fsSL -o /tmp/blender.sha256 "${BLENDER_BASE_URL}/blender-${BLENDER_VERSION}.sha256"
-          cd /tmp
-          grep " ${archive}$" blender.sha256 | sha256sum --check --strict
-          tar -xf "$archive"
+          cache=/tmp/art-forge-blender-cache
+          mkdir -p "$cache"
+          verify() { printf '%s  %s\n' "$BLENDER_SHA256" "$1" | sha256sum --check --strict; }
+          if ! verify "$cache/$archive"; then
+            rm -f "$cache/$archive" "$cache/$archive.part"
+            for base in "$BLENDER_BASE_URL" "https://download.blender.org/release/Blender5.2"; do
+              if curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 480 -o "$cache/$archive.part" "$base/$archive" && verify "$cache/$archive.part"; then
+                mv "$cache/$archive.part" "$cache/$archive"
+                break
+              fi
+              rm -f "$cache/$archive.part"
+            done
+          fi
+          verify "$cache/$archive"
+          tar -xf "$cache/$archive" -C /tmp
           echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
       - name: Validate jobs, isolation, budgets and failure rollback
         run: python3 -m unittest discover -s tools/art-forge -p test_forge.py -v

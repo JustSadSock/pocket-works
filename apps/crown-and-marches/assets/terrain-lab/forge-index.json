@@ -1,0 +1,67 @@
+{
+  "assets": [
+    {
+      "adapter": "blender",
+      "id": "geological-forms",
+      "inputs": {
+        "asset-forge/geological-forms.py": "01f565736055e62e7a30ed5f79d8358f7ee0d2b97e9f40aa064504ae8f11bf24"
+      },
+      "outputs": {
+        "editable": {
+          "bytes": 6168165,
+          "sha256": "aafd8a5433bccffcd778ad706e7f744941cc83c8676d0be800c260a07c278bcd",
+          "source": "asset-forge/generated/geological-forms.blend"
+        },
+        "model": {
+          "animations": 0,
+          "bytes": 2004524,
+          "materials": 7,
+          "maxTextureSize": 0,
+          "primitives": 32,
+          "sha256": "b46f3f6a44646c8a4bea32ba564661b18ab8c59f012c4b26211e84a46aea56ce",
+          "triangles": 102400,
+          "url": "assets/terrain-lab/geological-forms.glb"
+        }
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original authored geological cross-sections and connected terrain mesh studies, no third-party graphic assets"
+      },
+      "seed": 173,
+      "tool": "Blender 5.2.1 LTS\n\tbuild date: 2026-08-25\n\tbuild time: 02:12:34\n\tbuild commit date: 2026-08-24\n\tbuild commit time: 16:50\n\tbuild hash: 9e2066aef7ef\n\tbuild branch: blender-v5.2-release\n\tbuild platform: Linux\n\tbuild type: Release\n\tbuild c flags:  -Wall -Werror=implicit-function-declaration -Wstrict-prototypes -Werror=return-type -Werror=vla -Wmissing-prototypes -Wno-char-subscripts -Wno-unknown-pragmas -Wpointer-arith -Wunused-parameter -Wwrite-strings -Wlogical-op -Wundef -Winit-self -Wmissing-inc"
+    },
+    {
+      "adapter": "bake",
+      "id": "geological-contact-sheet",
+      "inputs": {
+        "asset-forge/generated/geological-forms.blend": "aafd8a5433bccffcd778ad706e7f744941cc83c8676d0be800c260a07c278bcd"
+      },
+      "outputs": {
+        "image": {
+          "bytes": 840367,
+          "height": 900,
+          "sha256": "cd39bc1578076dfbf185c5bd83e965b162a1d3d7f07711e53b271f88268e9ca9",
+          "url": "assets/terrain-lab/geological-contact-sheet.png",
+          "width": 1600
+        }
+      },
+      "parameters": {
+        "frame": 1,
+        "height": 900,
+        "samples": 32,
+        "width": 1600
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original authored geological cross-sections and connected terrain mesh studies, no third-party graphic assets"
+      },
+      "seed": 173,
+      "tool": "Blender 5.2.1 LTS\n\tbuild date: 2026-08-25\n\tbuild time: 02:12:34\n\tbuild commit date: 2026-08-24\n\tbuild commit time: 16:50\n\tbuild hash: 9e2066aef7ef\n\tbuild branch: blender-v5.2-release\n\tbuild platform: Linux\n\tbuild type: Release\n\tbuild c flags:  -Wall -Werror=implicit-function-declaration -Wstrict-prototypes -Werror=return-type -Werror=vla -Wmissing-prototypes -Wno-char-subscripts -Wno-unknown-pragmas -Wpointer-arith -Wunused-parameter -Wwrite-strings -Wlogical-op -Wundef -Winit-self -Wmissing-inc"
+    }
+  ],
+  "manifestSha256": "87d544ecfcf9c89cc9d85539bb8fc8dc0ca471aeeb88fada8d533a517d7f7a21",
+  "version": 1
+}

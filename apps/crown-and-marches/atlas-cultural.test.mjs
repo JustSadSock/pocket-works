@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';
+import {planUrbanTown,planUrbanFields} from './atlas-urban-layout.mjs';
+import {culturalParcels,culturalRoad} from './atlas-cultural-landscape.mjs';
+const env={width:32,dry:(x,y)=>x>=0&&x<12.3&&y>=0&&y<32,water:(x,y)=>x>=12.3&&x<32&&y>=0&&y<32,eligible:(x,y)=>x>=0&&x<32&&y>=0&&y<32,road:(x,y)=>x===10&&y===10,grade:()=>.01,occupied:()=>false,permitted:()=>true};
+const city={id:0,i:330,pop:944,capital:true,fort:0,port:0,build:[1,1,0,0]},village={...city,capital:false,pop:220,specialization:'farming'};
+for(const c of [city,village]){const base=planUrbanTown(c,env);for(const candidate of ['compact','cultural']){const p=planUrbanTown(c,env,{candidate});assert.equal(p.buildings.length,p.target);assert.ok(p.streets.length<base.streets.length);assert.equal(p.walls.length,0);assert.equal(p.piers.length,0);assert.deepEqual(p,planUrbanTown(c,env,{candidate}));for(let i=0;i<p.buildings.length;i++)for(const b of p.buildings.slice(i+1)){const a=p.buildings[i];assert.ok(Math.hypot(a.x-b.x,a.y-b.y)>=a.r+b.r);}}}
+const parcels=culturalParcels(329,env,.8,0,{adjacent:(x,y)=>x===10&&y===10});assert.ok(parcels.length>=2&&parcels.every(p=>p.axis==='east-west'));assert.ok(parcels.reduce((s,p)=>s+p.area,0)>.5);assert.equal(culturalParcels(329,env,.8,3).length,0);assert.equal(culturalParcels(329,{...env,eligible:()=>false},.8,0).length,0);assert.equal(culturalParcels(329,env,0,0).length,0);
+const points=[[1,1],[1.5,1],[2,1]],curve=culturalRoad(points,env,12);assert.deepEqual(curve[0],points[0]);assert.deepEqual(curve.at(-1),points.at(-1));assert.deepEqual(culturalRoad(points,{...env,dry:(x,y)=>y===1},12),points);
