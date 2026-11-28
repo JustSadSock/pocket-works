@@ -70,7 +70,35 @@ for p in d['restParts']:
         if rigid:
             for i in range(len(pts)):rigiderror=max(rigiderror,abs(math.dist(pp[0],pp[i])-math.dist(pts[0],pts[i])))
     passed=maxdelta<=.006 and maxgap<=.018 and (kind!='rigid-hardware' or rigid and rigiderror<=.0001)
-    attachments.append({'part':p['name'],'type':kind,'host':host['name'],'rigid':rigid,'influences':sorted(influences),'restAnchors':anchors,'maxGapMetres':maxgap,'maxGapChangeMetres':maxdelta,'maxRigidDistanceErrorMetres':rigiderror,'passed':passed})
+    result={'part':p['name'],'type':kind,'host':host['name'],'rigid':rigid,'influences':sorted(influences),'restAnchors':anchors,'maxGapMetres':maxgap,'maxGapChangeMetres':maxdelta,'maxRigidDistanceErrorMetres':rigiderror,'passed':passed}
+    bindings=p.get('attachmentBindings')
+    if bindings is not None:
+        # Explicit triangle attachment is stricter about absolute gap: EVERY
+        # trim vertex, both shells, with no re-projection in posed frames.
+        result['legacyNearestVertex']={'maxGapMetres':maxgap,'maxGapChangeMetres':maxdelta,'passed':passed}
+        valid=kind=='skinned-trim' and len(bindings)==len(pts) and len(bindings)>0
+        valid=valid and [b.get('vertex') for b in bindings]==list(range(len(pts)))
+        def anchor(b,positions):
+            return [sum(positions[j][k]*w for j,w in zip(b['vertices'],b['bary'])) for k in range(3)]
+        if valid:
+            for b in bindings:
+                ids=b.get('vertices',[]);bary=b.get('bary',[]);face=b.get('face')
+                if not (isinstance(face,int) and 0<=face<len(host['faces']) and ids==host['faces'][face] and len(ids)==3 and all(isinstance(j,int) and 0<=j<len(hs) for j in ids) and (host.get('outerVertexCount') is None or max(ids)<host['outerVertexCount']) and len(bary)==3 and all(isinstance(w,(int,float)) and math.isfinite(w) and 0<=w<=1 for w in bary) and abs(sum(bary)-1)<1e-8):
+                    valid=False;break
+                expected=math.dist(pts[b['vertex']],anchor(b,hs))
+                if not isinstance(b.get('restDistance'),(int,float)) or not math.isfinite(b['restDistance']) or abs(expected-b['restDistance'])>1e-8:
+                    valid=False;break
+        result['bindingValidated']=valid
+        if valid:
+            gap=delta=0.
+            for f in d['frames']:
+                pp=next(x['positions'] for x in f['parts'] if x['name']==p['name']);hh=next(x['positions'] for x in f['parts'] if x['name']==host['name'])
+                for b in bindings:
+                    g=math.dist(pp[b['vertex']],anchor(b,hh));gap=max(gap,g);delta=max(delta,abs(g-b['restDistance']))
+            result.update({'method':'stable barycentric host triangle, every outer and lining vertex','bindingCount':len(bindings),'maxGapMetres':gap,'maxGapChangeMetres':delta,'passed':gap<=.018 and delta<=.006})
+        else:
+            result.update({'passed':False,'reason':'Invalid explicit trim binding'})
+    attachments.append(result)
 gate=all(x['strictBodyCrossings']==0 and x['strictSelfCrossings']==0 and x['collapsedEdges']==0 and x['maxStretch']<=1.6 and x['p95Stretch']<=1.15 for r in rows for x in r['parts']) and all(not r['layerCrossings'] for r in rows)
-result={'rows':rows,'attachments':attachments,'clothingGate':gate,'attachmentGate':bool(attachments) and all(x['passed'] for x in attachments),'method':'Native posed actual triangles, full source body, strict BVH intersections, nine sampled phases per action; no seam exemptions or continuous collision claim'}
+result={'rows':rows,'attachments':attachments,'clothingGate':gate,'attachmentGate':bool(attachments) and all(x['passed'] for x in attachments),'method':'Native posed actual triangles, full source body, strict BVH intersections, rest, nine Idle samples, all 49 Walk keys and eight intermediate samples; no seam exemptions or continuous collision claim'}
 (out/'p0-surface-qa.json').write_text(json.dumps(result,indent=2))

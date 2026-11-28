@@ -28,7 +28,14 @@ for(const action of ['idle','walk'])for(const phase of [0,.125,.25,.375,.5,.625,
  const w=pose(m,action,phase),eightPos=eight.parts.map(p=>deform(eight,p,w)),parts=m.parts.map(p=>({name:p.name,layer:p.layer??0,positions:deform(m,p,w),faces:tri(p)}));evaluated.push({action,phase,anatomy:deform(src,src.parts[0],w),parts});
  browser.push({action,phase,parts:parts.map((p,j)=>({name:p.name,primitive:j,count:p.positions.length,points:p.positions.map((position,index)=>({index,position,eightPosition:eightPos[j][index],rest:m.parts[j].positions.slice(index*3,index*3+3)})).filter(x=>x.index%Math.max(1,Math.floor(p.positions.length/32))===0)}))});
 }
-write('p0-evaluated.json',JSON.stringify({sourceFaces:tri(src.parts[0]),frames:evaluated,restParts:m.parts.map(p=>({name:p.name,positions:pts(p),outerVertexCount:p.outerVertexCount??null,weights:p.attachment||p.attachmentSpec||/buckle|clasp|welt/.test(p.name)?pts(p).map((_,i)=>weights(p,i)):null,attachment:p.attachment??null,attachmentSpec:p.attachmentSpec??(/neck binding|waist belt|welt/.test(p.name)?{type:'skinned-trim',host:p.name.includes('welt')?p.name.replace(' welt',''):'tunic'}:/pouch/.test(p.name)?{type:'fitted-interface',host:p.name==='belt pouch'?'pouch belt loop':'waist belt'}:null)}))}));
+// Keep browser samples unchanged; only independent surface coverage grows.
+const sampledWalk=new Set(evaluated.filter(f=>f.action==='walk').map(f=>f.phase));
+for(const phase of [...Array.from({length:49},(_,k)=>k/48),...Array.from({length:8},(_,k)=>(6*k+.5)/48)])if(!sampledWalk.has(phase)){
+ const w=pose(m,'walk',phase);evaluated.push({action:'walk',phase,anatomy:deform(src,src.parts[0],w),parts:m.parts.map(p=>({name:p.name,layer:p.layer??0,positions:deform(m,p,w),faces:tri(p)}))});
+}
+evaluated.push({action:'rest',phase:0,anatomy:pts(src.parts[0]),parts:m.parts.map(p=>({name:p.name,layer:p.layer??0,positions:pts(p),faces:tri(p)}))});
+evaluated.sort((a,b)=>a.action.localeCompare(b.action)||a.phase-b.phase);
+write('p0-evaluated.json',JSON.stringify({sourceFaces:tri(src.parts[0]),frames:evaluated,restParts:m.parts.map(p=>({name:p.name,positions:pts(p),faces:tri(p),attachmentBindings:p.attachmentBindings??null,outerVertexCount:p.outerVertexCount??null,weights:p.attachment||p.attachmentSpec||/buckle|clasp|welt/.test(p.name)?pts(p).map((_,i)=>weights(p,i)):null,attachment:p.attachment??null,attachmentSpec:p.attachmentSpec??(/neck binding|waist belt|welt/.test(p.name)?{type:'skinned-trim',host:p.name.includes('welt')?p.name.replace(' welt',''):'tunic'}:/pouch/.test(p.name)?{type:'fitted-interface',host:p.name==='belt pouch'?'pouch belt loop':'waist belt'}:null)}))}));
 write('p0-browser-samples.json',JSON.stringify(browser));
 const three={drift:0,vertical:0,penetration:0},anchors={};
 for(let cycle=0;cycle<3;cycle++)for(const row of r.rows.slice(0,cycle===2?undefined:-1))for(const side of ['L','R']){

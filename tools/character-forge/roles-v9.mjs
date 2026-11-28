@@ -5,6 +5,7 @@ import {produceRole,roles as roleProfiles} from './roles-v8.mjs';
 import {part,push,weights,normals} from './hybrid-human.mjs';
 import {sewLining} from './garment.mjs';
 import {authoredPatch,ringSampler,reweightLinedSurface} from './authored-surface.mjs';
+import {bindTrim} from './surface-binding.mjs';
 import {profiles} from './material-study.mjs';
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),mix=(a,b,t)=>add(mul(a,1-t),mul(b,t)),unit=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),tau=Math.PI*2;
 const J=(m,n)=>{const j=m.joints.find(x=>x.name===n);if(!j)throw Error('Missing joint '+n);return j};
@@ -167,14 +168,18 @@ function civilianArtisan(m){
  // Linen upper edge gathers at the waist; broad leather apron follows the
  // actual shaped skirt but opens at the sides. Separate hem and thickness.
  const apron=authoredPatch({name:'leather work apron',color:[.31,.19,.095],material:{kind:'leather',roughness:.88,metallic:0},rows:13,columns:19,thickness:.003,host:'tunic',region:'waist apron',sample:(v,u)=>{
-  const r=.04+2.04*v,width=5.0-1.5*v,k=N*.75+(2*u-1)*width;
-  return sample(r,k,.009+.004*Math.sin(Math.PI*v)*Math.cos(5*Math.PI*u));
+  // An independently cut rounded leather panel: asymmetric hem, irregular
+  // hanging folds taper to the anchored waist, not a rigid radial trapezoid.
+  const edge=Math.abs(2*u-1),hem=.08+.18*edge**3+.045*Math.sin(Math.PI*u*2);
+  const r=hem+(2.08-hem)*v,width=4.75-1.3*v+.32*Math.sin(Math.PI*v),k=N*.75+(2*u-1)*width+.20*(1-v)*Math.sin(Math.PI*u);
+  const folds=(.008*Math.cos(5*Math.PI*u+.65*(1-v))+.004*Math.sin(9*Math.PI*u-.4))*Math.sin(Math.PI*(1-v)*.8);
+  return sample(r,k,.017+folds+.008*(1-v)*edge**2);
  }});
  m.parts.push(apron);civilianCuffs(m,tunic);
  m.parts=m.parts.filter(p=>p.name!=='belt clasp');
  const a=sample(2,N*.75,.028),buckle=torus(m,'apron belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.016,.0035,[[hip.id,1]],[.47,.35,.16]);
  buckle.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
- return {cut:'short linen work tunic',apron:'tailored leather panel, measured outer surface',accessories:['belt pouch','buckle'],construction:'authored patch + measured ring sampling'};
+ return {cut:'short linen work tunic',apron:'rounded asymmetric leather panel with tapering free folds',accessories:['belt pouch','buckle'],construction:'authored patch + measured ring sampling'};
 }
 function civilianMerchant(m){
  const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),upper=J(m,'spine01'),sample=ringSampler(tunic);
@@ -182,8 +187,13 @@ function civilianMerchant(m){
  // Short shoulder mantle: wider at lower edge, tapered toward the neck.
  // Real geometric folds and a hem that follows the back and right shoulder.
  const cape=authoredPatch({name:'wool draped merchant mantle',color:[.36,.17,.085],material:{kind:'cloth',roughness:.96,metallic:0},rows:17,columns:25,thickness:.004,host:'tunic',region:'shoulder mantle',sample:(v,u)=>{
-  const edge=Math.abs(2*u-1),r=2.90+.48*edge+(4.88-2.90-.48*edge)*v,k=(-5.5-1.2*v)+(27+2.4*v)*u;
-  return sample(r,k,.009+.008*Math.sin(Math.PI*(1-v))*(.6+.4*Math.cos(6*Math.PI*u)),{maxExtension:.065});
+  // Open-front mantle: independent curved hem, rounded shoulders and
+  // asymmetrical hanging folds; collar is narrow and fitted.
+  const edge=Math.abs(2*u-1),hem=2.72+.60*edge**2+.10*Math.sin(2*Math.PI*u),r=hem+(4.88-hem)*v;
+  const start=-5.4-.9*v,end=21.4+.9*v,k=start+(end-start)*u+.30*Math.sin(2*Math.PI*u)*Math.sin(Math.PI*v);
+  const shoulder=Math.sin(Math.PI*v)**1.5,free=(1-v)**1.4;
+  const wave=.008*Math.sin(6*Math.PI*u+.7*v)+.004*Math.cos(10*Math.PI*u-.5*v);
+  return sample(r,k,.013+.023*shoulder+.017*free+wave*free,{maxExtension:.085});
  }});
  m.parts.push(cape);
  m.parts=m.parts.filter(p=>p.name!=='belt clasp');
@@ -191,7 +201,7 @@ function civilianMerchant(m){
  const tie=authoredPatch({name:'merchant woven clasp band',color:[.43,.26,.115],material:{kind:'cloth',roughness:.92,metallic:0},rows:3,columns:13,thickness:.0025,host:'tunic',region:'neck fastening',sample:(v,u)=>sample(4.55+.17*v,21+6*u,.010)});m.parts.push(tie);
  const edge=sample(4.63,24,.017),clasp=torus(m,'merchant brass mantle clasp',edge.position,[1,0,0],[0,1,0],[0,0,1],.012,.0027,[[upper.id,1]],[.58,.37,.14]);clasp.attachmentSpec={type:'rigid-hardware',host:tie.name};
  const a=sample(2,N*.75,.026),b=torus(m,'merchant brass belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.018,.004,[[hip.id,1]],[.58,.37,.14]);b.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
- return {cut:'long fitted tunic and short shaped wool mantle',accessories:['mantle clasp','belt buckle','belt pouch'],construction:'authored patch + measured ring sampling'};
+ return {cut:'long fitted tunic and open-front rounded wool mantle',accessories:['mantle clasp','belt buckle','belt pouch'],construction:'authored patch + measured ring sampling'};
 }
 function artisanKit(m){
  const tunic=m.parts.find(p=>p.name==='tunic'),hip=J(m,'spine03'),root=J(m,'root');
@@ -266,7 +276,13 @@ export function produceRoleV9(source,id,identityOverride=null,{style='historical
  // P0.2 A: bounded weight-field recovery on the existing continuous tunic.
  // Keep exact rest positions and topology, role-specific cuts, and Cyclic49.
  // Other garment recipes and research modes are deliberately unchanged.
- if(civilianP0){const tunic=m.parts.find(p=>p.name==='tunic');reweightLinedSurface(tunic,{sigma:.10});m.spec.garmentSkinRevision='p0.2-a-continuous-field';}
+ if(civilianP0){
+  const tunic=m.parts.find(p=>p.name==='tunic');reweightLinedSurface(tunic,{sigma:.10});m.spec.garmentSkinRevision='p0.2-a-continuous-field';
+  // Only genuinely fitted trim inherits the final host field. Free mantle/apron
+  // and rigid buckles are intentionally still subject to the old strict audit.
+  for(const p of m.parts)if(['tunic neck binding','waist belt','linen cuff L','linen cuff R','merchant woven clasp band'].includes(p.name))bindTrim(p,tunic);
+  m.spec.tailoringRevision='p0.3-a-barycentric-trim-and-authored-drape';
+ }
  m.spec.styleRevision=styleRevision;contacts(m);
  m.spec.artHistoricalReferences=['https://isaw.nyu.edu/exhibitions/edge-of-empires/highlights/shield','https://www.metmuseum.org/art/collection/search/35771','https://fashionhistory.fitnyc.edu/chaperon/'];m.spec.artHistoricalReference=id==='infantry'?'late-14th-century coat-of-plates, mail and bascinet':id==='legionary'?'2nd-century CE lorica segmentata and scutum':'medieval civilian craft/trade clothing';
  m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'v0.9 role-specific cut, equipment and material construction'}];

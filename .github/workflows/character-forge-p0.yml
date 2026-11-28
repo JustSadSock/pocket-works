@@ -6,6 +6,11 @@ on:
       - '.github/workflows/character-forge-p0.yml'
       - 'tools/art-forge/**'
   workflow_dispatch:
+    inputs:
+      full_pack:
+        description: 'Run all six resources and mandatory full pack review after base recovery'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -23,7 +28,7 @@ jobs:
         with:
           node-version: 22
       - name: Required shared Core and scoped admission contract
-        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs tools/character-forge/p0-profile.test.mjs tools/character-forge/authored-surface.test.mjs tools/character-forge/eight-weight-control.test.mjs
+        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs tools/character-forge/p0-profile.test.mjs tools/character-forge/authored-surface.test.mjs tools/character-forge/eight-weight-control.test.mjs tools/character-forge/surface-binding.test.mjs
       - name: Fresh exact MakeHuman and licensed KinemIQ source
         run: |
           mkdir -p "$CHARACTER_EVIDENCE"
@@ -45,7 +50,8 @@ jobs:
       fail-fast: false
       matrix:
         role: [artisan, merchant]
-        morph: [base, short-light, tall-heavy]
+        # P0.3 base-first development. Explicit full-pack dispatch retains all final gates.
+        morph: ${{ fromJSON(inputs.full_pack && '["base","short-light","tall-heavy"]' || '["base"]') }}
     defaults:
       run:
         shell: bash
@@ -155,7 +161,7 @@ jobs:
           retention-days: 30
   pack:
     needs: [source, civilian]
-    if: ${{ always() && !cancelled() && needs.source.result == 'success' }}
+    if: ${{ always() && !cancelled() && needs.source.result == 'success' && inputs.full_pack }}
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 35
