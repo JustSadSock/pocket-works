@@ -1,0 +1,243 @@
+name: Universal Cross Commit Proof
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci-overhaul/universal-cross-commit*'
+      - 'scripts/ci-overhaul/universal-signed-receipts*'
+      - 'scripts/ci-overhaul/universal-verified-inventory*'
+      - '.github/workflows/universal-cross-commit-proof.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ci-overhaul/universal-signed-receipts*'
+      - '.github/workflows/universal-cross-commit-proof.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/ci-overhaul/universal-cross-commit.test.mjs scripts/ci-overhaul/universal-verified-inventory.test.mjs scripts/ci-overhaul/universal-signed-receipts.test.mjs
+      - name: Inventory original application QA plans
+        run: |
+          node scripts/ci-overhaul/universal-verified-inventory.mjs > inventory.json
+          jq '{apps,plannedApps,tasks,totals,errors,productionAuthorization}' inventory.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-verified-inventory-${{ github.run_attempt }}
+          path: inventory.json
+          if-no-files-found: error
+          retention-days: 7
+  live:
+    needs: contract
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'infra/universal-cross-commit-proof'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: axis-pals
+            prior: '91019b3bea4a37a51cd223f84aad997fa3a9eee9'
+            current: '5c87f6448f2ec8a5eab0f9d1921651334d510e16'
+            expected: 'true'
+          - app: press
+            prior: '91019b3bea4a37a51cd223f84aad997fa3a9eee9'
+            current: '5c87f6448f2ec8a5eab0f9d1921651334d510e16'
+            expected: 'true'
+          - app: flickyard
+            prior: '5c87f6448f2ec8a5eab0f9d1921651334d510e16'
+            current: 'a00c4525d4b7714fdecea09602eb841753bb326c'
+            expected: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute both immutable source snapshots with no network
+        env:
+          APP: ${{ matrix.app }}
+          PRIOR: ${{ matrix.prior }}
+          CURRENT: ${{ matrix.current }}
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          set -euo pipefail
+          tool="$PWD/scripts/ci-overhaul/universal-cross-commit.mjs"
+          repo="$PWD"
+          root="$RUNNER_TEMP/cross-proof"
+          mkdir "$root"
+          task="$(node "$tool" task "$APP")"
+          key="$(jq -er .key <<< "$task")"
+          node "$tool" scope "$repo" "$PRIOR" "$CURRENT" "$APP" > "$root/scope.json"
+          git merge-base --is-ancestor "$PRIOR" "$CURRENT"
+          image='node@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb'
+          docker pull "$image"
+          opts=(--rm --network none --hostname pw-shadow --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --user "$(id -u):$(id -g)" -e TZ=UTC -e LANG=C.UTF-8 -e HOME=/tmp)
+          config="$(docker image inspect --format '{{.Id}}' "$image")"
+          runtime="$(docker run "${opts[@]}" "$image" node -p 'process.version')"
+          arch="$(docker run "${opts[@]}" "$image" node -p 'process.arch')"
+          toolchain="$(docker run "${opts[@]}" "$image" sha256sum /usr/local/bin/node | cut -d' ' -f1)"
+          kernel="$(uname -srvm | sha256sum | cut -d' ' -f1)"
+          cpu="$(awk -F: '/^(vendor_id|cpu family|model[[:space:]]|model name|stepping|microcode|flags)[[:space:]]*:/{print}' /proc/cpuinfo | sort -u | sha256sum | cut -d' ' -f1)"
+          jq -n --arg image "$image" --arg config "$config" --arg node "$runtime" --arg arch "$arch" --arg toolchain "$toolchain" --arg kernel "$kernel" --arg cpu "$cpu" --argjson uid "$(id -u)" --argjson gid "$(id -g)" '{image:$image,config:$config,node:$node,arch:$arch,toolchain:$toolchain,kernel:$kernel,cpu:$cpu,uid:$uid,gid:$gid}' > "$root/runtime.json"
+          for side in prior current; do
+            sha="$PRIOR"; if [[ "$side" == current ]]; then sha="$CURRENT"; fi
+            src="$root/$side-source"; out="$root/$side-output"
+            mkdir "$src" "$out"
+            git archive "$sha" "apps/$APP" shared scripts package.json package-lock.json | tar -xf - -C "$src"
+            node "$tool" normalize "$repo" "$sha" "$APP" "$src" > "$root/$side-before.json"
+            docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" "$image" node /work/scripts/ci-overhaul/verified-mounted-inputs.mjs measure /work | jq -S . > "$root/$side-inside.json"
+            jq -S . "$root/$side-before.json" | cmp - "$root/$side-inside.json"
+            # Create an empty output mountpoint then restore normalized root mtime.
+            mkdir "$src/qa-artifacts"; touch -d @946684800 "$src"
+            docker run "${opts[@]}" --mount "type=bind,src=$src,dst=/work,readonly" --mount "type=bind,src=$out,dst=/work/qa-artifacts" -w /work -e "PW_QA_TASK=$task" "$image" node scripts/universal-qa/run.mjs
+            rmdir "$src/qa-artifacts"; touch -d @946684800 "$src"
+            node "$tool" measure "$src" > "$root/$side-after.json"
+            cmp "$root/$side-before.json" "$root/$side-after.json"
+            node "$tool" result "$APP" "$out/$key/result.json" "$out/$key/console.log" > "$root/$side-result.json"
+            jq -n --slurpfile mount "$root/$side-before.json" --slurpfile runtime "$root/runtime.json" --slurpfile result "$root/$side-result.json" '{mount:$mount[0],runtime:$runtime[0],result:$result[0]}' > "$root/$side.json"
+          done
+          node "$tool" compare "$root/scope.json" "$root/prior.json" "$root/current.json" | tee "$root/report.json"
+          jq -e --argjson expected "$EXPECTED" '.distinctCommits and .distinctTrees and .assertionMatch and .runtimeMatch and .scopeMatch==$expected and .mountMatch==$expected and .observedEquivalent==$expected and .productionAuthorization==false and .allowResultReuse==false' "$root/report.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universal-cross-proof-${{ github.run_attempt }}-${{ matrix.app }}
+          path: |
+            ${{ runner.temp }}/cross-proof/*.json
+            ${{ runner.temp }}/cross-proof/*-output/*/result.json
+            ${{ runner.temp }}/cross-proof/*-output/*/console.log
+          if-no-files-found: error
+          retention-days: 7
+
+  issue:
+    needs: live
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: universal-cross-proof-${{ github.run_attempt }}-*
+          path: raw
+      - run: node scripts/ci-overhaul/universal-signed-receipts.mjs issue raw receipts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-receipts-${{ github.run_attempt }}
+          path: receipts
+          if-no-files-found: error
+          retention-days: 7
+  attest:
+    needs: issue
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: universal-receipts-${{ github.run_attempt }}
+          path: receipts
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: receipts/*.json
+  independent_gate:
+    needs: [live, issue, attest]
+    if: always() && needs.live.result == 'success' && needs.issue.result == 'success' && ((github.ref == 'refs/heads/main' && needs.attest.result == 'success') || (github.event_name == 'pull_request' && needs.attest.result == 'skipped'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: universal-cross-proof-${{ github.run_attempt }}-*
+          path: raw
+      - uses: actions/download-artifact@v4
+        with:
+          name: universal-receipts-${{ github.run_attempt }}
+          path: receipts
+      - name: Authenticate each signed subject on main
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for file in receipts/*.json; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/universal-cross-commit-proof.yml@refs/heads/main" --source-ref refs/heads/main --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
+          done
+      - name: Reconstruct original inputs and receipts without trusting issuer summary
+        run: |
+          set -euo pipefail
+          node scripts/ci-overhaul/universal-signed-receipts.mjs gate raw receipts | tee gate.json
+          jq -e '.success and .expected==3 and .passed==3 and .eligibleCandidates==2 and .freshTasks==3 and .reusedTasks==0 and .productionAuthorization==false' gate.json
+      - name: Reject missing or modified evidence
+        run: |
+          set -euo pipefail
+          cp -a receipts tampered
+          jq '.prior.result.counts.tests += 1' receipts/axis-pals.json > tampered/axis-pals.json
+          if node scripts/ci-overhaul/universal-signed-receipts.mjs gate raw tampered; then exit 1; fi
+          rm -rf tampered
+          cp -a receipts tampered
+          rm tampered/press.json
+          if node scripts/ci-overhaul/universal-signed-receipts.mjs gate raw tampered; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-independent-gate-${{ github.run_attempt }}
+          path: gate.json
+          if-no-files-found: error
+          retention-days: 7
+  required_gate:
+    if: always()
+    needs: [contract, live, issue, attest, independent_gate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require complete independent admission experiment
+        env:
+          CONTRACT: ${{ needs.contract.result }}
+          LIVE: ${{ needs.live.result }}
+          ISSUE: ${{ needs.issue.result }}
+          ATTEST: ${{ needs.attest.result }}
+          GATE: ${{ needs.independent_gate.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$LIVE" == skipped && "$ISSUE" == skipped && "$ATTEST" == skipped && "$GATE" == skipped ]]; then
+            test "$CONTRACT" = success
+            if [[ "$GITHUB_REF" == refs/heads/main ]]; then exit 1; fi
+            if [[ "$GITHUB_EVENT_NAME" == pull_request ]] && jq -e '.pull_request.head.repo.full_name == .repository.full_name and .pull_request.head.ref == "infra/universal-cross-commit-proof"' "$GITHUB_EVENT_PATH"; then exit 1; fi
+            exit 0
+          fi
+          test "$CONTRACT" = success
+          test "$LIVE" = success
+          test "$ISSUE" = success
+          test "$GATE" = success
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then test "$ATTEST" = success; else test "$ATTEST" = skipped; fi

@@ -4,7 +4,7 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import {isDeepStrictEqual as eq} from 'node:util';
-import {validateManifest,validatePlan,validatePhase,normalizeScope,SOURCE,SOURCE_TREE,PLAN,WORKFLOW} from './verified-gameplay-receipt.mjs';
+import {validateManifest,validatePlan,validatePhase,normalizeScope,SOURCE,SOURCE_TREE,PLAN,WORKFLOW,SOURCE_SCOPE_VERSION} from './verified-gameplay-receipt.mjs';
 import {mountedFingerprint} from './verified-mounted-inputs.mjs';
 import {digest} from './verified-results.mjs';
 export const REPO='JustSadSock/pocket-works',RENEWAL_WORKFLOW='.github/workflows/gameplay-receipt-renewal.yml',APP_PR=1355,APP_BRANCH='app/banners-of-war';
@@ -67,11 +67,11 @@ export function buildCatalog(receipts,expected,now=Date.now(),mainOnly=true){
  if(cases!==1868||measurements!==3436||perf!==5||perfMeasurements!==10)fail('Incomplete coverage');
  if(rows.some(r=>!eq(r.manifest.sourceMount,rows[0].manifest.sourceMount)||!eq(r.manifest.auditMount,rows[0].manifest.auditMount)))fail('Mounted inputs differ across matrix');
  if(rows.some(r=>!compatibleGameplayRuntime(r.manifest.environment,rows[0].manifest.environment)))fail('Pinned gameplay runtime differs across matrix');
- return {schema:1,kind:'renewable-banners-catalog-v1',...expected,planDigest:PLAN,issuedAt:now,expiresAt:Math.min(...rows.map(r=>r.issuedAt))+MAX_AGE,gameplayCases:cases,sourceMeasurements:measurements,freshPerformanceCases:perf,freshPerformanceMeasurements:perfMeasurements,shards:rows.map(r=>({shard:r.manifest.shard,receiptDigest:digest(JSON.stringify(r)),gameplaySemanticDigest:r.gameplaySemanticDigest,environment:r.manifest.environment,sourceMount:r.manifest.sourceMount,auditMount:r.manifest.auditMount})),compatibility:'pinned-runtime-gameplay-v1',...flags};
+ return {schema:1,kind:'renewable-banners-catalog-v1',...expected,sourceScopeVersion:SOURCE_SCOPE_VERSION,planDigest:PLAN,issuedAt:now,expiresAt:Math.min(...rows.map(r=>r.issuedAt))+MAX_AGE,gameplayCases:cases,sourceMeasurements:measurements,freshPerformanceCases:perf,freshPerformanceMeasurements:perfMeasurements,shards:rows.map(r=>({shard:r.manifest.shard,receiptDigest:digest(JSON.stringify(r)),gameplaySemanticDigest:r.gameplaySemanticDigest,environment:r.manifest.environment,sourceMount:r.manifest.sourceMount,auditMount:r.manifest.auditMount})),compatibility:'pinned-runtime-gameplay-v1',...flags};
 }
 export function catalogCandidate(catalog,target,now=Date.now()){
  try{
-  if(catalog?.schema!==1||catalog.kind!=='renewable-banners-catalog-v1'||catalog.planDigest!==PLAN||!['exact-environment-only','pinned-runtime-gameplay-v1'].includes(catalog.compatibility)||Object.keys(flags).some(k=>catalog[k]!==false)||!positive(now)||!positive(catalog.issuedAt)||!positive(catalog.expiresAt)||now<catalog.issuedAt||now>catalog.expiresAt||catalog.expiresAt-catalog.issuedAt>MAX_AGE||catalog.gameplayCases!==1868||catalog.sourceMeasurements!==3436||catalog.freshPerformanceCases!==5||catalog.freshPerformanceMeasurements!==10||catalog.shards?.length!==8||catalog.shards.some((x,i)=>x.shard!==i||!HEX.test(x.receiptDigest)||!HEX.test(x.gameplaySemanticDigest)))fail('Invalid catalog');
+  if(catalog?.schema!==1||catalog.kind!=='renewable-banners-catalog-v1'||catalog.sourceScopeVersion!==SOURCE_SCOPE_VERSION||catalog.planDigest!==PLAN||!['exact-environment-only','pinned-runtime-gameplay-v1'].includes(catalog.compatibility)||Object.keys(flags).some(k=>catalog[k]!==false)||!positive(now)||!positive(catalog.issuedAt)||!positive(catalog.expiresAt)||now<catalog.issuedAt||now>catalog.expiresAt||catalog.expiresAt-catalog.issuedAt>MAX_AGE||catalog.gameplayCases!==1868||catalog.sourceMeasurements!==3436||catalog.freshPerformanceCases!==5||catalog.freshPerformanceMeasurements!==10||catalog.shards?.length!==8||catalog.shards.some((x,i)=>x.shard!==i||!HEX.test(x.receiptDigest)||!HEX.test(x.gameplaySemanticDigest)))fail('Invalid catalog');
   for(const k of ['source','sourceTree','auditCommit','auditTree','planDigest'])if(catalog[k]!==target[k])fail('Catalog identity differs: '+k);
   const r=catalog.shards[target.shard];
   if(!r||!(catalog.compatibility==='exact-environment-only'?eq(r.environment,target.environment):compatibleGameplayRuntime(r.environment,target.environment))||!eq(r.sourceMount,target.sourceMount)||!eq(r.auditMount,target.auditMount))fail('Unapproved target runtime or mount');
