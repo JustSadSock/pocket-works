@@ -16,7 +16,7 @@ function project(x,y,z=0){let F=scene.F,t=scene.frames[0].terrain,k=cam.k,alt=re
 function snapPoint(x,y){let F=scene.F,t=scene.frames[0].terrain,k=cam.k,z=renderHeight(F,t,x,y);return {x:Math.round(-y*k)+Math.round(w/2-cam.u*k),y:Math.round((x*S-z*T)*k)+Math.round(h/2-cam.v*k)}}
 const requestedStyle=typeof location==='undefined'?null:new URLSearchParams(location.search).get('diorama');
 const diorama=['A','B'].includes(requestedStyle)?requestedStyle:'control';
-function initTerrain(s){terrainTiles?.dispose();terrainTiles=new TerrainTiles(scene.F,s.terrain,textures,treeAsset,diorama)}
+function initTerrain(s){terrainTiles?.dispose();terrainTiles=new TerrainTiles(scene.F,s.terrain,textures,treeAsset,s.custom&&diorama==='control'&&new URLSearchParams(location.search).get('fieldArt')!=='before'?'field-study':diorama)}
 async function prepareTerrain(pad=0){resize();let start=performance.now(),coarse={...cam,k:cam.k/2};let first=await terrainTiles.warm(coarse,w,h,d,0),current=await terrainTiles.warm(cam,w,h,d,pad);return {wallMs:performance.now()-start,first,current}}
 function landscape(s){let ground=terrainTiles.draw(g,cam,w,h,d,performance.now()<zoomUntil?zoomLevel:null),trees=[];g.fillStyle='#30342142';g.beginPath();if(cam.k>=1.1)for(let o of terrainTiles.vegetation(cam,w,h)){let p=project(o.x,o.y),k=cam.k*o.scale,asset=treeAsset[o.kind];if(!asset)continue;let m=asset.meta,span=m.height*k;if(p.x<-span||p.x>w+span||p.y<-span||p.y>h+span)continue;trees.push({p,k,kind:o.kind});let radius=Math.max(1,span*.29),sx=diorama==='B'?span*.43:span*.32,sy=diorama==='B'?span*.19:span*.13;g.moveTo(p.x+sx+radius,p.y+sy);g.ellipse(p.x+sx,p.y+sy,radius*(diorama==='B'?1.16:1),radius*.38,.35,0,7)}g.fill();
  return {trees,ground}}

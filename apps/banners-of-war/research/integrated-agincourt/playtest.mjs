@@ -81,7 +81,7 @@ try{
   try{
    await p.goto(url+'?view='+ (art?'candidate':'schematic'));await p.waitForFunction(()=>window.integratedQA?.ready===true);
    if(configuration){
-    await p.locator('#seed').fill(configuration.seed);await p.locator('#landscape').selectOption(configuration.landscape);await p.locator('#objective').selectOption(configuration.objective);await p.locator('#duration').selectOption(String(configuration.seconds));await p.locator('#visibility').selectOption(configuration.fog?'fog':'open');if(process.env.BOW_CAMPAIGN_UI==='1')await p.locator('#campaign').check();
+    await p.locator('#front').selectOption(process.env.BOW_FRONT||'wide');await p.locator('#campaign-length').selectOption('3');await p.locator('#seed').fill(configuration.seed);await p.locator('#landscape').selectOption(configuration.landscape);await p.locator('#objective').selectOption(configuration.objective);await p.locator('#duration').selectOption(String(configuration.seconds));await p.locator('#visibility').selectOption(configuration.fog?'fog':'open');if(process.env.BOW_CAMPAIGN_UI==='1')await p.locator('#campaign').check();
     for(let side of [0,1]){let a=configuration.armies[side];await p.locator('#army-side').selectOption(String(side));await p.locator('#'+a.preset).click();await p.locator('#army-size').selectOption(String(a.size));await p.locator('#army-quality').selectOption(a.quality)}
     await p.screenshot({path:out+'/'+tag+'-muster.png'});await p.locator('#start').click();await p.locator('#phase').waitFor({state:'visible'});assert.equal((await saved(p)).state.seed,configuration.seed);assert.deepEqual((await saved(p)).state.custom.config.armies.map(a=>a.roster),configuration.armies.map(a=>a.roster));
    }else{await p.locator('#chronicles').click();await p.locator('#chronicle-id').selectOption('agincourt');await p.locator('#chronicle-side').selectOption(String(side));await p.locator('#chronicle-launch').click();}
@@ -91,19 +91,19 @@ try{
    motionProfile=await nativeMotionProfile(p);if(configuration){await p.locator('#confirm').click();await p.waitForFunction(()=>window.integratedQA.receipt()?.phase==='plan');routeEvidence=await nativeRouteCheck(p);}
    for(let i=0;i<31;i++){
     let before=await saved(p);if(before.state.result)break;
-    let order=await command(p,reference?.[i]?.order.executed);
+    let planStart=Date.now(),order=await command(p,reference?.[i]?.order.executed),planMs=Date.now()-planStart,confirmStart=Date.now();
     if(reference)assert.deepEqual(order.orders,reference[i].order.orders,'Native order payload differs');
     await p.locator('#confirm').click();await p.locator('#confirm').click();await p.locator('#playback').waitFor({state:'visible',timeout:120000});
-    await p.locator('#speed').selectOption('8');
+    let computeMs=Date.now()-confirmStart,playStart=Date.now(),speed=process.env.BOW_RHYTHM_NATIVE==='1'&&i===0?2:8;await p.locator('#speed').selectOption(String(speed));
     await p.evaluate(()=>{window.__bowFrameTimes=[];let last=performance.now();function record(t){if(document.querySelector('#playback').hidden||document.querySelector('#pause').textContent==='Играть')return;window.__bowFrameTimes.push(t-last);last=t;requestAnimationFrame(record)}requestAnimationFrame(record)});
     await p.waitForFunction(()=>{let e=document.querySelector('#scrub');return Number(e.max)>0&&Number(e.value)===Number(e.max)&&document.querySelector('#pause').textContent==='Играть'},{},{timeout:120000});
     await p.waitForFunction(()=>{let r=window.integratedQA.receipt();return r&&r.frame===r.lastFrame&&!r.playing});
-    if(art){let r=await receipt(p);for(let [kind,index] of Object.entries(r.markers||{})){if(events[kind]!==undefined)continue;await p.locator('#scrub').fill(String(index));await p.waitForFunction(n=>window.integratedQA.receipt()?.frame===n,index);await waitReceipt(p,true);await p.screenshot({path:out+'/'+tag+'-event-'+kind+'.png'});events[kind]={round:i+1,frame:index};}if(Object.keys(r.markers||{}).length){await p.locator('#scrub').fill(String(r.lastFrame));await p.waitForFunction(()=>{let q=window.integratedQA.receipt();return q?.frame===q?.lastFrame});}}
+    let playbackMs=Date.now()-playStart;if(art){let r=await receipt(p);for(let [kind,index] of Object.entries(r.markers||{})){if(events[kind]!==undefined)continue;await p.locator('#scrub').fill(String(index));await p.waitForFunction(n=>window.integratedQA.receipt()?.frame===n,index);await waitReceipt(p,true);await p.screenshot({path:out+'/'+tag+'-event-'+kind+'.png'});events[kind]={round:i+1,frame:index};}if(Object.keys(r.markers||{}).length){await p.locator('#scrub').fill(String(r.lastFrame));await p.waitForFunction(()=>{let q=window.integratedQA.receipt();return q?.frame===q?.lastFrame});}}
     if(i===0||i%5===4)pairs.push(await pair(p,tag+'-round'+i,art));
     const end=await receipt(p);if(end.frame!==end.lastFrame)throw Error('Not final playback frame');
     await p.locator('#skip').click();await p.locator('#playback').waitFor({state:'hidden'});
     let after=await saved(p);assert.equal(after.state.round,before.state.round+1);assert(after.state.time>before.state.time);
-    let timing=await p.evaluate(()=>({raf:window.__bowFrameTimes||[],render:performance.getEntriesByName('banners:render').map(x=>x.duration)}));let trace={round:after.state.round,time:after.state.time,order,signature:end.signature,state:after.state,timing,camera:end.camera,stats:end.stats};
+    let timing=await p.evaluate(()=>({raf:window.__bowFrameTimes||[],render:performance.getEntriesByName('banners:render').map(x=>x.duration)}));let trace={round:after.state.round,time:after.state.time,order,signature:end.signature,state:after.state,timing:{...timing,planMs,computeMs,playbackMs,speed},camera:end.camera,stats:end.stats};
     if(reference){assert.equal(trace.signature,reference[i].signature);assert.deepEqual(trace.state,reference[i].state,'Authoritative round state differs by renderer')}
     rounds.push(trace);
     await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,routeEvidence,campaignEvidence,errors},null,2));

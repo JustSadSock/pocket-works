@@ -78,7 +78,7 @@ const browser=await (engine==='webkit'?webkit:chromium).launch(),context=await b
 p.on('pageerror',e=>errors.push(e.message));
 try{
  await p.goto(url+'?view=candidate');await p.waitForFunction(()=>window.integratedQA?.ready===true);
- await p.locator('#seed').fill('Commander identity');await p.locator('#landscape').selectOption('dry-plain');await p.locator('#objective').selectOption('time');await p.locator('#duration').selectOption('360');await p.locator('#campaign').check();
+ await p.locator('#front').selectOption('wide');await p.locator('#campaign-length').selectOption('3');await p.locator('#seed').fill('Commander identity');await p.locator('#landscape').selectOption('dry-plain');await p.locator('#objective').selectOption('time');await p.locator('#duration').selectOption('360');await p.locator('#campaign').check();
  for(let side of [0,1]){await p.locator('#army-side').selectOption(String(side));await p.locator('#compact').click()}
  await p.locator('#army-side').selectOption('0');await p.locator('#regiment-details summary').click();await p.locator('#regiment-0-size').selectOption('1.25');await p.locator('#regiment-0-form').selectOption('spears');await p.locator('#regiment-1-quality').selectOption('veteran');await p.locator('#regiment-1-form').selectOption('shield');
  await p.screenshot({path:out+'/muster.png'});await p.locator('#start').click();await p.waitForFunction(()=>window.integratedQA.receipt()?.phase==='deploy');

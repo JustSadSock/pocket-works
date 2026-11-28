@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {E} from './engine.js';
-import {createCustom,PRESETS,armyCost,validArmy,armyPopulation,campaignSummary,nextCampaign,regiment,regimentCost,campaignOptions} from './custom-battle.js';
+import {createCustom,PRESETS,armyCost,validArmy,armyPopulation,campaignSummary,nextCampaign,regiment,regimentCost,campaignOptions,campaignLength,campaignOutcome} from './custom-battle.js';
 import {extent,project,unproject} from './research/integrated-agincourt/tactical-camera.js';
 const army=(preset,size=1,quality='regular')=>({roster:[...PRESETS[preset]],size,quality});
 const base={seed:'Custom causal test',armies:[army('compact'),army('levy',.75,'levy')],landscape:'valley',objective:'defend',seconds:360,difficulty:'commander',style:'adaptive',fog:false,campaign:true};
@@ -48,4 +48,22 @@ test('campaign has finite resource, alternative route, bounded experience, no fr
  a.result='loss';let b=nextCampaign(a,'recruit','secure');assert.equal(b.custom.campaign.resource,25);assert.equal(b.custom.campaign.records[1].spent,80);assert.equal(b.terrain.kind,'dry-ridge');assert.equal(b.custom.campaign.stage,3);
  let exhausted=E.snapshot(s);exhausted.custom.campaign.resource=40;assert(!campaignOptions(exhausted).recruit);assert.throws(()=>nextCampaign(exhausted,'recruit'));
  let destroyed=E.snapshot(s);for(let u of destroyed.units.filter(u=>u.side===0&&u.type!=='guard'))u.n=0;assert.throws(()=>nextCampaign(destroyed,'rest'));
+});
+
+test('field width keeps physical unit specs, deterministic geometry and non-overlap',()=>{
+ let wide=createCustom({...base,front:'wide'}),field=createCustom({...base,front:'field'}),close=createCustom({...base,front:'close'});
+ for(let [s,width] of [[wide,1400],[field,1200],[close,1000]]){let F=E.forState(s);assert.equal(F.W,width);assert.deepEqual(s.units.map(u=>[u.type,u.n,F.spec(u).speed,F.spec(u).range]),wide.units.map(u=>[u.type,u.n,E.spec(u).speed,E.spec(u).range]));assert(!s.units.some((u,i)=>s.units.slice(i+1).some(v=>F.overlap(u,v))));assert.equal(s.terrain.cols,width/20+1);assert(s.terrain.river>width*.4&&s.terrain.river<width*.6)}
+});
+test('five-operation routes depend on outcome and retain resources and width',()=>{
+ let s=createCustom({...base,front:'field',campaignLength:5});assert.equal(campaignLength(s),5);s.result='loss';s.units[0].n-=20;
+ assert(!campaignOptions(s).routes.assault);assert(campaignOptions(s).routes.withdraw);assert.throws(()=>nextCampaign(s,'rest','assault'));
+ let a=nextCampaign(s,'reinforce','withdraw','R0');assert.equal(a.custom.campaign.resource,140);assert.equal(a.objective.mission,'withdrawal');assert.equal(E.forState(a).W,1200);a.result='win';
+ let b=nextCampaign(a,'rest','assault');assert.equal(b.custom.campaign.resource,140);assert.equal(b.objective.mission,'assault');b.result='win';
+ let c=nextCampaign(b,'rest','crossing');assert.equal(c.custom.campaign.resource,175);assert.equal(c.objective.mission,'crossing');assert.equal(c.objective.zones[0].x,E.forState(c).riverX(c.terrain,c.terrain.ford));c.result='draw';
+ let d=nextCampaign(c,'rest','secure');assert.equal(d.custom.campaign.stage,5);d.result='win';assert(campaignOutcome(d).complete);assert.equal(campaignOutcome(d).points,6);assert.throws(()=>nextCampaign(d,'rest','secure'));
+});
+test('withdrawal requires actual rear-line survival and cannot end before 120s',()=>{
+ let s=createCustom({...base,front:'close',landscape:'dry-plain',objective:'withdrawal',campaign:false}),F=E.forState(s);
+ for(let u of s.units.filter(u=>u.side===0)){u.x=170;u.y=100+(u.id%100)*100}for(let u of s.units.filter(u=>u.side===1)){u.x=850;u.y=100+(u.id%100)*60}
+ for(let i=0;i<479;i++)F.step(s);assert(!s.result);F.step(s);assert.equal(s.result,'win');assert.equal(s.resultReason,'operation-withdrawal');
 });

@@ -84,6 +84,7 @@ export class TerrainTiles{
    color=color.map((v,i)=>mix(mix(v,[112,137,113][i]+flow,shallows*.36),[39,76,83][i]+flow,deep*.30));
    shade*=1+.48*(1-coverage);
  }
+ if(this.style==='field-study'){let dry=(1-smooth(.18,.52,mo))*(1-can)*(1-coverage),damp=smooth(.45,.8,mo)*(1-coverage),wood=smooth(.44,.76,can)*(1-coverage),edge=(1-smooth(0,8,Math.abs(r.shore)))*(1-coverage);color=color.map((v,i)=>mix(mix(mix(mix(v,[168,153,102][i],dry*.22),[104,126,89][i],damp*.24),[79,93,59][i],wood*.23),[111,99,78][i],edge*.20));shade*=1+.24*(1-coverage);if(coverage>0)color=color.map((v,i)=>mix(v,[47,87,94][i],coverage*(1-r.shallow)*.17))}
  return color.map(v=>clamp(v+shade,0,255))}
  async ensureFields(){if(!this.fields){this.fieldPromise??=prepareSurfaceFields(this.F,this.t);this.fields=await this.fieldPromise}return this.fields}
  async ensureBackdrop(axis='tactical'){
