@@ -75,7 +75,7 @@ jobs:
           cp -a "$CHARACTER_EVIDENCE/morph" "$P0_REPEAT/"
           for f in v10-reference-trajectory.json v11-native-mesh-frames.json v12-source-foot-surface.json; do cp "$CHARACTER_EVIDENCE/$f" "$P0_REPEAT/"; done
           node tools/character-forge/p0-build.mjs
-          node tools/character-forge/motion-study-v12.mjs
+          /usr/bin/time -v -o "$CHARACTER_EVIDENCE/p0-cyclic-build-time.txt" node tools/character-forge/motion-study-v12.mjs
           CHARACTER_EVIDENCE="$P0_REPEAT" node tools/character-forge/p0-build.mjs
           CHARACTER_EVIDENCE="$P0_REPEAT" node tools/character-forge/motion-study-v12.mjs
       - name: Native geometry and matched image evidence
@@ -148,4 +148,46 @@ jobs:
             quality-artifacts/p0/forge-*.log
             quality-artifacts/p0/*.mp4
             quality-artifacts/p0/*.png
+          retention-days: 30
+  pack:
+    needs: [source, civilian]
+    if: ${{ always() && !cancelled() && needs.source.result == 'success' }}
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 35
+    env:
+      CHARACTER_P0_DIR: ${{ github.workspace }}/quality-artifacts/p0-pack-input
+      P0_PACK_OUT: ${{ github.workspace }}/quality-artifacts/p0-pack
+      P0_SOURCE_DIR: ${{ github.workspace }}/quality-artifacts/p0-source/morph
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: p0-candidate-*
+          path: quality-artifacts/p0-raw
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-source
+          path: quality-artifacts/p0-source
+      - name: Collect exact per-model artifacts
+        run: |
+          mkdir -p "$CHARACTER_P0_DIR" "$P0_PACK_OUT"
+          for role in artisan merchant; do for morph in base short-light tall-heavy; do
+            cp -a "quality-artifacts/p0-raw/p0-candidate-$role-$morph" "$CHARACTER_P0_DIR/$role-$morph"
+          done; done
+      - name: Same-scale lineup and parametric batch benchmark
+        run: node tools/character-forge/p0-pack.mjs
+      - name: Character Studio six real previews and exact export
+        if: ${{ !cancelled() }}
+        run: |
+          npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0
+          node tools/character-forge/p0-studio-test.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p0-civilian-pack-review
+          path: quality-artifacts/p0-pack
           retention-days: 30
