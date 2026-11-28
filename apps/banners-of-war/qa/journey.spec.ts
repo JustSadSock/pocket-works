@@ -1,12 +1,12 @@
 import {test,expect} from '@playwright/test';
-test('muster, deploy, issue orders, WEGO, replay and reload',async({page})=>{
+for(const field of ['wide','field'])test('muster, deploy, issue orders, WEGO, replay and reload · '+field,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/apps/banners-of-war/');await expect(page.locator('#start')).toBeEnabled();
+ await page.goto('/apps/banners-of-war/');await expect(page.locator('#start')).toBeEnabled();await page.locator('#front').selectOption(field);
  await page.locator('#start').click();await expect(page.locator('#phase')).toContainText('Развёртывание');
  await page.screenshot({path:test.info().outputPath('deployment.png')});
  await page.locator('#confirm').click();await expect(page.locator('#phase')).toContainText('Планирование');
  const c=page.locator('#map'),b=await c.boundingBox();if(!b)throw new Error('Map unavailable');
- const position=async(wx:number,wy:number)=>page.evaluate(({wx,wy})=>{const canvas=document.querySelector('#map')!,r=canvas.getBoundingClientRect(),status=document.querySelector('.statusbar')!.getBoundingClientRect(),desk=document.querySelector('#desk')!.getBoundingClientRect(),portrait=innerHeight>innerWidth,wide=innerWidth>=720&&!portrait&&document.querySelector<HTMLElement>('#desk')!.dataset.expanded==='true',top=Math.max(0,status.bottom-r.top)+8,right=wide?Math.max(0,r.right-desk.left)+8:0,bottom=wide?8:Math.max(0,r.bottom-desk.top)+8,w=Math.max(40,r.width-right-16),h=Math.max(40,r.height-top-bottom),mw=portrait?900:1400,mh=portrait?1400:900,k=Math.min(w/mw,h/mh);return {x:8+(w-mw*k)/2+(portrait?900-wy:wx)*k,y:top+(h-mh*k)/2+(portrait?wx:wy)*k}},{wx,wy});
+ const position=async(wx:number,wy:number)=>page.evaluate(({wx,wy})=>{const canvas=document.querySelector('#map')!,r=canvas.getBoundingClientRect(),status=document.querySelector('.statusbar')!.getBoundingClientRect(),desk=document.querySelector('#desk')!.getBoundingClientRect(),portrait=innerHeight>innerWidth,wide=innerWidth>=720&&!portrait&&document.querySelector<HTMLElement>('#desk')!.dataset.expanded==='true',top=Math.max(0,status.bottom-r.top)+8,right=wide?Math.max(0,r.right-desk.left)+8:0,bottom=wide?8:Math.max(0,r.bottom-desk.top)+8,w=Math.max(40,r.width-right-16),h=Math.max(40,r.height-top-bottom),state=JSON.parse(localStorage.getItem('pocket-works:banners-of-war:battle:1')!).state,W=state.bounds?.width??1400,H=state.bounds?.height??900,mw=portrait?H:W,mh=portrait?W:H,k=Math.min(w/mw,h/mh);return {x:8+(w-mw*k)/2+(portrait?H-wy:wx)*k,y:top+(h-mh*k)/2+(portrait?wx:wy)*k}},{wx,wy});
  await c.click({position:await position(380,163)});await expect(page.locator('#unitname')).toContainText('Копейщики');
  await page.locator('[data-kind=move]').click();await c.click({position:await position(490,163)});
  await expect(page.locator('#maphint')).toContainText('Приказ записан');
@@ -20,6 +20,6 @@ test('muster, deploy, issue orders, WEGO, replay and reload',async({page})=>{
  await expect(page.locator('#pause')).toHaveText('Играть');await page.locator('#skip').click();
  await expect(page.locator('#round')).toContainText('2');await page.locator('#replay').click();
  await expect(page.locator('#phase')).toContainText('Просмотр повтора');await page.locator('#skip').click();
- await page.reload();await expect(page.locator('#resume')).toBeVisible();await page.locator('#resume').click();await expect(page.locator('#round')).toContainText('2');
+ await page.reload();await expect(page.locator('#resume')).toBeVisible();await page.locator('#resume').click();await expect(page.locator('#round')).toContainText('2');await expect(page.locator('#continue-plan')).toBeVisible();await page.locator('#continue-plan').click();await expect(page.locator('#playback')).toBeVisible();await page.locator('#skip').click();await expect(page.locator('#round')).toContainText('3');
  expect(errors).toEqual([]);
 });

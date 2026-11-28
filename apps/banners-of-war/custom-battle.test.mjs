@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {E} from './engine.js';
-import {createCustom,PRESETS,armyCost,validArmy,armyPopulation,campaignSummary,nextCampaign,regiment,regimentCost,campaignOptions,campaignLength,campaignOutcome} from './custom-battle.js';
+import {createCustom,PRESETS,armyCost,validArmy,armyPopulation,campaignSummary,nextCampaign,regiment,regimentCost,campaignOptions,campaignLength,campaignOutcome,ARMY_RECIPES} from './custom-battle.js';
 import {extent,project,unproject} from './research/integrated-agincourt/tactical-camera.js';
 const army=(preset,size=1,quality='regular')=>({roster:[...PRESETS[preset]],size,quality});
 const base={seed:'Custom causal test',armies:[army('compact'),army('levy',.75,'levy')],landscape:'valley',objective:'defend',seconds:360,difficulty:'commander',style:'adaptive',fog:false,campaign:true};
@@ -57,7 +57,7 @@ test('field width keeps physical unit specs, deterministic geometry and non-over
 test('five-operation routes depend on outcome and retain resources and width',()=>{
  let s=createCustom({...base,front:'field',campaignLength:5});assert.equal(campaignLength(s),5);s.result='loss';s.units[0].n-=20;
  assert(!campaignOptions(s).routes.assault);assert(campaignOptions(s).routes.withdraw);assert.throws(()=>nextCampaign(s,'rest','assault'));
- let a=nextCampaign(s,'reinforce','withdraw','R0');assert.equal(a.custom.campaign.resource,140);assert.equal(a.objective.mission,'withdrawal');assert.equal(E.forState(a).W,1200);a.result='win';
+ let a=nextCampaign(s,'reinforce','withdraw','R0');assert.equal(a.custom.campaign.resource,140);assert.equal(a.objective.mission,'withdrawal');assert.equal(E.forState(a).W,1200);a.result='win';assert(!campaignOptions(a).routes.withdraw);assert.throws(()=>nextCampaign(a,'rest','withdraw'));
  let b=nextCampaign(a,'rest','assault');assert.equal(b.custom.campaign.resource,140);assert.equal(b.objective.mission,'assault');b.result='win';
  let c=nextCampaign(b,'rest','crossing');assert.equal(c.custom.campaign.resource,175);assert.equal(c.objective.mission,'crossing');assert.equal(c.objective.zones[0].x,E.forState(c).riverX(c.terrain,c.terrain.ford));c.result='draw';
  let d=nextCampaign(c,'rest','secure');assert.equal(d.custom.campaign.stage,5);d.result='win';assert(campaignOutcome(d).complete);assert.equal(campaignOutcome(d).points,6);assert.throws(()=>nextCampaign(d,'rest','secure'));
@@ -67,3 +67,5 @@ test('withdrawal requires actual rear-line survival and cannot end before 120s',
  for(let u of s.units.filter(u=>u.side===0)){u.x=170;u.y=100+(u.id%100)*100}for(let u of s.units.filter(u=>u.side===1)){u.x=850;u.y=100+(u.id%100)*60}
  for(let i=0;i<479;i++)F.step(s);assert(!s.result);F.step(s);assert.equal(s.result,'win');assert.equal(s.resultReason,'operation-withdrawal');
 });
+
+test('five comparable-budget doctrine presets use the same individual-regiment rules',()=>{let costs=Object.values(ARMY_RECIPES).map(armyCost);assert(costs.every(v=>v>=1150&&v<=1300));for(let a of Object.values(ARMY_RECIPES)){assert(validArmy(a));let s=createCustom({...base,armies:[a,base.armies[1]],front:'field'});assert.equal(armyPopulation(a),s.units.filter(u=>u.side===0).reduce((n,u)=>n+u.n,0))}});

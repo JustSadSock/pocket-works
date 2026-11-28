@@ -262,3 +262,23 @@ jobs:
           name: five-operations-${{ matrix.path }}-key-PNG
           path: quality-artifacts/five-key
           retention-days: 14
+  native-rhythm-receipts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46150984985
+          artifact-ids: 15266156623,15265788373,15265952768,15265308530
+          path: /tmp/native-rhythm
+      - run: node apps/banners-of-war/research/custom-warfare/native-rhythm-receipts.mjs /tmp/native-rhythm quality-artifacts/native-rhythm
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-rhythm-and-matched-original-art
+          path: quality-artifacts/native-rhythm
+          retention-days: 14

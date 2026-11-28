@@ -13,7 +13,7 @@ async function disposableOrigin(){
 test('Living Battlefield: four terrain choices, fog, sector overlays, three camera scales, offline save and replay',async({page,context,browserName},info)=>{
  test.setTimeout(120000);const origin=browserName==='webkit'?await disposableOrigin():null;const url=(origin?.base||'')+'/apps/banners-of-war/';try{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);
- await page.locator('#landscape').selectOption('ridge');await page.locator('#visibility').selectOption('fog');await page.locator('#objective').selectOption('territory');await page.locator('#start').click();
+ await page.locator('#front').selectOption('wide');await page.locator('#landscape').selectOption('ridge');await page.locator('#visibility').selectOption('fog');await page.locator('#objective').selectOption('territory');await page.locator('#start').click();
  await expect(page.locator('#phase')).toContainText('Развёртывание');await expect(page.locator('#red')).toContainText('в обзоре 0');await page.screenshot({path:info.outputPath('living-strategic.png')});
  await page.locator('#confirm').click();await page.locator('#plus').click();await page.locator('#plus').click();await page.waitForTimeout(180);await page.screenshot({path:info.outputPath('living-tactical.png')});
  await page.locator('#focus').click();await page.waitForTimeout(200);await page.screenshot({path:info.outputPath('living-warriors.png')});
@@ -23,4 +23,9 @@ test('Living Battlefield: four terrain choices, fog, sector overlays, three came
  await page.waitForFunction(()=>!!navigator.serviceWorker.controller,{},{timeout:15000});if(origin){expect(await (await fetch(origin.base+'/__offline_probe')).text()).toBe('online');await origin.stop();await expect(fetch(origin.base+'/__offline_probe')).rejects.toThrow();}else await context.setOffline(true);await page.close();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(url,{waitUntil:'domcontentloaded'});await expect(page.locator('#resume')).toBeVisible();await page.locator('#resume').click();await expect(page.locator('#round')).toContainText('2');await page.locator('#replay').click();await expect(page.locator('#playback')).toBeVisible({timeout:30000});await page.locator('#skip').click();if(!origin)await context.setOffline(false);
  expect(errors).toEqual([]);
  }finally{await origin?.stop();if(!origin)await context.setOffline(false)}
+});
+
+test('Living Battlefield: maneuver field visibility matches authoritative fog and dimensions',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/apps/banners-of-war/');await page.locator('#front').selectOption('field');await page.locator('#landscape').selectOption('ridge');await page.locator('#visibility').selectOption('fog');await page.locator('#start').click();await expect(page.locator('#phase')).toContainText('Развёртывание');
+ const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:banners-of-war:battle:1')!).state);expect(state.bounds.width).toBe(1200);let visible=state.units.filter((u:any)=>u.side===1&&u.n>=1&&!u.escaped&&state.vision[0].includes(u.id));await expect(page.locator('#red')).toContainText('в обзоре '+visible.length);expect(visible.length).toBeLessThan(state.units.filter((u:any)=>u.side===1).length);expect(errors).toEqual([]);
 });
