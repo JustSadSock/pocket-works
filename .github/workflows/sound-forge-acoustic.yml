@@ -8,6 +8,7 @@ on:
       - 'tools/audio-forge/acoustic_authoring.py'
       - 'tools/audio-forge/acoustic_authoring_lab.py'
       - 'tools/audio-forge/acoustic-authoring.mjs'
+      - 'tools/audio-forge/acoustic-mixed-stems.mjs'
       - 'tools/audio-forge/run_manifest.mjs'
       - '.github/workflows/sound-forge-acoustic.yml'
   workflow_dispatch:
@@ -43,6 +44,12 @@ jobs:
           run-id: 46102891900
           github-token: ${{ github.token }}
           path: .acoustic-baseline
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-acoustic-reference-46134677742
+          run-id: 46134677742
+          github-token: ${{ github.token }}
+          path: .acoustic-previous
       - name: Preserve exact rejected baseline and analyze separate reference events
         run: |
           python - <<'PY'
@@ -62,12 +69,17 @@ jobs:
       - name: Portable acoustic package and mixed manifest authoring
         run: |
           python tools/audio-forge/acoustic_authoring_lab.py .acoustic
-          cp tools/audio-forge/acoustic_authoring.py tools/audio-forge/acoustic_authoring_lab.py tools/audio-forge/acoustic-authoring.mjs .acoustic/authoring/
+          node tools/audio-forge/acoustic-mixed-stems.mjs .acoustic/authoring
+          cp tools/audio-forge/acoustic_authoring.py tools/audio-forge/acoustic_authoring_lab.py tools/audio-forge/acoustic-authoring.mjs tools/audio-forge/acoustic-mixed-stems.mjs .acoustic/authoring/
       - name: Independent artifact checks
         run: |
           python - <<'PY'
           import pathlib,hashlib,json,wave,numpy as np
           p=pathlib.Path('.acoustic');q=pathlib.Path('.acoustic-repeat');sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          old=pathlib.Path('.acoustic-previous');ledger=json.loads((old/'archive-sha256.json').read_text())
+          assert len(ledger)==103
+          for name,h in ledger.items():assert sha(old/name)==h,name
+          (p/'previous-native-receipt.json').write_text(json.dumps(ledger,indent=2)+'\n')
           m=json.loads((p/'report.json').read_text())
           assert len(m['sources'])==10 and len(m['groups'])==5
           for s in m['sources']:
@@ -91,6 +103,13 @@ jobs:
               model=json.loads((p/'models'/(g['group']+'.json')).read_text());assert 'waveform' not in model and 'phase' not in model
           for f in (p/'renders').glob('*.wav'):read(f)
           read(p/'portable-model-smoke.wav')
+          s=p/'authoring';m2=json.loads((s/'mixed-stems.json').read_text());assert m2['exact']
+          def stereo(f):
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth())==(48000,2,2)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          for name,h in m2['files'].items():assert sha(s/name)==h,name
+          assert np.array_equal(stereo(s/'exact-master.wav'),sum(stereo(s/name) for name in m2['files'] if name!='exact-master.wav'))
           for e in json.loads((p/'documentary/documentary-receipts.json').read_text()):
               if e['status']=='acquired':
                   assert sha(p/'documentary'/e['file'])==e['sha256']
