@@ -41,3 +41,7 @@ Use existing PR #1354 / Issue #1430; verify latest HEAD and run 46091504781 befo
 
 ## Bounded recovery — iteration 1/3 (in progress)
 Baseline 95dfca74: 42/42 resident raster, 18/18 return, 6/6 stationary simulation pass; 0/18 camera throughput. Director 8425f71 product lock retained. First targeted experiment uses the existing Organic fixture, identical seed/viewport, 60 unique monotonic inputs in Copy/Direct/Resident; Direct additionally isolates terrain-only and overlay-only (no receipt or delivery claim) and tests existing adaptive moving LOD. GPU timer/completion probe outside timed loops; RAF and composed delivery separate. Original end PNG and raw journal saved. No adopted renderer change, no new cache, no spatial crop research. Decision pending actual results; do not count diagnostics as a performance gain. Remaining engineering budget two iterations after evaluation of this one.
+
+
+## Parallel product preparation (not yet played)
+Added a natural-start scenario preflight for six roles, matched decision/alternative branches and conservation/save checks, plus a concrete browser journey and Living Atlas capture queue in GRAND-CAMPAIGN-JOURNEYS.md. No campaign balance, save schema or art asset changes. Actual run and user experience review still required; blocked actions are evidence and cannot be silently gifted. Art review is carried forward from the director's original-image audit, not a new independent visual grade.
