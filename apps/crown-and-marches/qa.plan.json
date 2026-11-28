@@ -409,7 +409,11 @@
       "tier": "smoke",
       "seeds": [
         0,
-        1
+        1,
+        2,
+        3,
+        4,
+        5
       ],
       "args": [
         "{seed}"
@@ -467,42 +471,6 @@
         9,
         10,
         11
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "living-settlements-connected-chromium",
-      "kind": "browser-node",
-      "entry": "balance-journeys.mjs",
-      "args": [
-        "connected-chromium"
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "living-settlements-connected-webkit",
-      "kind": "browser-node",
-      "entry": "balance-journeys.mjs",
-      "args": [
-        "connected-webkit"
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "living-settlements-maritime-chromium",
-      "kind": "browser-node",
-      "entry": "balance-journeys.mjs",
-      "args": [
-        "maritime-chromium"
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "living-settlements-maritime-webkit",
-      "kind": "browser-node",
-      "entry": "balance-journeys.mjs",
-      "args": [
-        "maritime-webkit"
       ],
       "tier": "smoke"
     }

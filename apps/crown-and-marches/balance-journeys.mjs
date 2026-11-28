@@ -6,7 +6,7 @@ import {runGrandCausalityJourney} from './grand-causality-browser-qa.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {join} from 'node:path';
-const mode=process.argv[2]??'all';if(!['all','0','1','connected-chromium','connected-webkit','maritime-chromium','maritime-webkit'].includes(mode))throw Error('Invalid balance journey shard');
+const shard=process.argv[2]??'all',dispatch={'2':'connected-chromium','3':'connected-webkit','4':'maritime-chromium','5':'maritime-webkit'},mode=dispatch[shard]??shard;if(!['all','0','1','connected-chromium','connected-webkit','maritime-chromium','maritime-webkit'].includes(mode))throw Error('Invalid balance journey shard');
 const output=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/balance-ui';mkdirSync(output,{recursive:true});
 const url='http://127.0.0.1:4189/apps/crown-and-marches/',key='pocket-works:crown-and-marches:campaign:diplomacy-lab';
 const server=spawn(process.execPath,['scripts/serve-site.mjs'],{env:{...process.env,PORT:'4189',POCKET_WORKS_SITE_ROOT:process.env.PW_QA_SITE_ROOT||process.cwd()},stdio:['ignore','inherit','inherit']});
