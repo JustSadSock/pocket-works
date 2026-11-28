@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 22
       - name: Required shared Core and scoped admission contract
-        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs tools/character-forge/p0-profile.test.mjs
+        run: node --test tools/character-forge/core.test.mjs tools/character-forge/v2.test.mjs tools/character-forge/v3.test.mjs tools/character-forge/v4.test.mjs tools/character-forge/v7.test.mjs tools/character-forge/p0-profile.test.mjs tools/character-forge/authored-surface.test.mjs
       - name: Fresh exact MakeHuman and licensed KinemIQ source
         run: |
           mkdir -p "$CHARACTER_EVIDENCE"
@@ -75,7 +75,7 @@ jobs:
           cp -a "$CHARACTER_EVIDENCE/morph" "$P0_REPEAT/"
           for f in v10-reference-trajectory.json v11-native-mesh-frames.json v12-source-foot-surface.json; do cp "$CHARACTER_EVIDENCE/$f" "$P0_REPEAT/"; done
           node tools/character-forge/p0-build.mjs
-          /usr/bin/time -v -o "$CHARACTER_EVIDENCE/p0-cyclic-build-time.txt" node tools/character-forge/motion-study-v12.mjs
+          node tools/character-forge/p0-timed-run.mjs "$CHARACTER_EVIDENCE/p0-cyclic-build-time.json" tools/character-forge/motion-study-v12.mjs
           CHARACTER_EVIDENCE="$P0_REPEAT" node tools/character-forge/p0-build.mjs
           CHARACTER_EVIDENCE="$P0_REPEAT" node tools/character-forge/motion-study-v12.mjs
       - name: Native geometry and matched image evidence
@@ -87,6 +87,7 @@ jobs:
           name: p0-candidate-${{ matrix.role }}-${{ matrix.morph }}
           path: |
             quality-artifacts/p0/character.glb
+            quality-artifacts/p0/p0-eight-original.glb
             quality-artifacts/p0/spec.json
             quality-artifacts/p0/p0-*.json
             !quality-artifacts/p0/p0-evaluated.json
@@ -133,13 +134,14 @@ jobs:
           node tools/character-forge/p0-browser-qa.mjs
       - name: Fail-closed scoped candidate receipt
         if: ${{ !cancelled() }}
-        run: P0_BLENDER_VERSION="$("$BLENDER" --version | head -1)" node tools/character-forge/p0-manifest.mjs
+        run: P0_BLENDER_VERSION="$(if [ -n "$BLENDER" ]; then "$BLENDER" --version | head -1; else echo unavailable; fi)" node tools/character-forge/p0-manifest.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: p0-qualification-${{ matrix.role }}-${{ matrix.morph }}
           path: |
             quality-artifacts/p0/character.glb
+            quality-artifacts/p0/p0-eight-original.glb
             quality-artifacts/p0/spec.json
             quality-artifacts/p0/p0-*.json
             !quality-artifacts/p0/p0-evaluated.json

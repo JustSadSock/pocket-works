@@ -2,6 +2,7 @@
 // immutable. No independent per-phenotype model, no global garment inflation.
 import {part,push,weights,normals,compact} from './hybrid-human.mjs';
 import {sewLining} from './garment.mjs';
+import {openOuterShell} from './authored-surface.mjs';
 import {materialKind,profiles} from './material-study.mjs';
 const add=(a,b)=>a.map((x,k)=>x+b[k]),sub=(a,b)=>a.map((x,k)=>x-b[k]),mul=(a,s)=>a.map(x=>x*s),mix=(a,b,t)=>add(a,mul(sub(b,a),t)),unit=v=>mul(v,1/(Math.hypot(...v)||1)),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const pos=(p,i)=>p.positions.slice(i*3,i*3+3);
@@ -54,9 +55,9 @@ function repairPouch(p,tunic){
  for(let i=0;i<4;i+=2)loop.indices.push(i,i+1,i+3,i,i+3,i+2);
  return {pouch:q,loop:sewLining(loop,.003),maxShift:Math.max(...shifts.values())};
 }
-export function sculptCitizen(control,source=null){
+export function sculptCitizen(control,source=null,{outerFirst=false}={}){
  const m=structuredClone(control),original=m.parts.find(p=>p.name==='tunic'),sections=original.pattern.sections,N=original.pattern.ringCount,waist=sections[2].y,hem=sections[0].y,top=sections[4].y;
- const tunic=midpointMesh(original);
+ const tunic=midpointMesh(outerFirst?openOuterShell(original):original);
  // Broad gravity folds originate at the belt and spread toward the hem.
  // Zero displacement on all waist attachment and neckline bands. Positive
  // radial relief avoids consuming the already verified skirt clearance.
@@ -83,6 +84,7 @@ export function sculptCitizen(control,source=null){
    const d=sub(avg,v),len=Math.hypot(...d);if(len>1e-8)for(let k=0;k<3;k++)tunic.positions[i*3+k]+=d[k]*Math.min(.18,.0035/len);
  }
  normals(tunic);
+ if(outerFirst)sewLining(tunic,original.thickness);
  const down=.019/(waist-sections[1].y),up=.019/(sections[3].y-waist);
  const belt=panelBand(original,'waist belt',[.14,.085,.045],[[1,1-down],[2,0],[2,up]],.014,.005,'waist');
  // Collar is not an independent horizontal cylinder: it traces the sloping
@@ -119,7 +121,7 @@ export function sculptCitizen(control,source=null){
      p.color=skin.slice();p.vertexTint=[];
      for(let i=0;i<neighbors.length;i++){
        const t=clamp(distance[i]/(beard?2:1.5)),fade=beard?.005:.004;
-       for(let k=0;k<3;k++)p.positions[3*i+k]-=p.normals[3*i+k]*fade*(1-t);
+       for(let k=0;k<3;k++)p.positions[3*i+k]-=p.normals[3*i+k]*fade*(1-t)*(outerFirst?.25:1);
        for(let k=0;k<3;k++)p.vertexTint.push(clamp((hair[k]/skin[k])*t+(1-t)*(beard?.67:.56)));
      }
      normals(p);

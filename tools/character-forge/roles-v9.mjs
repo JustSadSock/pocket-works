@@ -4,6 +4,7 @@
 import {produceRole,roles as roleProfiles} from './roles-v8.mjs';
 import {part,push,weights,normals} from './hybrid-human.mjs';
 import {sewLining} from './garment.mjs';
+import {authoredPatch,ringSampler} from './authored-surface.mjs';
 import {profiles} from './material-study.mjs';
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),mix=(a,b,t)=>add(mul(a,1-t),mul(b,t)),unit=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),tau=Math.PI*2;
 const J=(m,n)=>{const j=m.joints.find(x=>x.name===n);if(!j)throw Error('Missing joint '+n);return j};
@@ -150,24 +151,35 @@ function merchantKit(m){
 }
 // P0 uses existing welded tunic and fitted mantle, not the experimental long robe tube.
 function civilianArtisan(m){
- const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,waist=tunic.pattern.sections[2],hip=J(m,'spine03');
- // A wide apron tied at the waist, visibly edged, with the existing fitted pouch.
- const apron=m.parts.find(p=>p.name==='leather work apron');
- if(apron){apron.material={kind:'leather',roughness:.88,metallic:0};apron.color=[.34,.22,.12]}
- const a=panelAt(tunic,2,0,Math.round(N*.75)),center=waist.center,n=radial(a.v,center);
- const buckle=add(a.v,mul(n,.022));torus(m,'apron belt buckle',buckle,[1,0,0],[0,1,0],[0,0,1],.015,.0035,[[hip.id,1]],[.42,.32,.17]);
- return {cut:'short work tunic',apron:'fitted waist apron',accessories:['belt pouch','buckle'],construction:'existing v6 fitted panels'};
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),sample=ringSampler(tunic);
+ tunic.color=[.38,.35,.26];tunic.material={kind:'cloth',roughness:.94,metallic:0};
+ // Linen upper edge gathers at the waist; broad leather apron follows the
+ // actual shaped skirt but opens at the sides. Separate hem and thickness.
+ const apron=authoredPatch({name:'leather work apron',color:[.31,.19,.095],material:{kind:'leather',roughness:.88,metallic:0},rows:13,columns:19,thickness:.003,host:'tunic',region:'waist apron',sample:(v,u)=>{
+  const r=.04+2.04*v,width=5.0-1.5*v,k=N*.75+(2*u-1)*width;
+  return sample(r,k,.009+.004*Math.sin(Math.PI*v)*Math.cos(5*Math.PI*u));
+ }});
+ m.parts.push(apron);
+ m.parts=m.parts.filter(p=>p.name!=='belt clasp');
+ const a=sample(2,N*.75,.028),buckle=torus(m,'apron belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.016,.0035,[[hip.id,1]],[.47,.35,.16]);
+ buckle.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
+ return {cut:'short linen work tunic',apron:'tailored leather panel, measured outer surface',accessories:['belt pouch','buckle'],construction:'authored patch + measured ring sampling'};
 }
 function civilianMerchant(m){
- const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),upper=J(m,'spine01');
- tunic.color=[.15,.23,.28];tunic.material={kind:'cloth',roughness:.87,metallic:0};
- const mantle=m.parts.find(p=>p.name==='wool draped merchant mantle');
- if(mantle){mantle.color=[.34,.16,.095];mantle.material={kind:'cloth',roughness:.96,metallic:0}}
- // Clasp on the measured upper tunic, rigidly bound to the chest. No hand prop.
- const a=panelAt(tunic,4,.18,Math.round(N*.76)),c=mix(tunic.pattern.sections[4].center,tunic.pattern.sections[5].center,.18),v=add(a.v,mul(radial(a.v,c),.072));
- rivet(m,'merchant brass mantle clasp',v,[[upper.id,1]],.017,[.57,.36,.12]);
- const belt=panelAt(tunic,2,0,Math.round(N*.75));torus(m,'merchant brass belt buckle',add(belt.v,mul(radial(belt.v,tunic.pattern.sections[2].center),.022)),[1,0,0],[0,1,0],[0,0,1],.019,.004,[[hip.id,1]],[.57,.36,.12]);
- return {cut:'long fitted tunic and asymmetric wool mantle',accessories:['mantle clasp','belt buckle','belt pouch'],construction:'existing v6 fitted panels; no free robe extension'};
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),upper=J(m,'spine01'),sample=ringSampler(tunic);
+ tunic.color=[.13,.23,.28];tunic.material={kind:'cloth',roughness:.88,metallic:0};
+ // Short shoulder mantle: wider at lower edge, tapered toward the neck.
+ // Real geometric folds and a hem that follows the back and right shoulder.
+ const cape=authoredPatch({name:'wool draped merchant mantle',color:[.36,.17,.085],material:{kind:'cloth',roughness:.96,metallic:0},rows:17,columns:25,thickness:.004,host:'tunic',region:'shoulder mantle',sample:(v,u)=>{
+  const r=2.65+2.23*v,k=(-1.5+2.5*v)+(18-4*v)*u;
+  return sample(r,k,.013+.009*Math.sin(Math.PI*(1-v))*(.6+.4*Math.cos(6*Math.PI*u)));
+ }});
+ m.parts.push(cape);
+ m.parts=m.parts.filter(p=>p.name!=='belt clasp');
+ // Solid torus rather than the previous degenerate lined ellipsoid.
+ const edge=sample(4.50,1.0,.025),clasp=torus(m,'merchant brass mantle clasp',edge.position,[1,0,0],[0,1,0],[0,0,1],.014,.0035,[[upper.id,1]],[.58,.37,.14]);clasp.attachmentSpec={type:'rigid-hardware',host:cape.name};
+ const a=sample(2,N*.75,.026),b=torus(m,'merchant brass belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.018,.004,[[hip.id,1]],[.58,.37,.14]);b.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
+ return {cut:'long fitted tunic and short shaped wool mantle',accessories:['mantle clasp','belt buckle','belt pouch'],construction:'authored patch + measured ring sampling'};
 }
 function artisanKit(m){
  const tunic=m.parts.find(p=>p.name==='tunic'),hip=J(m,'spine03'),root=J(m,'root');

@@ -76,15 +76,15 @@ function sheath(m,tunic,roman){
  grid(p,4,5);return sewLining(p,.005);
 }
 export function produceRole(source,id,identityOverride=null,style='historical-miniature',{civilianP0=false}={}){
- const role=roles[id],start=performance.now(),identity={...role.identity,...identityOverride},base=dress(source,{style,kit:'tunic',method:'hybrid',surfaceRevision:6,identity}),m=sculptCitizen(base,source).model,tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount;
+ const role=roles[id],start=performance.now(),identity={...role.identity,...identityOverride},base=dress(source,{style,kit:'tunic',method:'hybrid',surfaceRevision:6,identity}),m=sculptCitizen(base,source,{outerFirst:civilianP0}).model,tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount;
  tunic.color=role.tunic.slice();m.spec.artRole=id;if(id==='infantry'||id==='legionary')m.spec.actions=['idle'];m.spec.miniaturePose='v8';m.spec.motionRevision='v4';m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'Shared v8 historical role patterns'}];
  // Tailoring uses actual seam stations. Unequal hem lengths, a small bias
  // across panels and folds taper at the belt, without shrinking clearance.
  const hem=tunic.pattern.sections[0].y,waist=tunic.pattern.sections[2].y;
  for(let i=0;i<tunic.positions.length;i+=3){let y=tunic.positions[i+1],t=clamp((waist-.065-y)/(waist-.065-hem));if(t>0){let a=Math.atan2(tunic.positions[i+2]-tunic.pattern.sections[0].center[1],tunic.positions[i]);tunic.positions[i+1]+=(id==='legionary'?.125:id==='artisan'?(civilianP0?.12*Math.max(...source.parts[0].positions.filter((_,i)=>i%3===1)):.035):id==='merchant'?-.025:0)*t*t+.012*t*t*Math.sin(a*2+.4)}}normals(tunic);
  movePouch(m,tunic);
- if(id==='artisan')m.parts.push(drapedPanel(m,tunic,'leather work apron',civilianP0?[.34,.23,.13]:[.25,.14,.07],'leather',[[0,.1],[0,.4],[1,0],[1,.5],[2,0]],civilianP0?19:18,civilianP0?29:30,.022,.008));
- if(id==='merchant'){
+ if(id==='artisan'&&!civilianP0)m.parts.push(drapedPanel(m,tunic,'leather work apron',civilianP0?[.34,.23,.13]:[.25,.14,.07],'leather',[[0,.1],[0,.4],[1,0],[1,.5],[2,0]],civilianP0?19:18,civilianP0?29:30,.022,.008));
+ if(id==='merchant'&&!civilianP0){
    m.parts.push(mantle(m,tunic));
    m.parts.push(drapedPanel(m,tunic,'woven mantle clasp panel',[.53,.31,.11],'cloth',[[3,.75],[4,0],[4,.60]],26,32,.048,0));
  }

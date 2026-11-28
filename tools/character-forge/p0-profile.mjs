@@ -12,7 +12,7 @@ export function requestCheck(manifest,request,bin,attestations={}){
  if(!Array.isArray(request.actions)||request.actions.some(x=>!profile.actions.includes(x)||!manifest.actions.includes(x)))throw Error('Unqualified animation');
  if(hash(bin)!==manifest.glbSha256)throw Error('GLB integrity mismatch');
  if(!manifest.budgets||Object.keys(profile.budgets).some(k=>!Number.isFinite(manifest.budgets[k])||manifest.budgets[k]>profile.budgets[k]))throw Error('Budget gate');
- if(!manifest.checks||['core','license','determinism','contact','idle','clothing','attachments','blenderPlayback','artForge','chromium','webkit'].some(k=>manifest.checks[k]!==true))throw Error('Missing technical gate');
+ if(!manifest.checks||['core','license','determinism','skinFidelity','contact','idle','clothing','attachments','blenderPlayback','artForge','chromium','webkit'].some(k=>manifest.checks[k]!==true))throw Error('Missing technical gate');
  const digest=hash({...manifest,artisticAttestation:undefined});
  if(!manifest.artisticAttestation||manifest.artisticAttestation.manifestSha256!==digest||attestations[digest]?.accepted!==true||attestations[digest]?.manifestSha256!==digest)throw Error('Missing trusted artistic attestation');
  return {accepted:true,productionActivation:false};
