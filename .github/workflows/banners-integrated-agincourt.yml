@@ -161,7 +161,8 @@ jobs:
           retention-days: 14
   paired-performance:
     needs: profile-scope
-    if: needs.profile-scope.outputs.run == 'true'
+    # Director closed Bounded Performance Recovery; manual research only after separate approval.
+    if: github.event_name == 'workflow_dispatch' && needs.profile-scope.outputs.run == 'true'
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 180
