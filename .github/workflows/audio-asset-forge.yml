@@ -1018,6 +1018,46 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Verify melodic hierarchy and render Crown thematic reduction
+        id: crown_coherent
+        if: ${{ !cancelled() && steps.foundation_expansion.outcome == 'success' && steps.weight_of_crown.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-coherent.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-coherent.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-crown-coherent
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib,wave
+          import numpy as np
+          p=pathlib.Path('.audio-crown-coherent')
+          m=json.loads((p/'metrics.json').read_text())
+          assert m['version']=='v3-thematic-reduction' and m['bars']==24 and m['seconds']==76.5
+          assert len(m['events'])==153 and len(m['metrics'])==7
+          assert m['recordedIntervalCoverage']==0
+          def read(e):
+              f=p/e['file']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,3672000)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          master=read(m['metrics'][0]);acc=np.zeros_like(master)
+          for e in m['metrics'][1:]:acc+=read(e)
+          assert np.max(np.abs(acc-master))==0 and np.max(np.abs(master))<32768
+          rms={e['file']:e['rms'] for e in m['metrics']}
+          assert rms['crown-coherent-lead.wav']>2*rms['crown-coherent-bass.wav']
+          assert rms['crown-coherent-lead.wav']>3*rms['crown-coherent-harmony.wav']
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.crown_coherent.outcome == 'success' }}
+        with:
+          name: sound-forge-crown-coherent-${{ github.run_id }}
+          path: .audio-crown-coherent/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Merge verified recorded instrument libraries
         id: recorded_library_merge
         if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
