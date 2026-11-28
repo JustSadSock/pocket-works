@@ -17,15 +17,15 @@ function surfaceHeightRange(s){
  const range={minZ:-.035,maxZ:Math.max(.018,vertical(max)+.018)};heightRanges.set(key,range);return range;
 }
 export class AtlasCampaignSurface{
- constructor(){this.cache=new SpatialLRU(64*1024*1024);this.canvas=document.createElement('canvas');this.composition='copy';this.preserveDrawingBuffer=false;this.directVisible=false;this.pair=null;this.frameReceipt=null;this.needsRedraw=false;this.requests=new SurfaceRequests();this.pending=null;this.active=null;this.state=null;this.status='';this.epoch=0;this.firstUsefulMs=null;this.requestStart=0;this.notified=false;this.cancelled=0;this.reusedGPU=0;this.gpuDraws=0;this.gpuReuses=0;this.lastGPU=null;this.inFlight=0;this.maxInFlight=0;this.evidence=new PresentationEvidence();this.streaming='control';this.materialCache=null;this.streamTrace=false;this.streamEvents=[];this.streamOverflow=0;this.streamPrevious=null;this.streamJobSeq=0;}
+ constructor(){this.cache=new SpatialLRU(64*1024*1024);this.canvas=document.createElement('canvas');this.composition='copy';this.preserveDrawingBuffer=true;this.directVisible=false;this.pair=null;this.frameReceipt=null;this.needsRedraw=false;this.requests=new SurfaceRequests();this.pending=null;this.active=null;this.state=null;this.status='';this.epoch=0;this.firstUsefulMs=null;this.requestStart=0;this.notified=false;this.cancelled=0;this.reusedGPU=0;this.gpuDraws=0;this.gpuReuses=0;this.lastGPU=null;this.inFlight=0;this.maxInFlight=0;this.evidence=new PresentationEvidence();this.streaming='control';this.materialCache=null;this.streamTrace=false;this.streamEvents=[];this.streamOverflow=0;this.streamPrevious=null;this.streamJobSeq=0;}
  configure(mode='copy',preserve=true){
  if(!['copy','direct','resident'].includes(mode))throw Error('Unknown surface composition');
- preserve=mode==='copy'?false:!!preserve;if(mode===this.composition&&preserve===this.preserveDrawingBuffer)return;
+ preserve=!!preserve;if(mode===this.composition&&preserve===this.preserveDrawingBuffer)return;
  this.hideDirect();this.reset(this.state);this.canvas.remove();this.canvas=document.createElement('canvas');this.composition=mode;this.preserveDrawingBuffer=preserve;this.needsRedraw=true;
  }
  hideDirect(){this.directVisible=false;this.pair=null;this.frameReceipt=null;this.canvas.style.display='none';if(this.host){delete this.host.dataset.atlasCompositionActive;delete this.host.dataset.atlasPair;}}
  attachDirect(){const canvas=this.canvas,host=this.host;if(canvas.parentNode!==host.parentNode){canvas.setAttribute('aria-hidden','true');canvas.id='atlas-terrain-surface';Object.assign(canvas.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',display:'none'});host.before(canvas);}
- if(this.boundCanvas!==canvas){this.boundCanvas=canvas;canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(this.canvas!==canvas)return;this.hideDirect();this.reset(this.state);canvas.remove();this.canvas=document.createElement('canvas');this.composition='copy';this.preserveDrawingBuffer=false;this.needsRedraw=true;host.dataset.atlasCompositionFallback='context-lost';});}
+ if(this.boundCanvas!==canvas){this.boundCanvas=canvas;canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(this.canvas!==canvas)return;this.hideDirect();this.reset(this.state);canvas.remove();this.canvas=document.createElement('canvas');this.composition='copy';this.preserveDrawingBuffer=true;this.needsRedraw=true;host.dataset.atlasCompositionFallback='context-lost';});}
  }
  finishFrame(profile=null){
  const pair=this.pair;if(!pair)return;this.pair=null;

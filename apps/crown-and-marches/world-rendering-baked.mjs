@@ -102,7 +102,7 @@ export class BakedTerrainGL{
  // Explicit, destructive diagnostic: clear the live bank, compare one allocation
  // at a time, and restore the default framebuffer. Never used in motion timing.
  residentRasterProbe(cam,tilt,{originalTargets=false}={}){
-  const g=this.gl,v=viewportFramebufferRect(this.canvas.width,this.canvas.height,cam.viewport),w=v.width,h=v.height,bank=this.resident??=new ResidentWorldSurface(g),pad=bank.pad;
+  const g=this.gl,v=viewportFramebufferRect(this.canvas.width,this.canvas.height,cam.viewport),w=v.width,h=v.height,bank=this.resident??=new ResidentWorldSurface(g),pad=bank.pad||96;
   bank.clear();const rows=[],images={};
   const state=()=>Object.fromEntries(['RED_BITS','GREEN_BITS','BLUE_BITS','ALPHA_BITS','DEPTH_BITS','STENCIL_BITS','SAMPLES','SAMPLE_BUFFERS','IMPLEMENTATION_COLOR_READ_FORMAT','IMPLEMENTATION_COLOR_READ_TYPE'].map(k=>[k,g.getParameter(g[k])]));
   const read=(x,y)=>{const p=new Uint8Array(w*h*4);g.readPixels(x,y,w,h,g.RGBA,g.UNSIGNED_BYTE,p);return p;};

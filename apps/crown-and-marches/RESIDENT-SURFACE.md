@@ -53,3 +53,7 @@ Material tiles may use exact identities of immutable `scaleTerrainSource` tile a
 
 ## Raster identity policy (2026-11-28)
 The default Resident Surface uses a same-size framebuffer (`pad: 0`). Independent browser probes found same-size FBO build and blit pixel-identical to Fresh in Chromium and WebKit. Padded viewports change raster phase in WebKit; disabling dithering does not remove the differences. Padded experiments therefore remain diagnostic-only and use an explicit fresh fallback. Nonzero integer/fractional crops are never cache hits: the renderer builds a same-size FBO at the current camera pose instead. Exact same-pose reuse remains eligible. This policy trades spatial crop reuse for verified raster identity and reduces resident allocation size.
+
+
+## Recovery: exact physical framebuffer and production baseline
+The Copy baseline retains its drawing buffer again; the discard buffer is a review-only comparison. This preserves same-pose terrain reuse during simulation. The exact Resident candidate allocates the full physical drawing buffer and uses the original viewport origin and dimensions, not a viewport-sized FBO. The key includes physical origin, DPR and framebuffer size. Antialiased or invalid layouts fall back. Diagnostic padded targets retain a 96-pixel halo even when the candidate uses zero padding. Geography Review reports integration and historical/camera outcomes independently, and still fails when either fails. Camera admission requires both composition-delivery and independent RAF rates. No production Resident selection.
