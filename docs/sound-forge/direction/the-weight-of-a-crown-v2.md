@@ -30,7 +30,7 @@ Musical duration 165 seconds; 3.2-second natural tail. Total 56 bars, 6,336 PPQ 
 - Recorded orchestral percussion: VCSL CC0, pinned revision c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e; bass drum hits/crescendos and timpani hits/rolls.
 - Existing qualified recorded banks: cello section, violin, horn, trumpet, clarinet, folk harp, frame drum and Renaissance organ.
 - No choir, tuba or trombone is represented in this realization. No synthetic voice. No invented instrumental legato.
-- Sustained string/brass phrases may use a short overlap and attack-skip as an explicitly approximate crossfade. The recorded interval coverage remains zero.
+- Sustained string/brass phrases may use a short overlap and attack-skip as an explicitly approximate crossfade. Long double-bass and organ notes may use a crossfaded loop inside the recorded sustain region; each such event is marked in its receipt. The recorded interval coverage remains zero.
 
 ## Orchestration and space
 Low strings carry the floor; cello moves independently rather than simply doubling the bass. Horns answer in the middle register; trumpet is reserved for a few structural peaks, not continuous high-register glare. Violin carries a restrained transformed motif. Clarinet owns the conspiracy section. Harp provides irregular plucked connective tissue. Frame drum is a quiet processional layer; bass drum and timpani are reserved for selected structural accents and rolls. Renaissance organ supplies a distant E/F suspension only in the Weight/Price sections.
