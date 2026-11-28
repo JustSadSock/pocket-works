@@ -279,7 +279,7 @@ def render(dyn,hist,exp,out):
             receipts.append(dict(part=part,tick=e['tick'],midi=midi,source=source['id'],sourceSha256=source['sha256'],pitchRate=round(rate,6),approximateCrossfade=bool(connected),loopedSustain=bool(looped),frames=length))
         groups[group]+=a
     # Group-specific algorithmic stone-room reverb: early reflections plus a diffuse late field.
-    ROOM={'low-strings':(26,58,88,70,24,-9),'upper-strings':(38,48,100,100,28,-8),'brass':(32,48,95,88,26,-9),'woodwinds':(34,58,90,100,22,-10),'plucked-organ':(40,55,100,100,26,-10),'percussion':(18,72,75,55,12,-13)}
+    ROOM={'low-strings':(26,58,88,70,24,-9),'upper-strings':(38,48,100,100,28,-8),'brass':(32,48,95,88,26,-9),'woodwinds':(34,58,90,100,22,-10),'plucked-organ':(40,55,100,100,26,-10),'percussion':(18,72,75,55,12,-10)}
     for group in GROUPS:
         raw=groups[group].astype('<f4').tobytes()
         args=['sox','-R','-t','raw','-e','floating-point','-b','32','-L','-c','2','-r',str(SR),'-','-t','raw','-e','floating-point','-b','32','-L','-c','2','-r',str(SR),'-','reverb',*map(str,ROOM[group])]
