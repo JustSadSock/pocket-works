@@ -1,0 +1,18 @@
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';import {join} from 'node:path';
+import {importAuthoredStudy} from './import.mjs';import {validateGeometry} from '../authored-surface.mjs';import {glb,inspectGLB} from '../glb.mjs';import {pose,deform} from '../core.mjs';import {normals} from '../hybrid-human.mjs';import {raster,commonBounds} from '../material-study.mjs';
+const [basePath,documentPath,out]=process.argv.slice(2),base=JSON.parse(readFileSync(basePath)),document=JSON.parse(readFileSync(documentPath)),m=validateGeometry(importAuthoredStudy(base,document));m.contacts=structuredClone(base.contacts);m.components=structuredClone(base.components);m.spec.recipe='artisan-p0.5-composition-study';m.approval='Unqualified P0.5 full composition; no production admission';
+mkdirSync(out,{recursive:true});const bin=glb(m),repeat=glb(m);if(!bin.equals(repeat))throw Error('Nondeterministic native export');const d=inspectGLB(bin);if(d.skins[0].joints.length!==base.joints.length||d.animations.length!==base.spec.actions.length||d.meshes[0].primitives.some(p=>!p.attributes.JOINTS_1||!p.attributes.WEIGHTS_1))throw Error('Lost source rig, motion or secondary skin');writeFileSync(join(out,'composed.glb'),bin);writeFileSync(join(out,'composed-model.json'),JSON.stringify(m));writeFileSync(join(out,'composition-budget.json'),JSON.stringify({triangles:m.statistics.triangleCount,joints:m.joints.length,bytes:bin.length,repeatByteIdentical:true,qualified:false},null,2));
+const frame=(model,action,phase,cycle=0)=>{const w=pose(model,action,phase).map(j=>({...j,p:j.p.map((x,k)=>x+(k===2?cycle*(model.spec.gaitStride??0):0))}));return {parts:model.parts.map(p=>{const q={...p,positions:deform(model,p,w).flat()};normals(q);return q})}};
+const write=(name,model,options)=>writeFileSync(join(out,name),raster(model,options).png);
+for(const view of ['front','side','three-quarter']){
+ const a=frame(base,'idle',0),b=frame(m,'idle',0),bounds=commonBounds([a,b],view);
+ write('p03-'+view+'.png',a,{view,bounds,size:640,mode:'B'});write('p05-'+view+'.png',b,{view,bounds,size:640,mode:'B'});
+ const isolated={parts:b.parts.filter(p=>p.name==='authored artisan tunic')};write('p05-tunic-'+view+'.png',isolated,{view,bounds:commonBounds([isolated],view),size:640,mode:'B'});
+ for(const size of [32,64,128,256,512])write('p05-scale-'+size+'-'+view+'.png',b,{view,bounds,size,mode:'B'});
+ const silhouette={parts:b.parts.map(p=>({...p,color:[.12,.12,.12],vertexTint:undefined,vertexColors:undefined,material:{kind:'cloth',roughness:1,metallic:0}}))};write('p05-silhouette-'+view+'.png',silhouette,{view,bounds,size:512});
+ for(const [name,joint,radius] of [['face','head',.14],['clothing','spine03',.32],['boots','foot.L',.22]]){const j=m.joints.find(j=>j.name===joint),p=pose(m,'idle',0)[j.id].p,positions=[];for(const x of [-radius,radius])for(const y of [-radius,radius])for(const z of [-radius,radius])positions.push(p[0]+x,p[1]+y,p[2]+z);write('p05-'+name+'-'+view+'.png',b,{view,bounds:commonBounds([{parts:[{positions}]}],view),size:640,mode:'B'});}
+}
+for(const view of ['front','side']){
+ const frames=Array.from({length:73},(_,i)=>frame(m,'walk',(i%24)/24,Math.floor(i/24))),bounds=commonBounds(frames,view),dir=join(out,'walk-'+view);mkdirSync(dir,{recursive:true});for(let i=0;i<frames.length;i++)writeFileSync(join(dir,String(i).padStart(2,'0')+'.png'),raster(frames[i],{view,bounds,size:512,mode:'B',groundLine:true}).png);
+ for(const phase of [0,.26,.29,.77,38/48]){const a=frame(base,'walk',phase),b=frame(m,'walk',phase),bounds=commonBounds([a,b],view);write('p03-walk-'+phase+'-'+view+'.png',a,{view,bounds,size:640,mode:'B'});write('p05-walk-'+phase+'-'+view+'.png',b,{view,bounds,size:640,mode:'B'});}
+}

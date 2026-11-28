@@ -825,6 +825,19 @@
           "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46138654367/artifacts/15260329649"
         }
       ]
+    },
+    {
+      "head": "696a697d5258b5736ec6d8d1f92bb6ef7c5c376c",
+      "run": 46143701216,
+      "artifacts": [
+        {
+          "id": 15262823644,
+          "name": "artisan-authored-mesh-study",
+          "sha256": "44a4d6a9d1bf7c29cfc4d82a0ae4c426fdd986c8a1bdb3c67c22aafd874102d6",
+          "sizeBytes": 1646446,
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46143701216/artifacts/15262823644"
+        }
+      ]
     }
   ],
   "source": {
@@ -856,7 +869,8 @@
     "p0_1_previous": "run 46094281651 blocked before motion by missing /usr/bin/time; no visual qualification.",
     "p0_1_final": "Six deterministic candidates; all technical gates except clothing and attachments pass. Owner Artisan 6/10, Merchant 6/10. No admission. Preserve exact archives. P0.2 A is an experimental skin-field candidate, not accepted.",
     "p0_2_final": "Six candidates fail clothing and attachments; all other gates pass. Both browsers synthetic control passed. Research demonstrator restored, Dynamic Remesh gate remains failed. P0.3 base-first candidates only; no admission.",
-    "p0_3_final": "Two base candidates rejected clothing and attachments; other gates pass, rest tunic 46 strict crossings, owner Artisan 6/10 and Merchant 5.5/10. Mantle rejected (max stretch 5.255 on expanded sample). No acceptance. Four other morphotypes not requalified."
+    "p0_3_final": "Two base candidates rejected clothing and attachments; other gates pass, rest tunic 46 strict crossings, owner Artisan 6/10 and Merchant 5.5/10. Mantle rejected (max stretch 5.255 on expanded sample). No acceptance. Four other morphotypes not requalified.",
+    "p0_5": "A3 native export passed, isolated fit rejected. P0.5 A/B/C bounded; A retained as unqualified full Artisan study. No new capability or approval."
   },
   "retention": "Existing Research 14 days; P0 30 days; durable archive storage not configured."
 }
