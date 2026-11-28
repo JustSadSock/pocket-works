@@ -21,11 +21,17 @@ try{for(const [name,driver] of [['chromium',chromium],['webkit',webkit]]){
    await page.screenshot({path:out+'/'+name+'-'+id+'-start.png'});
    for(let i=0;i<31;i++){
     if((await page.locator('#phase').innerText()).includes('завершено'))break;
+    const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:banners-of-war:battle:1')).state);
     await page.locator('#confirm').click();await page.locator('#confirm').click();
     await page.locator('#playback').waitFor({state:'visible',timeout:120000});
     await page.locator('#speed').selectOption('8');
-    await page.locator('#playback').waitFor({state:'hidden',timeout:120000});
-    rounds.push({round:await page.locator('#round').innerText(),phase:await page.locator('#phase').innerText()});
+    await page.waitForFunction(()=>{let e=document.querySelector('#scrub');return Number(e.max)>0&&Number(e.value)===Number(e.max)&&document.querySelector('#pause').textContent==='Играть'},{},{timeout:120000});
+    const lastFrame=await page.locator('#scrub').evaluate(e=>Number(e.value));
+    await page.locator('#skip').click();await page.locator('#playback').waitFor({state:'hidden',timeout:30000});
+    const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:banners-of-war:battle:1')).state);
+    if(after.round!==before.round+1||after.time<=before.time||JSON.stringify(after.units)===JSON.stringify(before.units))throw Error('Round commit mismatch');
+    const phase=await page.locator('#phase').innerText();if(after.result?!phase.includes('завершено'):!phase.includes('ожидание'))throw Error('Round phase mismatch: '+phase);
+    rounds.push({round:after.round,time:after.time,phase,lastFrame,result:after.result});
    }
    if(!(await page.locator('#phase').innerText()).includes('завершено'))throw Error('No terminal result');
    await page.screenshot({path:out+'/'+name+'-'+id+'-result.png'});

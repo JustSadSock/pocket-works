@@ -86,7 +86,7 @@ function geometry(s,F){let cacheable=Object.isFrozen(s);let prior=cacheable?geom
 
 function render(s,mode='direct',environmentOnly=false){let start=performance.now();scaleHits=scaleMisses=scaleMs=0;resize();const k=cam.k,F=scene.F,groundStart=performance.now(),land=landscape(s),groundMs=performance.now()-groundStart;stats={groundMs,terrain:land.ground,sprites:0,represented:0,visible:0,drawCalls:0,hits:0,misses:0,prepBlits:0,atlasBytes:atlas.bytes,missMs:0,evictions:0,localContacts:0,contactSectors:0,proxy:0,byType:{},reachMismatch:0,atlasLoadMs:atlas.loadMs};
  let items=[],flags=[],profileStart=performance.now(),geo=environmentOnly?{regiments:[],contactSectors:0}:geometry(s,F),originX=Math.round(w/2-cam.u*k),originY=Math.round(h/2-cam.v*k),size=Math.max(4,k*6);
- stats.contactSectors=geo.contactSectors;stats.contactMs=geo.contactMs||0;stats.geometryMs=geo.geometryMs||0;stats.geometryCached=!!geo.cached;
+ if(s.presentationTerrainKey)stats.regiments=geo.regiments.map(r=>({id:r.id,side:r.side,kind:r.kind,represented:r.groups.reduce((n,g)=>n+g.rows.reduce((m,row)=>m+row.points.length,0),0)}));stats.contactSectors=geo.contactSectors;stats.contactMs=geo.contactMs||0;stats.geometryMs=geo.geometryMs||0;stats.geometryCached=!!geo.cached;
  for(let t of land.trees)items.push({y:t.p.y,tree:t});
  for(let reg of geo.regiments){let center=project(reg.x,reg.y),px=center.x,py=center.y,pad=reg.pad*k+50;if(px<-pad||px>w+pad||py<-pad||py>h+pad)continue;stats.visible++;stats.byType[reg.kind]=(stats.byType[reg.kind]||0)+1;
  for(let group of reg.groups){stats.represented+=group.n;for(let row of group.rows){for(let pt of row.points){let U=cam.axis==='wide'?pt.worldX:pt.u,V=cam.axis==='wide'?pt.worldY:cam.axis==='tall'?pt.worldX:pt.v,x=Math.round(U*k)+originX,y=Math.round(V*k)+originY;if(x<-size||x>w+size||y<-size||y>h+size)continue;
@@ -106,7 +106,7 @@ function render(s,mode='direct',environmentOnly=false){let start=performance.now
 export async function initArt(canvas){cv=canvas;g=canvas.getContext('2d',{alpha:false});await setStyle();return {canvas:atlas.pages[0]}}
 export function setArtPolicy(p){if(!['auto','direct','batch','scaled','layer','world-row'].includes(p))throw Error('Unknown renderer policy');policy=p;previousDraw=null;costs={direct:0,batch:0};trials={direct:0,batch:0}}
 function getScene(s,layout,C){
- w=layout.w;h=layout.h;d=layout.d;cam={...C};let F=E.forState(s),key=s.seed+'|'+F.W+'|'+F.H+'|'+s.terrain.kind;
+ w=layout.w;h=layout.h;d=layout.d;cam={...C};let F=E.forState(s),key=s.seed+'|'+F.W+'|'+F.H+'|'+s.terrain.kind+'|'+(s.presentationTerrainKey||'');
  if(!scene||terrainKey!==key){terrainKey=key;scene={F,frames:[s]};geometryCache.clear();cadence.clear();previousDraw=null;scaledCache.clear();scaledBytes=0;worldRows.clear();worldRowBytes=0;initTerrain(s);lastCam=null;zoomLevel=null;zoomUntil=0;cache.clear();cacheBytes=0}
  else scene.frames[0]=s;
 }
