@@ -253,7 +253,7 @@ function productionTorso(ctx,id,style,method,color,armored,revision=5,lower=[],s
    for(let k=half;k>=-half;k--)prev.push(4*N+mod(center+k));
    const axis=unit(sub(el.position,sh.position));
    // P0.1: the first sleeve cross-section must not lie behind its armhole.
-   const limbLength=norm(sub(el.position,sh.position)),maxProjection=Math.max(...prev.map(i=>dot(sub(p.positions.slice(i*3,i*3+3),sh.position),axis)));
+   const limbLength=Math.hypot(...sub(el.position,sh.position)),maxProjection=Math.max(...prev.map(i=>dot(sub(p.positions.slice(i*3,i*3+3),sh.position),axis)));
    const first=shoulderRecovery?Math.max(.25,(maxProjection+.012)/limbLength):.25;
    if(shoulderRecovery&&first>=.90)throw Error('Armhole extends beyond supported upper arm '+side);
    const origin=lerp(sh.position,el.position,first);
