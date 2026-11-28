@@ -8,7 +8,7 @@ import {raster,commonBounds} from './material-study.mjs';
 import {glb} from './glb.mjs';
 import {continuousStudy} from './motion-continuous-v15.mjs';
 const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(out,n))),write=(n,v)=>writeFileSync(join(out,n),v),json=(n,v)=>write(n,JSON.stringify(v,null,2));
-const m=read('morph/v9-artisan.model.json'),ref=read('v10-reference-trajectory.json'),native=read('v11-native-mesh-frames.json'),N=ref.frames.length-1,dt=ref.durationSeconds/N;
+const m=read(process.env.CHARACTER_P0_MODEL??'morph/v9-artisan.model.json'),ref=read('v10-reference-trajectory.json'),native=read('v11-native-mesh-frames.json'),N=ref.frames.length-1,dt=ref.durationSeconds/N;
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,k)=>s+v*b[k],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/(Math.hypot(...a)||1)),inv=q=>[-q[0],-q[1],-q[2],q[3]],clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(...sub(a,b)),I=[0,0,0,1],mix=(a,b,t)=>add(mul(a,1-t),mul(b,t));
 const J=n=>{const j=m.joints.find(x=>x.name===n);if(!j)throw Error('Missing '+n);return j};
 function matrixQ(m){const x=unit(m.slice(0,3)),y0=m.slice(4,7),y=unit(sub(y0,mul(x,dot(x,y0)))),z=cross(x,y),a=x[0],b=y[1],c=z[2],t=a+b+c;let q;if(t>0){const s=2*Math.sqrt(t+1);q=[(y[2]-z[1])/s,(z[0]-x[2])/s,(x[1]-y[0])/s,s/4]}else if(a>b&&a>c){const s=2*Math.sqrt(1+a-b-c);q=[s/4,(y[0]+x[1])/s,(z[0]+x[2])/s,(y[2]-z[1])/s]}else if(b>c){const s=2*Math.sqrt(1+b-a-c);q=[(y[0]+x[1])/s,s/4,(z[1]+y[2])/s,(z[0]-x[2])/s]}else{const s=2*Math.sqrt(1+c-a-b);q=[(z[0]+x[2])/s,(z[1]+y[2])/s,s/4,(x[1]-y[0])/s]}return unit(q)}
@@ -149,7 +149,7 @@ for(let pass=0;pass<2;pass++){
  }
 }
 if(process.env.CHARACTER_V15_MOTION==='1'){
- continuousStudy({m,ref,native,baseline:bilateral.B,author:variants.A,vertical:vertical.C,sourceSupport:support,sourceMarks,actual,solveLeg,relaxed,groundY,stride:strideA,first,scale,skin:read('morph/makehuman-base.json'),out});
+ continuousStudy({m,ref,native,baseline:bilateral.B,author:variants.A,vertical:vertical.C,sourceSupport:support,sourceMarks,actual,solveLeg,relaxed,groundY,stride:strideA,first,scale,skin:read(process.env.CHARACTER_P0_SOURCE??'morph/makehuman-base.json'),out});
 } else {
 const v14Reports={},v14Rendered={};
 for(const [name,v] of Object.entries(bilateral)){

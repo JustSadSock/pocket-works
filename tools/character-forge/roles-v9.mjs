@@ -148,6 +148,27 @@ function merchantKit(m){
  for(const side of ['L','R'])tube(m,'merchant cross-body goods strap '+side,[{p:J(m,'upperarm01.'+side).position,r:.018,ws:[[J(m,'upperarm01.'+side).id,.7],[J(m,'spine01').id,.3]]},{p:[side==='L'?.11:-.11,hip.position[1]+.01,hip.position[2]+.10],r:.018,ws:[[hip.id,.8],[root.id,.2]]}],[.13,.075,.04],'leather',8,.002);
  return {hemY:hem.y,bundle:'rolled shoulder load'};
 }
+// P0 uses existing welded tunic and fitted mantle, not the experimental long robe tube.
+function civilianArtisan(m){
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,waist=tunic.pattern.sections[2],hip=J(m,'spine03');
+ // A wide apron tied at the waist, visibly edged, with the existing fitted pouch.
+ const apron=m.parts.find(p=>p.name==='leather work apron');
+ if(apron){apron.material={kind:'leather',roughness:.88,metallic:0};apron.color=[.34,.22,.12]}
+ const a=panelAt(tunic,2,0,Math.round(N*.75)),center=waist.center,n=radial(a.v,center);
+ const buckle=add(a.v,mul(n,.022));torus(m,'apron belt buckle',buckle,[1,0,0],[0,1,0],[0,0,1],.015,.0035,[[hip.id,1]],[.42,.32,.17]);
+ return {cut:'short work tunic',apron:'fitted waist apron',accessories:['belt pouch','buckle'],construction:'existing v6 fitted panels'};
+}
+function civilianMerchant(m){
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),upper=J(m,'spine01');
+ tunic.color=[.15,.23,.28];tunic.material={kind:'cloth',roughness:.87,metallic:0};
+ const mantle=m.parts.find(p=>p.name==='wool draped merchant mantle');
+ if(mantle){mantle.color=[.34,.16,.095];mantle.material={kind:'cloth',roughness:.96,metallic:0}}
+ // Clasp on the measured upper tunic, rigidly bound to the chest. No hand prop.
+ const a=panelAt(tunic,4,.18,Math.round(N*.76)),c=mix(tunic.pattern.sections[4].center,tunic.pattern.sections[5].center,.18),v=add(a.v,mul(radial(a.v,c),.072));
+ rivet(m,'merchant brass mantle clasp',v,[[upper.id,1]],.017,[.57,.36,.12]);
+ const belt=panelAt(tunic,2,0,Math.round(N*.75));torus(m,'merchant brass belt buckle',add(belt.v,mul(radial(belt.v,tunic.pattern.sections[2].center),.022)),[1,0,0],[0,1,0],[0,0,1],.019,.004,[[hip.id,1]],[.57,.36,.12]);
+ return {cut:'long fitted tunic and asymmetric wool mantle',accessories:['mantle clasp','belt buckle','belt pouch'],construction:'existing v6 fitted panels; no free robe extension'};
+}
 function artisanKit(m){
  const tunic=m.parts.find(p=>p.name==='tunic'),hip=J(m,'spine03'),root=J(m,'root');
  for(const side of ['L','R']){const elbow=J(m,'lowerarm01.'+side),wrist=J(m,'wrist.'+side);tube(m,'rolled linen sleeve cuff '+side,[{p:mix(elbow.position,wrist.position,.72),r:.047,ws:[[elbow.id,.4],[wrist.id,.6]]},{p:mix(elbow.position,wrist.position,.84),r:.049,ws:[[elbow.id,.2],[wrist.id,.8]]},{p:wrist.position,r:.045,ws:[[wrist.id,1]]}],[.62,.52,.36],'cloth',12,.003)}
@@ -207,14 +228,14 @@ function lowPolyTransform(m){
 }
 function miniatureStyleV10(m){const hip=J(m,'root').position[1],neck=J(m,'neck01').position[1],head=J(m,'head').position,transform=v=>{const t=clamp((v[1]-neck)/.10,0,1),upper=clamp((v[1]-hip)/.30,0,1)*(1-t);return [v[0]*(1+.065*upper+.09*t),v[1]<hip?v[1]*.96:hip*.96+(v[1]-hip)*(1+.07*t),head[2]+(v[2]-head[2])*(1+.05*t)]};for(const p of m.parts){for(let i=0;i<p.positions.length;i+=3)p.positions.splice(i,3,...transform(p.positions.slice(i,i+3)));normals(p)}for(const j of m.joints){j.position=transform(j.position);j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position)}}
 export const roleMorphs=roleProfiles;
-export function produceRoleV9(source,id,identityOverride=null,{style='historical-miniature',styleRevision=9}={}){
+export function produceRoleV9(source,id,identityOverride=null,{style='historical-miniature',styleRevision=9,civilianP0=false}={}){
  if(!roleProfiles[id])throw Error('Unknown role '+id);
- const m=produceRole(source,id,identityOverride,'historical-miniature'),start=performance.now();
+ const m=produceRole(source,id,identityOverride,'historical-miniature',{civilianP0}),start=performance.now();
  m.parts=m.parts.filter(p=>!['iron breastplate','iron conical helmet','iron nasal','iron imperial helmet','iron cheek guard -1','iron cheek guard 1','red curved scutum','heater shield','iron shield rim','iron shield boss','leather shield forearm strap'].includes(p.name)&&!p.name.startsWith('quilted padded rib')&&!p.name.startsWith('iron segmented cuirass')&&!p.name.startsWith('iron shoulder guard')&&!(id==='legionary'&&p.name==='leather sheathed sidearm'));
  m.spec.artRole=id;m.spec.artRevision='v9';m.spec.miniaturePose='v9';m.spec.motionRevision='v9';m.spec.contactCorrection='path-v9';m.spec.actions=id==='artisan'?['idle','walk']:['idle'];
  let role;
- if(id==='artisan')role=artisanKit(m);
- if(id==='merchant')role=merchantKit(m);
+ if(id==='artisan')role=civilianP0?civilianArtisan(m):artisanKit(m);
+ if(id==='merchant')role=civilianP0?civilianMerchant(m):merchantKit(m);
  if(id==='infantry')role=infantryKit(m);
  if(id==='legionary')role=legionaryKit(m);
  if(style==='low-poly')lowPolyTransform(m);else if(style==='anatomical-realism'){m.spec.style=style;for(const p of m.parts){p.color=p.color.map(v=>Math.max(0,Math.min(1,v*.88+.035)));if(p.material?.kind==='skin')p.material.roughness=.57;if(p.material?.kind==='cloth')p.material.roughness=.96;}}else {m.spec.style='historical-miniature';if(styleRevision===10)miniatureStyleV10(m);}

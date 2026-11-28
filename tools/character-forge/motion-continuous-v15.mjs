@@ -242,7 +242,8 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   return {keyCount:v.rotations.length,additionalAuditSamples:n+1,counts,max,loop,velocity:seamVelocity(v),maxRootSpeedMetresPerSecond:maxRate,gate,rows};
  }
  const models={},reports={};
- const variants=[25,49,97,'cyclic49','cyclic97','cyclic49Upper','velocity49quarter','velocity49half','velocity49','elbow49'];
+ const p0=process.env.CHARACTER_P0_MOTION==='1';
+ const variants=p0?['cyclic49']:[25,49,97,'cyclic49','cyclic97','cyclic49Upper','velocity49quarter','velocity49half','velocity49','elbow49'];
  const cyclicDiagnostics={};let cyclic49,upperReport,elbowReport;
  for(const count of variants){
   let v;
@@ -252,10 +253,12 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   else v=String(count).startsWith('cyclic')?cyclic(Number(String(count).slice(6))):generate(count);
   if(count==='cyclic49')cyclic49=structuredClone(v);
   const c=structuredClone(m);
-  if(v.trace)cyclicDiagnostics[count]={trace:v.trace,velocitySeam:v.velocitySeam};c.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};c.spec.actions=['walk'];c.spec.walkDuration=ref.durationSeconds;c.spec.motionRevision='v9';
+  if(v.trace)cyclicDiagnostics[count]={trace:v.trace,velocitySeam:v.velocitySeam};c.sampledWalk={rotations:v.rotations.map(relaxed),offsets:v.offsets};c.spec.actions=p0?['idle','walk']:['walk'];c.spec.walkDuration=ref.durationSeconds;c.spec.motionRevision='v9';
   const bin=glb(c);write('v15-walk-'+count+'.glb',bin);json('v15-walk-'+count+'-spec.json',{spec:c.spec,sampledWalk:c.sampledWalk});reports[count]=audit(bin,c);models[count]=c;
  }
  const accepted=reports.cyclic49;
+ if(p0){const c=models.cyclic49;json('p0-model.json',c);json('v15-continuous-report.json',{reports,selected:'cyclic49',groundY,stride,duration:ref.durationSeconds,qualification:{contactGate:accepted.gate,artApproved:false}});return;}
+
  // Preserve exact source model for independent demonstrator construction.
  json('v21-cyclic49-source-model.json',models.cyclic49);
  const noRegression=r=>r.gate&&['drift','vertical','penetration'].every(k=>r.max[k]<=accepted.max[k]+1e-6)&&r.loop.maxJointDegrees<=accepted.loop.maxJointDegrees+1e-6;
