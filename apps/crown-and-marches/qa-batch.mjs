@@ -18,3 +18,5 @@ if(kind==='balance'&&shard<5){const child=spawnSync(process.execPath,[fileURLToP
 
 // One natural-start causality role per existing balance shard; no old task removed.
 if(kind==='balance'){const child=spawnSync(process.execPath,[fileURLToPath(new URL('grand-scenario-preflight.mjs',import.meta.url)),'360',String(shard)],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}
+
+if(kind==='balance'&&(shard===0||shard===3)){const child=spawnSync(process.execPath,[fileURLToPath(new URL('grand-breaking-isolation.mjs',import.meta.url)),shard===0?'agrarian':'maritime'],{stdio:'inherit',env:process.env});if(child.status!==0)process.exit(child.status??1);}

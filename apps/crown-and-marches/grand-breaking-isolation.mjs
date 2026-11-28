@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {grandCampaign,serialize,restore,step,simulationHash,beginCampaignCausalityAudit,landSurveyFrontier,launchExpedition,build,buildPort,fundInstitute,procurement,proposeAgreement,politicalRight,discoveryContact,atWar,setDelegation,delegationMode,adoption,RECIPES,BUILD,INSTITUTES,GOODS} from './world.mjs';
+import {catalogStarts,selectStarts,capital,NAV,seaFrontier,maritimeBlockers,isolation} from './grand-campaign-cases.mjs';
+const role=process.argv[2]||'maritime',selected=selectStarts(catalogStarts()),start=selected[role];assert.ok(start);
+const modes=role==='maritime'?['reserve-first','delegated']:['land-first','delegated'];
+const output=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/grand-isolation';mkdirSync(output,{recursive:true});
+const rows=[],base=serialize(grandCampaign({...start.cfg,worldSize:'standard',states:6,goal:'sandbox',playerFaction:start.playerFaction}));
+const save=()=>writeFileSync(join(output,'breaking-isolation-'+role+'.json'),JSON.stringify({schema:1,sha:process.env.GITHUB_SHA??null,start,role,rows},null,2));
+for(const mode of modes){
+ const s=restore(base),f=s.playerFaction,st=s.states[f],actions=[],own={},global={},volume={own:0,global:0},history=[],samples=[],row={mode,actions,own,global,volume,history,samples};rows.push(row);
+ const off=beginCampaignCausalityAudit(s,e=>{global[e.kind]=(global[e.kind]||0)+1;const belongs=e.f===f||e.a===f||e.b===f||e.from===f||e.to===f||e.kind==='discovery:contact'&&e.detail?.other===f;if(belongs){own[e.kind]=(own[e.kind]||0)+1;history.push(structuredClone(e));}if(e.kind==='shipment-delivered'&&e.from!==e.to){volume.global+=e.volume;global.internationalDelivered=(global.internationalDelivered||0)+1;if(belongs){volume.own+=e.volume;own.internationalDelivered=(own.internationalDelivered||0)+1;}}});
+ function snapshot(){const c=capital(s);return {day:s.day,gold:st.gold,stock:c.stock.slice(),reserves:st.reserves.slice(),potential:c.potential.slice(),output:c.output.slice(),input:c.input.slice(),produced:c.metrics.produced.slice(),work:{...c.work},build:c.build.slice(),port:c.port,known:c.knowledge.known.slice(),adopted:c.knowledge.use.slice(),funding:c.knowledge.funding,institutes:{...c.knowledge.institutes},blockers:{...c.knowledge.blockers},foodRatio:c.lastFoodRatio,chart:s.discovery.charts[f].filter(Boolean).length,contacts:s.discovery.contacts[f].map(Boolean),budget:{...st.budget},delegation:Object.fromEntries(['economy','research','ports','supply','labor'].map(k=>[k,delegationMode(s,f,k)])),isolation:isolation(s,c),worldDiscovery:{...s.discovery.stats},own:{...own},global:{...global},volume:{...volume}};}
+ function act(name,fn,check){const before=snapshot(),result=fn(),after=snapshot(),accepted=check?check(before,after,result):false;actions.push({day:s.day,name,result,accepted,before:{gold:before.gold,stock:before.stock,reserves:before.reserves},after:{gold:after.gold,stock:after.stock,reserves:after.reserves}});return accepted;}
+ const targets=mode==='reserve-first'?[24,12,2]:[16,2,2],goods=[9,10,12];
+ function plan(){
+  const c=capital(s);if(!c)return;
+  // Existing public reserve market: buy only real surplus; release only against cash.
+  // Keep grain, planks and tools for production rather than investing all at once.
+  if(mode==='delegated')return;
+  for(const [i,k] of goods.entries()){const need=targets[i]-st.reserves[k],floor=k===9?Math.max(4,c.demand[k]*2):k===10?8:3;if(need>.01&&c.stock[k]>floor&&st.gold>65){const qty=Math.min(need,c.stock[k]-floor,(st.gold-65)/c.market[k]);if(qty>.05)act('reserve '+GOODS[k],()=>procurement(s,c,k,qty),(a,b)=>b.reserves[k]>a.reserves[k]);}}
+  const nav=adoption(s,c,'coastal-sail'),sea=mode==='reserve-first',target=sea?seaFrontier(s,c):landSurveyFrontier(s,c),fee=sea?36:18,ready=target!=null&&(!sea||c.port&&nav>=.5)&&c.pop>=(sea?198:192)&&st.gold>=fee&&goods.every((k,i)=>c.stock[k]+st.reserves[k]>=targets[i])&&!s.discovery.expeditions.some(e=>e.f===f);
+  if(ready){for(const [i,k] of goods.entries())if(c.stock[k]<targets[i])act('release '+GOODS[k],()=>procurement(s,c,k,targets[i]-c.stock[k],true),(a,b)=>b.stock[k]>a.stock[k]);if(goods.every((k,i)=>c.stock[k]>=targets[i]))act(sea?'sea-survey':'land-survey',()=>launchExpedition(s,c,target,sea?'sea':'land'),(a,b,r)=>r==='Экспедиция отправлена');}
+  // Choose from actual known contacts only. No compelled acceptance or transfers.
+  for(const other of s.states){if(other.id===f||!discoveryContact(s,f,other.id)||atWar(s,f,other.id)||politicalRight(s,f,other.id,'trade')||s.politics.offers.some(o=>(o.a===f&&o.b===other.id||o.b===f&&o.a===other.id)&&s.day-o.day<120))continue;act('trade proposal '+other.id,()=>proposeAgreement(s,f,other.id,[{kind:'trade',from:f,to:other.id}],720),(a,b,r)=>r.status==='accepted');}
+  // Pay for one feasible bottleneck at a time, using actual inputs and outputs.
+  if(s.day%20!==0||st.gold<80||c.stock[10]<4||c.stock[2]<3||c.stock[12]<1)return;
+  const needed=(k,level)=>c.build[k]<level&&!c.orders.some(o=>o.kind===k);
+  let k=null;if(c.stock[9]+st.reserves[9]<targets[0]&&c.stock[0]>3&&needed(0,3))k=0;
+  else if(c.stock[10]+st.reserves[10]<targets[1]+8&&c.stock[1]>3&&needed(1,2))k=1;
+  else if(c.stock[12]<4&&c.stock[11]>.65&&needed(3,2))k=3;
+  else if(c.stock[11]<4&&c.stock[3]>1&&c.stock[1]>.5&&needed(2,2))k=2;
+  else if(sea&&c.stock[15]<3&&c.stock[7]>.8&&needed(6,2))k=6;
+  if(k!==null){act('build '+BUILD[k][0],()=>build(s,c,k),(a,b)=>b.build[k]===a.build[k]+1);return;}
+  if(sea&&nav<.5){st.focus=5;const spec=INSTITUTES.navigation;
+   // Knowledge is not adoption. Avoid draining scarce cloth and tools for a new institution.
+   if(!c.knowledge.institutes.navigation&&c.knowledge.known[NAV]<1&&spec[2].every(([g,q])=>c.stock[g]>=q+(g===12?2:0))&&st.gold>=spec[1]+65)act('navigation institute',()=>fundInstitute(s,c,'navigation'),(a,b)=>!!b.institutes.navigation);
+  }
+  if(sea&&nav>=.5&&!c.port&&c.stock[10]>=8&&c.stock[2]>=6&&c.stock[12]>=2&&st.gold>=71)act('port',()=>buildPort(s,c),(a,b)=>b.port===a.port+1);
+ }
+ try{
+  samples.push(snapshot());if(mode==='delegated'){for(const domain of ['research','ports'])assert.ok(setDelegation(s,f,domain,'auto'));actions.push({day:s.day,name:'delegate ports and research',accepted:true});}else if(mode==='reserve-first'){st.focus=5;capital(s).knowledge.funding=.25;actions.push({day:s.day,name:'navigation priority, low funding during provisioning',accepted:true});}
+  plan();for(let d=1;d<=360;d++){step(s);assert.ok(s.ledger.maxGoodsError<1e-5&&s.ledger.maxMoneyError<1e-5);if(d%4===0)plan();if(d%20===0||[60,180,360].includes(d))samples.push(snapshot());if([60,180,360].includes(d))assert.equal(simulationHash(restore(serialize(s))),simulationHash(s));}
+  row.goal={landSurvey:history.some(e=>e.kind==='discovery:expedition'&&e.detail.kind==='land'),seaSurvey:history.some(e=>e.kind==='discovery:expedition'&&e.detail.kind==='sea'),contact:(own['discovery:contact']||0)>0,tradeRight:s.states.some(q=>q.id!==f&&politicalRight(s,f,q.id,'trade')),internationalDelivery:(own.internationalDelivered||0)>0};row.final=snapshot();save();console.log('[breaking-isolation] '+JSON.stringify({role,mode,goal:row.goal,own,global,volume,final:row.final}));
+ }finally{off();}
+}
