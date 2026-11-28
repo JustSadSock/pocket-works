@@ -72,6 +72,25 @@ orgArmy("hellenistic","Антигонидская Македония","Перс�
 chronicles.push(...ancientChapters);chronicles.sort((a,b)=>(a.year??Number(a.date.slice(0,4)))-(b.year??Number(b.date.slice(0,4))));
 
 export const scenario=id=>chronicles.find(s=>s.id===id);
+
+// Strategic suggestions only; no forced orders or historical outcomes.
+export const featuredChronicles={
+ bannockburn:{focus:"Узкое поле и стойкость строя",sides:[
+  ["Держите шилтроны связанными; не отдавайте коннице открытый фланг.","Используйте резерв для поддержки ослабленного строя; встречайте конницу обороной."],
+  ["Не отправляйте конницу в плотные копья без поддержки; используйте стрелков.","Разведите давление по фронту и сохраните силы для прохода через ослабленный участок."]]},
+ agincourt:{focus:"Стрелки, тесный фронт и влажный грунт",sides:[
+  ["Сохраните боеспособность стрелков и прикрывающей пехоты; защищайте линию.","Перестройте угрожаемое крыло и берегите резерв вместо преследования."],
+  ["Выберите менее стеснённый маршрут; не скучивайте все полки в одном проходе.","Испытайте фронт пехотой, поддержите её стрелками и вводите конницу по обстановке."]]},
+ grunwald:{focus:"Мобильность, два крыла и резервы",sides:[
+  ["Разделите задачи тяжёлой и лёгкой конницы; держите резерв вне раннего контакта.","Выберите, какое крыло поддержать, или отойдите для восстановления строя."],
+  ["Сохраните связь между хоругвями и не преследуйте любой отход.","Сосредоточьте резерв на уязвимом крыле или удерживайте обе цели."]]}
+};
+export function chronicleBrief(id,side=0){
+ const d=scenario(id),b=featuredChronicles[id];
+ if(!d||!b||![0,1].includes(side))return null;
+ return {focus:b.focus,goal:d.sides[side].goal,approaches:[...b.sides[side]],seconds:d.seconds,zoneWeight:d.weights.zone,powerWeight:d.weights.power,zones:d.zones.map(z=>z.name)};
+}
+
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function validateScenario(s){if(!s||s.schema!==1||s.sides.length!==2||!s.zones.length||s.seconds<=0||Math.abs(s.weights.zone+s.weights.power-1)>1e-9)throw Error("Invalid chronicle");return s}
 function makeTerrain(E,d,reverse,ground=1){
