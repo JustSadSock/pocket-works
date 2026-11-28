@@ -8,7 +8,9 @@ SR=48000; FFT=1024; HOP=128
 BANDS=np.array([0,125,250,500,1000,2000,4000,8000,12000,18000,24001])
 sha=lambda p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
 def decode(p):
-    x=np.frombuffer(subprocess.check_output(['sox','-R',str(p),'-t','raw','-e','floating-point','-b','32','-L','-c','1','-r',str(SR),'-']),'<f4').astype(np.float64)
+    result=subprocess.run(['sox','-R','-v','0.5',str(p),'-t','raw','-e','floating-point','-b','32','-L','-c','1','-r',str(SR),'-'],capture_output=True,check=True)
+    if b'clipped' in result.stderr.lower():raise ValueError('Decode clipping: '+result.stderr.decode())
+    x=np.frombuffer(result.stdout,'<f4').astype(np.float64)
     if not len(x) or not np.isfinite(x).all():raise ValueError('Invalid audio')
     return x
 def select_event(x,seconds=1.2):
@@ -96,7 +98,7 @@ def render(model,seed=42,gain=1.,size=1.,duration=1.,noiseMix=1.,modalMix=1.):
     if not np.isfinite(a+b).all():raise ValueError('Nonfinite synthesis')
     return a,b
 def descriptors(x):
-    x=np.asarray(x);energy=float(np.sum(x*x));p=max(np.max(abs(x)),1e-12)
+    x=np.asarray(x);energy=float(np.sum(x*x));rawLength=len(x);p=max(np.max(abs(x)),1e-12)
     # Align both at first nontrivial amplitude; raw RMS is separately reported.
     j=np.flatnonzero(abs(x)>=p*.025);x=x[int(j[0]):] if len(j) else x
     slices=[]
@@ -105,7 +107,7 @@ def descriptors(x):
         if len(y)<8:slices.append([0.]*(len(BANDS)));continue
         f=np.fft.rfftfreq(len(y),1/SR);v=abs(np.fft.rfft(y*windows.hann(len(y))))**2
         slices.append([float(np.sum(y*y)/max(energy,1e-12))]+[float(v[(f>=lo)&(f<hi)].sum()/max(v.sum(),1e-12)) for lo,hi in zip(BANDS[:-1],BANDS[1:])])
-    return dict(peak=float(p),rms=float(np.sqrt(energy/len(x))),energy=energy,trajectory=slices)
+    return dict(peak=float(p),rms=float(np.sqrt(energy/rawLength)),energy=energy,trajectory=slices)
 def distance(a,b):
     # Diagnostic L1 distance over time-band energy, with each band's energy weighted by interval energy.
     a=np.array(a['trajectory']);b=np.array(b['trajectory'])
@@ -164,7 +166,14 @@ def main(corpus,baseline,out):
             mg=min(1,.85/max(np.max(abs(v)) for v in matched.values()))
             for name,v in matched.items():save(out/'controls'/(group+'-matched-'+name+'.wav'),v*mg)
             report.append(dict(group=group,train=tr['id'],holdout=ho['id'],tracks=len(model['tracks']),fixedGain=g,raw=raw,files=files,heldoutDistance={name:distance(raw['holdout-reference'],raw[name]) for name in ('training-reference','procedural-baseline','resynthesis')},matchedRms=level*mg,weakStrongEnergyRatio=raw['strong']['energy']/raw['weak']['energy'],scope='Uncontrolled Foley class holdout, not independent verified physical geometry or force. gain is amplitude; size/time are acoustic transforms.'))
-    (out/'report.json').write_text(json.dumps(dict(approval='research-only',sources=sources,groups=report,baselineSha256=sha(baseline),wallSeconds=time.perf_counter()-start,maxRssKiB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss),indent=2)+'\n')
+    (out/'report.json').write_text(json.dumps(dict(approval='research-only',decodeGain=.5,sources=sources,groups=report,baselineSha256=sha(baseline),wallSeconds=time.perf_counter()-start,maxRssKiB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss),indent=2)+'\n')
     print(json.dumps([{k:v for k,v in row.items() if k in ('group','tracks','heldoutDistance','weakStrongEnergyRatio')} for row in report],indent=2))
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('corpus');p.add_argument('baseline');p.add_argument('out');a=p.parse_args();main(a.corpus,a.baseline,a.out)
+    import sys
+    if len(sys.argv)>1 and sys.argv[1]=='render':
+        p=argparse.ArgumentParser();p.add_argument('model');p.add_argument('output');p.add_argument('--seed',type=int,default=914);p.add_argument('--gain',type=float,default=1);p.add_argument('--size',type=float,default=1);p.add_argument('--duration',type=float,default=1);p.add_argument('--noise-mix',type=float,default=1);p.add_argument('--modal-mix',type=float,default=1);p.add_argument('--output-gain',type=float,default=1);a=p.parse_args(sys.argv[2:])
+        if not 0<a.output_gain<=1:raise ValueError('Invalid output gain')
+        u,v=render(json.loads(pathlib.Path(a.model).read_text()),a.seed,a.gain,a.size,a.duration,a.noise_mix,a.modal_mix)
+        print(save(a.output,(u+v)*a.output_gain))
+    else:
+        p=argparse.ArgumentParser();p.add_argument('corpus');p.add_argument('baseline');p.add_argument('out');a=p.parse_args();main(a.corpus,a.baseline,a.out)

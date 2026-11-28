@@ -48,6 +48,7 @@ jobs:
           python tools/audio-forge/acoustic_resynthesis.py tools/audio-forge/acoustic-corpus .acoustic-baseline.zip .acoustic
           python tools/audio-forge/acoustic_resynthesis.py tools/audio-forge/acoustic-corpus .acoustic-baseline.zip .acoustic-repeat
           python tools/audio-forge/acoustic_documentary.py .acoustic/documentary
+          python tools/audio-forge/acoustic_resynthesis.py render .acoustic/models/metal.json .acoustic/portable-model-smoke.wav --seed 914 --gain .5 --size 1.1 --duration 1.2 --output-gain .5
           cp tools/audio-forge/acoustic-corpus/*LICENSE.txt .acoustic/
           cp tools/audio-forge/acoustic-corpus/sources.json .acoustic/
           cp tools/audio-forge/acoustic_resynthesis.py tools/audio-forge/acoustic_documentary.py .acoustic/
@@ -78,6 +79,12 @@ jobs:
               assert len(read(file('large-long')))==round(len(read(file('training-reference')))*1.2)
               model=json.loads((p/'models'/(g['group']+'.json')).read_text());assert 'waveform' not in model and 'phase' not in model
           for f in (p/'renders').glob('*.wav'):read(f)
+          read(p/'portable-model-smoke.wav')
+          for e in json.loads((p/'documentary/documentary-receipts.json').read_text()):
+              if e['status']=='acquired':
+                  assert sha(p/'documentary'/e['file'])==e['sha256']
+                  for name,h in e.get('files',{}).items():
+                      f=p/'documentary'/(e['kind']+'-'+name+'.wav');assert sha(f)==h;read(f)
           (p/'archive-sha256.json').write_text(json.dumps({str(f.relative_to(p)):sha(f) for f in sorted(p.rglob('*')) if f.is_file()},indent=2)+'\n')
           PY
       - uses: actions/upload-artifact@v4

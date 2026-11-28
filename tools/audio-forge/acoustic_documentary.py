@@ -37,7 +37,7 @@ def main(out):
         for k in peaks:
             left=max(0,k-(55 if spec['kind']=='breathing' else 9));right=min(len(env),k+(70 if spec['kind']=='breathing' else 55))
             if windows and left*hop<windows[-1][1]:continue
-            windows.append((left*hop,min(len(x),right*hop)))
+            windows.append((int(left*hop),int(min(len(x),right*hop))))
             if len(windows)==3:break
         if len(windows)<2:
             e.update(analysis='blocked: fewer than two separated energetic events');receipts.append(e);continue
@@ -46,7 +46,7 @@ def main(out):
         for name,w in [('training',train),('holdout',held),('resynthesis',u+v)]:
             f=out/f'{prefix}-{name}.wav';files[name]=save(f,w*g)
         (out/f'{prefix}-model.json').write_text(json.dumps(m,separators=(',',':'))+'\n')
-        e.update(analysis='automatic energetic windows; physical event identity and breath direction unverified',windows=windows,files=files,fixedGain=g,heldoutDistance=distance(descriptors(held),descriptors(u+v)))
+        e.update(analysis='automatic energetic windows; physical event identity and breath direction unverified',windows=windows,files=files,fixedGain=float(g),decodeGain=.5,heldoutDistance=distance(descriptors(held),descriptors(u+v)))
         receipts.append(e)
     (out/'documentary-receipts.json').write_text(json.dumps(receipts,indent=2)+'\n');print(json.dumps([{k:v for k,v in e.items() if k in ('title','status','sha256','reason','analysis')} for e in receipts],indent=2))
 if __name__=='__main__':main(sys.argv[1])
