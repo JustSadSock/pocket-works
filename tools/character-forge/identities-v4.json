@@ -1,0 +1,118 @@
+{
+  "base": {
+    "kit": "tunic",
+    "style": "historical-miniature",
+    "identity": {
+      "hair": "short",
+      "beard": true,
+      "faceWidth": 0.06,
+      "nose": 0.005,
+      "hairColor": [
+        0.15,
+        0.09,
+        0.04
+      ],
+      "colors": {
+        "tunic": "wool",
+        "trousers": "charcoal"
+      }
+    }
+  },
+  "young-woman": {
+    "kit": "shirt",
+    "style": "historical-miniature",
+    "identity": {
+      "hair": "long",
+      "faceWidth": -0.06,
+      "nose": -0.004,
+      "hairColor": [
+        0.27,
+        0.13,
+        0.045
+      ],
+      "colors": {
+        "shirt": "indigo",
+        "trousers": "ochre"
+      }
+    }
+  },
+  "older-woman": {
+    "kit": "traveler",
+    "style": "historical-miniature",
+    "identity": {
+      "hair": "long",
+      "faceWidth": 0.02,
+      "nose": 0.002,
+      "hairColor": [
+        0.42,
+        0.4,
+        0.34
+      ],
+      "colors": {
+        "shirt": "cream",
+        "cloak": "indigo",
+        "trousers": "charcoal"
+      },
+      "posture": 0.06
+    }
+  },
+  "older-man": {
+    "kit": "traveler",
+    "style": "historical-miniature",
+    "identity": {
+      "hair": "cropped",
+      "beard": true,
+      "faceWidth": -0.08,
+      "nose": 0.009,
+      "hairColor": [
+        0.47,
+        0.44,
+        0.38
+      ],
+      "colors": {
+        "shirt": "linen",
+        "cloak": "madder",
+        "trousers": "charcoal"
+      },
+      "posture": 0.075
+    }
+  },
+  "tall-heavy": {
+    "kit": "warrior",
+    "style": "historical-miniature",
+    "identity": {
+      "hair": "cropped",
+      "beard": true,
+      "faceWidth": 0.08,
+      "nose": 0.006,
+      "hairColor": [
+        0.07,
+        0.05,
+        0.035
+      ],
+      "colors": {
+        "shirt": "linen",
+        "quilted": "indigo",
+        "trousers": "charcoal"
+      }
+    }
+  },
+  "short-light": {
+    "kit": "tunic",
+    "style": "historical-miniature",
+    "identity": {
+      "hair": "cropped",
+      "faceWidth": -0.04,
+      "nose": -0.002,
+      "hairColor": [
+        0.29,
+        0.17,
+        0.07
+      ],
+      "colors": {
+        "tunic": "ochre",
+        "trousers": "madder"
+      }
+    }
+  }
+}

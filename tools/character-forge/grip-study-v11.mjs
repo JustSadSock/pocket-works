@@ -1,0 +1,145 @@
+// Isolated MakeHuman grip probe. The hand is never replaced by a primitive.
+// Angles are local phalanx rotations; the handle is an independent rigid cylinder.
+import {readFileSync,writeFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {quat,qmul,rotate,poseFrom} from './core.mjs';
+import {part,push,weights,normals} from './hybrid-human.mjs';
+import {raster,commonBounds} from './material-study.mjs';
+const out=process.env.CHARACTER_EVIDENCE;
+const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((n,v,i)=>n+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+// Distance to the finite cylinder axis from every clipped triangle. The
+// nearest surface point may be between vertices and is not a centroid.
+function triangleRadial(tri,c){
+ let poly=tri.map(v=>v.slice());
+ for(const sign of [-1,1]){const next=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=.075-sign*a[0],db=.075-sign*b[0];if(da>=0)next.push(a);if((da>=0)!==(db>=0))next.push(add(a,mul(sub(b,a),da/(da-db))))}poly=next;if(!poly.length)return Infinity}
+ const xy=poly.map(v=>[v[1]-c[0],v[2]-c[1]]),cross2=(a,b)=>a[0]*b[1]-a[1]*b[0],signs=xy.map((a,i)=>cross2(a,xy[(i+1)%xy.length])),area=signs.reduce((a,b)=>a+b,0);
+ if(Math.abs(area)>1e-12&&(signs.every(x=>x>=-1e-12)||signs.every(x=>x<=1e-12)))return 0;
+ let min=Infinity;for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length],d=sub(b,a),t=clamp(-dot(a,d)/Math.max(1e-18,dot(d,d)),0,1);min=Math.min(min,Math.hypot(...add(a,mul(d,t))))}return min;
+}
+// Sweep-and-prune with nonadjacent triangle SAT, including coplanar
+// separating axes. Shared-vertex neighbors are excluded, not entire fingers.
+function selfPairs(v,faces){
+ const boxes=faces.map((f,i)=>{const p=f.map(j=>v[j]);return {i,f,p,lo:[0,1,2].map(k=>Math.min(...p.map(x=>x[k]))),hi:[0,1,2].map(k=>Math.max(...p.map(x=>x[k])))}}).sort((a,b)=>a.lo[0]-b.lo[0]),pairs=[];
+ const sep=(axis,a,b)=>{if(Math.hypot(...axis)<1e-10)return false;const u=unit(axis),x=a.map(p=>dot(p,u)),y=b.map(p=>dot(p,u));return Math.max(...x)<Math.min(...y)-1e-8||Math.max(...y)<Math.min(...x)-1e-8};
+ for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length&&boxes[j].lo[0]<=boxes[i].hi[0]+1e-8;j++){const a=boxes[i],b=boxes[j];if(a.f.some(k=>b.f.includes(k))||[1,2].some(k=>a.hi[k]<b.lo[k]-1e-8||b.hi[k]<a.lo[k]-1e-8))continue;const ae=a.p.map((v,k)=>sub(a.p[(k+1)%3],v)),be=b.p.map((v,k)=>sub(b.p[(k+1)%3],v)),an=cross(ae[0],ae[1]),bn=cross(be[0],be[1]),axes=[an,bn,...ae.flatMap(x=>be.map(y=>cross(x,y))),...ae.map(e=>cross(an,e)),...be.map(e=>cross(bn,e))];if(!axes.some(x=>sep(x,a.p,b.p)))pairs.push([Math.min(a.i,b.i),Math.max(a.i,b.i)])}
+ return pairs;
+}
+// Minimum separating translation along the triangle SAT axes; this is a
+// local surface-pair overlap measure, not signed volumetric depth.
+function pairOverlap(a,b){
+ const ae=a.map((v,k)=>sub(a[(k+1)%3],v)),be=b.map((v,k)=>sub(b[(k+1)%3],v)),an=cross(ae[0],ae[1]),bn=cross(be[0],be[1]),axes=[an,bn,...ae.flatMap(x=>be.map(y=>cross(x,y))),...ae.map(e=>cross(an,e)),...be.map(e=>cross(bn,e))];let d=Infinity;
+ for(const ax of axes){if(Math.hypot(...ax)<1e-10)continue;const u=unit(ax),x=a.map(p=>dot(p,u)),y=b.map(p=>dot(p,u));d=Math.min(d,Math.max(...x)-Math.min(...y),Math.max(...y)-Math.min(...x))}
+ return Number.isFinite(d)?d:-1;
+}
+export function gripStudy(m,r,anatomyOnly=false,acceptedAxes=null){
+ const J=n=>{const j=m.joints.find(j=>j.name===n+'.L');if(!j)throw Error(n);return j},chains=Array.from({length:5},(_,i)=>[1,2,3].map(s=>J('finger'+(i+1)+'-'+s))),wrist=J('wrist'),p=m.parts[0],palm=chains.slice(1).reduce((a,c)=>add(a,mul(c[0].position,.25)),[0,0,0]),bar=unit(sub(chains[4][0].position,chains[1][0].position)),f=unit(sub(palm,wrist.position)),along=unit(sub(f,mul(bar,dot(f,bar)))),normal=unit(cross(bar,along)),basis=[bar,along,normal],local=v=>basis.map(b=>dot(sub(v,palm),b)),global=v=>add(palm,basis.reduce((a,b,i)=>add(a,mul(b,v[i])),[0,0,0]));
+ const ids=new Set([wrist.id,...[1,2,3,4].map(k=>J('metacarpal'+k).id),...chains.flat().map(j=>j.id)]),regions=chains.map(c=>new Set(c.map(j=>j.id))),selected=[],remap=new Map(),faces=[];
+ for(let i=0;i<p.positions.length/3;i++){const ws=weights(p,i);if(ws.reduce((n,[j,w])=>n+(ids.has(j)?w:0),0)<=.55)continue;const v=p.positions.slice(i*3,i*3+3),rs=regions.map(s=>ws.reduce((n,[j,w])=>n+(s.has(j)?w:0),0)>.48),ds=chains.map(c=>ws.some(([j,w])=>j===c[2].id&&w>.40));remap.set(i,selected.length);selected.push({v,ws,rs,ds,palm:ws.reduce((n,[j,w])=>n+(regions.every(s=>!s.has(j))?w:0),0)>.65})}
+ for(let i=0;i<p.indices.length;i+=3){const t=p.indices.slice(i,i+3);if(t.every(x=>remap.has(x)))faces.push(t.map(x=>remap.get(x)))}
+ // MakeHuman rotation-plane normal is its sourceFrame X axis. Orient
+ // its sign towards the palmar side individually; never use one shared axis.
+ const axes=chains.map((c,k)=>c.map((j,s)=>{const [x,y,z]=j.sourceFrame??[];if(!x||!y||!z||j.sourcePlane?.length!==3)throw Error('Missing source rotation plane '+j.name);const desired=k===0?unit(sub(chains[2][0].position,j.position)):normal;return mul(unit(x),dot(cross(x,y),desired)>=0?1:-1)}));
+
+ const opposition=unit(cross(sub(chains[0][1].position,chains[0][0].position),normal)),spread=chains.map(c=>unit(cross(sub(c[1].position,c[0].position),bar))),thumbRoll=unit(sub(chains[0][1].position,chains[0][0].position));
+ const restV=selected.map(v=>local(v.v)),restPairs=selfPairs(restV,faces),restKeys=new Set(restPairs.map(p=>p.join(':')));
+ const owner=faces.map(f=>{const sums=Array(5).fill(0);for(const i of f)for(let k=0;k<5;k++)for(const [j,w] of selected[i].ws)if(regions[k].has(j))sums[k]+=w/3;const k=sums.indexOf(Math.max(...sums));return sums[k]>.45?k+1:0});
+ const edgeMap=new Map();for(const f of faces)for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],key=[Math.min(a,b),Math.max(a,b)].join(':');if(!edgeMap.has(key))edgeMap.set(key,[a,b,Math.hypot(...sub(restV[a],restV[b]))])}const edges=[...edgeMap.values()].filter(e=>e[2]>1e-5);
+ const anatomical=(v,pairs)=>{const groups={},affected=new Set();for(const [a,b] of pairs){const x=owner[a],y=owner[b],name=x===y?(x?'same finger / joint skin':'palm local skin'):!x||!y?'finger / palm':x===1||y===1?'thumb / finger':Math.abs(x-y)===1?'adjacent fingers':'nonadjacent fingers',d=pairOverlap(faces[a].map(i=>v[i]),faces[b].map(i=>v[i]));const g=groups[name]??={pairs:0,maxSeparationMm:0,triangles:new Set(),fingerPairs:{}};g.pairs++;g.maxSeparationMm=Math.max(g.maxSeparationMm,d*1000);g.triangles.add(a);g.triangles.add(b);g.fingerPairs[[x,y].sort().join(':')]=(g.fingerPairs[[x,y].sort().join(':')]??0)+1;affected.add(a);affected.add(b)}return {groups:Object.fromEntries(Object.entries(groups).map(([k,g])=>[k,{...g,triangles:g.triangles.size}])),affected:[...affected]}};
+ const strain=v=>{const a=edges.map(([i,j,l])=>Math.hypot(...sub(v[i],v[j]))/l).sort((a,b)=>a-b);return {p05:a[Math.floor(a.length*.05)],p95:a[Math.floor(a.length*.95)],min:a[0],max:a.at(-1),collapsed:a.filter(x=>x<.5).length}};
+ function handModel(v,pairs=[]){const affected=new Set(pairs.flat()),parts=[];for(const [name,color,test] of [['intact',[.68,.40,.27],i=>!affected.has(i)],['self-overlap',[.9,.12,.08],i=>affected.has(i)]]){const p=part(name,color,'body');for(let i=0;i<faces.length;i++)if(test(i)){const j=p.positions.length/3;for(const k of faces[i])push(p,v[k],[[0,1]]);p.indices.push(j,j+1,j+2)}if(p.indices.length){normals(p);parts.push(p)}}return {parts}}
+ function skin(x,subset){const q=m.joints.map(()=>[0,0,0,1]);for(let k=0;k<5;k++)for(let s=0;s<3;s++)q[chains[k][s].id]=quat(axes[k][s],x[k*3+s]);q[chains[0][0].id]=qmul(quat(opposition,x[15]),q[chains[0][0].id]);for(let k=0;k<5;k++)q[chains[k][0].id]=qmul(quat(spread[k],x[18+k]??0),q[chains[k][0].id]);q[chains[0][0].id]=qmul(quat(thumbRoll,x[23]??0),q[chains[0][0].id]);const world=poseFrom(m,q);return {q,vertices:subset.map(o=>local(o.ws.reduce((a,[j,w])=>add(a,mul(add(world[j].p,rotate(world[j].q,sub(o.v,m.joints[j].position))),w)),[0,0,0])))}}
+ if(anatomyOnly){
+  const qid=[0,0,0,1],caps=[[.60,.85,.65],[1.12,1.40,.92],[1.15,1.48,1.0],[1.18,1.48,1.02],[1.20,1.45,.98]],poses=[{name:'relaxed',a:Array.from({length:5},()=>[0,0,0]),opp:0}];
+  for(let k=0;k<5;k++)for(const t of [.25,.5,.75,1])poses.push({name:'digit-'+(k+1)+'-'+t,a:caps.map((v,i)=>v.map(x=>i===k?x*t:0)),opp:0});
+  for(const t of [.25,.5,.75,1])poses.push({name:'four-'+t,a:caps.map((v,i)=>v.map(x=>i?x*t:0)),opp:0});
+  for(const t of [.25,.5,.75,1])poses.push({name:'opposition-'+t,a:caps.map((v,i)=>v.map(x=>i===0?x*.45:0)),opp:t});
+  poses.push({name:'fist',a:caps.map((v,k)=>v.map(x=>x*(k===0?.55:1))),opp:1});
+  const axesReport=chains.flatMap((c,k)=>c.map((j,i)=>({name:j.name,head:j.position,tail:j.sourceTail,frame:j.sourceFrame,plane:j.sourcePlane,flexionAxis:axes[k][i],degrees:caps[k][i]*180/Math.PI})));
+  const jointIds=new Set(chains.flat().map(j=>j.id)),adj=Array.from({length:selected.length},()=>[]);for(const [i,j,l] of edges){adj[i].push([j,l]);adj[j].push([i,l])}
+  const qnorm=q=>mul(q,1/(Math.hypot(...q)||1));
+  function transforms(pose){const q=m.joints.map(()=>qid.slice());for(let k=0;k<5;k++)for(let s=0;s<3;s++)q[chains[k][s].id]=quat(axes[k][s],pose.a[k][s]);
+   const t=chains[0][0],dir=t.sourceFrame[1],target=unit(sub(chains[2][0].position,t.position)),ax=unit(cross(dir,target));
+   q[t.id]=qmul(quat(ax,.48*pose.opp),qmul(quat(dir,.30*pose.opp),q[t.id]));return q}
+  function deformLocal(q,mode){
+   const w=poseFrom(m,q),rows=selected.map(o=>{
+    const influenced=o.ws.filter(([j])=>jointIds.has(j)),strength=influenced.reduce((a,[j,x])=>a+x,0),bending=influenced.reduce((a,[j,x])=>a+x*(1-Math.abs(q[j][3])),0);
+    const ws=mode==='B'&&strength>.45?o.ws.map(([j,x])=>[j,Math.pow(x,1+Math.min(.4,bending*3))]):o.ws;
+    const sum=ws.reduce((a,[j,x])=>a+x,0),linear=ws.reduce((a,[j,x])=>add(a,mul(add(w[j].p,rotate(w[j].q,sub(o.v,m.joints[j].position))),x/sum)),[0,0,0]);
+    // Local rotational corrective: preserve the original offset around a
+    // weighted joint pivot rather than blending opposing radial offsets.
+    const pivot=o.ws.reduce((a,[j,x])=>add(a,mul(m.joints[j].position,x)),[0,0,0]),posed=o.ws.reduce((a,[j,x])=>add(a,mul(w[j].p,x)),[0,0,0]),refQ=w[o.ws[0][0]].q,blend=qnorm(o.ws.reduce((a,[j,x])=>add(a,mul(w[j].q,x*(dot(refQ,w[j].q)<0?-1:1))),[0,0,0,0]));
+    const rigid=add(posed,rotate(blend,sub(o.v,pivot))),alpha=(mode==='C'||mode==='D')?Math.min(.85,bending*5)*strength:0;
+    return {v:local(add(linear,mul(sub(rigid,linear),alpha))),mobility:Math.min(1,bending*8)*strength}
+   });let v=rows.map(x=>x.v);
+   // Bounded local edge correction for the hybrid candidate. Correct only
+   // compressed edges, preserving thickness; never scale the hand smaller.
+   if(mode==='D'){const base=v.map(p=>p.slice());for(let it=0;it<6;it++){const d=v.map(()=>[0,0,0]),n=v.map(()=>0);for(const [i,j,l] of edges){const a=sub(v[j],v[i]),len=Math.hypot(...a);if(len>=.72*l||len<1e-9)continue;const f=mul(a,(.72*l-len)/len*.5);d[i]=sub(d[i],f);d[j]=add(d[j],f);n[i]++;n[j]++}v=v.map((p,i)=>{const q=add(p,mul(d[i],rows[i].mobility/Math.max(1,n[i]))),delta=sub(q,base[i]),l=Math.hypot(...delta);return l>.003?add(base[i],mul(delta,.003/l)):q})}}
+   return v;
+  }
+  const methods={},accepted=[];
+  for(const mode of ['A','B','C','D']){
+   const rows=[];
+   for(const p of poses){const q=transforms(p),v=deformLocal(q,mode),pairs=selfPairs(v,faces).filter(p=>!restKeys.has(p.join(':'))),edge=strain(v),pass=!pairs.length&&!edge.collapsed;
+    rows.push({pose:p.name,angles:p.a,opposition:p.opp,rotations:Object.fromEntries(chains.flat().map(j=>[j.name,q[j.id]])),newSelfPairs:pairs.length,edge,pass,anatomical:anatomical(v,pairs)});
+    if(p.name==='relaxed'||p.name==='fist'||p.name.endsWith('-1')){for(const view of ['front','side','three-quarter'])writeFileSync(join(out,'v14-hand-'+mode+'-'+p.name+'-'+view+'.png'),raster(handModel(v,pairs),{view,size:512,mode:'A'}).png)}
+   }
+   methods[mode]={rows,passed:rows.every(x=>x.pass),maxSelfPairs:Math.max(...rows.map(x=>x.newSelfPairs)),maxCollapsed:Math.max(...rows.map(x=>x.edge.collapsed)),passedPoses:rows.filter(x=>x.pass).length};
+   // The grip path only supports the original LBS weights. A corrected
+   // candidate must be integrated consistently before a grip is attempted.
+   if(methods[mode].passed)accepted.push(mode);
+  }
+  return {axes:axesReport,methods,accepted,gripAllowed:accepted.includes('A'),notes:'A source-plane axes/original weights; B local weight sharpening; C procedural pose-space radial offset corrective; D bounded local compression relaxation. No altered source rest mesh. Correction candidates are research-only, not GLB runtime skinning.'};
+ }
+ const sample=[];for(let k=0;k<6;k++){const group=selected.filter(v=>k===5?v.palm:v.rs[k]);for(let i=0;i<group.length;i+=Math.max(1,Math.floor(group.length/48)))if(!sample.includes(group[i]))sample.push(group[i])}
+ function evaluate(x,subset=sample,full=false){const {q,vertices}=skin(x,subset),signed=vertices.map(v=>Math.hypot(v[1]-x[16],v[2]-x[17])-r),closest=a=>{const s=a.map(Math.abs).sort((a,b)=>a-b).slice(0,Math.max(2,Math.floor(a.length/12)));return s.length?s.reduce((n,v)=>n+v*v,0)/s.length:1},pen=signed.map(v=>Math.max(0,-v-.00015));let cost=70*pen.reduce((n,v)=>n+v*v,0)/pen.length+12*Math.max(...pen)**2;
+ for(let k=0;k<5;k++){cost+=2.5*closest(signed.filter((_,i)=>subset[i].rs[k]))+2*closest(signed.filter((_,i)=>subset[i].ds[k]))}
+ cost+=2*closest(signed.filter((_,i)=>subset[i].palm));cost+=.0000004*x.slice(0,15).reduce((n,v,i)=>n+(v-[.75,1,.5][i%3])**2,0);
+ return {cost,q,vertices,signed}}
+ const limits=[...Array.from({length:5},()=>[[0,1.48],[0,1.48],[0,1.35]]).flat(),[-.7,.95],[-.04,.035],[.009,.06],...Array.from({length:5},()=>[-.28,.28]),[-.65,.65]];
+ const seed=[.3514254851,.4021415360,.3520454565,.8075196822,.9478738034,.6088002316,.9549803218,.9980971252,.6281869677,.8888940411,.9774072544,.6264369945,.8529601481,.7082617535,.3736134718,.7435492121,-.02251227395,.03261053433+(r-.010)];
+ seed.push(0,0,0,0,0,0);let best=[.65,.65,.45,...Array.from({length:4},()=>[.6,1.05,.65]).flat(),.35,-.01,r+.014,0,0,0,0,0,0],score=evaluate(best).cost;
+ // Deterministic bounded pattern search: no cross-morph copying or global finger rotations.
+ for(const step of [.24,.12,.06,.03,.015])for(let pass=0;pass<3;pass++)for(let k=0;k<best.length;k++){for(const sign of [-1,1]){const trial=best.slice();trial[k]=clamp(trial[k]+sign*step*(k===16||k===17?.04:1),...limits[k]);const v=evaluate(trial).cost;if(v<score){best=trial;score=v}}}
+ // Exact full mesh validation, including triangle centroids. No approval based on optimizer samples.
+ // Final refinement uses all actual skin vertices, not the coarse sample.
+ // Preserve an independently measured reference pose as a candidate, never
+ // copy its approval to other morphs or handle diameters.
+ const fullCost=x=>{const e=evaluate(x,selected,true),tri=faces.map(f=>f.reduce((a,i)=>add(a,mul(e.vertices[i],1/3)),[0,0,0])),pen=[...e.signed,...tri.map(v=>Math.hypot(v[1]-x[16],v[2]-x[17])-r)].map(v=>Math.max(0,-v-.0001));return e.cost+650*pen.reduce((n,v)=>n+v*v,0)/pen.length+90*Math.max(...pen)**2};
+ let fullScore=fullCost(best),seedScore=fullCost(seed);if(seedScore<fullScore){best=seed.slice();fullScore=seedScore}
+ for(const step of [.12,.06,.03,.015,.0075])for(let pass=0;pass<2;pass++)for(let k=0;k<best.length;k++)for(const sign of [-1,1]){const t=best.slice();t[k]=clamp(t[k]+sign*step*(k===16||k===17?.04:1),...limits[k]);const v=fullCost(t);if(v<fullScore){best=t;fullScore=v}}
+ // Add worst continuously tested triangles to the active set. A local
+ // search re-evaluates these exact triangle constraints, not just centroids.
+ const controls=[['A-relaxed',Array(16).fill(0)],['B-flexed',[.15,.25,.15,...Array.from({length:4},()=>[.35,.55,.25]).flat(),.10]],['C-closed',[.35,.50,.35,...Array.from({length:4},()=>[.85,1.10,.65]).flat(),.65]]].map(([name,a])=>{const x=[...a,0,0,0,0,0,0,0,0],v=skin(x,selected).vertices,pairs=selfPairs(v,faces).filter(p=>!restKeys.has(p.join(':')));return {name,model:handModel(v,pairs),report:{name,angles:a,newPairs:pairs.length,anatomical:anatomical(v,pairs),strain:strain(v)}}});
+ const active=new Set(),activeSelf=new Map(),iterations=[],prior=best.slice(),surface=x=>{const e=evaluate(x,selected,true);return {e,distances:faces.map(f=>triangleRadial(f.map(i=>e.vertices[i]),x.slice(16,18))-r)}};
+ const closureCost=x=>{const e=evaluate(x,selected,true),p=[...active].map(i=>Math.max(0,r-.00015-triangleRadial(faces[i].map(j=>e.vertices[j]),x.slice(16,18)))),gap=e.signed.filter((_,i)=>selected[i].palm).map(Math.abs),palm=Math.min(...gap),angles=x.slice(0,16).reduce((n,v,i)=>n+(v-prior[i])**2,0);
+ const self=[...activeSelf.values()].map(([a,b])=>Math.max(0,pairOverlap(faces[a].map(j=>e.vertices[j]),faces[b].map(j=>e.vertices[j]))+.00012));
+ const contact=e.vertices.map((v,i)=>({i,a:Math.atan2(v[2]-x[17],v[1]-x[16]),d:Math.abs(e.signed[i])})),thumb=contact.filter(v=>selected[v.i].ds[0]).sort((a,b)=>a.d-b.d).slice(0,8),other=contact.filter(v=>selected[v.i].ds.slice(1).some(Boolean)).sort((a,b)=>a.d-b.d).slice(0,16),opp=Math.min(1,...thumb.flatMap(a=>other.map(b=>Math.cos(a.a-b.a)+30*(a.d+b.d))));
+ const sectors=new Set(contact.filter(v=>v.d<.003).map(v=>Math.floor((v.a+Math.PI)/(Math.PI/6))%12));const volume=edges.reduce((n,[i,j,l])=>{const ratio=Math.hypot(...sub(e.vertices[i],e.vertices[j]))/l;return n+Math.max(0,.60-ratio,ratio-1.8)**2},0)/edges.length;
+ return e.cost+300*Math.max(0,...p)**2+120*p.reduce((n,v)=>n+v*v,0)/Math.max(1,p.length)+500*Math.max(0,...self)**2+250*self.reduce((n,v)=>n+v*v,0)/Math.max(1,self.length)+15*Math.max(0,palm-.0025)**2+.00003*Math.max(0,opp+.35)**2+.000003*Math.max(0,6-sectors.size)**2+.00002*volume+0.000002*angles};
+ for(let round=0;round<7;round++){
+  const a=surface(best),worst=a.distances.map((d,i)=>({d,i})).filter(x=>x.d<-.00015).sort((a,b)=>a.d-b.d);for(const x of worst.slice(0,40))active.add(x.i);
+  const pairs=selfPairs(a.e.vertices,faces).filter(p=>!restKeys.has(p.join(':'))).map(p=>({p,d:pairOverlap(faces[p[0]].map(i=>a.e.vertices[i]),faces[p[1]].map(i=>a.e.vertices[i]))})).sort((a,b)=>b.d-a.d);
+  for(const {p} of pairs.slice(0,80))activeSelf.set(p.join(':'),p);
+  iterations.push({round,active:active.size,activeSelf:activeSelf.size,newSelfPairs:pairs.length,maxPenetrationMm:Math.max(0,-Math.min(...a.distances))*1000,violations:worst.length});
+  if(!pairs.length&&iterations.at(-1).maxPenetrationMm<=.45)break;
+  let score=closureCost(best);for(const step of [.025,.0125,.00625,.003125])for(let pass=0;pass<2;pass++)for(let k=0;k<best.length;k++)for(const sign of [-1,1]){const t=best.slice();t[k]=clamp(t[k]+sign*step*(k===16||k===17?.04:1),...limits[k]);const val=closureCost(t);if(val<score){best=t;score=val}}
+ }
+ const e=evaluate(best,selected,true),signed=e.signed,centroids=faces.map(f=>f.reduce((a,i)=>add(a,mul(e.vertices[i],1/3)),[0,0,0])).map(v=>Math.hypot(v[1]-best[16],v[2]-best[17])-r),fingers=chains.map((c,k)=>{const a=signed.filter((_,i)=>selected[i].rs[k]),d=signed.filter((_,i)=>selected[i].ds[k]);return {finger:k+1,samples:a.length,closestGapMm:Math.min(...a.map(Math.abs))*1000,distalGapMm:Math.min(...d.map(Math.abs))*1000,penetrationSamples:a.filter(v=>v<-.001).length}});
+ const exact=faces.map(f=>triangleRadial(f.map(i=>e.vertices[i]),best.slice(16,18))-r),maxPenetrationMm=Math.max(0,-Math.min(...signed,...centroids))*1000,maxTrianglePenetrationMm=Math.max(0,-Math.min(...exact))*1000;
+ const posedPairs=selfPairs(e.vertices,faces),newPairs=posedPairs.filter(p=>!restKeys.has(p.join(':')));
+ const palmGapMm=Math.min(...signed.filter((_,i)=>selected[i].palm).map(Math.abs))*1000,contacts=e.vertices.map((v,i)=>({v,i,d:signed[i],a:Math.atan2(v[2]-best[17],v[1]-best[16])})).filter(x=>Math.abs(x.d)<=.003&&Math.abs(x.v[0])<=.075);
+ const sectors=new Set(contacts.map(c=>Math.floor((c.a+Math.PI)/(Math.PI/6))%12)),thumb=contacts.filter(c=>selected[c.i].ds[0]),finger=contacts.filter(c=>selected[c.i].ds.slice(1).some(Boolean)),oppositionCos=thumb.length&&finger.length?Math.min(...thumb.flatMap(a=>finger.map(b=>Math.cos(a.a-b.a)))):1;
+ const gates={penetration:maxPenetrationMm<=.5&&maxTrianglePenetrationMm<=.5,distal:fingers.every(f=>f.distalGapMm<=3&&f.penetrationSamples===0),palm:palmGapMm<=3,wrap:sectors.size>=6,opposition:oppositionCos<-.35,selfIntersection:newPairs.length===0,flexion:best.slice(3,15).every((a,i)=>a>=(i%3===1?.35:.15))},passed=Object.values(gates).every(Boolean);
+ const hand=part('actual MakeHuman isolated left hand',[.68,.40,.27],'body');for(let i=0;i<selected.length;i++)push(hand,e.vertices[i],[[0,1]]);hand.indices=faces.flat();normals(hand);
+ const handle=part('independent rigid test cylinder',[.29,.16,.075],'equipment'),N=32;for(let s of [-.075,.075])for(let i=0;i<N;i++){const a=2*Math.PI*i/N;push(handle,[s,best[16]+r*Math.cos(a),best[17]+r*Math.sin(a)],[[0,1]])}for(let i=0;i<N;i++){let j=(i+1)%N;handle.indices.push(i,j,j+N,i,j+N,i+N)}for(let i=1;i<N-1;i++)handle.indices.push(0,i+1,i,N,N+i,N+i+1);normals(handle);
+ const contactParts=[];for(const [name,color,select] of [['clear',[.55,.55,.55],d=>d>.003],['contact',[.19,.62,.38],d=>d>=-.0005&&d<=.003],['penetration',[.86,.14,.12],d=>d<-.0005]]){const p=part(name,color,'body');for(let i=0;i<faces.length;i++)if(select(exact[i])){const offset=p.positions.length/3;for(const j of faces[i])push(p,e.vertices[j],[[0,1]]);p.indices.push(offset,offset+1,offset+2)}if(p.indices.length){normals(p);contactParts.push(p)}}
+ return {controls,selfModel:handModel(e.vertices,newPairs),model:{parts:[hand,handle]},contactModel:{parts:[...contactParts,handle]},report:{diameterMm:r*2000,vertices:selected.length,triangles:faces.length,optimizerSamples:sample.length,angles:best.slice(0,16),mcpSpread:best.slice(18,23),thumbRoll:best[23],jointAxes:axes,palmBasis:basis,handleCenterWorld:global([0,best[16],best[17]]),handleAxis:bar,localRotations:Object.fromEntries(chains.flat().map(j=>[j.name,e.q[j.id]])),fingers,gates,iterations,palmGapMm,contactSectors:sectors.size,oppositionCos,restSelfPairs:restPairs.length,posedSelfPairs:posedPairs.length,newSelfPairs:newPairs.length,selfIntersectionPairs:newPairs,anatomicalSelfAudit:anatomical(e.vertices,newPairs),edgeStrain:strain(e.vertices),controls:controls.map(c=>c.report),maxPenetrationMm,maxTrianglePenetrationMm,trianglesInsideHalfMm:exact.filter(v=>v<-.0005).length,verticesInside1mm:signed.filter(v=>v<-.001).length,centroidsInside1mm:centroids.filter(v=>v<-.001).length,passed,scope:'Full triangle-cylinder penetration; nonadjacent triangle SAT, baseline comparison, contact sectors and thumb opposition. Visual review still required.'}};
+}
+if(process.env.CHARACTER_EVIDENCE){
+ const m=JSON.parse(readFileSync(join(out,'makehuman-base.json'))),anatomy=gripStudy(m,.010,true);
+ writeFileSync(join(out,'v14-hand-anatomy.json'),JSON.stringify(anatomy,null,2));
+ console.log(JSON.stringify({anatomy:Object.fromEntries(Object.entries(anatomy.methods).map(([k,v])=>[k,{passedPoses:v.passedPoses,total:v.rows.length,maxSelfPairs:v.maxSelfPairs,maxCollapsed:v.maxCollapsed}]))}));
+ if(!anatomy.gripAllowed){writeFileSync(join(out,'v11-grip-report.json'),JSON.stringify({rows:[],accepted:false,base20Passed:false,shieldProductionAllowed:false,reason:'No anatomy-qualified original-weight candidate; grip deliberately not executed'},null,2));}
+ else {
+const rows=[],cases=[['base',.010],['base',.014],['base',.018],...['short-light','tall-heavy'].flatMap(n=>[.010,.014,.018].map(r=>[n,r]))];for(const [name,r] of cases){if(rows.length&&!rows[0].passed)break;const m=JSON.parse(readFileSync(join(out,'makehuman-'+name+'.json'))),{model,contactModel,selfModel,controls,report}=gripStudy(m,r);if(name==='base'&&r===.010){for(const c of controls)for(const view of ['front','side','three-quarter'])writeFileSync(join(out,'v13-hand-'+c.name+'-'+view+'.png'),raster(c.model,{view,size:640,mode:'A'}).png);for(const view of ['front','side','three-quarter'])writeFileSync(join(out,'v13-grip-self-'+view+'.png'),raster(selfModel,{view,size:640,mode:'A'}).png)}rows.push({...report,morph:name});for(const view of ['front','side','back','three-quarter']){writeFileSync(join(out,'v12-grip-'+name+'-'+r*2000+'-'+view+'.png'),raster(model,{view,size:640,mode:'B'}).png);writeFileSync(join(out,'v12-grip-contact-'+name+'-'+r*2000+'-'+view+'.png'),raster(contactModel,{view,size:640,mode:'A',bounds:commonBounds([model],view)}).png)}}writeFileSync(join(out,'v11-grip-report.json'),JSON.stringify({rows,accepted:rows.length===9&&rows.every(x=>x.passed),base20Passed:rows[0].passed,shieldProductionAllowed:false,reason:'Base 20mm must pass all isolated gates before expanding; shield requires visual approval'},null,2));console.log(JSON.stringify(rows.map(({morph,diameterMm,maxTrianglePenetrationMm,passed,gates,newSelfPairs})=>({morph,diameterMm,maxTrianglePenetrationMm,passed,gates,newSelfPairs}))));}
+}

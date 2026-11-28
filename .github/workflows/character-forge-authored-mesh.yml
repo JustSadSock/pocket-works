@@ -1,0 +1,71 @@
+name: Character Forge Authored Mesh Study
+on:
+  pull_request:
+    paths:
+      - 'tools/character-forge/authored-mesh/**'
+      - '.github/workflows/character-forge-authored-mesh.yml'
+  workflow_dispatch:
+    inputs:
+      baseline_run:
+        description: Archived P0 run with Artisan Base and source artifacts
+        type: string
+        default: '46138654367'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  artisan-base:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.5'
+      - name: Import contract
+        run: node --test tools/character-forge/authored-mesh/import.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-source
+          path: quality-artifacts/authored/source
+          run-id: ${{ inputs.baseline_run || '46138654367' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-candidate-artisan-base
+          path: quality-artifacts/authored/control
+          run-id: ${{ inputs.baseline_run || '46138654367' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Independent authored geometry twice
+        run: |
+          python -m pip install -r tools/character-forge/authored-mesh/requirements.txt
+          export OPENBLAS_NUM_THREADS=1
+          mkdir -p quality-artifacts/authored/result
+          python tools/character-forge/authored-mesh/author-artisan.py quality-artifacts/authored/source/morph/makehuman-base.json quality-artifacts/authored/result/document.json
+          python tools/character-forge/authored-mesh/author-artisan.py quality-artifacts/authored/source/morph/makehuman-base.json quality-artifacts/authored/repeat.json
+          cmp quality-artifacts/authored/result/document.json quality-artifacts/authored/repeat.json
+          sha256sum quality-artifacts/authored/result/document.json
+      - name: Existing Forge native export and sampled playback
+        run: node tools/character-forge/authored-mesh/export-study.mjs quality-artifacts/authored/control/p0-model.json quality-artifacts/authored/result/document.json quality-artifacts/authored/result/study.glb
+      - name: Independent exported GLB and archived control audit
+        run: |
+          export OPENBLAS_NUM_THREADS=1
+          python tools/character-forge/authored-mesh/collision-test.py
+          root=quality-artifacts/authored
+          source="$root/source/morph/makehuman-base.json"
+          outer=$(node -e 'console.log(require("./quality-artifacts/authored/result/document.json").parts[0].outerVertexCount)')
+          old=$(node -e 'console.log(require("./quality-artifacts/authored/control/p0-model.json").parts.find(p=>p.name==="tunic").outerVertexCount)')
+          python tools/character-forge/authored-mesh/audit-export.py "$root/result/study.glb" "$source" "authored artisan tunic" "$outer" "$root/result/audit67.json"
+          python tools/character-forge/authored-mesh/audit-export.py "$root/control/character.glb" "$source" tunic "$old" "$root/result/control-audit67.json"
+      - name: Fail-closed isolated study gate
+        run: |
+          node -e 'const r=require("./quality-artifacts/authored/result/audit67.json");if(r.states!==67||r.isolatedGate!==true){console.error("Study remains rejected:",r.summary);process.exit(1)}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: artisan-authored-mesh-study
+          path: quality-artifacts/authored/result
+          retention-days: 30

@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "defaults": {
+    "style": "historical-miniature",
+    "lod": "medium",
+    "anatomy": "v3",
+    "actions": [
+      "idle",
+      "walk"
+    ],
+    "seed": 17,
+    "composite": false
+  },
+  "profiles": {
+    "horse": {
+      "base": {
+        "recipe": "horse",
+        "morphology": {
+          "height": 1.55,
+          "chest": 1,
+          "neck": 1
+        }
+      },
+      "courser": {
+        "extends": "base",
+        "morphology": {
+          "build": 0.85,
+          "neck": 1.12,
+          "chest": 0.87,
+          "limb": 1.07,
+          "muzzle": 1.12
+        }
+      },
+      "draft": {
+        "extends": "base",
+        "morphology": {
+          "build": 1.27,
+          "chest": 1.18,
+          "neck": 0.88,
+          "limb": 0.92,
+          "muzzle": 0.9
+        }
+      },
+      "pony": {
+        "extends": "base",
+        "morphology": {
+          "height": 1.18,
+          "build": 1.19,
+          "neck": 0.85,
+          "limb": 0.88,
+          "head": 1.16
+        }
+      },
+      "elder": {
+        "extends": "base",
+        "morphology": {
+          "build": 0.88,
+          "neck": 1.07,
+          "chest": 0.89,
+          "tail": 0.8,
+          "age": 0.9
+        }
+      }
+    },
+    "elephant": {
+      "base": {
+        "recipe": "elephant",
+        "morphology": {
+          "height": 2.9
+        }
+      },
+      "massive": {
+        "extends": "base",
+        "morphology": {
+          "height": 3.25,
+          "build": 1.24,
+          "chest": 1.17,
+          "tusk": 1.28,
+          "ear": 1.2
+        }
+      },
+      "compact": {
+        "extends": "base",
+        "morphology": {
+          "height": 2.4,
+          "build": 1.15,
+          "neck": 0.8,
+          "tusk": 0.75,
+          "ear": 0.78
+        }
+      },
+      "longTrunk": {
+        "extends": "base",
+        "morphology": {
+          "trunk": 1.3,
+          "chest": 0.95,
+          "ear": 1.1,
+          "tusk": 0.83
+        }
+      },
+      "light": {
+        "extends": "base",
+        "morphology": {
+          "build": 0.87,
+          "chest": 0.86,
+          "limb": 1.05,
+          "trunk": 0.92,
+          "tusk": 0.72
+        }
+      }
+    }
+  }
+}

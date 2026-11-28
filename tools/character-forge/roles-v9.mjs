@@ -1,0 +1,291 @@
+// v0.9 historical role construction. One MakeHuman anatomical source,
+// one shared garment pattern and reusable fitted parts; role differences are
+// generated from declared cuts, equipment and material classes.
+import {produceRole,roles as roleProfiles} from './roles-v8.mjs';
+import {part,push,weights,normals} from './hybrid-human.mjs';
+import {sewLining} from './garment.mjs';
+import {authoredPatch,ringSampler,reweightLinedSurface} from './authored-surface.mjs';
+import {bindTrim} from './surface-binding.mjs';
+import {profiles} from './material-study.mjs';
+const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),mix=(a,b,t)=>add(mul(a,1-t),mul(b,t)),unit=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),tau=Math.PI*2;
+const J=(m,n)=>{const j=m.joints.find(x=>x.name===n);if(!j)throw Error('Missing joint '+n);return j};
+function addPart(m,name,color,kind,region=name){const p=part(name,color,kind==='metal'?'equipment':'clothing');p.layer=4;p.region=region;p.material={kind,roughness:profiles[kind]?.roughness??(kind==='wood'?.82:.72),metallic:profiles[kind]?.metallic??0};m.parts.push(p);return p}
+function grid(p,rows,cols){for(let r=0;r<rows-1;r++)for(let c=0;c<cols-1;c++){let a=r*cols+c,b=a+1;p.indices.push(a,b,b+cols,a,b+cols,a+cols)}return p}
+function finish(p,thickness=.004){if(thickness)sewLining(p,thickness);p.thickness=thickness;return normals(p)}
+function tube(m,name,stations,color,kind='leather',sides=12,thickness=.004){
+ const p=addPart(m,name,color,kind),centers=stations.map(s=>s.p);
+ for(let r=0;r<stations.length;r++){
+  const s=stations[r],axis=unit(sub(centers[Math.min(r+1,centers.length-1)],centers[Math.max(0,r-1)])),helper=Math.abs(axis[1])>.88?[1,0,0]:[0,1,0],u=unit([axis[1]*helper[2]-axis[2]*helper[1],axis[2]*helper[0]-axis[0]*helper[2],axis[0]*helper[1]-axis[1]*helper[0]]),v=[axis[1]*u[2]-axis[2]*u[1],axis[2]*u[0]-axis[0]*u[2],axis[0]*u[1]-axis[1]*u[0]];
+  for(let k=0;k<=sides;k++){const a=tau*k/sides,q=add(s.p,add(mul(u,Math.cos(a)*s.r),mul(v,Math.sin(a)*s.r)));push(p,q,s.ws)}
+ }
+ grid(p,stations.length,sides+1);return finish(p,thickness);
+}
+function ellipsoid(m,name,c,r,ws,color,kind='leather',rows=8,cols=16){
+ const p=addPart(m,name,color,kind);
+ for(let i=0;i<=rows;i++){const a=Math.PI*i/rows;for(let k=0;k<=cols;k++){const b=tau*k/cols,v=[c[0]+r[0]*Math.sin(a)*Math.cos(b),c[1]+r[1]*Math.cos(a),c[2]+r[2]*Math.sin(a)*Math.sin(b)];push(p,v,ws)}}
+ grid(p,rows+1,cols+1);return finish(p,.003);
+}
+function appendTorus(p,c,u,v,n,R,r,ws){const M=8,S=4;for(let i=0;i<=M;i++)for(let k=0;k<=S;k++){const a=tau*i/M,b=tau*k/S,rad=add(mul(u,Math.cos(a)),mul(v,Math.sin(a))),q=add(c,add(mul(rad,R),mul(add(mul(rad,Math.cos(b)),mul(n,Math.sin(b))),r)));push(p,q,ws)}const base=p.positions.length/3-(M+1)*(S+1);for(let i=0;i<M;i++)for(let k=0;k<S;k++){const a=base+i*(S+1)+k,b=a+1,c=b+S+1,d=a+S+1;p.indices.push(a,b,c,a,c,d)}}
+function torus(m,name,c,u,v,n,R,r,ws,color=[.31,.34,.35]){const p=addPart(m,name,color,'metal','mail');appendTorus(p,c,u,v,n,R,r,ws);return normals(p)}
+function panelAt(tunic,row,t,k){
+ const N=tunic.pattern.ringCount,a=row*N+((k%N)+N)%N,b=(row+1)*N+((k%N)+N)%N;
+ const va=tunic.positions.slice(a*3,a*3+3),vb=tunic.positions.slice(b*3,b*3+3);
+ return {v:mix(va,vb,t),ws:[...weights(tunic,a).map(([j,w])=>[j,w*(1-t)]),...weights(tunic,b).map(([j,w])=>[j,w*t])]};
+}
+function radial(v,c){return unit([v[0]-c[0],0,v[2]-c[1]])}
+function curvedPatch(m,tunic,name,rows,from,to,color,kind='metal',offset=.018,thickness=.004){
+ const p=addPart(m,name,color,kind),N=to-from+1;
+ for(let ri=0;ri<rows.length;ri++){const [row,t]=rows[ri],center=mix(tunic.pattern.sections[row].center,tunic.pattern.sections[row+1].center,t);
+  for(let k=from;k<=to;k++){const {v,ws}=panelAt(tunic,row,t,k),n=radial(v,center),bulge=.006*Math.sin(Math.PI*ri/Math.max(1,rows.length-1))*Math.sin(Math.PI*(k-from)/Math.max(1,to-from));push(p,add(v,mul(n,offset+bulge)),ws)}
+ }
+ grid(p,rows.length,N);return finish(p,thickness);
+}
+function mailCurtain(m,tunic){
+ const N=tunic.pattern.ringCount,sections=[[2,.18],[2,.48],[2,.78],[3,.08],[3,.34]],centers=[],p=addPart(m,'interlinked mail aventail and collar',[.30,.34,.36],'metal','mail');
+ for(const [row,t] of sections)for(let k=0;k<N;k+=2){
+  const a=panelAt(tunic,row,t,k),b=panelAt(tunic,row,t,k+1),c=panelAt(tunic,row,t,k-1),center=a.v,centerLine=tunic.pattern.sections[row].center;
+  const u=unit(sub(b.v,c.v)),n=radial(center,centerLine),v=unit([u[1]*n[2]-u[2]*n[1],u[2]*n[0]-u[0]*n[2],u[0]*n[1]-u[1]*n[0]]);
+  centers.push({c:add(center,mul(n,.006)),u,v,n,ws:a.ws});
+ }
+ for(const x of centers)appendTorus(p,x.c,x.u,x.v,x.n,.009,.0022,x.ws);normals(p);
+ return {rings:centers.length,parts:1};
+}
+function rivet(m,name,p,ws,size=.008,color=[.55,.36,.14]){return ellipsoid(m,name,p,[size,size,size*.65],ws,color,'metal',4,8)}
+function curvedBand(m,tunic,name,t0,t1,color=[.40,.43,.43],offset=.032){
+ const p=addPart(m,name,color,'metal','torso armour'),N=tunic.pattern.ringCount;
+ for(const t of [t0,t1])for(let k=0;k<=N;k++){const a=panelAt(tunic,2,t,k),center=mix(tunic.pattern.sections[2].center,tunic.pattern.sections[3].center,t),n=radial(a.v,center),v=add(a.v,mul(n,offset+.004*Math.sin(k*tau/N)));push(p,v,a.ws)}
+ grid(p,2,N+1);return finish(p,.006);
+}
+// Dura-Europos central-grip analogue and a separate medieval enarmes
+// arrangement. Geometry and all fittings belong to one rigid bone.
+function shield(m,roman){
+ const wrist=J(m,'wrist.L'),fore=J(m,'lowerarm01.L'),digits=[2,3,4,5].map(n=>J(m,'finger'+n+'-1.L')),palm=digits.reduce((a,j)=>add(a,mul(j.position,.25)),[0,0,0]),barAxis=unit(sub(digits[3].position,digits[0].position)),along=unit(sub(palm,wrist.position)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dot=(a,b)=>a.reduce((n,x,k)=>n+x*b[k],0),normal=unit(cross(barAxis,along));
+ const grip=add(add(palm,mul(normal,.024)),mul(along,.009)),anchor=roman?wrist:fore,ws=[[anchor.id,1]],curvature=roman?.105:.035,thick=roman?.012:.016,w=roman?.245:.175,h=roman?.46:.29,N=24,R=32;
+ // The board and all fittings are in a single palm-aligned rigid frame.
+ // Its back is in front of the curled knuckles, not a global Z plane cutting through them.
+ const outward=[-normal[0],0,-normal[2]],front=Math.hypot(...outward)>.1?unit(outward):[0,0,1],up=[0,1,0],right=unit(cross(up,front)),clearance=roman?.058:.071,center=add(grip,mul(front,clearance+thick-curvature)),p=addPart(m,roman?'curved Roman scutum':'heater shield',[.34,.075,.035],'leather','shield');
+ const point=(u,v,back=false)=>{const shape=roman?1:(1-.48*Math.max(0,-v));return add(center,add(mul(right,u*w*shape),add(mul(up,v*h),mul(front,curvature*(1-u*u)-(back?thick:0)))))};
+ // Only allocate vertices that belong to faces. Blender must preserve
+ // the complete weighted vertex set on import, including the umbo aperture.
+ const remap=new Map(),at=(r,c,back)=>{const key=back+':'+r+':'+c;if(!remap.has(key)){const id=p.positions.length/3;push(p,point(-1+2*c/N,-1+2*r/R,back),ws);remap.set(key,id)}return remap.get(key)},hole=(r,c)=>roman&&Math.abs((c+.5-N/2)*2*w/N)<.067&&Math.abs((r+.5-R/2)*2*h/R)<.057;
+ for(let r=0;r<R;r++)for(let c=0;c<N;c++){if(hole(r,c))continue;const corners=[[r,c],[r,c+1],[r+1,c+1],[r+1,c]],f=corners.map(([r,c])=>at(r,c,false)),b=corners.map(([r,c])=>at(r,c,true));p.indices.push(f[0],f[1],f[2],f[0],f[2],f[3],b[0],b[2],b[1],b[0],b[3],b[2]);for(const [k,rr,cc] of [[0,r-1,c],[1,r,c+1],[2,r+1,c],[3,r,c-1]])if(rr<0||rr>=R||cc<0||cc>=N||hole(rr,cc)){const l=(k+1)%4;p.indices.push(f[k],b[k],b[l],f[k],b[l],f[l])}}
+ normals(p);
+ const ends=[add(grip,mul(barAxis,-.057)),add(grip,mul(barAxis,.057))];
+ tube(m,roman?'scutum horizontal central hand grip':'heater shield hand grip',ends.map(p=>({p,r:.012,ws})),[.21,.11,.05],'wood',12,.002);
+ for(const [i,end] of ends.entries())tube(m,(roman?'scutum':'heater shield')+' grip mounting lug '+i,[{p:end,r:.013,ws},{p:add(end,mul(front,clearance+.003)),r:.018,ws}],[.29,.24,.17],'metal',10,.003);
+ if(!roman){const c=mix(fore.position,wrist.position,.35),u=unit(sub(wrist.position,fore.position));tube(m,'heater shield forearm enarme',[{p:add(c,mul(u,-.016)),r:.049,ws},{p:add(c,mul(u,.016)),r:.049,ws}],[.15,.08,.035],'leather',16,.004)}
+ // A hollow raised umbo, aligned with the board, gives the fist clearance.
+ const boss=addPart(m,roman?'scutum umbo':'heater shield boss',[.48,.43,.31],'metal','shield'),rad=roman?.105:.046,bossBase=point(0,0),S=24,rows=[[rad,0],[rad*.85,.012],[rad*.60,roman?.053:.024],[rad*.25,roman?.073:.029],[rad*.03,roman?.078:.031]];
+ for(const [r,z] of rows)for(let k=0;k<=S;k++){const a=tau*k/S;push(boss,add(bossBase,add(mul(right,r*Math.cos(a)),add(mul(up,r*Math.sin(a)),mul(front,z)))),ws)}
+ grid(boss,rows.length,S+1);const tip=boss.positions.length/3;push(boss,add(bossBase,mul(front,rows.at(-1)[1]+.001)),ws);for(let k=0;k<S;k++)boss.indices.push((rows.length-1)*(S+1)+k,(rows.length-1)*(S+1)+k+1,tip);finish(boss,.003);
+ m.gripPose={side:'L',anchor:anchor.name,handle:grip,axis:barAxis,radius:.012,palmNormal:normal,mode:roman?'central-grip':'enarmes',boardNormal:front,boardClearance:clearance};
+ m.attachments??=[];m.attachments.push({name:roman?'scutum grip':'heater shield grip',joint:anchor.name,local:sub(grip,anchor.position),contactError:Math.hypot(...sub(grip,palm)),gripMethod:m.gripPose.mode,rigid:true,handleEnds:ends});
+}
+function bascinet(m){
+ const h=J(m,'head'),head=m.parts[0],pts=[];
+ for(let i=0;i<head.positions.length;i+=3){const v=head.positions.slice(i,i+3);if(Math.abs(v[1]-h.position[1])<.15&&Math.abs(v[0]-h.position[0])<.11)pts.push(v)}
+ const top=Math.max(...pts.map(v=>v[1])),rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.22,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.18,base=top-.086,centerZ=h.position[2]-.005,N=24,p=addPart(m,'rounded bascinet skull',[.30,.34,.35],'metal','head armour');
+ const rows=[[base,1.08],[base+.025,1.04],[base+.065,.91],[base+.078,.68],[base+.098,.34],[base+.108,.03]];
+ for(const [y,s] of rows)for(let k=0;k<=N;k++){const a=tau*k/N;push(p,[h.position[0]+rx*s*Math.cos(a),y,centerZ+rz*s*Math.sin(a)],[[h.id,1]])}
+ grid(p,rows.length,N+1);const cap=push(p,[h.position[0],rows.at(-1)[0]+.003,typeof centerZ==='number'?centerZ:h.position[2]],[[h.id,1]]);for(let k=0;k<N;k++)p.indices.push((rows.length-1)*(N+1)+k,(rows.length-1)*(N+1)+k+1,cap);for(let i=0;i<p.indices.length;i+=3)[p.indices[i+1],p.indices[i+2]]=[p.indices[i+2],p.indices[i+1]];finish(p,.004);
+ const z=centerZ+rz*.86,visor=addPart(m,'bascinet brow and visor',[.27,.30,.31],'metal','face protection');
+ for(const [x,y] of [[-.060,base+.025],[.060,base+.025],[.055,base+.066],[-.055,base+.066]])push(visor,[h.position[0]+x,y,z],[[h.id,1]]);
+ visor.indices=[0,1,2,0,2,3];finish(visor,.003);
+ const slit=addPart(m,'bascinet eye slit',[.035,.032,.028],'leather','face');for(const [x,y] of [[-.048,base+.044],[.048,base+.044],[.046,base+.050],[-.046,base+.050]])push(slit,[h.position[0]+x,y,z+.002],[[h.id,1]]);slit.indices=[0,1,2,0,2,3];finish(slit,.002);
+ for(const side of [-1,1]){
+  const cheek=addPart(m,'bascinet cheek guard '+side,[.31,.34,.35],'metal','head armour'),x=h.position[0]+side*rx*.78;
+  for(const [xx,y,zz] of [[x,base+.025,centerZ+rz*.2],[x+side*.012,base-.065,centerZ+rz*.54],[x-side*.015,base-.105,centerZ+rz*.26],[x-side*.012,base-.015,centerZ+rz*.12]])push(cheek,[xx,y,zz],[[h.id,1]]);
+  cheek.indices=side>0?[0,1,2,0,2,3]:[0,2,1,0,3,2];finish(cheek,.003);
+ }
+ const neck=J(m,'neck01');tube(m,'mail aventail lower edge',[{p:[h.position[0]-.105,neck.position[1]+.015,neck.position[2]-.01],r:.012,ws:[[neck.id,.7],[h.id,.3]]},{p:[h.position[0],neck.position[1]-.045,neck.position[2]-.045],r:.012,ws:[[neck.id,1]]},{p:[h.position[0]+.105,neck.position[1]+.015,neck.position[2]-.01],r:.012,ws:[[neck.id,.7],[h.id,.3]]}],[.27,.29,.30],'metal',8,.002);
+}
+function imperialHelmet(m){
+ const h=J(m,'head'),head=m.parts[0],pts=[];for(let i=0;i<head.positions.length;i+=3){const v=head.positions.slice(i,i+3);if(Math.abs(v[1]-h.position[1])<.15)pts.push(v)}
+ const top=Math.max(...pts.map(v=>v[1])),rx=Math.max(.055,...pts.map(v=>Math.abs(v[0]-h.position[0])))*1.18,rz=Math.max(.055,...pts.map(v=>Math.abs(v[2]-h.position[2])))*1.16,base=top-.078,N=24,p=addPart(m,'imperial Gallic helmet bowl',[.36,.38,.38],'metal','head armour');
+ const rows=[[base,1.10],[base+.025,1.08],[base+.065,.96],[base+.072,.72],[base+.088,.36],[base+.098,.025]];
+ for(const [y,s] of rows)for(let k=0;k<=N;k++){const a=tau*k/N;push(p,[h.position[0]+rx*s*Math.cos(a),y,h.position[2]+rz*s*Math.sin(a)],[[h.id,1]])}
+ grid(p,rows.length,N+1);const cap=p.positions.length/3;push(p,[h.position[0],rows.at(-1)[0]+.002,h.position[2]],[[h.id,1]]);for(let k=0;k<N;k++)p.indices.push((rows.length-1)*(N+1)+k,(rows.length-1)*(N+1)+k+1,cap);for(let i=0;i<p.indices.length;i+=3)[p.indices[i+1],p.indices[i+2]]=[p.indices[i+2],p.indices[i+1]];finish(p,.004);
+ tube(m,'imperial helmet brow',[{p:[h.position[0]-rx,base+.026,h.position[2]+rz*.52],r:.010,ws:[[h.id,1]]},{p:[h.position[0],base+.030,h.position[2]+rz*1.04],r:.010,ws:[[h.id,1]]},{p:[h.position[0]+rx,base+.026,h.position[2]+rz*.52],r:.010,ws:[[h.id,1]]}],[.55,.39,.16],'metal',8,.002);
+ for(const side of [-1,1]){
+  const cheek=addPart(m,'imperial cheek guard '+side,[.37,.38,.34],'metal','head armour'),x=h.position[0]+side*rx*.82;
+  for(const v of [[x,base+.015,h.position[2]+rz*.25],[x+side*.012,base-.075,h.position[2]+rz*.50],[x-side*.014,base-.105,h.position[2]+rz*.24],[x-side*.012,base-.012,h.position[2]+rz*.10]])push(cheek,v,[[h.id,1]]);
+  cheek.indices=side>0?[0,1,2,0,2,3]:[0,2,1,0,3,2];normals(cheek);
+ }
+ const neck=J(m,'neck01');curvedPatch(m,m.parts.find(p=>p.name==='tunic'), 'imperial neck guard',[ [3,.72],[3,.86],[3,.98] ],18,30,[.34,.36,.34],'metal',.05,.004);
+ // Short, restrained crest socket; no oversized brush that swallows the bowl.
+ ellipsoid(m,'imperial crest socket',[h.position[0],base+.098,h.position[2]-.012],[.035,.018,.045],[[h.id,1]],[.38,.24,.10],'metal',5,10);
+}
+function scutumBands(m){
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount;
+ for(let i=0;i<7;i++){const a=.04+i*.135,b=a+.105;curvedBand(m,tunic,'lorica segmentata band '+(i+1),a,b,[.34,.37,.37],.030+(6-i)*.0015);
+  for(const k of [0,Math.floor(N/2)]){const x=panelAt(tunic,2,(a+b)/2,k);rivet(m,'lorica copper hinge '+i+' '+k,x.v,x.ws,.008,[.59,.39,.16])}
+ }
+ for(let side of [-1,1])for(let i=0;i<3;i++){const sh=J(m,'upperarm01.'+(side>0?'L':'R')),el=J(m,'lowerarm01.'+(side>0?'L':'R'));tube(m,'lorica shoulder strap '+side+' '+i,[{p:mix(sh.position,el.position,.08),r:.028,ws:[[sh.id,.8],[el.id,.2]]},{p:mix(sh.position,el.position,.36),r:.025,ws:[[sh.id,.4],[el.id,.6]]}],[.34,.37,.37],'metal',12,.003)}
+}
+function pteruges(m,roman){
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,front=Array.from({length:N},(_,k)=>k).filter(k=>panelAt(tunic,2,0,k).v[2]>tunic.pattern.sections[2].center[1]);
+ for(let i=0;i<7;i++){const k=front[Math.floor(i*(front.length-1)/6)],a=panelAt(tunic,2,.05,k),b=panelAt(tunic,2,.22,k),c=panelAt(tunic,1,.0,k),ws=a.ws;
+  const p=addPart(m,(roman?'roman leather pteryx ':'infantry belt tongue ')+i,[.24,.12,.055],'leather','belt');
+  const width=.028;for(const v of [a.v.map((x,j)=>x+(j===0?-width:0)),a.v.map((x,j)=>x+(j===0?width:0)),c.v.map((x,j)=>x+(j===0?width:0)),c.v.map((x,j)=>x+(j===0?-width:0))])push(p,v,ws);
+  p.indices=[0,1,2,0,2,3];finish(p,.003);
+  rivet(m,'pteryx stud '+i,mix(a.v,c.v,.18),ws,.004,[.55,.39,.17]);
+ }
+}
+function romanCaligae(m){
+ for(const side of ['L','R']){const foot=J(m,'foot.'+side),knee=J(m,'lowerleg01.'+side),x=foot.position[0],y=foot.position[1],z=foot.position[2];
+  for(let i=0;i<3;i++){const yy=y+.035+i*.032;tube(m,'caligae leather strap '+side+' '+i,[{p:[x-.048,yy,z+.045],r:.009,ws:[[foot.id,.8],[knee.id,.2]]},{p:[x,yy+.005,z+.065],r:.009,ws:[[foot.id,1]]},{p:[x+.048,yy,z+.045],r:.009,ws:[[foot.id,.8],[knee.id,.2]]}],[.20,.11,.055],'leather',8,.002)}
+  tube(m,'caligae ankle wrap '+side,[{p:[x-.044,y+.10,z],r:.012,ws:[[foot.id,.6],[knee.id,.4]]},{p:[x+.044,y+.10,z],r:.012,ws:[[foot.id,.6],[knee.id,.4]]}],[.35,.23,.12],'leather',8,.002);
+ }
+}
+function merchantKit(m){
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hem=tunic.pattern.sections[0],root=J(m,'root'),hip=J(m,'spine03'),coat=addPart(m,'merchant long wool robe',[.20,.22,.30],'cloth','outer robe');
+ for(let r=0;r<=8;r++){const t=r/8;for(let k=0;k<=N;k++){const a=panelAt(tunic,0,0,k%N),d=radial(a.v,hem.center),flare=1+.16*t+.035*Math.sin(t*Math.PI),v=[hem.center[0]+(a.v[0]-hem.center[0])*flare+d[0]*(.025+.018*t),hem.y-.39*t+.006*Math.sin(k*tau/N*3)*t,hem.center[1]+(a.v[2]-hem.center[1])*flare+d[2]*(.025+.018*t)];const side=v[0]>0?'L':'R';push(coat,v,[[root.id,.52],[hip.id,.18],[J(m,'upperleg01.'+side).id,.30]])}}
+ grid(coat,9,N+1);finish(coat,.008);
+ for(const side of ['L','R']){const upper=J(m,'upperarm01.'+side),lower=J(m,'lowerarm01.'+side),wrist=J(m,'wrist.'+side);tube(m,'merchant broad wool sleeve '+side,[{p:upper.position,r:.072,ws:[[upper.id,1]]},{p:mix(upper.position,lower.position,.55),r:.078,ws:[[upper.id,.45],[lower.id,.55]]},{p:mix(lower.position,wrist.position,.70),r:.088,ws:[[lower.id,.7],[wrist.id,.3]]},{p:wrist.position,r:.082,ws:[[wrist.id,1]]}],[.18,.20,.28],'cloth',16,.006)}
+ const head=J(m,'head'),headPts=m.parts[0].positions.reduce((a,x,i)=>{if(i%3===0&&m.parts[0].positions[i+1]>head.position[1]-.08&&m.parts[0].positions[i+1]<head.position[1]+.12)a.push(m.parts[0].positions.slice(i,i+3));return a},[]),rx=Math.max(.055,...headPts.map(v=>Math.abs(v[0]-head.position[0]))),rz=Math.max(.055,...headPts.map(v=>Math.abs(v[2]-head.position[2]))),hatY=head.position[1]+.06;
+ const brim=addPart(m,'merchant chaperon brim',[.22,.20,.27],'cloth','headwear');for(let row=0;row<2;row++)for(let k=0;k<=32;k++){const a=tau*k/32,r=1.45-row*.08;push(brim,[head.position[0]+rx*r*Math.cos(a),hatY+row*.018,head.position[2]+rz*r*Math.sin(a)],[[head.id,1]])}grid(brim,2,33);finish(brim,.004);
+ ellipsoid(m,'merchant chaperon crown',[head.position[0],hatY+.055,head.position[2]],[rx*1.05,.09,rz*1.04],[[head.id,1]],[.20,.20,.28],'cloth',8,20);
+ tube(m,'merchant liripipe',[{p:[head.position[0]+rx*.55,hatY+.055,head.position[2]-.01],r:.035,ws:[[head.id,.75],[hip.id,.25]]},{p:[head.position[0]+rx*.9,hatY-.08,head.position[2]-.025],r:.028,ws:[[head.id,.25],[hip.id,.75]]},{p:[head.position[0]+rx*1.2,hatY-.21,head.position[2]-.02],r:.018,ws:[[hip.id,1]]}],[.20,.20,.28],'cloth',10,.003);
+ const bundle=ellipsoid(m,'merchant shoulder goods',[0,head.position[1]-.02,head.position[2]-.15],[.19,.09,.085],[[J(m,'spine01').id,.6],[hip.id,.4]],[.43,.30,.17],'leather',8,20);
+ for(const side of ['L','R'])tube(m,'merchant cross-body goods strap '+side,[{p:J(m,'upperarm01.'+side).position,r:.018,ws:[[J(m,'upperarm01.'+side).id,.7],[J(m,'spine01').id,.3]]},{p:[side==='L'?.11:-.11,hip.position[1]+.01,hip.position[2]+.10],r:.018,ws:[[hip.id,.8],[root.id,.2]]}],[.13,.075,.04],'leather',8,.002);
+ return {hemY:hem.y,bundle:'rolled shoulder load'};
+}
+// P0 uses existing welded tunic and fitted mantle, not the experimental long robe tube.
+// Build a closed woven cuff using the actual outer sleeve rows, no repeated seam vertex.
+function civilianCuffs(m,tunic){
+ const N=tunic.pattern.ringCount,half=4,count=2*(2*half+1);
+ for(const [i,side] of ['L','R'].entries()){
+  const start=N*6+i*count*5,center=row=>Array.from({length:count},(_,j)=>tunic.positions.slice((start+row*count+j)*3,(start+row*count+j+1)*3)).reduce((a,b)=>add(a,mul(b,1/count)),[0,0,0]);
+  const cuff=authoredPatch({name:'linen cuff '+side,color:[.58,.53,.39],material:{kind:'cloth',roughness:.94,metallic:0},rows:3,columns:count,closedColumns:true,thickness:.002,host:'tunic',region:'sleeve cuff',sample:(v,u)=>{
+   const k=Math.round(u*count)%count,a=start+3*count+k,b=a+count,t=.73+.25*v,pa=tunic.positions.slice(a*3,a*3+3),pb=tunic.positions.slice(b*3,b*3+3),p=mix(pa,pb,t),n=unit(sub(p,mix(center(3),center(4),t)));
+   return {position:add(p,mul(n,.0035)),outward:n,weights:weights(tunic,a).map(([j,w])=>[j,w*(1-t)]).concat(weights(tunic,b).map(([j,w])=>[j,w*t]))};
+  }});m.parts.push(cuff);
+ }
+}
+function civilianArtisan(m){
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),sample=ringSampler(tunic);
+ tunic.color=[.38,.35,.26];tunic.material={kind:'cloth',roughness:.94,metallic:0};
+ // Linen upper edge gathers at the waist; broad leather apron follows the
+ // actual shaped skirt but opens at the sides. Separate hem and thickness.
+ const apron=authoredPatch({name:'leather work apron',color:[.31,.19,.095],material:{kind:'leather',roughness:.88,metallic:0},rows:13,columns:19,thickness:.003,host:'tunic',region:'waist apron',sample:(v,u)=>{
+  // An independently cut rounded leather panel: asymmetric hem, irregular
+  // hanging folds taper to the anchored waist, not a rigid radial trapezoid.
+  const edge=Math.abs(2*u-1),hem=.08+.18*edge**3+.045*Math.sin(Math.PI*u*2);
+  const r=hem+(2.08-hem)*v,width=4.75-1.3*v+.32*Math.sin(Math.PI*v),k=N*.75+(2*u-1)*width+.20*(1-v)*Math.sin(Math.PI*u);
+  const folds=(.008*Math.cos(5*Math.PI*u+.65*(1-v))+.004*Math.sin(9*Math.PI*u-.4))*Math.sin(Math.PI*(1-v)*.8);
+  return sample(r,k,.017+folds+.008*(1-v)*edge**2);
+ }});
+ m.parts.push(apron);civilianCuffs(m,tunic);
+ m.parts=m.parts.filter(p=>p.name!=='belt clasp');
+ const a=sample(2,N*.75,.028),buckle=torus(m,'apron belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.016,.0035,[[hip.id,1]],[.47,.35,.16]);
+ buckle.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
+ return {cut:'short linen work tunic',apron:'rounded asymmetric leather panel with tapering free folds',accessories:['belt pouch','buckle'],construction:'authored patch + measured ring sampling'};
+}
+function civilianMerchant(m){
+ const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),upper=J(m,'spine01'),sample=ringSampler(tunic);
+ tunic.color=[.13,.23,.28];tunic.material={kind:'cloth',roughness:.88,metallic:0};
+ // Short shoulder mantle: wider at lower edge, tapered toward the neck.
+ // Real geometric folds and a hem that follows the back and right shoulder.
+ const cape=authoredPatch({name:'wool draped merchant mantle',color:[.36,.17,.085],material:{kind:'cloth',roughness:.96,metallic:0},rows:17,columns:25,thickness:.004,host:'tunic',region:'shoulder mantle',sample:(v,u)=>{
+  // Open-front mantle: independent curved hem, rounded shoulders and
+  // asymmetrical hanging folds; collar is narrow and fitted.
+  const edge=Math.abs(2*u-1),hem=2.72+.60*edge**2+.10*Math.sin(2*Math.PI*u),r=hem+(4.88-hem)*v;
+  const start=-5.4-.9*v,end=21.4+.9*v,k=start+(end-start)*u+.30*Math.sin(2*Math.PI*u)*Math.sin(Math.PI*v);
+  const shoulder=Math.sin(Math.PI*v)**1.5,free=(1-v)**1.4;
+  const wave=.008*Math.sin(6*Math.PI*u+.7*v)+.004*Math.cos(10*Math.PI*u-.5*v);
+  return sample(r,k,.013+.023*shoulder+.017*free+wave*free,{maxExtension:.085});
+ }});
+ m.parts.push(cape);
+ m.parts=m.parts.filter(p=>p.name!=='belt clasp');
+ // Solid torus rather than the previous degenerate lined ellipsoid.
+ const tie=authoredPatch({name:'merchant woven clasp band',color:[.43,.26,.115],material:{kind:'cloth',roughness:.92,metallic:0},rows:3,columns:13,thickness:.0025,host:'tunic',region:'neck fastening',sample:(v,u)=>sample(4.55+.17*v,21+6*u,.010)});m.parts.push(tie);
+ const edge=sample(4.63,24,.017),clasp=torus(m,'merchant brass mantle clasp',edge.position,[1,0,0],[0,1,0],[0,0,1],.012,.0027,[[upper.id,1]],[.58,.37,.14]);clasp.attachmentSpec={type:'rigid-hardware',host:tie.name};
+ const a=sample(2,N*.75,.026),b=torus(m,'merchant brass belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.018,.004,[[hip.id,1]],[.58,.37,.14]);b.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
+ return {cut:'long fitted tunic and open-front rounded wool mantle',accessories:['mantle clasp','belt buckle','belt pouch'],construction:'authored patch + measured ring sampling'};
+}
+function artisanKit(m){
+ const tunic=m.parts.find(p=>p.name==='tunic'),hip=J(m,'spine03'),root=J(m,'root');
+ for(const side of ['L','R']){const elbow=J(m,'lowerarm01.'+side),wrist=J(m,'wrist.'+side);tube(m,'rolled linen sleeve cuff '+side,[{p:mix(elbow.position,wrist.position,.72),r:.047,ws:[[elbow.id,.4],[wrist.id,.6]]},{p:mix(elbow.position,wrist.position,.84),r:.049,ws:[[elbow.id,.2],[wrist.id,.8]]},{p:wrist.position,r:.045,ws:[[wrist.id,1]]}],[.62,.52,.36],'cloth',12,.003)}
+ const apron=m.parts.find(p=>p.name==='leather work apron');if(apron){for(const side of [-1,1])tube(m,'apron shoulder strap '+side,[{p:[side*.075,hip.position[1]+.27,.07],r:.013,ws:[[J(m,'spine01').id,.6],[hip.id,.4]]},{p:[side*.12,hip.position[1]+.12,.12],r:.013,ws:[[hip.id,1]]}],[.18,.10,.055],'leather',8,.002)}
+ const x=hip.position[0]+.12,y=hip.position[1]-.02,z=hip.position[2]+.11;
+ tube(m,'wooden mallet handle',[{p:[x,y-.12,z],r:.012,ws:[[hip.id,1]]},{p:[x,y+.025,z],r:.012,ws:[[hip.id,1]]}],[.32,.19,.10],'wood',8,.002);
+ tube(m,'iron mallet head',[{p:[x-.045,y+.025,z],r:.023,ws:[[hip.id,1]]},{p:[x+.045,y+.025,z],r:.023,ws:[[hip.id,1]]}],[.29,.30,.27],'metal',8,.003);
+ tube(m,'awl handle',[{p:[x-.06,y-.04,z-.025],r:.009,ws:[[hip.id,1]]},{p:[x-.06,y+.035,z-.025],r:.009,ws:[[hip.id,1]]}],[.28,.16,.07],'wood',8,.002);
+ return {tools:['wooden mallet','iron mallet head','awl']};
+}
+function gambesonChannels(m,tunic){
+ const tracks=[1,3,6,9,12,15];
+ for(let i=0;i<tracks.length;i++){const k=tracks[i],rows=[[2,.12],[2,.42],[2,.74],[3,.08],[3,.36]],stations=rows.map(([r,t])=>{const a=panelAt(tunic,r,t,k),c=mix(tunic.pattern.sections[r].center,tunic.pattern.sections[r+1].center,t);return {p:add(a.v,mul(radial(a.v,c),.012)),r:.008,ws:a.ws}});tube(m,'gambeson tailored quilting channel '+i,stations,[.28,.23,.18],'cloth',8,.002)}
+}
+function tassets(m){
+ for(const side of ['L','R']){const j=J(m,'upperleg01.'+side),root=J(m,'root'),sign=side==='L'?1:-1,c=[j.position[0],j.position[1]+.015,j.position[2]+.075],ws=[[j.id,.78],[root.id,.22]];
+  ellipsoid(m,'steel articulated tasset '+side,c,[.083,.115,.027],ws,[.31,.34,.35],'metal',7,14);
+  for(const y of [-.075,.075])rivet(m,'tasset brass rivet '+side+' '+y,[c[0],c[1]+y,c[2]+.026],ws,.005,[.55,.36,.14]);
+ }
+}
+function infantryKit(m){
+ const tunic=m.parts.find(p=>p.name==='tunic');tunic.color=[.23,.20,.16];tunic.material={kind:'cloth',roughness:.86,metallic:.02};
+ const mail=mailCurtain(m,tunic);gambesonChannels(m,tunic);
+ // Coat-of-plates: separate curved steel plates under a textile outer
+ // silhouette, with actual edge relief and rivet hardware.
+ const plates=[];
+ for(const [row,t0,t1] of [[2,.12,.38],[2,.50,.76],[2,.84,.98]]){
+  for(const [from,to] of [[18,24],[24,30],[2,8],[8,14]]){
+   const p=curvedPatch(m,tunic,'brigandine plate '+plates.length,[[row,t0],[row,t1],[3,Math.min(.98,t1+.10)]],from,to,[.32,.35,.36],'metal',.044,.006);plates.push(p.name);
+   for(const k of [from+1,to-1])for(const [r,t] of [[row,t0+.02],[3,Math.min(.98,t1+.08)]]){const a=panelAt(tunic,r,t,k),c=mix(tunic.pattern.sections[r].center,tunic.pattern.sections[r+1].center,t);rivet(m,'brigandine copper rivet '+plates.length+' '+k,add(a.v,mul(radial(a.v,c),.05)),a.ws,.005,[.56,.37,.15])}
+  }
+ }
+ for(const side of ['L','R']){const upper=J(m,'upperarm01.'+side),elbow=J(m,'lowerarm01.'+side),wrist=J(m,'wrist.'+side);
+  ellipsoid(m,'steel spaulder '+side,upper.position,[.083,.072,.087],[[upper.id,.82],[J(m,'spine01').id,.18]],[.31,.35,.37],'metal',7,14);
+  tube(m,'steel vambrace '+side,[{p:mix(elbow.position,wrist.position,.15),r:.052,ws:[[elbow.id,.85],[wrist.id,.15]]},{p:mix(elbow.position,wrist.position,.50),r:.046,ws:[[elbow.id,.5],[wrist.id,.5]]},{p:mix(elbow.position,wrist.position,.90),r:.039,ws:[[elbow.id,.15],[wrist.id,.85]]}],[.31,.35,.37],'metal',14,.004);
+  for(let t of [.24,.78])tube(m,'leather vambrace tie '+side+' '+t,[{p:mix(elbow.position,wrist.position,t),r:.049,ws:[[elbow.id,1-t],[wrist.id,t]]},{p:add(mix(elbow.position,wrist.position,t),[.002,.003,.002]),r:.049,ws:[[elbow.id,1-t],[wrist.id,t]]}],[.16,.085,.045],'leather',12,.002);
+ }
+ bascinet(m);tassets(m);shield(m,false);
+ return {mailRings:mail.rings,brigandinePlates:plates.length,armourPeriod:'late 14th century, coat-of-plates with mail and bascinet'};
+}
+function legionaryKit(m){
+ const tunic=m.parts.find(p=>p.name==='tunic');tunic.color=[.48,.095,.055];tunic.material={kind:'cloth',roughness:.84,metallic:0};
+ scutumBands(m);imperialHelmet(m);pteruges(m,true);romanCaligae(m);shield(m,true);
+ const sword=J(m,'upperleg01.R'),root=J(m,'root');tube(m,'gladius scabbard',[{p:[sword.position[0]-.06,sword.position[1]+.05,sword.position[2]+.04],r:.025,ws:[[sword.id,.8],[root.id,.2]]},{p:[sword.position[0]-.075,sword.position[1]-.30,sword.position[2]+.05],r:.018,ws:[[sword.id,.8],[root.id,.2]]}],[.20,.075,.035],'leather',10,.003);
+ tube(m,'gladius hilt',[{p:[sword.position[0]-.06,sword.position[1]+.07,sword.position[2]+.04],r:.012,ws:[[sword.id,1]]},{p:[sword.position[0]-.06,sword.position[1]+.14,sword.position[2]+.04],r:.012,ws:[[sword.id,1]]}],[.28,.20,.12],'wood',8,.002);
+ return {loricaBands:7,shield:'curved scutum with hand grip',helmet:'imperial Gallic with cheek guards'};
+}
+function contacts(m){
+ const H=m.spec.morphology.height??1.7,boots=['L','R'].map(side=>{const p=m.parts.find(x=>x.name==='boot '+side),j=J(m,'foot.'+side);if(!p)throw Error('Missing boot '+side);const ys=p.positions.filter((_,i)=>i%3===1),low=Math.min(...ys),ids=Array.from({length:p.positions.length/3},(_,i)=>i).filter(i=>p.positions[i*3+1]<=low+H*.008),center=ids.reduce((a,i)=>a.map((x,k)=>x+p.positions[i*3+k]/ids.length),[0,0,0]);return {joint:j.id,local:sub(center,j.position),groundY:low,phase:side==='L'?0:.5,surfaceContact:true,vertexCount:ids.length}});
+ const ground=Math.min(...boots.map(c=>c.groundY));m.contacts=boots.map(c=>({...c,groundY:ground}));m.spec.groundY=ground;m.spec.gaitDuty=.62;m.spec.gaitStride=H*.32;m.spec.swingHeight=.05;
+}
+function lowPolyTransform(m){
+ const hip=J(m,'root').position[1],head=J(m,'head').position,neck=J(m,'neck01').position[1],transform=v=>{let q=v.slice(),top=clamp((v[1]-neck)/.10,0,1),upper=clamp((v[1]-hip)/.35,0,1)*(1-top);q[0]*=1+.14*upper+.10*top;q[1]=v[1]<hip?v[1]*.91:hip*.91+(v[1]-hip)*(1+.04*top);q[2]=head[2]+(v[2]-head[2])*(1+.09*top);return q};
+ for(const p of m.parts){for(let i=0;i<p.positions.length;i+=3)p.positions.splice(i,3,...transform(p.positions.slice(i,i+3)));normals(p)}
+ for(const j of m.joints){j.position=transform(j.position);j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position)}
+ m.spec.style='low-poly';
+}
+function miniatureStyleV10(m){const hip=J(m,'root').position[1],neck=J(m,'neck01').position[1],head=J(m,'head').position,transform=v=>{const t=clamp((v[1]-neck)/.10,0,1),upper=clamp((v[1]-hip)/.30,0,1)*(1-t);return [v[0]*(1+.065*upper+.09*t),v[1]<hip?v[1]*.96:hip*.96+(v[1]-hip)*(1+.07*t),head[2]+(v[2]-head[2])*(1+.05*t)]};for(const p of m.parts){for(let i=0;i<p.positions.length;i+=3)p.positions.splice(i,3,...transform(p.positions.slice(i,i+3)));normals(p)}for(const j of m.joints){j.position=transform(j.position);j.local=j.parent<0?j.position.slice():sub(j.position,m.joints[j.parent].position)}}
+export const roleMorphs=roleProfiles;
+export function produceRoleV9(source,id,identityOverride=null,{style='historical-miniature',styleRevision=9,civilianP0=false}={}){
+ if(!roleProfiles[id])throw Error('Unknown role '+id);
+ const m=produceRole(source,id,identityOverride,'historical-miniature',{civilianP0}),start=performance.now();
+ m.parts=m.parts.filter(p=>!['iron breastplate','iron conical helmet','iron nasal','iron imperial helmet','iron cheek guard -1','iron cheek guard 1','red curved scutum','heater shield','iron shield rim','iron shield boss','leather shield forearm strap'].includes(p.name)&&!p.name.startsWith('quilted padded rib')&&!p.name.startsWith('iron segmented cuirass')&&!p.name.startsWith('iron shoulder guard')&&!(id==='legionary'&&p.name==='leather sheathed sidearm'));
+ m.spec.artRole=id;m.spec.artRevision='v9';m.spec.miniaturePose='v9';m.spec.motionRevision='v9';m.spec.contactCorrection='path-v9';m.spec.actions=id==='artisan'?['idle','walk']:['idle'];
+ let role;
+ if(id==='artisan')role=civilianP0?civilianArtisan(m):artisanKit(m);
+ if(id==='merchant')role=civilianP0?civilianMerchant(m):merchantKit(m);
+ if(id==='infantry')role=infantryKit(m);
+ if(id==='legionary')role=legionaryKit(m);
+ if(style==='low-poly')lowPolyTransform(m);else if(style==='anatomical-realism'){m.spec.style=style;for(const p of m.parts){p.color=p.color.map(v=>Math.max(0,Math.min(1,v*.88+.035)));if(p.material?.kind==='skin')p.material.roughness=.57;if(p.material?.kind==='cloth')p.material.roughness=.96;}}else {m.spec.style='historical-miniature';if(styleRevision===10)miniatureStyleV10(m);}
+ // P0.2 A: bounded weight-field recovery on the existing continuous tunic.
+ // Keep exact rest positions and topology, role-specific cuts, and Cyclic49.
+ // Other garment recipes and research modes are deliberately unchanged.
+ if(civilianP0){
+  const tunic=m.parts.find(p=>p.name==='tunic');reweightLinedSurface(tunic,{sigma:.10});m.spec.garmentSkinRevision='p0.2-a-continuous-field';
+  // Only genuinely fitted trim inherits the final host field. Free mantle/apron
+  // and rigid buckles are intentionally still subject to the old strict audit.
+  for(const p of m.parts)if(['tunic neck binding','waist belt','linen cuff L','linen cuff R','merchant woven clasp band'].includes(p.name))bindTrim(p,tunic);
+  m.spec.tailoringRevision='p0.3-a-barycentric-trim-and-authored-drape';
+ }
+ m.spec.styleRevision=styleRevision;contacts(m);
+ m.spec.artHistoricalReferences=['https://isaw.nyu.edu/exhibitions/edge-of-empires/highlights/shield','https://www.metmuseum.org/art/collection/search/35771','https://fashionhistory.fitnyc.edu/chaperon/'];m.spec.artHistoricalReference=id==='infantry'?'late-14th-century coat-of-plates, mail and bascinet':id==='legionary'?'2nd-century CE lorica segmentata and scutum':'medieval civilian craft/trade clothing';
+ m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'v0.9 role-specific cut, equipment and material construction'}];
+ m.statistics={...m.statistics,triangleCount:m.parts.reduce((n,p)=>n+p.indices.length/3,0),vertices:m.parts.reduce((n,p)=>n+p.positions.length/3,0),roleV9Ms:performance.now()-start};
+ m.roleDiagnostics=role;return m;
+}

@@ -1,0 +1,89 @@
+name: Character Forge Pose-Aware Artisan Study
+on:
+  pull_request:
+    paths:
+      - 'tools/character-forge/authored-mesh/**'
+      - '.github/workflows/character-forge-pose-tailoring.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  artisan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.5'
+      - uses: actions/download-artifact@v4
+        with:
+          name: artisan-authored-mesh-study
+          path: quality-artifacts/p05/a3
+          run-id: '46143701216'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-source
+          path: quality-artifacts/p05/source
+          run-id: '46138654367'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: p0-candidate-artisan-base
+          path: quality-artifacts/p05/control
+          run-id: '46138654367'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pose-aware diagnosis and two clean authored compositions
+        run: |
+          set -e
+          python -m pip install -r tools/character-forge/authored-mesh/requirements.txt
+          export OPENBLAS_NUM_THREADS=1
+          root=quality-artifacts/p05
+          script=tools/character-forge/authored-mesh
+          source="$root/source/morph/makehuman-base.json"
+          outer=$(node -e 'console.log(require("./quality-artifacts/p05/a3/document.json").parts[0].outerVertexCount)')
+          for run in result repeat; do
+            python "$script/pose_tailor.py" "$root/a3/study.glb" "$source" "authored artisan tunic" "$outer" "$root/$run"
+            python "$script/compose-artisan.py" "$root/control/p0-model.json" "$root/a3/document.json" "$root/$run/candidate.npy" "$root/$run/composed-document.json"
+            python "$script/compose-fit-audit.py" "$root/a3/study.glb" "$source" "authored artisan tunic" "$outer" "$root/$run" "$root/$run/composed-document.json"
+          done
+          cmp "$root/result/composed-document.json" "$root/repeat/composed-document.json"
+          node --test "$script/import.test.mjs"
+      - name: Existing Forge full character export and matched native images
+        run: |
+          root=quality-artifacts/p05
+          node tools/character-forge/authored-mesh/export-composed.mjs "$root/control/p0-model.json" "$root/result/composed-document.json" "$root/result"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          fps=$(node -e 'console.log(24/require("./quality-artifacts/p05/control/p0-model.json").spec.walkDuration)')
+          for view in front side; do ffmpeg -hide_banner -loglevel error -y -framerate "$fps" -i "$root/result/walk-$view/%02d.png" -frames:v 73 -c:v libx264 -pix_fmt yuv420p "$root/result/walk-$view.mp4"; done
+      - name: Independent exported tunic audit
+        run: |
+          export OPENBLAS_NUM_THREADS=1
+          root=quality-artifacts/p05
+          outer=$(node -e 'console.log(require("./quality-artifacts/p05/a3/document.json").parts[0].outerVertexCount)')
+          python tools/character-forge/authored-mesh/audit-export.py "$root/result/composed.glb" "$root/source/morph/makehuman-base.json" "authored artisan tunic" "$outer" "$root/result/audit67.json"
+      - name: Independent actual GLB full layered study
+        run: |
+          export OPENBLAS_NUM_THREADS=1
+          root=quality-artifacts/p05
+          outer=$(node -e 'console.log(require("./quality-artifacts/p05/a3/document.json").parts[0].outerVertexCount)')
+          python tools/character-forge/authored-mesh/binary-composition-audit.py "$root/result/composed.glb" "$root/source/morph/makehuman-base.json" "authored artisan tunic" "$outer" "$root/result" "$root/result/composed-document.json"
+          python tools/character-forge/authored-mesh/depth-evidence.py "$root/a3/study.glb" "$root/source/morph/makehuman-base.json" "authored artisan tunic" "$outer" "$root/result"
+      - name: Fail-closed research fit and attachment gates
+        run: |
+          node -e 'const r=require("./quality-artifacts/p05/result/audit67.json"),a=require("./quality-artifacts/p05/result/attachment-study.json"),f=require("./quality-artifacts/p05/result/full-binary-audit.json");if(r.states!==67||f.states!==70||f.layeredStudyGate!==true||r.isolatedGate!==true||!a.every(x=>x.passed)){console.error("Composition remains rejected:",r.summary,a.map(x=>[x.part,x.passed]));process.exit(1)}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: artisan-p05-composition-study
+          path: |
+            quality-artifacts/p05/result
+            !quality-artifacts/p05/result/walk-front
+            !quality-artifacts/p05/result/walk-side
+          retention-days: 30

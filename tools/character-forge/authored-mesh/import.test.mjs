@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {importAuthoredStudy} from './import.mjs';
+const rig=[{id:0,name:'root',parent:-1,position:[0,0,0],local:[0,0,0]}],base={joints:rig,parts:[],spec:{actions:['idle']},sampledWalk:{rotations:[]}},p={name:'panel',positions:[0,0,0,1,0,0,0,1,0],normals:[0,0,1,0,0,1,0,0,1],indices:[0,1,2],color:[.4,.5,.6],joints:Array(12).fill(0),weights:[1,0,0,0,1,0,0,0,1,0,0,0]};
+const doc=()=>structuredClone({version:1,rig,parts:[p]});
+test('external mesh keeps source rig and animation; never marks accepted',()=>{const x=doc(),m=importAuthoredStudy(base,x);assert.deepEqual(m.joints,base.joints);assert.deepEqual(m.sampledWalk,base.sampledWalk);assert.equal(m.statistics.triangleCount,1);assert.match(m.approval,/Unqualified/);assert.deepEqual(base.parts,[]);assert.deepEqual(m.parts,x.parts);});
+test('rig, topology and skin errors fail closed',()=>{for(const mutate of [x=>x.rig[0].position[0]=.1,x=>x.parts[0].indices[2]=1,x=>x.parts[0].weights[0]=.5,x=>x.parts[0].weights8=[],x=>x.parts[0].normals[0]=NaN]){const x=doc();mutate(x);assert.throws(()=>importAuthoredStudy(base,x));}});

@@ -1,0 +1,33 @@
+{
+  "base": {
+    "female": 0,
+    "old": 0
+  },
+  "young-woman": {
+    "female": 1,
+    "old": 0,
+    "light": 0.15
+  },
+  "older-woman": {
+    "female": 1,
+    "old": 1,
+    "heavy": 0.25
+  },
+  "older-man": {
+    "female": 0,
+    "old": 1,
+    "light": 0.25
+  },
+  "tall-heavy": {
+    "female": 0,
+    "old": 0,
+    "tall": 0.3,
+    "heavy": 0.55
+  },
+  "short-light": {
+    "female": 0,
+    "old": 0,
+    "short": 0.35,
+    "light": 0.5
+  }
+}

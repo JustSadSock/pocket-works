@@ -1,0 +1,118 @@
+"""Matched-duration 24/48/96 FPS contact experiment for the actual right trouser."""
+import hashlib,json,os,shutil,subprocess
+from pathlib import Path
+
+root=Path(os.environ["CHARACTER_EVIDENCE"])
+blender=os.environ["BLENDER"]
+source=root/"morph"/"v9-cloth-input.json"
+if not source.exists():
+    raise SystemExit("Missing v9-cloth-input.json")
+spec=json.loads(source.read_text())
+experiments=[("baseline-24fps",1),("subframe-48fps",2),("subframe-96fps",4)]
+summary=[]
+for name,factor in experiments:
+    out=root/("v20-trousers-R-"+name)
+    (out/"morph").mkdir(parents=True,exist_ok=True)
+    shutil.copy2(source,out/"morph"/"v9-cloth-input.json")
+    config={"diagnosticOnly":True,"collider":"trousers R","timeResolution":factor,"timeScale":1.0,
+            "friction":5.0,"selfDistance":0.0025,"proxy":"outer",
+            "pinMotion":True,"colliderMotion":True}
+    cfg=out/"v20-config.json"
+    cfg.write_text(json.dumps(config,indent=2))
+    env=os.environ.copy()
+    env.update({"CHARACTER_EVIDENCE":str(out),"CHARACTER_V15_CLOTH":"1",
+                "CHARACTER_V20_CLOTH_CONFIG":str(cfg)})
+    cmd=[blender,"--background","--factory-startup","--disable-autoexec",
+         "--python-exit-code","1","--python","tools/character-forge/cloth-recovery-v11.py"]
+    with (out/"run.log").open("w") as log:
+        proc=subprocess.run(cmd,env=env,stdout=log,stderr=subprocess.STDOUT)
+    report=out/"v11-cloth-recovery.json"
+    if not report.exists():
+        summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,"sceneFps":spec["fps"]*factor,"clothTimeScale":1.0,"effectiveSimulationFps":spec["fps"]*factor,"solverElapsedSeconds":None,"solverDurationMatches":False,
+                        "exit":proc.returncode,"status":"missing-recovery-report"})
+        continue
+    data=json.loads(report.read_text())
+    stage=next((x for x in data.get("stages",[]) if x.get("stage")==2),None)
+    if stage is None:
+        summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,
+                        "exit":proc.returncode,"status":data.get("status")})
+        continue
+    frames=stage.get("frames",[])
+    scene_fps=float(data.get("sceneFps",spec["fps"]*factor))
+    cloth_time_scale=float(data.get("clothTimeScale",config["timeScale"]))
+    scene_duration=(len(frames)-1)/scene_fps if frames else 0.0
+    solver_elapsed=(len(frames)-1)*cloth_time_scale/scene_fps if frames else 0.0
+    warm=(24+18)*factor
+    warmup_duration=warm/scene_fps
+    source_motion_duration=(spec["frameCount"]-1)/spec["fps"]
+    expected_solver_elapsed=warmup_duration+source_motion_duration
+    speeds=[x.get("colliderAudit",{}).get("trousers R",{}).get("maxSurfaceSpeedMetresPerSecond",0) for x in frames]
+    mismatches=[x.get("colliderAudit",{}).get("trousers R",{}).get("maxEvaluatedMismatchMetres",0) for x in frames]
+    contacts=[]
+    for defect in stage.get("defects",[]):
+        for edge in defect.get("worstEdges",[]):
+            nearest=edge.get("nearestCollider") or {}
+            if nearest.get("name")=="trousers R":
+                contacts.append({"frame":defect.get("frame"),"edge":edge.get("edge"),
+                    "stretch":edge.get("ratio"),"distanceMetres":nearest.get("distanceMetres"),
+                    "relativeNormalSpeed":nearest.get("relativeNormalSpeed"),
+                    "relativeTangentialSpeed":nearest.get("relativeTangentialSpeed"),
+                    "surfaceVelocity":nearest.get("surfaceVelocity")})
+    contacts.sort(key=lambda x:x.get("relativeTangentialSpeed") or 0,reverse=True)
+    warm=(24+18)*factor
+    source_frame_stride=factor
+    expected_frames=warm+(spec["frameCount"]-1)*source_frame_stride+1
+    first=stage.get("firstDefect")
+    summary.append({"name":name,"timeResolution":factor,"fps":spec["fps"]*factor,
+        "exit":proc.returncode,"status":data.get("status"),"passed":stage.get("passed"),
+        "simulationFrames":len(frames),"expectedSimulationFrames":expected_frames,"frameCountMatches":len(frames)==expected_frames,
+        "sceneFps":scene_fps,"clothTimeScale":cloth_time_scale,"effectiveSimulationFps":scene_fps/cloth_time_scale,
+        "solverStepSeconds":cloth_time_scale/scene_fps,"sceneDurationSeconds":scene_duration,
+        "solverElapsedSeconds":solver_elapsed,"simulationDurationSeconds":solver_elapsed,
+        "expectedSolverElapsedSeconds":expected_solver_elapsed,"solverDurationMatches":abs(solver_elapsed-expected_solver_elapsed)<=1e-8,
+        "warmupDurationSeconds":warmup_duration,"sourceMotionDurationSeconds":source_motion_duration,
+        "firstDefect":first,"firstDefectSourceFrame":None if first is None else 1+(first-1-warm)/source_frame_stride,
+        "gates":stage.get("gates"),
+        "maxStretch":max((x.get("maxStretch",0) for x in frames),default=0),
+        "maxP95Stretch":max((x.get("p95Stretch",0) for x in frames),default=0),
+        "maxSelfPairs":max((x.get("selfOverlapPairs",0) for x in frames),default=0),
+        "maxExternalPairs":max((sum(x.get("nonSeamTrianglePairs",{}).values()) for x in frames),default=0),
+        "maxRightPantSurfaceSpeed":max(speeds,default=0),
+        "maxPinTargetSpeed":max((x.get("maxPinTargetSpeed",0) for x in frames),default=0),
+        "maxColliderMismatchMetres":max(mismatches,default=0),
+        "maxRelativeTangentialSpeed":max((x.get("relativeTangentialSpeed",0) for x in contacts),default=0),
+        "peakContact":contacts[0] if contacts else None,"contactSamples":contacts[:12]})
+    render_env=env.copy()
+    subprocess.run(["node","tools/character-forge/cloth-evidence-v12.mjs"],env=render_env,check=False)
+
+baseline=next((x for x in summary if x["timeResolution"]==1),None)
+comparisons={}
+if baseline:
+    for row in summary:
+        if row is baseline:continue
+        comparisons[row["name"]]={"maxStretchDelta":row.get("maxStretch",0)-baseline.get("maxStretch",0),
+            "maxP95StretchDelta":row.get("maxP95Stretch",0)-baseline.get("maxP95Stretch",0),
+            "selfPairsDelta":row.get("maxSelfPairs",0)-baseline.get("maxSelfPairs",0),
+            "externalPairsDelta":row.get("maxExternalPairs",0)-baseline.get("maxExternalPairs",0),
+            "surfaceSpeedDelta":row.get("maxRightPantSurfaceSpeed",0)-baseline.get("maxRightPantSurfaceSpeed",0),
+            "pinTargetSpeedDelta":row.get("maxPinTargetSpeed",0)-baseline.get("maxPinTargetSpeed",0),
+            "solverElapsedSecondsDelta":row.get("solverElapsedSeconds",0)-baseline.get("solverElapsedSeconds",0),
+            "relativeTangentialSpeedDelta":row.get("maxRelativeTangentialSpeed",0)-baseline.get("maxRelativeTangentialSpeed",0),
+            "colliderMismatchDelta":row.get("maxColliderMismatchMetres",0)-baseline.get("maxColliderMismatchMetres",0)}
+path_timing_matches=bool(baseline) and all(
+    abs(x.get("maxRightPantSurfaceSpeed",0)-baseline.get("maxRightPantSurfaceSpeed",0))<=0.01 and
+    abs(x.get("maxPinTargetSpeed",0)-baseline.get("maxPinTargetSpeed",0))<=0.01
+    for x in summary
+)
+matrix={"version":"v0.20.1","diagnosticOnly":True,"productionAllowed":False,
+    "supersedesV020":True,
+    "priorV020TrialValidForComparison":False,
+    "priorV020TrialReason":"The inverse cloth time_scale shortened actual solver elapsed time by factors 2 and 4; velocity diagnostics were also scaled by inverse factor.",
+    "method":"same source and material; 24/48/96 scene FPS; cloth time_scale fixed at 1.0; equal scene-time, source-motion, pin-transition and solver duration",
+    "motionPathTimingMatches":path_timing_matches,
+    "sourceSha256":hashlib.sha256(source.read_bytes()).hexdigest(),
+    "experiments":summary,"comparisonsAgainst24Fps":comparisons}
+(root/"v20-time-resolution-matrix.json").write_text(json.dumps(matrix,indent=2))
+print(json.dumps(matrix),flush=True)
+if len(summary)!=len(experiments) or any(x.get("exit")!=0 or x.get("status") in ("missing-recovery-report",None) or not x.get("frameCountMatches") or not x.get("solverDurationMatches") for x in summary) or not path_timing_matches:
+    raise SystemExit("v0.20.1 equal-time matrix incomplete, solver duration mismatched, or collider/pin path speed changed across FPS")

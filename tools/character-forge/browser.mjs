@@ -1,0 +1,22 @@
+// Isolated browser evidence: true GLB loading and a bounded synthetic group benchmark.
+import {chromium,webkit} from 'playwright';import {createServer} from 'node:http';import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';import {resolve,join,extname} from 'node:path';
+const out=resolve(process.argv[2]??'quality-artifacts/character-forge');const root=resolve('.');const types={'.js':'text/javascript','.mjs':'text/javascript','.html':'text/html','.svg':'image/svg+xml','.glb':'model/gltf-binary','.png':'image/png'};
+const html=`<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#d9d7cc}canvas{display:block}</style><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script><script type="module">
+import * as T from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {clone} from 'three/addons/utils/SkeletonUtils.js';
+window.run=async function(){
+ const loader=new GLTFLoader(),data=await loader.loadAsync('/evidence/rider-miniature/character.glb');
+ const sc=new T.Scene();sc.background=new T.Color(0xd9d7cc);let camera=new T.PerspectiveCamera(40,960/640,.1,100);camera.position.set(6,4,7);camera.lookAt(0,1.5,0);
+ let renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(960,640);document.body.append(renderer.domElement);sc.add(new T.HemisphereLight(0xffffff,0x7d7765,2.2));let sun=new T.DirectionalLight(0xffffff,3);sun.position.set(4,6,2);sc.add(sun);sc.add(data.scene);let mix=new T.AnimationMixer(data.scene);mix.clipAction(data.animations.find(a=>a.name==='walk')).play();mix.update(.32);renderer.render(sc,camera);
+ let skinCount=0;data.scene.traverse(o=>{if(o.isSkinnedMesh)skinCount++});if(!skinCount)throw Error('No skinned mesh');
+ return {skinCount,clips:data.animations.map(a=>a.name),renderer:renderer.info.render,webgpu:!!navigator.gpu};};
+window.groups=async function(){
+ const imgs=await Promise.all(['swordsman','legionary','rider','elephant','dog'].map(n=>new Promise((res,rej)=>{let i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src='/evidence/'+n+'-simplified/game.svg'})));
+ let canvas=document.createElement('canvas');canvas.width=960;canvas.height=640;document.body.replaceChildren(canvas);let ctx=canvas.getContext('2d'),rows=[];
+ for(let size of [24,48,96]){let n=240;let draws=[],intervals=[],last=0;
+  for(let f=0;f<72;f++){let now=await new Promise(requestAnimationFrame);if(f>=12&&last)intervals.push(now-last);last=now;let t=performance.now();ctx.fillStyle='#9da58b';ctx.fillRect(0,0,960,640);for(let i=0;i<n;i++){let x=(i%20)*46+8+Math.sin(f/15+i)*3,y=Math.floor(i/20)*50+6;ctx.drawImage(imgs[i%imgs.length],x,y,size,size)}if(f>=12)draws.push(performance.now()-t)}
+  let mean=a=>a.reduce((s,v)=>s+v,0)/a.length;rows.push({size,count:n,fps:1000/mean(intervals),meanSubmitMs:mean(draws),p95Interval:intervals.sort((a,b)=>a-b)[Math.floor(intervals.length*.95)]});
+ }return rows};
+</script>`;
+const server=createServer((req,res)=>{try{let p=new URL(req.url,'http://localhost').pathname;if(p==='/'){res.setHeader('Content-Type','text/html');return res.end(html)}let f=p.startsWith('/evidence/')?resolve(out,p.slice(10)):resolve(root,'.'+p);if(!f.startsWith(out+'/')&&!f.startsWith(join(root,'node_modules')+'/'))throw Error('Outside evidence');res.setHeader('Content-Type',types[extname(f)]??'application/octet-stream');res.end(readFileSync(f))}catch(e){res.statusCode=404;res.end(String(e))}});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+let results=[],failures=[];try{for(let [name,type] of [['chromium',chromium],['webkit',webkit]]){let b;try{b=await type.launch();let p=await b.newPage({viewport:{width:960,height:640},deviceScaleFactor:1});await p.goto('http://127.0.0.1:'+server.address().port);await p.waitForFunction(()=>typeof window.run==='function');let native=await p.evaluate(()=>window.run());await p.screenshot({path:join(out,'glb-'+name+'.png')});let groups=await p.evaluate(()=>window.groups());await p.screenshot({path:join(out,'groups-'+name+'.png')});results.push({name,version:b.version(),native,groups,synthetic:true});}catch(e){failures.push({name,error:String(e)})}finally{await b?.close()}}}finally{server.close()}
+writeFileSync(join(out,'browser-report.json'),JSON.stringify({results,failures,minimumGameFPS:30,notGameAcceptance:true},null,2));if(failures.length)throw Error(JSON.stringify(failures));
