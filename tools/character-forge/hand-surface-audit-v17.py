@@ -52,7 +52,10 @@ def raw_glb(case):
   idx=case['indices'];v=v[idx];j=js[idx];w=ws[idx];v4=np.concatenate([v,np.ones((len(v),1))],1)
   posed=np.einsum('nkij,nj,nk->ni',matrices[j],v4,w)[:,:3];err=np.linalg.norm(posed-np.array(r['vertices']),axis=1)*1000
   rows.append({'phase':r['phase'],'morphWeight':weight,'maxVertexErrorMm':float(err.max()),'meanVertexErrorMm':float(err.mean())})
- return {'rows':rows,'agreement':all(r['maxVertexErrorMm']<=.05 for r in rows),'method':'Independent raw float32 GLB morph-before-skin matrix evaluation, not Blender importer playback'}
+ angleTracks={}
+ for name in ('finger2-1.L','finger2-2.L','finger2-3.L'):
+  j=next(i for i,n in enumerate(nodes) if n.get('name')==name);qs=tracks[(j,'rotation')];q0=qs[0]/np.linalg.norm(qs[0]);angleTracks[name]=[float(np.degrees(2*np.arccos(np.clip(abs(np.dot(q0,q/np.linalg.norm(q))),0,1)))) for q in qs]
+ return {'angleTracksDeg':angleTracks,'rows':rows,'agreement':all(r['maxVertexErrorMm']<=.05 for r in rows),'method':'Independent raw float32 GLB morph-before-skin matrix evaluation, not Blender importer playback'}
 reports={}
 for c in data['cases']:
  f=c['faces'];base,baseStrict=audit(c['rest'],f);rest=geom(c['rest'],f);edgeCounts=Counter(tuple(sorted((face[i],face[(i+1)%3]))) for face in f for i in range(3));edgeLengths=[(Vector(c['rest'][a])-Vector(c['rest'][b])).length for a,b in edgeCounts];triAreas=[x.length*.5 for x in rest];rows=[]
@@ -60,7 +63,7 @@ for c in data['cases']:
   pairs,strict=audit(r['vertices'],f);cur=geom(r['vertices'],f)
   ratios=[b.length/a.length for a,b in zip(rest,cur) if a.length>1e-12]
   involved=sorted(set(i for pair in strict for i in pair));newStrict=strict-baseStrict;newFaces=sorted(set(i for pair in newStrict for i in pair));area=[x.length*.5 for x in cur];strictArea=sum(area[i] for i in involved);newArea=sum(area[i] for i in newFaces);strictVerts=sorted(set(v for i in involved for v in f[i]));newVerts=sorted(set(v for i in newFaces for v in f[i]))
-  rows.append({'phase':r['phase'],'totalPairs':len(pairs),'strictPairs':len(strict),'newPairs':len(pairs-base),'newStrictPairs':len(newStrict),'strictIndices':sorted(strict),'strictFaceCount':len(involved),'strictVertexCount':len(strictVerts),'strictSurfaceAreaMm2':strictArea*1e6,'strictSurfaceAreaRatio':strictArea/max(sum(area),1e-12),'newStrictFaceCount':len(newFaces),'newStrictVertexCount':len(newVerts),'newStrictSurfaceAreaMm2':newArea*1e6,'areaMin':min(ratios),'areaMax':max(ratios),'areaTotalRatio':sum(x.length for x in cur)/sum(x.length for x in rest),'normalOpposedToRest':sum(a.dot(b)<0 for a,b in zip(rest,cur))})
+  rows.append({'phase':r['phase'],'totalPairs':len(pairs),'strictPairs':len(strict),'newPairs':len(pairs-base),'newStrictPairs':len(newStrict),'strictIndices':sorted(strict),'strictFaceCount':len(involved),'strictVertexCount':len(strictVerts),'strictSurfaceAreaMm2':strictArea*1e6,'strictSurfaceAreaRatio':strictArea/max(sum(area),1e-12),'newStrictFaceCount':len(newFaces),'newStrictVertexCount':len(newVerts),'newStrictSurfaceAreaMm2':newArea*1e6,'areaMin':min(ratios),'areaP05':float(np.percentile(ratios,5)),'areaMedian':float(np.median(ratios)),'areaP95':float(np.percentile(ratios,95)),'areaMax':max(ratios),'areaTotalRatio':sum(x.length for x in cur)/sum(x.length for x in rest),'normalOpposedToRest':sum(a.dot(b)<0 for a,b in zip(rest,cur))})
  topology={'vertices':len(c['rest']),'triangles':len(f),'boundaryEdges':sum(v==1 for v in edgeCounts.values()),'nonManifoldEdges':sum(v>2 for v in edgeCounts.values()),'edgeLengthMinMm':min(edgeLengths)*1000,'edgeLengthP95Mm':float(np.percentile(edgeLengths,95))*1000,'edgeLengthMaxMm':max(edgeLengths)*1000,'triangleAreaMinMm2':min(triAreas)*1e6,'triangleAreaP05Mm2':float(np.percentile(triAreas,5))*1e6,'triangleAreaP95Mm2':float(np.percentile(triAreas,95))*1e6,'triangleAreaMaxMm2':max(triAreas)*1e6}
  reports[c['name']]={'glbPlayback':raw_glb(c),'topology':topology,'rows':rows,'zeroNewStrict':all(x['newStrictPairs']==0 for x in rows),'matchedPose':c['name'] in ('B-matched','C-matched','D-matched'),'artApproved':False}
 matched_pose_audit={}
@@ -68,7 +71,15 @@ for name in ('B','C','D'):
  rows=data.get('matchedPoseDiagnostics',{}).get(name,[])
  errors=[j.get('angleErrorDeg',float('inf')) for row in rows for j in row.get('joints',[])]
  matched_pose_audit[name]={'phases':len(rows),'jointSamples':len(errors),'maxAngleErrorDeg':max(errors,default=float('inf')),'passed':len(rows)==5 and len(errors)==15 and max(errors,default=float('inf'))<=0.02}
-result={'reports':reports,'poseMatchDiagnostics':data.get('poseMatchDiagnostics'),'matchedPoseAudit':matched_pose_audit,'morphTransfer':data.get('morphTransfer'),'gripAllowed':False,'note':'Raw strict-pair count is accompanied by unique involved-face area and topology statistics; subdivision can increase pair counts without proportionally increasing affected surface. Normals compared in world space, rotations may reverse their orientation without triangle inversion.'}
+v21={}
+for name,report in reports.items():
+ if not name.startswith(('C-area','C-volume','C-combined')):continue
+ reference=reports['C-matched']['glbPlayback']['angleTracksDeg'];current=report['glbPlayback']['angleTracksDeg']
+ error=max(abs(a-b) for j in reference for a,b in zip(reference[j],current[j]))
+ v21[name]={'angleMaxErrorDeg':error,'matchedPosePassed':error<=.02,'zeroNewStrict':report['zeroNewStrict'],'minAreaAllPhases':min(x['areaMin'] for x in report['rows']),'areaAtMaxFlexion':report['rows'][-1]['areaMin'],'artApproved':False}
+ if error>.02:raise RuntimeError('v0.21 GLB joint angles differ from C-matched')
+(out/'v21-hand-independent.json').write_text(json.dumps({'diagnosticOnly':True,'productionAllowed':False,'gripAllowed':False,'candidates':v21},indent=2))
+result={'reports':reports,'v21':v21,'poseMatchDiagnostics':data.get('poseMatchDiagnostics'),'matchedPoseAudit':matched_pose_audit,'morphTransfer':data.get('morphTransfer'),'gripAllowed':False,'note':'Raw strict-pair count is accompanied by unique involved-face area and topology statistics; subdivision can increase pair counts without proportionally increasing affected surface. Normals compared in world space, rotations may reverse their orientation without triangle inversion.'}
 (out/'v17-hand-audit.json').write_text(json.dumps(result,indent=2))
 print(json.dumps({'matchedPoseAudit':matched_pose_audit,'reports':{k:{'glbPlayback':v['glbPlayback'],'matchedPose':v['matchedPose']} for k,v in reports.items()}}),flush=True)
 if not all(v['glbPlayback']['agreement'] for v in reports.values()):raise RuntimeError('GLB corrective playback diverged from evaluated candidate')

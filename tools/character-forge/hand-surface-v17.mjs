@@ -5,6 +5,7 @@ import {poseFrom,deform,rotate,qmul} from './core.mjs';
 import {normals,weights} from './hybrid-human.mjs';
 import {raster,commonBounds} from './material-study.mjs';
 import {glb} from './glb.mjs';
+import {optimizeSurface} from './hand-surface-v21.mjs';
 const out=process.env.CHARACTER_EVIDENCE,read=n=>JSON.parse(readFileSync(join(out,n))),write=(n,v)=>writeFileSync(join(out,n),v);
 const source=read('morph/makehuman-base.json'),a=read('morph/v15-hand-core.json'),b=read('v16-hand-transfer.json'),prior=read('v16-hand-audit.json');
 const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],len=a=>Math.hypot(...a),unit=a=>mul(a,1/Math.max(1e-12,len(a))),clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
@@ -91,9 +92,13 @@ function candidate(name,model,rotations,indices,faces,deltas){
  write('v17-hand-'+name+'.glb',glb(c,opt));return {name,rest,faces,rows,indices,activation:deltas?activation:null,jointPositions:rotations.map(q=>poseFrom(model,q)[mcp.id].p)};
 }
 const primaryCases=[candidate('A',source,ar,a.selected,a.faces),candidate('B',source,brot,a.selected,a.faces),candidate('B-matched',source,matchedB,a.selected,a.faces),candidate('C',model,brot,a.selected,a.faces,delta),candidate('C-matched',model,matchedC,a.selected,a.faces,delta),candidate('D',D,brot,dsel,df,dd),candidate('D-matched',D,matchedD,dsel,df,dd)];
+const v21Corrections=['C-area','C-volume','C-combined'].map(name=>optimizeSurface(model,matchedC,activation,delta,region,name));
+const v21Primary=v21Corrections.map(x=>candidate(x.report.kind,model,matchedC,a.selected,a.faces,x.delta));
+for(const x of v21Corrections)matchedPoseDiagnostics[x.report.kind]=matchedPoseDiagnostics.C;
+const v21Morphs=[];
 const morphTransfer=[],morphCases=[],morphFiles=[['makehuman-older-man.json','older-man'],['makehuman-older-woman.json','older-woman'],['makehuman-short-light.json','short-light'],['makehuman-tall-heavy.json','tall-heavy'],['makehuman-young-woman.json','young-woman']];
-for(const [file,slug] of morphFiles){const variant=read('morph/'+file),vp=variant.parts[0],jointCompatible=variant.joints.length===source.joints.length&&variant.joints.every((j,i)=>j.name===source.joints[i].name&&j.parent===source.joints[i].parent),compatible=jointCompatible&&vp.positions.length===p.positions.length&&vp.indices.length===p.indices.length&&vp.indices.every((x,i)=>x===p.indices[i]);if(!compatible){morphTransfer.push({name:slug,compatible:false,jointCompatible,reason:'Topology/index or semantic joint mapping differs'});continue}for(const key of ['joints8','weights8','joints','weights'])vp[key]=model.parts[0][key].slice();morphCases.push(candidate('C-'+slug,variant,brot,a.selected,a.faces,delta));morphTransfer.push({name:slug,compatible:true,jointCompatible:true,correctiveTransferred:true,vertices:vp.positions.length/3,triangles:vp.indices.length/3,maxCorrectiveMm:Math.max(...[...region.keys()].map(i=>len(delta.slice(i*3,i*3+3))))*1000,artApproved:false})}
-const cases=[...primaryCases,...morphCases];
+for(const [file,slug] of morphFiles){const variant=read('morph/'+file),vp=variant.parts[0],jointCompatible=variant.joints.length===source.joints.length&&variant.joints.every((j,i)=>j.name===source.joints[i].name&&j.parent===source.joints[i].parent),compatible=jointCompatible&&vp.positions.length===p.positions.length&&vp.indices.length===p.indices.length&&vp.indices.every((x,i)=>x===p.indices[i]);if(!compatible){morphTransfer.push({name:slug,compatible:false,jointCompatible,reason:'Topology/index or semantic joint mapping differs'});continue}for(const key of ['joints8','weights8','joints','weights'])vp[key]=model.parts[0][key].slice();morphCases.push(candidate('C-'+slug,variant,brot,a.selected,a.faces,delta));for(const x of v21Corrections)v21Morphs.push(candidate(x.report.kind+'-'+slug,variant,matchedC,a.selected,a.faces,x.delta));morphTransfer.push({name:slug,compatible:true,jointCompatible:true,correctiveTransferred:true,vertices:vp.positions.length/3,triangles:vp.indices.length/3,maxCorrectiveMm:Math.max(...[...region.keys()].map(i=>len(delta.slice(i*3,i*3+3))))*1000,artApproved:false})}
+const cases=[...primaryCases,...morphCases,...v21Primary,...v21Morphs];
 for(const i of [0,2,4]){
  const meshes=primaryCases.map(c=>{const m={...p,positions:c.rows[i].vertices.flat(),indices:c.faces.flat()};normals(m);return {parts:[m]}});
  for(const view of ['front','side','three-quarter']){
@@ -104,6 +109,23 @@ for(const i of [0,2,4]){
   for(let j=0;j<primaryCases.length;j++)write('v17-index-MCP-'+primaryCases[j].name+'-'+phases[i]+'-'+view+'.png',raster(close[j],{view,bounds:cb,size:640,mode:'A'}).png);
  }
 }
+// Actual pose-space geometry, matched cameras and per-face area-ratio maps.
+const compareV21=[primaryCases[0],primaryCases[4],...v21Primary];
+for(const i of [0,2,4]){
+ const models=compareV21.map(c=>{const m={...p,positions:c.rows[i].vertices.flat(),indices:c.faces.flat()};delete m.vertexTint;normals(m);return {parts:[m]}});
+ const maps=compareV21.map(c=>{const v=c.rows[i].vertices,rest=c.rest;const tint=[],pos=[],idx=[];for(const f of c.faces){const ar=(vv)=>len(cross(sub(vv[f[1]],vv[f[0]]),sub(vv[f[2]],vv[f[0]]))),r=ar(v)/Math.max(ar(rest),1e-12),h=clamp(r),color=[.85*(1-h)+.12*h,.14*(1-h)+.65*h,.17];for(const j of f){idx.push(pos.length/3);pos.push(...v[j]);tint.push(...color);}}const m={...p,positions:pos,indices:idx,vertexTint:tint};normals(m);return {parts:[m]}});
+ for(const view of ['front','side','three-quarter']){
+  const bounds=commonBounds(models,view);
+  for(let j=0;j<compareV21.length;j++){
+   const name=compareV21[j].name;write('v21-hand-'+name+'-'+phases[i]+'-'+view+'.png',raster(models[j],{view,bounds,size:640,mode:'A'}).png);
+   write('v21-area-'+name+'-'+phases[i]+'-'+view+'.png',raster(maps[j],{view,bounds,size:640,mode:'A'}).png);
+  }
+  const close=compareV21.map((c,j)=>{const center=c.jointPositions[i],v=c.rows[i].vertices,fs=c.faces.filter(f=>len(sub(mul(add(add(v[f[0]],v[f[1]]),v[f[2]]),1/3),center))<.045);const ids=[...new Set(fs.flat())],index=new Map(ids.map((x,k)=>[x,k]));const m={...p,positions:ids.flatMap(x=>v[x]),indices:fs.flatMap(f=>f.map(x=>index.get(x)))};delete m.vertexTint;normals(m);return {parts:[m]}});
+  const boundsClose=commonBounds(close,view);
+  for(let j=0;j<compareV21.length;j++)write('v21-close-'+compareV21[j].name+'-'+phases[i]+'-'+view+'.png',raster(close[j],{view,bounds:boundsClose,size:640,mode:'A'}).png);
+ }
+}
+write('v21-hand-optimization.json',JSON.stringify({diagnosticOnly:true,productionAllowed:false,candidates:v21Corrections.map(x=>x.report),morphCases:v21Morphs.map(x=>x.name),gripAllowed:false}));
 const regionRows=[...region].map(([i,r])=>({vertex:i,...r,delta:delta.slice(i*3,i*3+3)}));
 write('v17-hand-surface.json',JSON.stringify({joint:mcp.name,parent:parent.name,half,region:regionRows,originalVertices:oldCount,retessellatedVertices:dp.positions.length/3,splitEdges:[...mid],poseMatchDiagnostics,matchedPoseDiagnostics,morphTransfer,cases,oppositionControl:prior.transferB?.find(x=>x.name==='opposition')??null,limitations:['A and B raw poses differ; B-matched, C-matched and D-matched share the same per-joint MakeHuman flexion magnitudes.','D remains a local conforming retessellation control, not a new anatomical ring template.','MCP centre held fixed pending independent evidence of misalignment.','No other digits, scutum or grip qualified.']}));
 console.log(JSON.stringify({region:region.size,splitEdges:mid.size,maxCorrectiveMm:Math.max(...regionRows.map(r=>len(r.delta)))*1000,candidates:cases.map(c=>c.name),morphTransfer:morphTransfer.map(x=>({name:x.name,compatible:x.compatible}))}));

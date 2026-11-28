@@ -239,6 +239,9 @@ jobs:
           path: |
             quality-artifacts/character-bridge/v17-hand-*
             quality-artifacts/character-bridge/v17-index-*
+            quality-artifacts/character-bridge/v21-hand-*
+            quality-artifacts/character-bridge/v21-area-*
+            quality-artifacts/character-bridge/v21-close-*
           if-no-files-found: warn
       - name: Required gated physical garment reference and remesh recovery
         id: recovery
