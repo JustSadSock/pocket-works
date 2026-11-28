@@ -32,15 +32,15 @@ function realmNames(s,owner,visible){const groups=new Map();for(let i=0;i<N;i++)
 // class, development, heraldry and architectural variant, not by city identity.
 const boroughs=new Map();
 function borough(city){
- const count=city.pop>4200?20:city.pop>1600?12:city.pop>900?7:3,fort=city.fort||0,port=city.port||0,variant=hash(String(city.name))%3,ink=PALETTE[city.occupation>=0?city.occupation:city.f]||'#8d6040',key=[count,fort,port,variant,ink,!!city.capital].join('|');if(boroughs.has(key))return boroughs.get(key);
+ const factor=city.colony?.purpose==='factor'&&city.pop<900,outpost=city.colony?.purpose==='outpost'&&city.pop<900,count=city.pop>4200?20:city.pop>1600?12:city.pop>900?7:city.pop>=400?5:city.pop>=180?4:3,fort=city.fort||0,port=city.port||0,variant=hash(String(city.name))%3,region=(Math.max(0,city.f)||0)%3,ink=PALETTE[city.occupation>=0?city.occupation:city.f]||'#8d6040',key=[count,fort,port,variant,region,ink,!!city.capital,factor,outpost,city.specialization||''].join('|');if(boroughs.has(key))return boroughs.get(key);
  const canvas=document.createElement('canvas');canvas.width=192;canvas.height=160;const c=canvas.getContext('2d');c.translate(96,99);
  const poly=(p,color,stroke)=>{c.beginPath();c.moveTo(...p[0]);for(const v of p.slice(1))c.lineTo(...v);c.closePath();c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=.8;c.stroke();}};
  const house=(x,y,w,h,roof,tower=false)=>{const d=w*.36;poly([[x-w/2+3,y+4],[x+w/2+5,y+4],[x+w/2+d+5,y-d*.55+4],[x-w/2+d+3,y-d*.55+4]],'#433a2f66');poly([[x-w/2,y],[x+w/2,y],[x+w/2,y-h],[x-w/2,y-h]],'#e7d2aa','#77664b');poly([[x+w/2,y],[x+w/2+d,y-d*.6],[x+w/2+d,y-h-d*.6],[x+w/2,y-h]],'#a48a64','#77664b');poly([[x-w/2-1,y-h],[x,y-h-w*.52],[x+d,y-h-w*.52-d*.6],[x-w/2+d,y-h-d*.6]],roof,'#65513b');poly([[x,y-h-w*.52],[x+w/2+1,y-h],[x+w/2+d,y-h-d*.6],[x+d,y-h-w*.52-d*.6]],'#6e4837','#65513b');c.fillStyle='#69523b';c.fillRect(x-1.4,y-5,2.8,5);if(tower){c.fillRect(x-3,y-h+4,2,4);c.fillRect(x+2,y-h+4,2,4);}};
- const radius=count>12?58:count>7?44:count>3?33:21;
+ const radius=count>12?58:count>7?44:count>3?33:21;const palettes=[['#97583b','#ae774d','#74634c'],['#696d65','#8c826e','#554d47'],['#a76b47','#ba945e','#906c45']],roofPalette=palettes[region];
  if(fort||city.capital){c.strokeStyle='#695941';c.lineWidth=9;c.beginPath();c.ellipse(0,0,radius+4,radius*.6+4,0,0,Math.PI*2);c.stroke();c.strokeStyle='#d5c09a';c.lineWidth=5;c.stroke();}
- const points=[];for(let i=0;i<count;i++){const ang=i*2.399963+variant*.72,dist=i===0?0:radius*.85*Math.sqrt(i/count);points.push([Math.cos(ang)*dist,Math.sin(ang)*dist*.64,i]);}
- points.sort((a,b)=>a[1]-b[1]);for(const [x,y,i] of points){const big=i===0&&(city.capital||count>=12),roof=big?ink:['#97583b','#ae774d','#74634c'][((i+variant)%3)];house(x,y,big?22:13+(i%3)*2,big?28:9+(i%4)*2,roof,big);}
- if(fort||city.capital){for(const angle of [.2,1.65,2.9])house(Math.cos(angle)*(radius+3),Math.sin(angle)*(radius*.6+3),13,17,'#887b60',true);}
+ const points=[];for(let i=0;i<count;i++){const ang=i*2.399963+variant*.72,dist=i===0?0:radius*.85*Math.sqrt(i/count);const p=factor?[[0,1],[-16,7],[16,7],[-10,-12],[12,-12]][i]:null;points.push(p?[p[0],p[1],i]:[Math.cos(ang)*dist,Math.sin(ang)*dist*.64,i]);}
+ points.sort((a,b)=>a[1]-b[1]);for(const [x,y,i] of points){const big=i===0&&(city.capital||count>=12),roof=big?ink:roofPalette[(i+variant)%3];house(x,y,big?22:factor&&i===0?23:13+(i%3)*2,big?28:factor&&i===0?12:9+(i%4)*2,roof,big);}
+ if(factor){c.fillStyle='#8d704b';c.fillRect(-10,12,20,3);c.fillStyle='#d0ae73';for(const x of [-8,-3,2,7])c.fillRect(x,10,3,3);}if(outpost&&!fort){c.strokeStyle='#776343';c.lineWidth=2;c.strokeRect(-19,-10,38,22);}if(fort||city.capital){for(const angle of [.2,1.65,2.9])house(Math.cos(angle)*(radius+3),Math.sin(angle)*(radius*.6+3),13,17,'#887b60',true);}
  if(port){c.fillStyle='#876b48';for(let i=0;i<Math.min(3,port);i++){const x=radius*.7+i*10;c.fillRect(x,10,5,25);poly([[x-4,30],[x+4,30],[x+4,42],[x,47],[x-4,42]],'#594533');poly([[x,31],[x+9,40],[x,42]],'#e4d5ae');}}
  if(city.capital){c.strokeStyle='#453a2b';c.lineWidth=1.7;c.beginPath();c.moveTo(0,-34);c.lineTo(0,-62);c.stroke();poly([[0,-62],[19,-59],[0,-51]],ink,'#493a27');}
  if(boroughs.size>=256)boroughs.delete(boroughs.keys().next().value);boroughs.set(key,canvas);return canvas;
@@ -48,7 +48,7 @@ function borough(city){
 function urbanSettlementMark(c,city,scale){const size=city.capital?7:city.fort?6:city.port?5.5:city.pop>900||city.specialization==='trade'?5:3.6;c.fillStyle='#e6d6ae';c.strokeStyle='#4c4434';c.lineWidth=1.15;c.beginPath();c.arc(0,0,size,0,Math.PI*2);c.fill();c.stroke();c.fillStyle=PALETTE[city.f]||'#8d6040';c.beginPath();c.moveTo(-size*.65,0);c.lineTo(0,-size*.78);c.lineTo(size*.65,0);c.lineTo(size*.49,size*.56);c.lineTo(-size*.49,size*.56);c.closePath();c.fill();if(city.capital){c.strokeStyle='#ead29a';c.lineWidth=1.25;c.beginPath();c.arc(0,0,size+2,0,Math.PI*2);c.stroke();}if(city.port){c.fillStyle='#98c2c7';c.fillRect(size-1,1,3.5,3.5);}if(city.fort){c.fillStyle='#524d40';c.fillRect(-size-1,-size,3,4);c.fillRect(size-2,-size,3,4);}}
 function settlementMark(c,city,r,scale){
  if(scale<1.5){c.fillStyle=PALETTE[city.f]||'#8d6040';c.strokeStyle='#f5dfaf';c.lineWidth=1.3;c.beginPath();c.arc(0,0,city.capital?5:3.5,0,Math.PI*2);c.fill();c.stroke();return;}
- const size=clamp(scale*6.4,42,city.pop>1600||city.capital?116:76),img=borough(city);c.drawImage(img,-size/2,-size*99/192,size,size*160/192);
+ const size=clamp(scale*6.4,city.pop<180?32:42,city.pop>1600||city.capital?116:city.pop<180?58:76),img=borough(city);c.drawImage(img,-size/2,-size*99/192,size,size*160/192);
 }
 
 function fieldSurface(canvas,b){

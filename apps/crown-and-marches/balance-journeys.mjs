@@ -32,5 +32,7 @@ try{let ready=false,last='no response';for(let i=0;i<80;i++){if(serverError||ser
  if(mode!=='0')await runDiscoveryJourneys(url);
  if(mode!=='1')await runGrandCausalityJourney(url,'agrarian');
  if(mode!=='0')await runGrandCausalityJourney(url,'maritime');
+ if(mode!=='1')await runGrandCausalityJourney(url,'connected-land');
+ if(mode!=='0')await runGrandCausalityJourney(url,'maritime-natural');
 }finally{if(server.exitCode===null){server.kill('SIGTERM');await Promise.race([once(server,'exit'),new Promise(r=>setTimeout(r,2000))]);}writeFileSync(join(output,'journeys.json'),JSON.stringify(reports,null,2));}
 
