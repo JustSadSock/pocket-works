@@ -50,6 +50,19 @@ jobs:
           sha256sum quality-artifacts/authored/result/document.json
       - name: Existing Forge native export and sampled playback
         run: node tools/character-forge/authored-mesh/export-study.mjs quality-artifacts/authored/control/p0-model.json quality-artifacts/authored/result/document.json quality-artifacts/authored/result/study.glb
+      - name: Independent exported GLB and archived control audit
+        run: |
+          export OPENBLAS_NUM_THREADS=1
+          python tools/character-forge/authored-mesh/collision-test.py
+          root=quality-artifacts/authored
+          source="$root/source/morph/makehuman-base.json"
+          outer=$(node -e 'console.log(require("./quality-artifacts/authored/result/document.json").parts[0].outerVertexCount)')
+          old=$(node -e 'console.log(require("./quality-artifacts/authored/control/p0-model.json").parts.find(p=>p.name==="tunic").outerVertexCount)')
+          python tools/character-forge/authored-mesh/audit-export.py "$root/result/study.glb" "$source" "authored artisan tunic" "$outer" "$root/result/audit67.json"
+          python tools/character-forge/authored-mesh/audit-export.py "$root/control/character.glb" "$source" tunic "$old" "$root/result/control-audit67.json"
+      - name: Fail-closed isolated study gate
+        run: |
+          node -e 'const r=require("./quality-artifacts/authored/result/audit67.json");if(r.states!==67||r.isolatedGate!==true){console.error("Study remains rejected:",r.summary);process.exit(1)}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
