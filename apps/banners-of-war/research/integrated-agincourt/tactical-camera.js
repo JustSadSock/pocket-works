@@ -9,6 +9,8 @@ export function extent(s){
  let min=Infinity,max=-Infinity;
  // Historical elevations are bilinear samples; their extrema are grid vertices.
  for(const h of t.height||[]){min=Math.min(min,h);max=Math.max(max,h)}
+ // The river carve changes rendered extrema between grid vertices. Sample actual terrain too.
+ for(let x=0;x<=F.W;x+=10)for(let y=0;y<=F.H;y+=10){let h=renderHeight(F,t,x,y);min=Math.min(min,h);max=Math.max(max,h)}
  if(!Number.isFinite(min))min=max=0;
  const top=-max*T-5,e={w:F.H,h:F.W*S-min*T+5-top,top};cache.set(t,e);return e;
 }

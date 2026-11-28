@@ -119,7 +119,7 @@ export function paintArt(s,layout,C){getScene(s,layout,C);let before=lastCam;mot
  // RAF-to-RAF time includes deferred Canvas raster and compositing, unlike JS submit time.
  // Ignore paused/idle frames and scene changes; learn only from adjacent active draws.
  if(previousDraw&&previousDraw.bucket===bucket){let ms=now-previousDraw.at;if(ms>=4&&ms<120){let samples=cadence.get(bucket)||{},p=samples[previousDraw.mode]||{ms:0,n:0};p.ms=p.n?p.ms*.84+ms*.16:ms;p.n++;samples[previousDraw.mode]=p;cadence.set(bucket,samples)}}
- let choices=motionKind==='zoom'?['direct']:['direct','batch'],learned=cadence.get(bucket)||{},mode=policy;
+ let recovery=new URLSearchParams(location.search).get('zoomRecovery'),choices=motionKind==='zoom'&&['batch','scaled','world-row'].includes(recovery)?[recovery]:motionKind==='zoom'?['direct']:['direct','batch'],learned=cadence.get(bucket)||{},mode=policy;
  if(policy==='auto'){
   let unknown=choices.find(m=>(learned[m]?.n||0)<3);
   mode=unknown||choices.reduce((best,m)=>learned[m].ms<learned[best].ms?m:best,choices[0]);

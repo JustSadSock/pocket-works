@@ -3,7 +3,8 @@ import {startPreview} from './server.mjs';
 import {writeFile,mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import assert from 'node:assert/strict';
-const out=resolve(process.env.BOW_INTEGRATED_OUTPUT),assets=process.env.BOW_ART_OUTPUT,engine=process.env.BOW_BROWSER,side=Number(process.env.BOW_SIDE);
+import {configurations} from '../custom-warfare/configurations.mjs';
+const out=resolve(process.env.BOW_INTEGRATED_OUTPUT),assets=process.env.BOW_ART_OUTPUT,engine=process.env.BOW_BROWSER,side=Number(process.env.BOW_SIDE||1),configuration=process.env.BOW_CUSTOM_CASE?configurations.find(c=>c.id===process.env.BOW_CUSTOM_CASE):null;
 await mkdir(out,{recursive:true});const {server,url}=await startPreview(assets);
 const key='pocket-works:banners-of-war:battle:1',saved=p=>p.evaluate(key=>JSON.parse(localStorage.getItem(key)),key),receipt=p=>p.evaluate(()=>window.integratedQA.receipt());
 async function waitReceipt(p,art){await p.waitForFunction(art=>{const r=window.integratedQA?.receipt();return r&&r.art===art},art,{timeout:120000});return receipt(p)}
@@ -33,7 +34,7 @@ async function command(p,reference){
  // Native selection/command controls only. No QA state setter, localStorage injection or AI observer.
  await p.locator('#fit').click();await p.waitForTimeout(150);
  const r=await receipt(p),own=r.units.filter(u=>u.side===0&&u.type!=='guard'&&u.n>=1&&!u.rout&&!u.escaped),enemy=r.units.filter(u=>u.side===1);
- const instructions=reference||own.filter(u=>u.type==='sword'||u.type==='archer'||u.type==='crossbow'||u.type==='knight').slice(0,5).map(u=>({id:u.id,kind:u.type==='archer'||u.type==='crossbow'?'shoot':side===0?'brace':'attack',target:enemy.slice().sort((a,b)=>Math.hypot(a.x-u.x,a.y-u.y)-Math.hypot(b.x-u.x,b.y-u.y)||a.id-b.id)[0]?.id}));
+ const instructions=reference||own.filter(u=>u.type==='sword'||u.type==='archer'||u.type==='crossbow'||u.type==='knight').slice(0,5).map(u=>({id:u.id,kind:configuration&&!enemy.length?'brace':u.type==='archer'||u.type==='crossbow'?'shoot':side===0?'brace':'attack',target:enemy.slice().sort((a,b)=>Math.hypot(a.x-u.x,a.y-u.y)-Math.hypot(b.x-u.x,b.y-u.y)||a.id-b.id)[0]?.id}));
  let executed=[],diagnostics=[];
  for(const ins of instructions){
   const u=own.find(u=>u.id===ins.id),v=enemy.find(v=>v.id===ins.target);
@@ -71,11 +72,15 @@ try{
   const tag=engine+'-side'+side+'-'+(art?'candidate':'schematic'),context=await b.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1,recordVideo:{dir:out+'/'+tag,size:{width:1440,height:900}}}),p=await context.newPage(),errors=[],rounds=[],pairs=[],events={};let motionProfile=null;p.on('pageerror',e=>errors.push(e.message));
   try{
    await p.goto(url+'?view='+ (art?'candidate':'schematic'));await p.waitForFunction(()=>window.integratedQA?.ready===true);
-   await p.locator('#chronicles').click();await p.locator('#chronicle-id').selectOption('agincourt');await p.locator('#chronicle-side').selectOption(String(side));await p.locator('#chronicle-launch').click();
+   if(configuration){
+    await p.locator('#seed').fill(configuration.seed);await p.locator('#landscape').selectOption(configuration.landscape);await p.locator('#objective').selectOption(configuration.objective);await p.locator('#duration').selectOption(String(configuration.seconds));await p.locator('#visibility').selectOption(configuration.fog?'fog':'open');
+    for(let side of [0,1]){let a=configuration.armies[side];await p.locator('#army-side').selectOption(String(side));await p.locator('#'+a.preset).click();await p.locator('#army-size').selectOption(String(a.size));await p.locator('#army-quality').selectOption(a.quality)}
+    await p.screenshot({path:out+'/'+tag+'-muster.png'});await p.locator('#start').click();await p.locator('#phase').waitFor({state:'visible'});assert.equal((await saved(p)).state.seed,configuration.seed);assert.deepEqual((await saved(p)).state.custom.config.armies.map(a=>a.roster),configuration.armies.map(a=>a.roster));
+   }else{await p.locator('#chronicles').click();await p.locator('#chronicle-id').selectOption('agincourt');await p.locator('#chronicle-side').selectOption(String(side));await p.locator('#chronicle-launch').click();}
    await p.locator('#map').waitFor({state:'visible'});await p.waitForFunction(()=>!!window.integratedQA?.receipt());
    pairs.push(await pair(p,tag+'-initial',art));
    if(art){await p.locator('#focus').click();await p.waitForTimeout(250);await waitReceipt(p,true);await p.screenshot({path:out+'/'+tag+'-close60.png'});await p.locator('#fit').click();await p.waitForTimeout(200)}
-   motionProfile=await nativeMotionProfile(p);
+   motionProfile=await nativeMotionProfile(p);if(configuration){await p.locator('#confirm').click();await p.waitForFunction(()=>window.integratedQA.receipt()?.phase==='plan');}
    for(let i=0;i<31;i++){
     let before=await saved(p);if(before.state.result)break;
     let order=await command(p,reference?.[i]?.order.executed);
@@ -97,7 +102,7 @@ try{
    }
    let final=await saved(p);assert(final.state.result);if(art){assert(reference,'Schematic reference battle failed');assert.equal(rounds.length,reference.length)}
    await p.screenshot({path:out+'/'+tag+'-result.png'});assert.equal(errors.length,0);assert(rounds.some(r=>r.order.executed.length),'No actual player commands in complete battle');
-   if(!art)reference=rounds;
+   if(!art)reference=rounds;if(configuration){await p.locator('#custom-return').click();await p.locator('#setup').waitFor({state:'visible'});assert.equal(await p.locator('#seed').inputValue(),configuration.seed);}
   }catch(e){failures.push({tag,error:e.stack,receipt:await receipt(p).catch(()=>null),browserErrors:errors});await p.screenshot({path:out+'/'+tag+'-failure.png'}).catch(()=>{})}
   finally{await writeFile(out+'/'+tag+'.json',JSON.stringify({tag,rounds,pairs,events,motionProfile,errors},null,2));await context.close()}
  }}finally{await b.close()}

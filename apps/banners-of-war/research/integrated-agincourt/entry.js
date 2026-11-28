@@ -18,8 +18,8 @@ cameraButton.onclick=()=>{if(!ready||!active||failed)return;tacticalRequested=!t
 function hash(s){let v=2166136261;for(let i=0;i<s.length;i++){v=Math.imul(v^s.charCodeAt(i),16777619)}return (v>>>0).toString(16)}
 function fingerprint(s){return hash(JSON.stringify([s.time,s.round,s.result,s.units.map(u=>[u.id,u.side,u.type,u.x,u.y,u.a,u.n,u.v,u.contact,u.morale,u.cohesion,u.fatigue,u.rout,u.form,u.cols,u.order,u.sectors])]))}
 globalThis.__bowIntegratedPreview={
- update({state,study}){enabled=state?.historical?.id==='agincourt'&&!study;button.hidden=!enabled;status.hidden=!enabled;cameraButton.hidden=!enabled||!active||!ready},
- tactical(s,layer,paletteAlt){return !!(enabled&&active&&ready&&!failed&&tacticalRequested&&s?.historical?.id==='agincourt'&&!s.commandHierarchy&&layer==='normal'&&!paletteAlt)},
+ update({state,study}){enabled=(state?.historical?.id==='agincourt'||!!state?.custom)&&!study;button.hidden=!enabled;status.hidden=!enabled;cameraButton.hidden=!enabled||!active||!ready},
+ tactical(s,layer,paletteAlt){return !!(enabled&&active&&ready&&!failed&&tacticalRequested&&(s?.historical?.id==='agincourt'||!!s?.custom)&&!s.commandHierarchy&&layer==='normal'&&!paletteAlt)},
  extent,project,unproject,overlay,
  needsPaint(ts){if(wake){wake=false;return true}return enabled&&active&&ready&&!failed&&ts-lastPaint>180&&(last?.reason==='preparing terrain'||pendingArt()>0)},
  present({s,visible,canvas,camera,phase,layer,selected,commandable,orders,projected,unproject,playing,frame,lastFrame,paletteAlt,study}){
@@ -35,7 +35,7 @@ globalThis.__bowIntegratedPreview={
   try{
    // Visibility comes from the native UI. Unsupported troops use native renderRegiment.
    // No independently advancing state, no substitution of crossbows with longbows.
-   const ids=new Set(visible.map(u=>u.id)),drawState={...s,presentationTerrainKey:s.historical.id+'|'+terrainHash,units:expected,shots:(s.shots||[]).filter(q=>ids.has(q.id))};
+   const ids=new Set(visible.map(u=>u.id)),drawState={...s,presentationTerrainKey:(s.historical?.id||'custom')+'|'+terrainHash,units:expected,shots:(s.shots||[]).filter(q=>ids.has(q.id))};
    const stats=paintArt(drawState,{w,h,d:dpr},cam);
    if(stats.terrain.uncovered>0){last.reason='preparing terrain';status.textContent='Подготовка поверхности';if(tactical)return new Set(expected.map(u=>u.id));return null}
    if(before!==fingerprint(s))throw Error('Renderer mutated authoritative state');

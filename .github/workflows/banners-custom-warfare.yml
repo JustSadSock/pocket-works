@@ -1,0 +1,159 @@
+name: Banners of War Custom Warfare Foundation
+on:
+  pull_request:
+    paths:
+      - 'apps/banners-of-war/**'
+      - '.github/workflows/banners-custom-warfare.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: banners-custom-warfare-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test apps/banners-of-war/custom-battle.test.mjs apps/banners-of-war/chronicles.test.mjs apps/banners-of-war/engine.test.mjs apps/banners-of-war/laboratory.test.mjs apps/banners-of-war/research/vertical-slice/standalone.test.mjs
+  tactical-and-campaign:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/custom-audit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node apps/banners-of-war/research/custom-warfare/audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-tactical-and-campaign
+          path: quality-artifacts/custom-audit
+          retention-days: 14
+  browser:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            scenario: equal
+          - browser: webkit
+            scenario: quality
+          - browser: chromium
+            scenario: mixed
+          - browser: webkit
+            scenario: defence
+    env:
+      BOW_INTEGRATED_OUTPUT: quality-artifacts/custom-browser
+      BOW_BROWSER: ${{ matrix.browser }}
+      BOW_CUSTOM_CASE: ${{ matrix.scenario }}
+      BOW_SIDE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/custom-candidate
+      - run: |
+          atlas="$(find /tmp/custom-candidate -name mixed-atlas.json -print -quit)"
+          test -n "$atlas"
+          echo "BOW_ART_OUTPUT=$(dirname "$atlas")" >> "$GITHUB_ENV"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+      - run: node apps/banners-of-war/research/integrated-agincourt/playtest.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-${{ matrix.scenario }}-${{ matrix.browser }}-original
+          path: quality-artifacts/custom-browser
+          retention-days: 14
+      - name: Keep selected original PNGs
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/key
+          find quality-artifacts/custom-browser -maxdepth 1 -type f \( -name '*-muster.png' -o -name '*-initial-candidate.png' -o -name '*-initial-schematic.png' -o -name '*-initial-tactical60.png' -o -name '*-close60.png' -o -name '*-event-*.png' -o -name '*-result.png' -o -name '*-failure.png' \) -exec cp {} quality-artifacts/key/ \;
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-${{ matrix.scenario }}-key-PNG
+          path: quality-artifacts/key
+          retention-days: 14
+  bounded-final-recovery:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            profile: 15259586015
+          - browser: webkit
+            profile: 15259298049
+    env:
+      BOW_PAIRED_PROFILE: '1'
+      BOW_RECOVERY: '1'
+      BOW_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46134216631
+          artifact-ids: ${{ matrix.profile }}
+          path: /tmp/prior-profile
+      - name: Analyze original frame and composition metrics
+        run: |
+          mkdir -p quality-artifacts/final-recovery
+          original="$(find /tmp/prior-profile -name 'paired-*.json' -print -quit)"
+          test -n "$original"
+          policy="$(node apps/banners-of-war/research/custom-warfare/analyze-profile.mjs "$original" quality-artifacts/final-recovery/causal-profile.json)"
+          echo "BOW_FINAL_RECOVERY=$policy" >> "$GITHUB_ENV"
+          echo "Selected policy: $policy"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/final-candidate
+      - name: Final bounded paired comparison
+        run: |
+          if [ "$BOW_FINAL_RECOVERY" = none ]; then
+            echo 'No measured composition improvement passing existing equivalence gates. Stop this recovery cycle; Candidate not admitted.' | tee quality-artifacts/final-recovery/no-admission.txt
+            exit 1
+          fi
+          atlas="$(find /tmp/final-candidate -name mixed-atlas.json -print -quit)"
+          test -n "$atlas"
+          export BOW_ART_OUTPUT="$(dirname "$atlas")"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/battlefield-identity/capture.mjs
+      - name: Preserve final measurement and pixel evidence
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/final-recovery
+          find /tmp/final-candidate -name 'paired-*.json' -o -name 'difference-*-candidate-*.png' -o -name 'difference-*-recovery-*.png' | while read -r f; do cp "$f" quality-artifacts/final-recovery/; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-recovery-${{ matrix.browser }}
+          path: quality-artifacts/final-recovery
+          retention-days: 14
