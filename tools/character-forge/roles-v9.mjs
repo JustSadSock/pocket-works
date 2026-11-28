@@ -150,6 +150,17 @@ function merchantKit(m){
  return {hemY:hem.y,bundle:'rolled shoulder load'};
 }
 // P0 uses existing welded tunic and fitted mantle, not the experimental long robe tube.
+// Build a closed woven cuff using the actual outer sleeve rows, no repeated seam vertex.
+function civilianCuffs(m,tunic){
+ const N=tunic.pattern.ringCount,half=4,count=2*(2*half+1);
+ for(const [i,side] of ['L','R'].entries()){
+  const start=N*6+i*count*5,center=row=>Array.from({length:count},(_,j)=>tunic.positions.slice((start+row*count+j)*3,(start+row*count+j+1)*3)).reduce((a,b)=>add(a,mul(b,1/count)),[0,0,0]);
+  const cuff=authoredPatch({name:'linen cuff '+side,color:[.58,.53,.39],material:{kind:'cloth',roughness:.94,metallic:0},rows:3,columns:count,closedColumns:true,thickness:.002,host:'tunic',region:'sleeve cuff',sample:(v,u)=>{
+   const k=Math.round(u*count)%count,a=start+3*count+k,b=a+count,t=.73+.25*v,pa=tunic.positions.slice(a*3,a*3+3),pb=tunic.positions.slice(b*3,b*3+3),p=mix(pa,pb,t),n=unit(sub(p,mix(center(3),center(4),t)));
+   return {position:add(p,mul(n,.0035)),outward:n,weights:weights(tunic,a).map(([j,w])=>[j,w*(1-t)]).concat(weights(tunic,b).map(([j,w])=>[j,w*t]))};
+  }});m.parts.push(cuff);
+ }
+}
 function civilianArtisan(m){
  const tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount,hip=J(m,'spine03'),sample=ringSampler(tunic);
  tunic.color=[.38,.35,.26];tunic.material={kind:'cloth',roughness:.94,metallic:0};
@@ -159,7 +170,7 @@ function civilianArtisan(m){
   const r=.04+2.04*v,width=5.0-1.5*v,k=N*.75+(2*u-1)*width;
   return sample(r,k,.009+.004*Math.sin(Math.PI*v)*Math.cos(5*Math.PI*u));
  }});
- m.parts.push(apron);
+ m.parts.push(apron);civilianCuffs(m,tunic);
  m.parts=m.parts.filter(p=>p.name!=='belt clasp');
  const a=sample(2,N*.75,.028),buckle=torus(m,'apron belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.016,.0035,[[hip.id,1]],[.47,.35,.16]);
  buckle.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
@@ -171,13 +182,14 @@ function civilianMerchant(m){
  // Short shoulder mantle: wider at lower edge, tapered toward the neck.
  // Real geometric folds and a hem that follows the back and right shoulder.
  const cape=authoredPatch({name:'wool draped merchant mantle',color:[.36,.17,.085],material:{kind:'cloth',roughness:.96,metallic:0},rows:17,columns:25,thickness:.004,host:'tunic',region:'shoulder mantle',sample:(v,u)=>{
-  const r=2.65+2.23*v,k=(-1.5+2.5*v)+(18-4*v)*u;
-  return sample(r,k,.013+.009*Math.sin(Math.PI*(1-v))*(.6+.4*Math.cos(6*Math.PI*u)));
+  const edge=Math.abs(2*u-1),r=2.90+.48*edge+(4.88-2.90-.48*edge)*v,k=(-5.5-1.2*v)+(27+2.4*v)*u;
+  return sample(r,k,.009+.008*Math.sin(Math.PI*(1-v))*(.6+.4*Math.cos(6*Math.PI*u)),{maxExtension:.065});
  }});
  m.parts.push(cape);
  m.parts=m.parts.filter(p=>p.name!=='belt clasp');
  // Solid torus rather than the previous degenerate lined ellipsoid.
- const edge=sample(4.50,1.0,.025),clasp=torus(m,'merchant brass mantle clasp',edge.position,[1,0,0],[0,1,0],[0,0,1],.014,.0035,[[upper.id,1]],[.58,.37,.14]);clasp.attachmentSpec={type:'rigid-hardware',host:cape.name};
+ const tie=authoredPatch({name:'merchant woven clasp band',color:[.43,.26,.115],material:{kind:'cloth',roughness:.92,metallic:0},rows:3,columns:13,thickness:.0025,host:'tunic',region:'neck fastening',sample:(v,u)=>sample(4.55+.17*v,21+6*u,.010)});m.parts.push(tie);
+ const edge=sample(4.63,24,.017),clasp=torus(m,'merchant brass mantle clasp',edge.position,[1,0,0],[0,1,0],[0,0,1],.012,.0027,[[upper.id,1]],[.58,.37,.14]);clasp.attachmentSpec={type:'rigid-hardware',host:tie.name};
  const a=sample(2,N*.75,.026),b=torus(m,'merchant brass belt buckle',a.position,[1,0,0],[0,1,0],[0,0,1],.018,.004,[[hip.id,1]],[.58,.37,.14]);b.attachmentSpec={type:'rigid-hardware',host:'waist belt'};
  return {cut:'long fitted tunic and short shaped wool mantle',accessories:['mantle clasp','belt buckle','belt pouch'],construction:'authored patch + measured ring sampling'};
 }

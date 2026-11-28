@@ -186,7 +186,7 @@ function fitSkirtOverTrousers(p,stations,sections,N,lower,thickness){
  return {sampleCount:samples.length,points:samples.reduce((n,s)=>n+s.points.length,0),before,after,original,adjusted:sections.slice(0,3).map(s=>s.radius.slice()),note:'Conservative rest-pose section envelope including lining and fold allowance; not a dynamic or triangle-intersection proof.'};
 }
 const longGarment=id=>id==='tunic'||id==='quilted';
-function productionTorso(ctx,id,style,method,color,armored,revision=5,lower=[]){
+function productionTorso(ctx,id,style,method,color,armored,revision=5,lower=[],shoulderRecovery=false){
  const {H,J,vs}=ctx,r=garmentRules[id],low=style==='low-poly',armor=id==='quilted',under=id==='shirt'&&armored,
        N=low?12:32,neck=J('neck01').position,hip=J('root').position[1],waist=J('spine03').position[1]-.04,
        shoulder=J('upperarm01.L').position[1],gap=under?.014:armor?.064:.030,
@@ -251,13 +251,18 @@ function productionTorso(ctx,id,style,method,color,armored,revision=5,lower=[]){
    let prev=[];
    for(let k=-half;k<=half;k++)prev.push(3*N+mod(center+k));
    for(let k=half;k>=-half;k--)prev.push(4*N+mod(center+k));
-   const origin=lerp(sh.position,el.position,.25),axis=unit(sub(el.position,sh.position));
+   const axis=unit(sub(el.position,sh.position));
+   // P0.1: the first sleeve cross-section must not lie behind its armhole.
+   const limbLength=norm(sub(el.position,sh.position)),maxProjection=Math.max(...prev.map(i=>dot(sub(p.positions.slice(i*3,i*3+3),sh.position),axis)));
+   const first=shoulderRecovery?Math.max(.25,(maxProjection+.012)/limbLength):.25;
+   if(shoulderRecovery&&first>=.90)throw Error('Armhole extends beyond supported upper arm '+side);
+   const origin=lerp(sh.position,el.position,first);
    let u=unit(cross([0,0,1],axis)),v=cross(axis,u);
    const boundaryCenter=mul(prev.map(i=>p.positions.slice(i*3,i*3+3)).reduce(add,[0,0,0]),1/prev.length);
    const angles=prev.map(i=>{const d=sub(p.positions.slice(i*3,i*3+3),boundaryCenter);return Math.atan2(dot(d,v),dot(d,u))});
    let winding=0;for(let k=0;k<angles.length;k++){let d=angles[(k+1)%angles.length]-angles[k];winding+=Math.atan2(Math.sin(d),Math.cos(d))}
    const direction=winding<0?-1:1,phase=angles[0],count=prev.length;
-   const points=[origin,lerp(sh.position,el.position,.62),el.position,lerp(el.position,wr.position,.55),lerp(el.position,wr.position,armor?.89:.985)];
+   const points=[origin,lerp(sh.position,el.position,shoulderRecovery?(first+1)*.5:.62),el.position,lerp(el.position,wr.position,.55),lerp(el.position,wr.position,armor?.89:.985)];
    const widths=[.066,.059,.050,.043,.035].map(x=>x*H/1.75+gap*.7);
    const jointWeights=[[[sh.id,.85],[J('spine01').id,.15]],[[sh.id,1]],[[sh.id,.5],[el.id,.5]],[[el.id,1]],[[el.id,.85],[wr.id,.15]]];
    for(let row=0;row<points.length;row++){
@@ -364,11 +369,11 @@ function headwear(ctx,style,identity,helmet,revision=4){let {body,H,J}=ctx,eye=J
 }
 function identityBody(ctx,id){let {body,H,J}=ctx,eye=J('eye.L').position,head=J('head').position;let p=structuredClone(body);for(let i=0;i<p.positions.length;i+=3){let [x,y,z]=p.positions.slice(i,i+3);if(y>head[1]-.04&&z>head[2]+.015){let w=clamp((y-head[1]+.04)/.12,0,1);p.positions[i]=x*(1+(id.faceWidth??0)*w);p.positions[i+2]=z+(id.nose??0)*Math.exp(-((x/.025)**2)-((y-eye[1]+.022)/.035)**2)}}
  p.color=id.skin??body.color;return normals(p)}
-export function draftGarments(source,{style='historical-miniature',kit='tunic',method='hybrid',identity={},surfaceRevision=4}={}){
+export function draftGarments(source,{style='historical-miniature',kit='tunic',method='hybrid',identity={},surfaceRevision=4,shoulderRecovery=false}={}){
  if(!kits[kit]||!['pattern','template','hybrid'].includes(method))throw Error('Unknown garment specification');let ctx=context(source),colors=identity.colors??{},parts=[],ids=kits[kit];
  const lower=surfaceRevision===6&&ids.includes('trousers')?trousers(ctx,style,method,materials[colors.trousers??'charcoal'],surfaceRevision):[];
  for(let id of ids){let color=materials[colors[id]??(id==='quilted'?'charcoal':id==='cloak'?'madder':id==='trousers'?'charcoal':id==='shirt'?'linen':'wool')];if(!color)throw Error('Unknown garment material');
- if(['shirt','tunic','quilted'].includes(id))parts.push(...(surfaceRevision>=5?productionTorso(ctx,id,style,method,color,ids.includes('quilted'),surfaceRevision,lower):torso(ctx,id,style,method,color)));else if(id==='trousers')parts.push(...(lower.length?lower:trousers(ctx,style,method,color,surfaceRevision)));else if(id==='boots')parts.push(...boots(ctx,style,surfaceRevision));else if(id==='cloak')parts.push(cape(ctx,style,color))}
+ if(['shirt','tunic','quilted'].includes(id))parts.push(...(surfaceRevision>=5?productionTorso(ctx,id,style,method,color,ids.includes('quilted'),surfaceRevision,lower,shoulderRecovery):torso(ctx,id,style,method,color)));else if(id==='trousers')parts.push(...(lower.length?lower:trousers(ctx,style,method,color,surfaceRevision)));else if(id==='boots')parts.push(...boots(ctx,style,surfaceRevision));else if(id==='cloak')parts.push(cape(ctx,style,color))}
  if(ids.includes('belt'))parts.push(...waist(ctx,parts,ids.includes('bag'),surfaceRevision));parts.push(...headwear(ctx,style,identity,ids.includes('helmet'),surfaceRevision));return parts
 }
 // Bind one authored source template to stable anatomical indices, then

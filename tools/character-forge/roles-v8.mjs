@@ -48,9 +48,9 @@ function shield(m,roman){
  const grip=surface(m,'leather shield forearm strap',[.13,.075,.035],'leather');for(const [dy,zz] of [[-.036,center[2]+.045],[.036,center[2]+.045],[.045,z-.020],[-.045,z-.020]])push(grip,[x-.08,y+dy,zz],ws);grip.indices=[0,1,2,0,2,3];
  return [sewLining(p,.016),sewLining(rim,.004),sewLining(boss,.005),sewLining(grip,.009)];
 }
-function movePouch(m,tunic){
+function movePouch(m,tunic,civilianP0=false){
  const pouch=m.parts.find(p=>p.name==='belt pouch'),loop=m.parts.find(p=>p.name==='pouch belt loop');if(!pouch||!loop)return;
- const sections=tunic.pattern.sections,N=tunic.pattern.ringCount,k=Math.round(N*.16),angle=-k*tau/N,co=Math.cos(angle),si=Math.sin(angle);
+ const sections=tunic.pattern.sections,N=tunic.pattern.ringCount,k=civilianP0?N-2:Math.round(N*.16),angle=-k*tau/N,co=Math.cos(angle),si=Math.sin(angle);
  function at(y,k){let i=sections.findIndex(s=>s.y>=y);i=Math.max(1,i<0?sections.length-1:i);return panelAt(tunic,i-1,clamp((y-sections[i-1].y)/(sections[i].y-sections[i-1].y)),k).v}
  for(const p of [pouch,loop]){for(let i=0;i<p.positions.length;i+=3){let y=p.positions[i+1],a=at(y,0),b=at(y,k),x=p.positions[i]-a[0],z=p.positions[i+2]-a[2];p.positions[i]=b[0]+x*co-z*si;p.positions[i+2]=b[2]+x*si+z*co}p.attachment={garment:'tunic',station:2,azimuth:angle,anchor:at(sections[2].y,k)};normals(p)}
 }
@@ -76,13 +76,13 @@ function sheath(m,tunic,roman){
  grid(p,4,5);return sewLining(p,.005);
 }
 export function produceRole(source,id,identityOverride=null,style='historical-miniature',{civilianP0=false}={}){
- const role=roles[id],start=performance.now(),identity={...role.identity,...identityOverride},base=dress(source,{style,kit:'tunic',method:'hybrid',surfaceRevision:6,identity}),m=sculptCitizen(base,source,{outerFirst:civilianP0}).model,tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount;
+ const role=roles[id],start=performance.now(),identity={...role.identity,...identityOverride},base=dress(source,{style,kit:'tunic',method:'hybrid',surfaceRevision:6,identity,shoulderRecovery:civilianP0}),m=sculptCitizen(base,source,{outerFirst:civilianP0}).model,tunic=m.parts.find(p=>p.name==='tunic'),N=tunic.pattern.ringCount;
  tunic.color=role.tunic.slice();m.spec.artRole=id;if(id==='infantry'||id==='legionary')m.spec.actions=['idle'];m.spec.miniaturePose='v8';m.spec.motionRevision='v4';m.spec.provenance=[...m.spec.provenance,{author:'Pocket Works',license:'original',origin:'Shared v8 historical role patterns'}];
  // Tailoring uses actual seam stations. Unequal hem lengths, a small bias
  // across panels and folds taper at the belt, without shrinking clearance.
  const hem=tunic.pattern.sections[0].y,waist=tunic.pattern.sections[2].y;
  for(let i=0;i<tunic.positions.length;i+=3){let y=tunic.positions[i+1],t=clamp((waist-.065-y)/(waist-.065-hem));if(t>0){let a=Math.atan2(tunic.positions[i+2]-tunic.pattern.sections[0].center[1],tunic.positions[i]);tunic.positions[i+1]+=(id==='legionary'?.125:id==='artisan'?(civilianP0?.12*Math.max(...source.parts[0].positions.filter((_,i)=>i%3===1)):.035):id==='merchant'?-.025:0)*t*t+.012*t*t*Math.sin(a*2+.4)}}normals(tunic);
- movePouch(m,tunic);
+ movePouch(m,tunic,civilianP0);
  if(id==='artisan'&&!civilianP0)m.parts.push(drapedPanel(m,tunic,'leather work apron',civilianP0?[.34,.23,.13]:[.25,.14,.07],'leather',[[0,.1],[0,.4],[1,0],[1,.5],[2,0]],civilianP0?19:18,civilianP0?29:30,.022,.008));
  if(id==='merchant'&&!civilianP0){
    m.parts.push(mantle(m,tunic));
