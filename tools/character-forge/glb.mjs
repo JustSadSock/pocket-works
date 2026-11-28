@@ -7,6 +7,7 @@ export function glb(model,{detailMaps=null,researchMorph=null}={}){
  const doc={asset:{version:'2.0',generator:'Pocket Works Character Forge research'},scene:0,scenes:[{nodes:[]}],nodes:[],meshes:[],materials:[],skins:[],animations:[],buffers:[{byteLength:0}],bufferViews:[],accessors:[],extras:{spec:model.spec,components:model.components,sockets:model.sockets,contacts:model.contacts,approval:model.approval}};
  let chunks=[],offset=0;
  function accessor(data,type,componentType=5126,target,minmax=false){
+  for(let i=0;i<data.length;i++)if(!Number.isFinite(data[i]))throw Error('Nonfinite GLB accessor '+type+' index '+i);
   const sizes={SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT4:16},size=sizes[type],typed=componentType===5126?new Float32Array(data):componentType===5123?new Uint16Array(data):new Uint32Array(data);
   const bytes=Buffer.from(typed.buffer,typed.byteOffset,typed.byteLength),padding=(4-offset%4)%4;if(padding){chunks.push(Buffer.alloc(padding));offset+=padding}
   const vi=doc.bufferViews.length;doc.bufferViews.push({buffer:0,byteOffset:offset,byteLength:bytes.length,...(target?{target}:{})});chunks.push(bytes);offset+=bytes.length;

@@ -25,8 +25,8 @@ for(const view of ['front','side']){
 const tri=p=>Array.from({length:p.indices.length/3},(_,i)=>p.indices.slice(i*3,i*3+3)),pts=p=>Array.from({length:p.positions.length/3},(_,i)=>p.positions.slice(i*3,i*3+3));
 const evaluated=[],browser=[];
 for(const action of ['idle','walk'])for(const phase of [0,.125,.25,.375,.5,.625,.75,.875,1]){
- const w=pose(m,action,phase),parts=m.parts.map(p=>({name:p.name,layer:p.layer??0,positions:deform(m,p,w),faces:tri(p)}));evaluated.push({action,phase,anatomy:deform(src,src.parts[0],w),parts});
- browser.push({action,phase,parts:parts.map((p,j)=>({name:p.name,primitive:j,count:p.positions.length,points:p.positions.map((position,index)=>({index,position,rest:m.parts[j].positions.slice(index*3,index*3+3)})).filter(x=>x.index%Math.max(1,Math.floor(p.positions.length/32))===0)}))});
+ const w=pose(m,action,phase),eightPos=eight.parts.map(p=>deform(eight,p,w)),parts=m.parts.map(p=>({name:p.name,layer:p.layer??0,positions:deform(m,p,w),faces:tri(p)}));evaluated.push({action,phase,anatomy:deform(src,src.parts[0],w),parts});
+ browser.push({action,phase,parts:parts.map((p,j)=>({name:p.name,primitive:j,count:p.positions.length,points:p.positions.map((position,index)=>({index,position,eightPosition:eightPos[j][index],rest:m.parts[j].positions.slice(index*3,index*3+3)})).filter(x=>x.index%Math.max(1,Math.floor(p.positions.length/32))===0)}))});
 }
 write('p0-evaluated.json',JSON.stringify({sourceFaces:tri(src.parts[0]),frames:evaluated,restParts:m.parts.map(p=>({name:p.name,positions:pts(p),weights:p.attachment||p.attachmentSpec||/buckle|clasp|welt/.test(p.name)?pts(p).map((_,i)=>weights(p,i)):null,attachment:p.attachment??null,attachmentSpec:p.attachmentSpec??(/neck binding|waist belt|welt/.test(p.name)?{type:'skinned-trim',host:p.name.includes('welt')?p.name.replace(' welt',''):'tunic'}:/pouch/.test(p.name)?{type:'fitted-interface',host:p.name==='belt pouch'?'pouch belt loop':'waist belt'}:null)}))}));
 write('p0-browser-samples.json',JSON.stringify(browser));
