@@ -312,7 +312,11 @@ def self_test():
     s=make_score();validate(s)
     assert sum(x['bars'] for x in s['sections'])==56
     assert len({e['tick'] for e in s['events'] if e['part']=='bass'})>100
-    print('The Weight of a Crown score self-test passed:',len(s['events']),'events')
+    for inst,duration in (('double-bass',2.5),('renaissance-organ',1.875)):
+        n=round(duration*SR);x=np.sin(2*np.pi*41*np.arange(n)/SR).astype(np.float32)
+        y,looped=loop_sustain(x,round(3.2*SR),inst)
+        assert looped and len(y)==round(3.2*SR) and np.isfinite(y).all()
+    print('The Weight of a Crown score and recorded-sustain self-tests passed:',len(s['events']),'events')
 if __name__=='__main__':
     if len(sys.argv)==2 and sys.argv[1]=='--self-test':self_test()
     elif len(sys.argv)==5:render(*sys.argv[1:])
