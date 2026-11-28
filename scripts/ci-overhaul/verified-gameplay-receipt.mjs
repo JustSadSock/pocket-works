@@ -9,12 +9,13 @@ import {mountedFingerprint} from './verified-mounted-inputs.mjs';
 export const SOURCE='45d6ce53df3cd5013a605bba972d94f1c0cd8dce';
 export const SOURCE_TREE='9a9cc376c7ce39e9a7116cf7fd8f6ec3e720b80c';
 export const PLAN='81f618b94fadc8e1bd96ff66a339528c55b768e72ac50767ada94de409e2ee25';
+export const SOURCE_SCOPE_VERSION='banners-runtime-v2';
 export const WORKFLOW='.github/workflows/verified-gameplay-receipt.yml';
 export const REPLAY_WORKFLOW='.github/workflows/verified-gameplay-replay.yml';
 const REPO='JustSadSock/pocket-works',HEX=/^[a-f0-9]{64}$/,SHA=/^[a-f0-9]{40}$/,EPOCH=946684800;
 const IMAGE='be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb';
 const LIMIT=128*1024*1024;
-const scopes={source:['apps/banners-of-war','shared','scripts','package.json','package-lock.json'],audit:['scripts/ci-overhaul']};
+const scopes={source:['apps/banners-of-war','shared','scripts','package.json','package-lock.json'],renewalSource:['apps/banners-of-war','shared','package.json','package-lock.json'],audit:['scripts/ci-overhaul']};
 const plain=x=>x!==null&&typeof x==='object'&&!Array.isArray(x)&&Object.getPrototypeOf(x)===Object.prototype;
 function stable(x){
  if(x===null||typeof x==='boolean'||typeof x==='string'||typeof x==='number'&&Number.isFinite(x))return x;

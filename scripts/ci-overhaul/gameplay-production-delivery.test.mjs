@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {verifyMixed,eligibleDelivery,verifyGateSummary} from './gameplay-production-delivery.mjs';
+import {verifyMixed,eligibleDelivery,verifyGateSummary,validateScopedCanary,scopedCanaryFailures} from './gameplay-production-delivery.mjs';
 import {taskDigest} from './verified-results.mjs';
 const sha='a'.repeat(40),tree='b'.repeat(40),controller='c'.repeat(40),controllerTree='d'.repeat(40),flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 const t={key:'banners-of-war-completion-lab-0',app:'banners-of-war',suite:'completion-lab',kind:'node',seed:0,install:false},u={key:'banners-of-war-regression',app:'banners-of-war',suite:'regression',kind:'node-test',seed:null,install:false};
@@ -25,4 +25,12 @@ test('production route is explicitly scoped to approved same-repository PR',()=>
  assert.equal(eligibleDelivery(e),true);for(const x of [{PW_QA_PRODUCTION_VERIFIED:'0'},{QA_PR_NUMBER:'1411'},{GITHUB_REF:'refs/heads/main'},{QA_HEAD_REPO:'other/repo'}])assert.equal(eligibleDelivery({...e,...x}),false);
 });
 
+test('scoped canary must preserve measured net savings after discovery and audit overhead',()=>{
+ const ctx={run:10,attempt:1,source:sha,tree,enabled:true,scopedEnabled:true},task='banners-of-war-completion-lab-3',digest='e'.repeat(64),timingsMs={discoveryMs:40000,scopeProofMs:2000,runListMs:1000,economicDownloadMs:5000,economicVerificationMs:6000,canaryAuditMs:10000},grossSavingsMs=734418,freshLowerMs=3126418,overheadMs=timingsMs.discoveryMs+timingsMs.canaryAuditMs,netSavingsMs=grossSavingsMs-overheadMs,netSavingsBasisPoints=Math.floor(netSavingsMs/freshLowerMs*10000);
+ const canary={schema:1,scopeVersion:'banners-runtime-v2',task,shard:3,run:10,attempt:1,source:sha,tree,semanticMatch:true,gameplaySemanticDigest:digest,gameplayCases:234,freshPerformanceCases:0,freshPerformanceMeasurements:0,timingsMs,economics:{grossSavingsMs,freshLowerMs,overheadMs,netSavingsMs,netSavingsBasisPoints},scopeDigest:digest,economicDigest:digest,sourceRun:12,sourceAttempt:1,productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
+ const summary={rows:[{key:task,mode:'fresh'},{key:t.key,mode:'verified-gameplay',identity:'scoped-cross-commit',scopeVersion:'banners-runtime-v2',scopeDigest:digest,economicDigest:digest,sourceRun:12,sourceAttempt:1}],scopedCanary:canary};
+ assert.deepEqual(scopedCanaryFailures(summary,ctx),[]);assert.doesNotThrow(()=>validateScopedCanary(summary,ctx));
+ assert.throws(()=>validateScopedCanary({...summary,scopedCanary:{...canary,economics:{...canary.economics,overheadMs:900000}}},ctx));
+ assert.throws(()=>validateScopedCanary({...summary,scopedCanary:{...canary,timingsMs:{...timingsMs,discoveryMs:800000}}},ctx));
+});
 test('final gate binds the mixed summary to the original plan, context and counters',()=>{const r=verifyMixed(raw,ctx,read,()=>proof);assert.equal(verifyGateSummary(raw,r,ctx).verifiedTasks,1);for(const p of [{...r,planDigest:sha},{...r,verifiedTasks:0},{...r,rows:[r.rows[0],r.rows[0]]},{...r,rows:[{...r.rows[0],controllerTree:sha},r.rows[1]]},{...r,productionAuthorization:false},{...r,attempt:2}])assert.throws(()=>verifyGateSummary(raw,p,ctx));assert.throws(()=>verifyGateSummary(raw,r,{...ctx,enabled:false}));});

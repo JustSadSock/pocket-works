@@ -47,7 +47,7 @@ test('scheduled no-ops cannot hide an authentic older catalog',()=>{
  const noop=Array.from({length:24},(_,i)=>({...run,id:100+i,created_at:new Date(now-1000-i).toISOString()}));
  try{
   const r=discover(source,issuer,out,{now,clock:()=>now,list:()=>[{...run,id:999,head_sha:'f'.repeat(40),created_at:new Date(now-1).toISOString()},...noop,run],requiredIssuer:issuer,hasCatalog:x=>{metadata++;return x.id===run.id;},getTree:s=>s===source?sourceTree:auditTree,getRun:()=>run,download:(_,dir)=>{downloads++;writeFileSync(join(dir,'catalog.json'),JSON.stringify(catalog));receipts.forEach((x,i)=>writeFileSync(join(dir,'receipt-'+i+'.json'),JSON.stringify(x)));},authenticate:()=>{signatures++;},downloadBundles:()=>{},checkBundles:()=>{}});
-  assert.equal(r.status,'authenticated-candidate');assert.equal(r.attempted,1);assert.equal(metadata,25);assert.equal(downloads,1);assert.equal(signatures,9);assert.deepEqual(r.lookupStats,{listed:26,issuerExcluded:1,metadataChecks:25,withoutCatalog:24,candidateDownloads:1});
+  assert.equal(r.status,'authenticated-candidate');assert.equal(r.attempted,1);assert.equal(metadata,25);assert.equal(downloads,1);assert.equal(signatures,9);assert.equal(r.lookupStats.listed,26);assert.equal(r.lookupStats.issuerExcluded,1);assert.equal(r.lookupStats.metadataChecks,25);assert.equal(r.lookupStats.withoutCatalog,24);assert.equal(r.lookupStats.candidateDownloads,1);assert.ok(Number.isSafeInteger(r.lookupStats.elapsedMs)&&r.lookupStats.elapsedMs>=0);
  }finally{rmSync(out,{recursive:true,force:true});}
 });
 test('metadata is an exact current-attempt, unexpired artifact prefilter only',()=>{

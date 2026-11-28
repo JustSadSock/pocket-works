@@ -5,7 +5,8 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {isDeepStrictEqual as eq} from 'node:util';
 import {buildCatalog,issueRenewal,REPO,RENEWAL_WORKFLOW,APP_PR,APP_BRANCH} from './gameplay-renewal.mjs';
-import {PLAN} from './verified-gameplay-receipt.mjs';
+import {PLAN,SOURCE_SCOPE_VERSION} from './verified-gameplay-receipt.mjs';
+import {scopedEnabled,prepareScopedEvidence} from './gameplay-scoped-production.mjs';
 const SHA=/^[a-f0-9]{40}$/,MAX_AGE=7*86400000,positive=n=>Number.isSafeInteger(n)&&n>0;
 const flags={productionAuthorization:false,allowResultReuse:false,allowImpactSkipping:false};
 const fail=s=>{throw Error(s);},events=['push','schedule','workflow_dispatch'];
@@ -16,11 +17,11 @@ export function eligibleRuns(runs,now=Date.now()){
  .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)||b.id-a.id).slice(0,100);
 }
 export function verifyDiscoveredCatalog(c,receipts,run,source,sourceTree,auditTree,now=Date.now()){
- if(eligibleRuns([run],now).length!==1||!SHA.test(source)||!SHA.test(sourceTree)||!SHA.test(auditTree)||c?.source!==source||c.sourceTree!==sourceTree||c.sourcePR!==APP_PR||!['main',APP_BRANCH,'refs/pull/'+APP_PR+'/merge'].includes(c.sourceRef)||c.auditCommit!==run.head_sha||c.auditTree!==auditTree||c.run!==run.id||c.attempt!==run.run_attempt||c.ref!=='refs/heads/main'||c.event!==run.event||c.planDigest!==PLAN||!positive(c.issuedAt)||!positive(c.expiresAt)||now<c.issuedAt||now>=c.expiresAt)fail('Wrong, stale or untrusted catalog identity');
+ if(eligibleRuns([run],now).length!==1||!SHA.test(source)||!SHA.test(sourceTree)||!SHA.test(auditTree)||c?.source!==source||c.sourceTree!==sourceTree||c.sourceScopeVersion!==SOURCE_SCOPE_VERSION||c.sourcePR!==APP_PR||!['main',APP_BRANCH,'refs/pull/'+APP_PR+'/merge'].includes(c.sourceRef)||c.auditCommit!==run.head_sha||c.auditTree!==auditTree||c.run!==run.id||c.attempt!==run.run_attempt||c.ref!=='refs/heads/main'||c.event!==run.event||c.planDigest!==PLAN||!positive(c.issuedAt)||!positive(c.expiresAt)||now<c.issuedAt||now>=c.expiresAt)fail('Wrong, stale or untrusted catalog identity');
  const ctx=Object.fromEntries(['source','sourceTree','sourceRef','sourcePR','auditCommit','auditTree','run','attempt','ref','event'].map(k=>[k,c[k]]));
  const rebuilt=buildCatalog(receipts,ctx,c.issuedAt,true),legacy={...rebuilt,compatibility:'exact-environment-only'};
  if(!eq(c,rebuilt)&&!eq(c,legacy))fail('Catalog and eight receipts differ');
- return {schema:1,status:'authenticated-candidate',source,sourceTree,issuer:run.head_sha,issuerTree:auditTree,sourceRun:run.id,sourceAttempt:run.run_attempt,expiresAt:c.expiresAt,planDigest:PLAN,authenticatedSubjects:9,shards:8,compatibility:c.compatibility,...flags};
+ return {schema:1,status:'authenticated-candidate',source,sourceTree,sourceScopeVersion:SOURCE_SCOPE_VERSION,issuer:run.head_sha,issuerTree:auditTree,sourceRun:run.id,sourceAttempt:run.run_attempt,expiresAt:c.expiresAt,planDigest:PLAN,authenticatedSubjects:9,shards:8,compatibility:c.compatibility,...flags};
 }
 const gh=(args,timeout=30000)=>execFileSync('gh',args,{encoding:'utf8',timeout,maxBuffer:8*1024*1024,stdio:['ignore','pipe','pipe']});
 const api=path=>JSON.parse(gh(['api',path]));
@@ -57,9 +58,10 @@ export function discoveryTarget(env,checkout){
  if(env.GITHUB_REF==='refs/heads/main'&&['workflow_dispatch','issues','push'].includes(env.GITHUB_EVENT_NAME))return checkout;
  return null;
 }
-export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list=()=>api('repos/'+REPO+'/actions/workflows/gameplay-receipt-renewal.yml/runs?branch=main&status=success&per_page=100').workflow_runs,hasCatalog=hasPublishedCatalog,requiredIssuer=null,getTree=tree,getRun=id=>api('repos/'+REPO+'/actions/runs/'+id),download=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--name','renewal-signed-catalog-'+r.run_attempt,'--dir',dir]),authenticate=(r,path)=>gh(['attestation','verify',path,'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',r.head_sha,'--deny-self-hosted-runners']),downloadBundles=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--pattern','renewal-bundle-'+r.run_attempt+'-*','--dir',dir],60000),checkBundles=verifyBundles}={}){
+export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list=()=>api('repos/'+REPO+'/actions/workflows/gameplay-receipt-renewal.yml/runs?branch=main&status=success&per_page=100').workflow_runs,hasCatalog=hasPublishedCatalog,requiredIssuer=null,scopedCandidate=null,getTree=tree,getRun=id=>api('repos/'+REPO+'/actions/runs/'+id),download=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--name','renewal-signed-catalog-'+r.run_attempt,'--dir',dir]),authenticate=(r,path)=>gh(['attestation','verify',path,'--repo',REPO,'--cert-identity','https://github.com/'+REPO+'/'+RENEWAL_WORKFLOW+'@refs/heads/main','--source-ref','refs/heads/main','--source-digest',r.head_sha,'--deny-self-hosted-runners']),downloadBundles=(r,dir)=>gh(['run','download',String(r.id),'--repo',REPO,'--pattern','renewal-bundle-'+r.run_attempt+'-*','--dir',dir],60000),checkBundles=verifyBundles}={}){
  const stats={listed:0,issuerExcluded:0,metadataChecks:0,withoutCatalog:0,candidateDownloads:0};
- const miss=(reason,attempted=0)=>({schema:1,status:'fresh-fallback',source:source??null,checkout,reason,attempted,lookupStats:{...stats},...flags});
+ const started=Date.now();
+ const miss=(reason,attempted=0)=>{stats.elapsedMs=Math.max(0,Date.now()-started);return {schema:1,status:'fresh-fallback',source:source??null,checkout,reason,attempted,lookupStats:{...stats},...flags};};
  if(!source)return miss('No eligible Banners task');
  if(!SHA.test(source)||!SHA.test(checkout))return miss('Invalid source identity');
  let checked=0;
@@ -82,18 +84,22 @@ export function discover(source,checkout,out,{now=Date.now(),clock=Date.now,list
     download(run,tmp);
     if(!eq(readdirSync(tmp).sort(),[...subjects].sort()))fail('Missing or extra signed subjects');
     const c=json(join(tmp,'catalog.json'));
-    if(c.source!==source||c.sourceTree!==sourceTree)continue;
+    const exact=c.source===source&&c.sourceTree===sourceTree;
+    if(!exact&&(!scopedCandidate||c.source===source||c.sourceTree===sourceTree||!SHA.test(c.source)||!SHA.test(c.sourceTree)))continue;
     // Check the catalog before trusting its receipt references; every subject
     // is verified independently against the exact main run's signer digest.
     for(const name of subjects){json(join(tmp,name));authenticate(run,join(tmp,name));}
     const receipts=subjects.slice(1).map(n=>json(join(tmp,n)));
-    const r=verifyDiscoveredCatalog(c,receipts,run,source,sourceTree,getTree(run.head_sha),now);
+    const r=verifyDiscoveredCatalog(c,receipts,run,exact?source:c.source,exact?sourceTree:getTree(c.source),getTree(run.head_sha),now);
     const bundleRoot=join(tmp,'bundles');mkdirSync(bundleRoot);
     downloadBundles(run,bundleRoot);checkBundles(bundleRoot,receipts,run);
+    const scoped=exact?null:scopedCandidate(c,{source,sourceTree},tmp,clock());
+    if(!exact&&scoped?.kind!=='scoped-cross-commit')fail('Scoped candidate declined');
     const finalRun=getRun(run.id);
     if(eligibleRuns([finalRun],clock()).length!==1||finalRun.run_attempt!==run.run_attempt||finalRun.head_sha!==run.head_sha||clock()>=r.expiresAt)fail('Run or freshness changed after authentication');
     renameSync(tmp,join(out,'authenticated'));
-    return {...r,verifiedBundles:8,checkout,checkoutMatchesSource:checkout===source,attempted:checked,lookupStats:{...stats}};
+    stats.elapsedMs=Math.max(0,Date.now()-started);
+    return {...r,verifiedBundles:8,checkout,checkoutMatchesSource:checkout===r.source,attempted:checked,lookupStats:{...stats},...(scoped?{requestedSource:source,requestedTree:sourceTree,scoped}: {})};
    }catch(e){console.log('Renewal candidate '+listing.id+' declined: '+String(e.message).slice(0,300));}
    finally{rmSync(tmp,{recursive:true,force:true});}
   }
@@ -105,7 +111,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const out=resolve(process.argv[2]),checkout=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
   mkdirSync(out,{recursive:false});
   const source=discoveryTarget(process.env,checkout);
-  const result=discover(source,checkout,out);
+  const result=discover(source,checkout,out,{scopedCandidate:scopedEnabled(process.env)&&source===checkout?prepareScopedEvidence:null});
   writeFileSync(join(out,'discovery.json'),JSON.stringify(result,null,2)+'\n',{flag:'wx'});
   console.log(JSON.stringify(result,null,2));
  }catch(e){console.error(e.message);process.exitCode=1;}
