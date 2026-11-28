@@ -84,6 +84,13 @@ def textile_material():
     return tint
 textile=textile_material()
 def livery(side,rear=False):
+    # Opt-in Banners-only painted miniature finish. No source rig or geometry changes.
+    if os.environ.get("BOW_HISTORICAL_MINIATURE")=="1" and os.environ.get("BOW_TROOP")=="spear":
+        wool=((.36,.49,.62),(.64,.30,.20))[side] if not rear else ((.48,.57,.61),(.67,.43,.29))[side]
+        textile.inputs[2].default_value=(*wool,1)
+        color=((.11,.24,.36),(.40,.16,.085))[side] if not rear else ((.23,.35,.42),(.49,.27,.13))[side]
+        for i,f in [(0,.73),(1,1.32)]:ramp.color_ramp.elements[i].color=(*(min(1,x*f) for x in color),1)
+        return
     textile.inputs[2].default_value=((*((.18,.34,.68) if side==0 else (.72,.14,.075)),1) if not rear else (*((.32,.48,.69) if side==0 else (.69,.32,.15)),1))
     color=(.09,.19,.38) if side==0 else (.48,.095,.042)
     if rear:color=(.19,.32,.46) if side==0 else (.48,.22,.075)
@@ -105,6 +112,12 @@ assert kind in ("spear","sword","archer","knight","lightHorse")
 extended=os.environ.get("BOW_MOTION_REV")=="1"
 out=out/kind;out.mkdir(parents=True,exist_ok=True)
 sc.cycles.samples=10
+if os.environ.get("BOW_HISTORICAL_MINIATURE")=="1" and kind=="spear":
+    # A broader daylight key and restrained cool fill preserve mail/cloth contrast.
+    key.data.energy=780;key.data.size=5;key.data.color=(1,.94,.83)
+    fill.data.energy=230;fill.data.color=(.79,.86,1)
+    world.node_tree.nodes["Background"].inputs[1].default_value=.48
+    sc.cycles.samples=16
 # Retain the original human skin, textures, helmet, rig and pose clips.
 sc.frame_set(1);pivot.rotation_euler.z=0;bpy.context.view_layer.update()
 def bone(*names):

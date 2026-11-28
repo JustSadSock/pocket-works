@@ -1,0 +1,115 @@
+name: Banners of War Battlefield Recovery
+on:
+  pull_request:
+    paths:
+      - 'apps/banners-of-war/research/battlefield-recovery/**'
+      - '.github/workflows/banners-battlefield-recovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: banners-battlefield-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, candidate]
+    defaults:
+      run:
+        shell: bash
+    env:
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/recovery-${{ matrix.variant }}
+      BOW_VARIANT: ${{ matrix.variant }}
+      BOW_RECOVERY: '1'
+      BOW_MOTION_REV: '1'
+      BLENDER_VERSION: '5.2.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45731469010
+          artifact-ids: 15077971441
+          path: /tmp/bow-control
+      - name: Restore exact native resources, not prior screenshots or metrics
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil ffmpeg fonts-dejavu-core xz-utils libgl1 libx11-6 libxi6 libxrender1
+          python3 - <<'PY'
+          import os,shutil,json,hashlib
+          from pathlib import Path
+          root=Path('/tmp/bow-control');out=Path(os.environ['BOW_ART_OUTPUT']);out.mkdir(parents=True,exist_ok=True)
+          matches=list(root.rglob('mixed-atlas.json'));assert len(matches)==1,matches
+          src=matches[0].parent
+          for p in src.iterdir():
+              if p.is_file() and (p.name.startswith('page-') or p.name in ('formation-atlas.json','mixed-atlas.json','terrain-provenance.json','horse-provenance.json','horse-forge-index.json') or p.stem in ('grass','sparse','road','stone','tree1','tree2','tree3','bush')):
+                  shutil.copyfile(p,out/p.name)
+          for kind in ('spear','sword','archer','knight','lightHorse'):
+              folder=src/kind;meta=json.loads((folder/'frames.json').read_text())
+              for n in meta['frames']:
+                  assert (folder/(n+'.png')).is_file(),(kind,n)
+              shutil.copytree(folder,out/kind)
+          manifest={str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.is_file()}
+          (out/'recovery-control-sha256.json').write_text(json.dumps(manifest,indent=2))
+          PY
+      - uses: actions/download-artifact@v4
+        if: matrix.variant == 'candidate'
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45672121448
+          artifact-ids: 15050357382
+          path: /tmp/bow-source
+      - name: Re-render one historical spear regiment source, no Forge dependency
+        if: matrix.variant == 'candidate'
+        env:
+          BOW_TROOP: spear
+          BOW_HISTORICAL_MINIATURE: '1'
+        run: |
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          verified=false
+          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" blender.sha256
+            if curl -fsSL --retry 2 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
+               curl -fsSL --retry 2 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
+              verified=true;break
+            fi
+          done
+          test "$verified" = true
+          tar -xf "$archive"
+          cd "$GITHUB_WORKSPACE"
+          source="$(find /tmp/bow-source -name spearman.blend -print -quit)"
+          test -n "$source"
+          mv "$BOW_ART_OUTPUT/spear" /tmp/bow-old-spear
+          "/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" --background --disable-autoexec "$source" --threads 2 --python-exit-code 1 --python apps/banners-of-war/research/battlefield-identity/troop-bake.py
+          python3 apps/banners-of-war/research/battlefield-identity/pack.py
+      - name: Native source motion and environment finish
+        run: |
+          python3 apps/banners-of-war/research/battlefield-recovery/finish.py
+      - name: Matched cameras and physical gameplay in Chromium and WebKit
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/battlefield-identity/physical.test.mjs
+          node apps/banners-of-war/research/battlefield-identity/composition.test.mjs
+          node apps/banners-of-war/research/battlefield-identity/living.test.mjs
+          node --check apps/banners-of-war/research/battlefield-identity/capture.mjs
+          node apps/banners-of-war/research/battlefield-identity/capture.mjs
+      - name: Retain native outputs even if acceptance fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battlefield-recovery-${{ matrix.variant }}
+          path: quality-artifacts/recovery-${{ matrix.variant }}
+          if-no-files-found: error
+          retention-days: 14

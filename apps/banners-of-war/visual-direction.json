@@ -66,6 +66,11 @@
         "slug": "petlya-17",
         "spatialDifference": "Petlya-17 uses a low Babylon.js cockpit with a central road horizon, peripheral speed and lap instruments. Banners of War uses a top-down spatial map, local army framing, minimap and collapsible command ledger rather than a driver's perspective.",
         "interactionDifference": "Petlya-17 continuously controls one car through steering, braking and throttle. Banners of War draws multi-regiment plans, edits geometric footprints and executes simultaneous fixed-duration orders."
+      },
+      {
+        "slug": "flickyard",
+        "spatialDifference": "FLICKYARD has a stable horizontal mechanical target range with a separate drill rail; Banners has a camera-scaled geographic field and foldable contextual order ledger.",
+        "interactionDifference": "FLICKYARD measures direct reticle acquisition and timed individual shots; Banners composes multi-regiment orders, resolves both sides simultaneously and replays continuous physical formations."
       }
     ]
   },
