@@ -70,3 +70,23 @@ C-matched and D-matched reuse the per-joint MakeHuman flexion magnitudes measure
 - Cloth acceptance still requires full dynamic/root-motion qualification, independent contact audit and artistic review.
 - Hand acceptance still requires anatomical and visual approval; matching angles is only a fair comparison control.
 - Banners of War remains untouched.
+
+
+## v0.20.1 — Equal Simulation-Time FPS Qualification
+
+Status: diagnostic-only; production remains blocked.
+
+The first v0.20 matrix is retained as evidence but rejected for comparative acceptance. It increased scene FPS while also setting Blender Cloth `time_scale=1/factor`. Blender's point-cache time delta already follows scene time; Cloth then multiplies that delta by `time_scale`. The inverse factor therefore scaled elapsed solver time twice. The old velocity diagnostics also multiplied per-frame displacement by `sceneFps * clothTimeScale`, which made the same collider path appear proportionally slower at 48 and 96 FPS.
+
+The corrected v0.20.1 matrix keeps `time_scale=1.0` at 24/48/96 FPS. Scene FPS alone supplies the smaller physical frame interval and higher solver evaluation count. Source motion is sampled at a stride of 1/2/4 source frames per scene frame so the same animation path, warm-up, pin transition and total scene-time duration are preserved.
+
+Every run now records and checks:
+- exact simulation frame count;
+- scene-time duration;
+- actual solver elapsed time: `(frameIntervals * clothTimeScale) / sceneFps`;
+- source-motion and warm-up duration;
+- collider surface speed measured in scene time;
+- pinned-target speed measured in scene time;
+- agreement of collider and pin-path speeds across all three frame rates.
+
+A run is invalid if solver elapsed time differs from the expected 2.75 seconds or if collider/pin path speeds differ materially from the 24 FPS baseline. The original v0.20 JSON and renders remain untouched. No production qualification is inferred from a successful time-resolution experiment.

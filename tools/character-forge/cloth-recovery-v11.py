@@ -180,8 +180,8 @@ def defect_detail(v,old,cs,previous_cs):
   for name,t,vv,ff in trees:
    co,normal,fi,distance=t.find_nearest(mid)
    if co is None:continue
-   ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*simulationFps/3 for k in range(3)]
-   clothVelocity=[sum((v[j][k]-old[j][k])*simulationFps for j in (a,b))*.5 for k in range(3)]
+   ids=ff[fi];last=previous_cs.get(name,vv);velocity=[sum(vv[j][k]-last[j][k] for j in ids)*measurementFps/3 for k in range(3)]
+   clothVelocity=[sum((v[j][k]-old[j][k])*measurementFps for j in (a,b))*.5 for k in range(3)]
    relative=Vector(clothVelocity)-Vector(velocity);normalUnit=normal.normalized();normalSpeed=relative.dot(normalUnit);tangentialSpeed=(relative-normalUnit*normalSpeed).length
    nearest.append({'name':name,'face':fi,'faceVertices':ids,'distanceMetres':distance,'normal':list(normal),'surfaceVelocity':velocity,'clothEdgeVelocity':clothVelocity,'relativeVelocity':list(relative),'relativeNormalSpeed':normalSpeed,'relativeTangentialSpeed':tangentialSpeed})
   details.append({'edge':[a,b],'ratio':ratio,'previousRatio':math.dist(old[a],old[b])/d,'restLength':d,'midpoint':list(mid),'edgeDirection':list((Vector(v[b])-Vector(v[a])).normalized()),'pinDistancesMetres':[min(math.dist(initial[j],initial[k]) for k in wpins) for j in (a,b)],'nearestCollider':min(nearest,key=lambda x:x['distanceMetres']) if nearest else None})
@@ -304,7 +304,7 @@ if os.getenv('CHARACTER_V20_CLOTH_CONFIG'):
  if not v20config.get('diagnosticOnly') or v20config.get('collider')!='trousers R':raise RuntimeError('v0.20 time-resolution probe must remain diagnostic-only and scoped to trousers R')
  factor=int(v20config.get('timeResolution',0))
  if factor not in (1,2,4):raise RuntimeError('Unsupported v0.20 time-resolution multiplier')
- if abs(float(v20config.get('timeScale',0))-1.0/factor)>1e-9:raise RuntimeError('v0.20 Blender cloth time_scale must compensate scene FPS as 1/timeResolution')
+ if abs(float(v20config.get('timeScale',0))-1.0)>1e-9:raise RuntimeError('v0.20.1 must keep Blender cloth time_scale at 1.0; scene FPS already defines physical frame duration')
  experiments=[('remesh-static',1,1,6,None),('remesh',2,1,18,None)]
 v19DecompositionReport=None
 chosen=None
@@ -348,17 +348,18 @@ for label,stage,slow,ramp,allowed in experiments:
    for j in firstRing:pinWeights[j]=.22
   bpy.ops.wm.read_factory_settings(use_empty=True);scene=bpy.context.scene
   timeResolution=int(v20config.get('timeResolution',1)) if v20config and stage>1 else 1
-  timeScale=slow*timeResolution
+  sourceFrameStride=slow*timeResolution
   rampFrames=ramp*timeResolution if stage>1 else ramp
   sceneFps=spec['fps']*timeResolution
   clothTimeScale=float(v20config.get('timeScale',1.0)) if v20config and stage>1 else 1.0
-  simulationFps=sceneFps*clothTimeScale
+  measurementFps=sceneFps
   scene.render.fps=sceneFps;scene.gravity=(0,0,-9.81)
-  # Blender's cloth time_scale is frame-based. Compensate it when increasing
-  # scene FPS so the source motion, pin targets and solver advance in equal time.
+  # Scene FPS already defines the physical point-cache time delta.
+  # Keep Cloth time_scale at 1.0: applying 1/factor would scale time twice.
+  # Higher scene FPS supplies proportionally more solver evaluations per second.
   warm=24 if stage==1 else (24+ramp)*timeResolution
-  count=49 if stage==1 else warm+(spec['frameCount']-1)*timeScale+1;scene.frame_start=1;scene.frame_end=count
-  times=[-1 if stage==1 or label=='A' or i<warm-rampFrames else max(0,min(spec['frameCount']-1,(i-warm)/timeScale)) for i in range(count)]
+  count=49 if stage==1 else warm+(spec['frameCount']-1)*sourceFrameStride+1;scene.frame_start=1;scene.frame_end=count
+  times=[-1 if stage==1 or label=='A' or i<warm-rampFrames else max(0,min(spec['frameCount']-1,(i-warm)/sourceFrameStride)) for i in range(count)]
   def frame_positions(item,idx,t):
    neutral=raw(item['staticPositions'])
    if t<0:return neutral
@@ -413,7 +414,7 @@ for label,stage,slow,ramp,allowed in experiments:
    else:proxyTopology=sourceTopology
    localFrames=frames;rigidTransforms=None;useWorld=False
    if v19config and stage>1 and item['name']==v19config['collider']:
-    decomposition=decompose_frames(frames,simulationFps,active_start=warm-rampFrames)
+    decomposition=decompose_frames(frames,measurementFps,active_start=warm-rampFrames)
     v19DecompositionReport=decomposition['report']
     (out/'v19-motion-decomposition.json').write_text(json.dumps(v19DecompositionReport,indent=2))
     mode=v19config['motionTransfer']
@@ -459,7 +460,7 @@ for label,stage,slow,ramp,allowed in experiments:
    cs=[];audit={};previous_cs=dict(prev)
    for name,fs,idx,ob,useWorld in collider_data:
     actual=world_vertices_gltf(ob) if useWorld else evaluated(ob);assert len(actual)==len(fs[i])
-    err=max(math.dist(a,b) for a,b in zip(actual,fs[i]));vel=max((math.dist(a,b)*simulationFps for a,b in zip(actual,prev.get(name,actual))),default=0)
+    err=max(math.dist(a,b) for a,b in zip(actual,fs[i]));vel=max((math.dist(a,b)*measurementFps for a,b in zip(actual,prev.get(name,actual))),default=0)
     prev[name]=actual;top=topology(actual,idx);audit[name]={'maxEvaluatedMismatchMetres':err,'maxSurfaceSpeedMetresPerSecond':vel,'signedVolume':top['signedVolume'],'boundaryEdges':top['boundaryEdges'],'nonManifoldEdges':top['nonManifoldEdges']}
     cs.append((name,actual,idx))
    row=stats(v,expected[i],cs);row={'frame':frame,**row,'colliderAudit':audit};rows.append(row)
@@ -468,7 +469,7 @@ for label,stage,slow,ramp,allowed in experiments:
     selfPairs=[(a,b) for a,b in selfTree.overlap(selfTree) if a<b and not set(faces[a])&set(faces[b])]
     row['selfOverlapPairs']=len(selfPairs)
     row['selfOverlapIndices']=selfPairs
-    row['maxPinTargetSpeed']=max((math.dist(expected[i][j],expected[max(0,i-1)][j])*simulationFps for j in wpins),default=0)
+    row['maxPinTargetSpeed']=max((math.dist(expected[i][j],expected[max(0,i-1)][j])*measurementFps for j in wpins),default=0)
     if 44<=frame<=46:
      row['edgeStrainMap']=[math.dist(v[a],v[b])/d for (a,b),d in zip(edges,lengths)]
      row['edgeIndices']=edges
@@ -483,7 +484,7 @@ for label,stage,slow,ramp,allowed in experiments:
    if stage>1 and (40<=frame<=48 or (bad and firstDefect is None) or (firstDefect is not None and frame<=firstDefect+2)):
     detail=defect_detail(v,prevCloth,cs,previous_cs)
     edge=(10,42);a,b=edge
-    detail['pinBoundary']={'edge':list(edge),'originalEdgeExists':edge in edges,'vertexPositions':[v[a],v[b]],'vertexVelocity':[[ (x-y)*simulationFps for x,y in zip(v[j],prevCloth[j])] for j in edge],'targetPositions':[expected[i][j] for j in edge],'targetVelocity':[[ (x-y)*simulationFps for x,y in zip(expected[i][j],expected[max(0,i-1)][j])] for j in edge],'restDistance':math.dist(initial[a],initial[b]),'distance':math.dist(v[a],v[b]),'neighborStrain':[{'edge':[j,k],'ratio':math.dist(v[j],v[k])/l} for (j,k),l in zip(edges,lengths) if j in edge or k in edge]}
+    detail['pinBoundary']={'edge':list(edge),'originalEdgeExists':edge in edges,'vertexPositions':[v[a],v[b]],'vertexVelocity':[[ (x-y)*measurementFps for x,y in zip(v[j],prevCloth[j])] for j in edge],'targetPositions':[expected[i][j] for j in edge],'targetVelocity':[[ (x-y)*measurementFps for x,y in zip(expected[i][j],expected[max(0,i-1)][j])] for j in edge],'restDistance':math.dist(initial[a],initial[b]),'distance':math.dist(v[a],v[b]),'neighborStrain':[{'edge':[j,k],'ratio':math.dist(v[j],v[k])/l} for (j,k),l in zip(edges,lengths) if j in edge or k in edge]}
     defects.append({'frame':frame,**detail})
    prevCloth=v
    if bad and firstDefect is None:
@@ -501,7 +502,7 @@ for label,stage,slow,ramp,allowed in experiments:
   results.append({'stage':stage,'experiment':label,'passed':all(gates.values()),'gates':gates,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'method':method,'variant':variant,'pinWeights':pinWeights,'transitionWidthMetres':max((min(math.dist(initial[j],initial[k]) for k in wpins) for j in firstRing),default=0),'totalMassKg':experimentMass,'vertexMassKg':vertexMass,'friction':c.friction,'quality':s.quality,'collisionThickness':c.distance_min,'frames':rows,'sampleFrames':len(samples)})
   (out/(('v15-cloth-' if v15 else 'v14-cloth-')+label+'.json')).write_text(json.dumps({'stage':stage,'experiment':label,'firstDefect':firstDefect,'topology':topologies,'defects':defects,'vertices':len(initial),'originalVertices':N,'originalToWelded':remap,'refinementMapping':mapping,'restPositions':initial,'faces':faces,'pinIndices':wpins,'pinWeights':pinWeights,'samples':samples,'diagnostics':rows,'gates':gates},indent=2))
   status='diagnostic complete; production qualification not evaluated' if (v18config or v19config or v20config) and results[-1]['stage']==2 else ('passed' if results[-1]['stage']==3 and results[-1]['passed'] else 'blocked or incomplete at '+label)
-  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'sourceFps':spec['fps'],'sceneFps':sceneFps,'simulationFps':simulationFps,'clothTimeScale':clothTimeScale,'timeResolution':timeResolution,'timeScale':timeScale,'preflight':preflight,'diagnosticOnly':bool(v18config or v19config or v20config),'diagnosticConfig':v20config or v19config or v18config,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':status},indent=2))
+  (out/'v11-cloth-recovery.json').write_text(json.dumps({'stages':results,'weldedSeamVertices':N-len(initial),'sourcePinCount':len(pins),'weldedPinCount':len(wpins),'gravity':list(scene.gravity),'sourceFps':spec['fps'],'sceneFps':sceneFps,'measurementFps':measurementFps,'clothTimeScale':clothTimeScale,'solverStepSeconds':clothTimeScale/sceneFps,'solverStepsPerSimulatedSecond':sceneFps/clothTimeScale,'timeResolution':timeResolution,'sourceFrameStride':sourceFrameStride,'preflight':preflight,'diagnosticOnly':bool(v18config or v19config or v20config),'diagnosticConfig':v20config or v19config or v18config,'stage3Method':'local cloth simulation + measured world root translation; no double application','status':status},indent=2))
   print(json.dumps({'stage':stage,'gates':gates,'last':rows[-1]}),flush=True)
   if stage==3 and all(gates.values()):
    # The existing verified cache format remains available; no production cache

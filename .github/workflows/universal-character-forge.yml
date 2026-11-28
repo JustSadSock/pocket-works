@@ -394,7 +394,7 @@ jobs:
             quality-artifacts/character-bridge/v19-trousers-R-*
             quality-artifacts/character-bridge/v19-motion-transfer-matrix.json
           if-no-files-found: warn
-      - name: v0.20 matched-duration 24/48/96 FPS cloth contact qualification
+      - name: v0.20.1 equal-simulation-time 24/48/96 FPS cloth contact qualification
         id: clothTimeResolutionV20
         if: ${{ !cancelled() && env.BLENDER != '' }}
         run: |
@@ -405,7 +405,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: character-forge-cloth-v20-time-resolution
+          name: character-forge-cloth-v20-time-resolution-corrected
           path: |
             quality-artifacts/character-bridge/v20-trousers-R-*
             quality-artifacts/character-bridge/v20-time-resolution-matrix.json
