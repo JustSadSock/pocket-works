@@ -206,6 +206,19 @@ def decode(src):
         peak=float(np.max(abs(x)));idx=np.flatnonzero(abs(x)>max(1e-6,peak*.025))
         if len(idx):off=max(0,int(idx[0])-120)
     return x[off:]
+def loop_sustain(x,needed,inst):
+    if len(x)>=needed:return x,False
+    if inst=='double-bass':start,end,fade=round(.32*SR),len(x)-round(.25*SR),round(.06*SR)
+    elif inst=='renaissance-organ':start,end,fade=round(.12*SR),len(x)-round(.12*SR),round(.05*SR)
+    else:return x,False
+    sustain=x[start:end]
+    if len(sustain)<fade*4:raise ValueError('recorded sustain region too short '+inst)
+    out=x[:end].copy()
+    while len(out)<needed:
+        n=min(fade,len(out),len(sustain));blend=np.linspace(0,1,n,dtype=np.float32)
+        out[-n:]=out[-n:]*(1-blend)+sustain[:n]*blend
+        out=np.concatenate((out,sustain[n:]))
+    return out[:needed],True
 def write_wav(path,a):
     with wave.open(str(path),'wb') as w:
         w.setparams((2,2,SR,0,'NONE','not compressed'));w.writeframes(a.astype('<i2').tobytes())
@@ -218,7 +231,7 @@ def render(dyn,hist,exp,out):
         if not pools[part]:raise ValueError('missing qualified source '+part)
     total_seconds=s['totalTicks']*60/(BPM*PPQ);N=round((total_seconds+3.2)*SR)
     frame=lambda t:round(t*60*SR/(BPM*PPQ))
-    cache={};groups={g:np.zeros((N,2),np.float32) for g in GROUPS};receipts=[];crossfades=0
+    cache={};groups={g:np.zeros((N,2),np.float32) for g in GROUPS};receipts=[];crossfades=0;looped_sustain=0
     for part,(inst,art,pan,trim,group,wet) in PARTS.items():
         es=[e for e in s['events'] if e['part']==part];a=np.zeros((N,2),np.float32);rr=0
         for i,e in enumerate(es):
@@ -245,8 +258,11 @@ def render(dyn,hist,exp,out):
                 tail={'folk-harp':1.15,'frame-drum':1.0,'bass-drum':2.75,'timpani':1.8}[inst]
                 length=min(int((len(x)-2)/rate),max(dur,round(tail*SR)))
             offset=round(.065*SR) if connected else 0
-            if (length-1)*rate+offset>=len(x)-1:
-                length=min(length,int((len(x)-offset-2)/rate))
+            required=int((length-1)*rate+offset)+2;looped=False
+            if required>=len(x):
+                x,looped=loop_sustain(x,required,inst)
+                if required>=len(x):raise ValueError('recorded sustain too short '+part)
+            if looped:looped_sustain+=1
             if length<480 or start+length>N:raise ValueError('sample too short or event outside render '+part)
             y=np.interp((np.arange(length)+offset)*rate,np.arange(len(x)),x).astype(np.float32)
             idx=np.arange(length);attack=round(SR*(.012 if finite else .075 if connected else .045));release=min(length//2,round(SR*(.28 if finite else .12)))
@@ -260,7 +276,7 @@ def render(dyn,hist,exp,out):
             pan_l=math.cos((pan+1)*math.pi/4);pan_r=math.sin((pan+1)*math.pi/4)
             a[start:start+length,0]+=y*env*gain*pan_l
             a[start:start+length,1]+=y*env*gain*pan_r
-            receipts.append(dict(part=part,tick=e['tick'],midi=midi,source=source['id'],sourceSha256=source['sha256'],pitchRate=round(rate,6),approximateCrossfade=bool(connected),frames=length))
+            receipts.append(dict(part=part,tick=e['tick'],midi=midi,source=source['id'],sourceSha256=source['sha256'],pitchRate=round(rate,6),approximateCrossfade=bool(connected),loopedSustain=bool(looped),frames=length))
         groups[group]+=a
     # Group-specific algorithmic stone-room reverb: early reflections plus a diffuse late field.
     ROOM={'low-strings':(26,58,88,70,24,-9),'upper-strings':(38,48,100,100,28,-8),'brass':(32,48,95,88,26,-9),'woodwinds':(34,58,90,100,22,-10),'plucked-organ':(40,55,100,100,26,-10),'percussion':(18,72,75,55,12,-13)}
@@ -289,7 +305,7 @@ def render(dyn,hist,exp,out):
         section_metrics.append(dict(id=sec['id'],meter=sec['meter'],rmsDb=db(np.sqrt(np.mean(x*x))),events=len(es),activeParts=sorted({e['part'] for e in es})))
     mono=master.astype(np.float64).mean(axis=1);stereo=master.astype(np.float64)
     width=float(np.sqrt(np.mean((stereo[:,0]-stereo[:,1])**2))/max(np.sqrt(np.mean(mono**2)),1e-9))
-    report=dict(approval='research-only',roomProcessor='SoX algorithmic room reverb',roomSettings=ROOM,score=s,sourceCount=len({r['source'] for r in receipts}),sourceEntries=len(src),eventCount=len(s['events']),receipts=receipts,approximateCrossfades=crossfades,recordedIntervalCoverage=0,sections=section_metrics,stereoWidth=width,monoPeak=float(np.max(abs(mono))/32768),pcmReconstructionError=pcm_error,commonGain=gain,metrics=metrics)
+    report=dict(approval='research-only',roomProcessor='SoX algorithmic room reverb',roomSettings=ROOM,score=s,sourceCount=len({r['source'] for r in receipts}),sourceEntries=len(src),eventCount=len(s['events']),receipts=receipts,approximateCrossfades=crossfades,loopedSustainEvents=looped_sustain,recordedIntervalCoverage=0,sections=section_metrics,stereoWidth=width,monoPeak=float(np.max(abs(mono))/32768),pcmReconstructionError=pcm_error,commonGain=gain,metrics=metrics)
     (out/'score.json').write_text(json.dumps(s,indent=2)+'\n');(out/'metrics.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k in ('sourceCount','sourceEntries','eventCount','approximateCrossfades','recordedIntervalCoverage','stereoWidth','monoPeak','pcmReconstructionError','sections','metrics')},indent=2))
 def self_test():
