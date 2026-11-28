@@ -81,3 +81,37 @@ test('byte budget counts unique cached and playing PCM; active buffers cannot be
  const small=fixture({maxDecodedBytes:100}).player;
  assert.equal(await small.play('steel'),false);assert.equal(small.stats.decodedBytes,0);small.destroy();
 });
+
+test('context bags are independent and rejected requests do not consume the selected variant',async()=>{
+ const families={step:{contexts:{wood:{variants:['w1','w2','w3']},gravel:{variants:['g1','g2','g3']}},pitchCents:0,gainSpread:0}};
+ const {player,requests}=fixture({families,maxVoices:1});
+ const baseline=fixture({families,maxVoices:1}).player;
+ const a=[],b=[];const start=x=>r=>x.push(r.url);
+ assert.equal(await player.play('step'),false);
+ assert.equal(await player.play('step',{context:'invalid'}),false);
+ assert.equal(await player.play('step',{context:'wood',canStart:()=>false}),false);
+ assert.equal(requests.length,0);
+ for(let i=0;i<3;i++){
+  assert.equal(await player.play('step',{context:'wood',priority:9,onStart:start(a)}),true);
+  const count=requests.length;
+  assert.equal(await player.play('step',{context:'wood',priority:0}),false);
+  assert.equal(requests.length,count);
+  player.stopAll();
+  assert.equal(await baseline.play('step',{context:'wood',priority:9,onStart:start(b)}),true);baseline.stopAll();
+ }
+ assert.deepEqual(a,b);assert.equal(new Set(a).size,3);
+ const g=[];for(let i=0;i<3;i++){assert.equal(await player.play('step',{context:'gravel',onStart:start(g)}),true);player.stopAll()}
+ assert.equal(new Set(g).size,3);assert.ok(g.every(x=>x.startsWith('g')));
+ assert.equal(await player.play('step',{context:'wood',onStart:start(a)}),true);assert.notEqual(a[2],a[3]);
+ assert.ok(player.stats.cacheHits>0);assert.equal(player.stats.accepted,7);
+ player.destroy();baseline.destroy();
+});
+test('failed post-decode eligibility retries identical reserved variant',async()=>{
+ let allowed=true,release,entered;const waiting=new Promise(r=>{entered=r});
+ const {player,requests}=fixture({fetcher:url=>{requests.push(url);entered();return new Promise(r=>{release=()=>r({ok:true,arrayBuffer:async()=>url})})}});
+ const p=player.play('steel',{canStart:()=>allowed});await waiting;allowed=false;release();
+ assert.equal(await p,false);assert.equal(player.stats.accepted,0);allowed=true;let selected;
+ assert.equal(await player.play('steel',{onStart:r=>selected=r.url}),true);
+ assert.equal(requests.length,1);assert.equal(selected,requests[0]);assert.equal(player.stats.cacheHits,1);
+ player.destroy();
+});

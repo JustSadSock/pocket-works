@@ -17,7 +17,7 @@ export function createVirtualAudioWorld({context,destination=context?.destinatio
  const active=new Map(),origin=context.currentTime;
  let disposed=false,busy=false,logical=0,audible=0,selected=0,peak=0,starts=0,retires=0,failures=0;
  function remove(id,entry){entry.emitter.destroy();active.delete(id);}
- function getStats(){return {logical,audible,selected,active:active.size,retiring:[...active.values()].filter(v=>v.retireAt!==null).length,virtual:Math.max(0,logical-[...active.values()].filter(v=>v.retireAt===null).length),maxVoices,peak,starts,retires,failures,busy};}
+ function getStats(){const buffers=new Set([...active.values()].map(v=>v.buffer));const decodedBytes=[...buffers].reduce((n,b)=>n+b.length*b.numberOfChannels*4,0);return {decodedBytes,logical,audible,selected,active:active.size,retiring:[...active.values()].filter(v=>v.retireAt!==null).length,virtual:Math.max(0,logical-[...active.values()].filter(v=>v.retireAt===null).length),maxVoices,peak,starts,retires,failures,busy};}
  return {
   async reconcile({listener,heading=0,sources}={}){
    if(disposed||busy)return false;
@@ -93,6 +93,8 @@ export function createBudgetedAudioScene({context,destination=context?.destinati
  if(!Array.isArray(stems)||stems.length>quota.music)throw Error('Music stems exceed voice reservation');
  if(score!==undefined&&(!score||stems.length||quota.music<2))throw Error('Horizontal score requires two reserved music slots and no vertical stems');
  const musicCount=stems.length;
+ const adaptiveBytes=[...new Set(stems.map(s=>s.buffer).filter(Boolean))].reduce((n,b)=>n+b.length*b.numberOfChannels*4,0);
+ if(!score&&(!Number.isSafeInteger(adaptiveBytes)||adaptiveBytes>maxScoreDecodedBytes))throw Error('Adaptive decoded music budget exceeded');
  const eventFamilies=Object.assign(Object.create(null),families??{}),stingerDefs=new Map();
  for(const [id,d] of Object.entries(stingers)){
   if(!/^[a-z][a-z0-9-]{0,63}$/.test(id)||!d||typeof d.url!=='string'||!d.url.trim())throw Error('Invalid stinger');
@@ -126,7 +128,9 @@ export function createBudgetedAudioScene({context,destination=context?.destinati
   destroy(){if(closed)return;closed=true;music?.destroy();ducker?.destroy();events.destroy();world.destroy();mixer.destroy();},
   get stats(){
    const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=score?(music?.state.voices??0):(music?.state.active?musicCount:0);
-   return {musicDucking:ducker?.state??{gain:1,until:null},continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending,eventDecodedBytes:events.stats.decodedBytes,scoreReservedBytes:score?(music?.memory.reservedBytes??0):0};
+   const eventDecodedBytes=events.stats.decodedBytes,ambienceDecodedBytes=world.stats.decodedBytes;
+   const musicDecodedBytes=closed?0:score?(music?.memory.reservedBytes??0):adaptiveBytes;
+   return {musicDucking:ducker?.state??{gain:1,until:null},continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending,eventDecodedBytes,scoreReservedBytes:score?musicDecodedBytes:0,musicDecodedBytes,ambienceDecodedBytes,totalAccountedDecodedBytes:eventDecodedBytes+ambienceDecodedBytes+musicDecodedBytes};
   }
  };
 }

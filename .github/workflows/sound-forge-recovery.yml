@@ -1,0 +1,149 @@
+name: Sound Forge Recovery Slice
+on:
+  pull_request:
+    paths:
+      - 'tools/audio-forge/lanterns-of-home.py'
+      - 'tools/audio-forge/living-soundscapes.py'
+      - 'tools/audio-forge/recovery-study.py'
+      - 'tools/audio-forge/browser-living-soundscape.mjs'
+      - 'tools/audio-forge/sound-family.test.mjs'
+      - 'shared/capabilities/sound-family.js'
+      - 'shared/capabilities/virtual-audio.js'
+      - '.github/workflows/sound-forge-recovery.yml'
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Verified original artifact run (must contain pinned source/loop)
+        default: '46094639476'
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: sound-forge-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      SOURCE_RUN: ${{ inputs.source_run || '46094639476' }}
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install existing audio engine and pinned numeric toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libfluidsynth3 timgm6mb-soundfont sox libsox-fmt-all
+          pip install numpy==2.3.5 scipy==1.17.0
+      - name: Context, cache and existing runtime regression tests
+        run: node --test tools/audio-forge/sound-family.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/spatial-audio.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-field-recordings-${{ env.SOURCE_RUN }}
+          run-id: ${{ env.SOURCE_RUN }}
+          github-token: ${{ github.token }}
+          path: .recovery-input/field
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-foundation-expansion-${{ env.SOURCE_RUN }}
+          run-id: ${{ env.SOURCE_RUN }}
+          github-token: ${{ github.token }}
+          path: .recovery-input/foundation
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-historical-slice-${{ env.SOURCE_RUN }}
+          run-id: ${{ env.SOURCE_RUN }}
+          github-token: ${{ github.token }}
+          path: .recovery-input/previous
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-recorded-dynamics-${{ env.SOURCE_RUN }}
+          run-id: ${{ env.SOURCE_RUN }}
+          github-token: ${{ github.token }}
+          path: .recovery-input/recorded
+      - name: Render new music and living scene twice, no legacy regeneration
+        run: |
+          set -euo pipefail
+          sf=/usr/share/sounds/sf2/TimGM6mb.sf2
+          for out in .recovery .recovery-repeat; do
+            python tools/audio-forge/lanterns-of-home.py "$sf" "$out/music"
+            python tools/audio-forge/living-soundscapes.py .recovery-input/field .recovery-input/previous .recovery-input/foundation "$out/soundscape"
+          done
+          python tools/audio-forge/recovery-study.py "$sf" .recovery-input/recorded .recovery/controls
+          mkdir -p .recovery/rights
+          cp "$sf" .recovery/rights/
+          cp /usr/share/doc/timgm6mb-soundfont/copyright /usr/share/common-licenses/GPL-2 .recovery/rights/
+          python - <<'PY'
+          import pathlib,hashlib,json,wave,numpy as np
+          p=pathlib.Path('.recovery');q=pathlib.Path('.recovery-repeat')
+          sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          def read(f):
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth())==(48000,2,2)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          for sub,ledger,files in [('music','metrics.json','files'),('soundscape','manifest.json','scene')]:
+              d=json.loads((p/sub/ledger).read_text())
+              assert d['pcmError']==0
+              xs=[]
+              for e in d[files]:
+                  f=p/sub/e['file'];assert sha(f)==e['sha256'];x=read(f);assert np.max(np.abs(x))<32768;xs.append(x)
+              acc=np.zeros_like(xs[0])
+              for x in xs[1:]:acc+=x
+              assert np.array_equal(acc,xs[0])
+              for f in (p/sub).rglob('*.wav'):
+                  assert sha(f)==sha(q/f.relative_to(p)),f
+          s=json.loads((p/'soundscape/manifest.json').read_text())
+          assert s['music'] is False and s['seconds']==72 and len(s['variants'])==24 and s['cacheHits']>0 and s['peakVoices']<=6
+          assert s['approvedRainSha256']=='e081d22b28b7b757cbbab98098231ab8192030cc9c408efe094fd8401b88c8fb'
+          assert sha(p/'soundscape/originals/rain-at-the-gate-loop.wav')==s['approvedRainSha256']
+          assert all(l['seam']<=l['derivativeP99']+2 for l in s['layers'])
+          v={e['file']:e for e in s['variants']}
+          assert all(v[e['variant']]['key']==e['key'] and v[e['variant']]['context']==e['context'] for e in s['events'])
+          m=json.loads((p/'music/metrics.json').read_text());assert 90<m['duration']<150 and m['recordedIntervalCoverage']==0
+          c=json.loads((p/'controls/comparison.json').read_text());assert len(c['metrics'])==3 and max(x['rms'] for x in c['metrics'])-min(x['rms'] for x in c['metrics'])<.0001
+          (p/'archive-sha256.json').write_text(json.dumps({str(f.relative_to(p)):sha(f) for f in sorted(p.rglob('*')) if f.is_file()},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recovery-${{ github.run_id }}
+          path: .recovery/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+  browser:
+    needs: render
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/recovery-browser" playwright@1.56.1
+          "$RUNNER_TEMP/recovery-browser/node_modules/.bin/playwright" install --with-deps ${{ matrix.browser }}
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/recovery-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-recovery-${{ github.run_id }}
+          path: .recovery
+      - run: node tools/audio-forge/browser-living-soundscape.mjs ${{ matrix.browser }} .recovery/soundscape .recovery/music .recovery-browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recovery-runtime-${{ matrix.browser }}-${{ github.run_id }}
+          path: .recovery-browser/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
