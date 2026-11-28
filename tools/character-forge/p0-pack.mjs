@@ -7,7 +7,7 @@ for(const view of ['front','side','three-quarter']){
  for(let i=0;i<names.length;i++)writeFileSync(join(out,names[i]+'-'+view+'.png'),raster(posed[i],{view,bounds,size:640,mode:'B'}).png)
 }
 const batch=[];for(const count of [1,10,100]){let peakRss=process.memoryUsage().rss,bytes=0,geometryMs=0,exportMs=0;const start=performance.now();for(let i=0;i<count;i++){
- const begin=performance.now(),index=i%names.length,ref=models[index],role=ref.spec.artRole,morph=ref.spec.p0Morphotype,src=read(join(source,'makehuman-'+morph+'.json')),m=fourInfluenceCandidate(produceRoleV9(src,role,null,{civilianP0:true})).model;m.spec=structuredClone(ref.spec);m.sampledWalk=structuredClone(ref.sampledWalk);m.approval=ref.approval;
+ const begin=performance.now(),index=i%names.length,ref=models[index],role=ref.spec.artRole,morph=ref.spec.p0Morphotype,src=read(join(source,'makehuman-'+morph+'.json')),m=produceRoleV9(src,role,null,{civilianP0:true});m.spec=structuredClone(ref.spec);m.sampledWalk=structuredClone(ref.sampledWalk);m.approval=ref.approval;
  geometryMs+=performance.now()-begin;const h=canonical(m),expected=canonical(ref);if(Object.keys(h).some(k=>h[k]!==expected[k]))throw Error('Batch reused motion on a different generated resource');
  const exportStart=performance.now(),b=glb(m);exportMs+=performance.now()-exportStart;bytes+=b.length;peakRss=Math.max(peakRss,process.memoryUsage().rss)
  }const elapsedMs=performance.now()-start;batch.push({count,elapsedMs,geometryMs,exportMs,perResourceMs:elapsedMs/count,peakRssBytes:peakRss,totalBytes:bytes});}

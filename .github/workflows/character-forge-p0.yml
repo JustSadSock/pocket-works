@@ -88,6 +88,7 @@ jobs:
           path: |
             quality-artifacts/p0/character.glb
             quality-artifacts/p0/p0-eight-original.glb
+            quality-artifacts/p0/p0-four-control.glb
             quality-artifacts/p0/spec.json
             quality-artifacts/p0/p0-*.json
             !quality-artifacts/p0/p0-evaluated.json
@@ -142,6 +143,7 @@ jobs:
           path: |
             quality-artifacts/p0/character.glb
             quality-artifacts/p0/p0-eight-original.glb
+            quality-artifacts/p0/p0-four-control.glb
             quality-artifacts/p0/spec.json
             quality-artifacts/p0/p0-*.json
             !quality-artifacts/p0/p0-evaluated.json
