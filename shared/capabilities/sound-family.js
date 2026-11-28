@@ -24,7 +24,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
   if(!Number.isInteger(maxVoices)||maxVoices<1||maxVoices>128||!Number.isInteger(maxBuffers)||maxBuffers<1||maxBuffers>256) throw new Error('Invalid audio budget');
   if(!Number.isSafeInteger(maxDecodedBytes)||maxDecodedBytes<1)throw new Error('Invalid decoded memory budget');
   const definitions=new Map(),cache=new Map(),voices=new Set();
-  let enabled=true,destroyed=false,generation=0,pending=0,cacheHits=0,cacheMisses=0,decodes=0,accepted=0;
+  let enabled=true,destroyed=false,generation=0,pending=0,cacheHits=0,cacheMisses=0,decodes=0,accepted=0,decodesAfterEpochChange=0,cancelledAfterLoad=0,peakDecodedObservedBytes=0,peakRetainedBytes=0,decoding=0,peakDecoding=0;
   function variantDefinition(id,definition){
     const urls=definition.variants;
     if(!Array.isArray(urls)||urls.some(x=>typeof x!=='string'||!x.trim())) throw new Error('Invalid variants for '+id);
@@ -51,6 +51,9 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
     if(!Number.isSafeInteger(buffer.length)||buffer.length<1||!Number.isInteger(buffer.numberOfChannels)||buffer.numberOfChannels<1||!Number.isSafeInteger(n))throw new Error('Invalid decoded audio dimensions');
     return n;
   }
+  function bufferSetBytes(buffers){return [...buffers].reduce((n,b)=>n+bytes(b),0);}
+  function cachedBytes(){return bufferSetBytes(new Set([...cache.values()].filter(e=>e.ready).map(e=>e.buffer)));}
+  function activeBytes(){return bufferSetBytes(new Set([...voices].map(v=>v.buffer)));}
   function retainedBytes(extra){
     const buffers=new Set([...cache.values()].filter(e=>e.ready).map(e=>e.buffer));
     for(const v of voices)buffers.add(v.buffer);
@@ -75,15 +78,16 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
       if(key===undefined) return Promise.reject(new Error('Audio buffer budget busy'));
       cache.delete(key);
     }
-    const entry={ready:false,controller:new AbortController(),promise:null};
+    const entry={ready:false,controller:new AbortController(),promise:null,epoch:generation};
     entry.promise=Promise.resolve().then(()=>fetcher(url,{signal:entry.controller.signal})).then(response=>{
       if(!response.ok) throw new Error('Audio fetch failed: '+response.status);
       return response.arrayBuffer();
-    }).then(data=>context.decodeAudioData(data)).then(buffer=>{
-      decodes++;
+    }).then(async data=>{decoding++;peakDecoding=Math.max(peakDecoding,decoding);try{return await context.decodeAudioData(data)}finally{decoding--}}).then(buffer=>{
+      decodes++;if(entry.epoch!==generation||destroyed)decodesAfterEpochChange++;
+      peakDecodedObservedBytes=Math.max(peakDecodedObservedBytes,retainedBytes(buffer));
       if(destroyed) throw new Error('Audio player destroyed');
       if(!fit(buffer,entry))throw new Error('Decoded memory budget exceeded');
-      entry.buffer=buffer;entry.ready=true;return buffer;
+      entry.buffer=buffer;entry.ready=true;peakRetainedBytes=Math.max(peakRetainedBytes,retainedBytes());return buffer;
     }).catch(error=>{if(cache.get(url)===entry) cache.delete(url);throw error;});
     cache.set(url,entry);return entry.promise;
   }
@@ -101,13 +105,13 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
       // Sequential: supports a family larger than a small cache budget.
       try{for(const url of def.urls){if(destroyed)return false;await load(url)}return true}catch{return false}
     },
-    async play(id,{gain=1,pan=0,rate=1,priority=0,spatial,canStart,onStart,context:variantContext}={}){
+    async play(id,{gain=1,pan=0,rate=1,priority=0,spatial,canStart,onStart,signal,context:variantContext}={}){
       const def=resolve(id,variantContext);
-      if(!enabled||destroyed||!def||pending>=maxVoices) return false;
+      if(!enabled||destroyed||!def||signal?.aborted||pending>=maxVoices) return false;
       const epoch=generation;pending++;
       let source,level,panner,voice,releaseTurn;const extra=[];
       priority=finite(priority,0);
-      const eligible=()=>!destroyed&&enabled&&epoch===generation&&context.state==='running'&&(typeof canStart!=='function'||canStart())&&(voices.size<maxVoices||[...voices].some(v=>v.priority<=priority));
+      const eligible=()=>!signal?.aborted&&!destroyed&&enabled&&epoch===generation&&context.state==='running'&&(typeof canStart!=='function'||canStart())&&(voices.size<maxVoices||[...voices].some(v=>v.priority<=priority));
       try{
         const profile=spatial===undefined?null:spatialProfile(spatial);
         if(profile&&profile.gain<=0)return false;
@@ -119,7 +123,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
         const turn=def.queue;def.queue=new Promise(resolve=>{releaseTurn=resolve});
         await turn;if(!eligible())return false;
         const url=def.bag.peek(),buffer=await load(url);
-        if(!eligible())return false;
+        if(!eligible()){cancelledAfterLoad++;return false;}
         if(voices.size>=maxVoices){
           const victim=[...voices].reduce((a,b)=>b.priority<a.priority?b:a);
           if(victim.priority>priority)return false;
@@ -149,7 +153,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
           signal.connect(delay);delay.connect(reflection);reflection.connect(destination);tail=profile.delay;
         }
         voice={source,buffer,nodes:[source,level,...(panner?[panner]:[]),...extra],priority};
-        voices.add(voice);
+        voices.add(voice);peakRetainedBytes=Math.max(peakRetainedBytes,retainedBytes());
         source.onended=()=>{if(!voices.has(voice))return;if(tail)voice.tailTimer=setTimeout(()=>remove(voice),Math.ceil(tail*1000)+20);else remove(voice)};
         source.start();
         def.bag.commit(url);accepted++;
@@ -163,7 +167,7 @@ export function createSoundFamilyPlayer({context,destination=context?.destinatio
     },
     stopAll(){generation++;for(const voice of [...voices])remove(voice,true)},
     setEnabled(value){enabled=Boolean(value);if(!enabled)this.stopAll()},
-    get stats(){return {voices:voices.size,pending,buffers:cache.size,decodedBytes:retainedBytes(),maxDecodedBytes,cacheHits,cacheMisses,decodes,accepted,enabled:enabled&&!destroyed}},
+    get stats(){return {voices:voices.size,pending,buffers:cache.size,decodedBytes:retainedBytes(),maxDecodedBytes,cachedDecodedBytes:cachedBytes(),activeDecodedBytes:activeBytes(),peakDecodedObservedBytes,peakRetainedBytes,decoding,peakDecoding,decodesAfterEpochChange,cancelledAfterLoad,cacheHits,cacheMisses,decodes,accepted,enabled:enabled&&!destroyed}},
     destroy(){
       if(destroyed)return;
       destroyed=true;enabled=false;this.stopAll();

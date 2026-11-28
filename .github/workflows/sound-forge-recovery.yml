@@ -6,6 +6,7 @@ on:
       - 'tools/audio-forge/living-soundscapes.py'
       - 'tools/audio-forge/recovery-study.py'
       - 'tools/audio-forge/browser-living-soundscape.mjs'
+      - 'tools/audio-forge/expressive-loop-repair.py'
       - 'tools/audio-forge/sound-family.test.mjs'
       - 'shared/capabilities/sound-family.js'
       - 'shared/capabilities/virtual-audio.js'
@@ -78,6 +79,7 @@ jobs:
             python tools/audio-forge/living-soundscapes.py .recovery-input/field .recovery-input/previous .recovery-input/foundation "$out/soundscape"
           done
           python tools/audio-forge/recovery-study.py "$sf" .recovery-input/recorded .recovery/controls
+          python tools/audio-forge/expressive-loop-repair.py .recovery/soundscape .recovery/runtime-repair
           mkdir -p .recovery/rights
           cp "$sf" .recovery/rights/
           cp /usr/share/doc/timgm6mb-soundfont/copyright /usr/share/common-licenses/GPL-2 .recovery/rights/
@@ -124,6 +126,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, webkit]
+        rate: [44100, 48000]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -139,10 +142,10 @@ jobs:
         with:
           name: sound-forge-recovery-${{ github.run_id }}
           path: .recovery
-      - run: node tools/audio-forge/browser-living-soundscape.mjs ${{ matrix.browser }} .recovery/soundscape .recovery/music .recovery-browser
+      - run: node tools/audio-forge/browser-living-soundscape.mjs ${{ matrix.browser }} .recovery/soundscape .recovery/music .recovery-browser ${{ matrix.rate }} .recovery/runtime-repair
       - uses: actions/upload-artifact@v4
         with:
-          name: sound-forge-recovery-runtime-${{ matrix.browser }}-${{ github.run_id }}
+          name: sound-forge-recovery-runtime-${{ matrix.browser }}-${{ matrix.rate }}-${{ github.run_id }}
           path: .recovery-browser/
           include-hidden-files: true
           if-no-files-found: error

@@ -94,3 +94,13 @@ test('stinger state guard is checked again after decode; only actual starts duck
  assert.ok(scene.stats.allocated<=8);
  scene.destroy();assert.equal(scene.stats.allocated,0);
 });
+
+test('ambience memory limits unique snapshot and active PCM before graph mutation',async()=>{
+ const {world}=fixture({maxVoices:2,maxAmbienceDecodedBytes:192000});
+ await world.reconcile({listener,sources:[at('a',1),at('b',2)]});
+ assert.equal(world.stats.externalSnapshotBytes,192000);
+ assert.equal(world.stats.snapshotAndActiveBytes,192000);
+ const other={...buffer};await assert.rejects(world.reconcile({listener,sources:[{...at('c',1),buffer:other}]}),/Ambience decoded memory budget/);
+ assert.equal(world.stats.active,2);assert.equal(world.stats.snapshotAndActiveBytes,192000);
+ world.destroy();assert.equal(world.stats.snapshotAndActiveBytes,0);
+});

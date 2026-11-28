@@ -9,26 +9,30 @@ const bounded=(value,fallback,min,max,label)=>{
  return n;
 };
 // A bounded pool for continuous emitters. Music and one-shots have separate quotas.
-export function createVirtualAudioWorld({context,destination=context?.destination,maxVoices=12,maxSources=4096,minAudible=.002,retentionBonus=.15,releaseSeconds=.05,createEmitter=createDynamicEmitter}={}){
+export function createVirtualAudioWorld({context,destination=context?.destination,maxVoices=12,maxSources=4096,minAudible=.002,retentionBonus=.15,releaseSeconds=.05,maxAmbienceDecodedBytes=64*1024*1024,createEmitter=createDynamicEmitter}={}){
  if(!context||!destination||!Number.isInteger(maxVoices)||maxVoices<1||maxVoices>64||!Number.isInteger(maxSources)||maxSources<maxVoices||maxSources>16384)throw Error('Invalid audio world budget');
  const floor=bounded(minAudible,.002,0,1,'audibility floor');
  const bonus=bounded(retentionBonus,.15,0,1,'retention');
  const release=bounded(releaseSeconds,.05,.035,1,'release');
+ if(!Number.isSafeInteger(maxAmbienceDecodedBytes)||maxAmbienceDecodedBytes<1)throw Error('Invalid ambience memory budget');
  const active=new Map(),origin=context.currentTime;
+ let snapshotBuffers=new Set(),peakSnapshotAndActiveBytes=0;
+ const bufferBytes=bs=>[...bs].reduce((n,b)=>n+b.length*b.numberOfChannels*4,0);
  let disposed=false,busy=false,logical=0,audible=0,selected=0,peak=0,starts=0,retires=0,failures=0;
  function remove(id,entry){entry.emitter.destroy();active.delete(id);}
- function getStats(){const buffers=new Set([...active.values()].map(v=>v.buffer));const decodedBytes=[...buffers].reduce((n,b)=>n+b.length*b.numberOfChannels*4,0);return {decodedBytes,logical,audible,selected,active:active.size,retiring:[...active.values()].filter(v=>v.retireAt!==null).length,virtual:Math.max(0,logical-[...active.values()].filter(v=>v.retireAt===null).length),maxVoices,peak,starts,retires,failures,busy};}
+ function getStats(){const buffers=new Set([...active.values()].map(v=>v.buffer));const decodedBytes=bufferBytes(buffers),externalSnapshotBytes=bufferBytes(snapshotBuffers),snapshotAndActiveBytes=bufferBytes(new Set([...buffers,...snapshotBuffers]));return {decodedBytes,externalSnapshotBytes,snapshotAndActiveBytes,peakSnapshotAndActiveBytes,maxAmbienceDecodedBytes,logical,audible,selected,active:active.size,retiring:[...active.values()].filter(v=>v.retireAt!==null).length,virtual:Math.max(0,logical-[...active.values()].filter(v=>v.retireAt===null).length),maxVoices,peak,starts,retires,failures,busy};}
  return {
   async reconcile({listener,heading=0,sources}={}){
    if(disposed||busy)return false;
    if(!Array.isArray(sources)||sources.length>maxSources)throw Error('Logical source budget exceeded');
-   const ids=new Set(),ranked=[];
+   const ids=new Set(),ranked=[],nextBuffers=new Set();
    // Validate the complete snapshot before touching the current audio graph.
    for(const s of sources){
     if(!s||typeof s.id!=='string'||!s.id||s.id.length>128||ids.has(s.id))throw Error('Invalid or duplicate emitter ID');
     ids.add(s.id);
     const b=s.buffer;
     if(!b||!Number.isInteger(b.length)||b.length<2||!Number.isFinite(b.sampleRate)||b.sampleRate<8000||![1,2].includes(b.numberOfChannels)||typeof b.getChannelData!=='function')throw Error('Invalid emitter buffer');
+    nextBuffers.add(b);
     const volume=bounded(s.volume,1,0,1,'volume'),priority=bounded(s.priority,1,0,10,'priority');
     const phaseOrigin=bounded(s.phaseOrigin,origin,0,1e12,'phase origin');
     const spatial={source:s.position,listener,heading,referenceDistance:s.referenceDistance,maxDistance:s.maxDistance,rolloff:s.rolloff,occlusion:s.occlusion,zone:s.zone};
@@ -38,6 +42,9 @@ export function createVirtualAudioWorld({context,destination=context?.destinatio
     const retained=incumbent&&incumbent.retireAt===null&&incumbent.buffer===b&&incumbent.phaseOrigin===phaseOrigin;
     ranked.push({id:s.id,buffer:b,volume,spatial,phaseOrigin,score:gain*priority*(retained?1+bonus:1)});
    }
+   const nextBytes=bufferBytes(new Set([...nextBuffers,...[...active.values()].map(v=>v.buffer)]));
+   if(!Number.isSafeInteger(nextBytes)||nextBytes>maxAmbienceDecodedBytes)throw Error('Ambience decoded memory budget exceeded');
+   snapshotBuffers=nextBuffers;peakSnapshotAndActiveBytes=Math.max(peakSnapshotAndActiveBytes,nextBytes);
    ranked.sort((a,b)=>b.score-a.score||(a.id<b.id?-1:a.id>b.id?1:0));
    const desired=ranked.slice(0,maxVoices),wanted=new Map(desired.map(s=>[s.id,s]));
    logical=sources.length;audible=ranked.length;selected=desired.length;busy=true;
@@ -71,7 +78,7 @@ export function createVirtualAudioWorld({context,destination=context?.destinatio
     return !disposed;
    }finally{busy=false;}
   },
-  destroy(){if(disposed)return;disposed=true;for(const [id,v] of active)remove(id,v);logical=0;audible=0;selected=0;},
+  destroy(){if(disposed)return;disposed=true;for(const [id,v] of active)remove(id,v);logical=0;audible=0;selected=0;snapshotBuffers.clear();},
   get stats(){return getStats()},
   get activeIds(){return [...active].filter(([,v])=>v.retireAt===null).map(([id])=>id)}
  };
@@ -88,7 +95,7 @@ export function planVoiceBudget({total=24,events=8,music=4}={}){
 }
 // Optional integration facade. Enforces fixed quotas by construction, without
 // allowing any one category to starve a reserved music or critical event slot.
-export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],score,bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,maxEventDecodedBytes=64*1024*1024,maxScoreDecodedBytes=128*1024*1024,stingers={},volume=.7}={}){
+export function createBudgetedAudioScene({context,destination=context?.destination,budget,families,stems=[],score,bpm=120,beatsPerBar=4,fetcher,random,maxBuffers=32,maxSources=4096,maxEventDecodedBytes=64*1024*1024,maxScoreDecodedBytes=128*1024*1024,maxAmbienceDecodedBytes=64*1024*1024,stingers={},volume=.7}={}){
  const quota=planVoiceBudget(budget);
  if(!Array.isArray(stems)||stems.length>quota.music)throw Error('Music stems exceed voice reservation');
  if(score!==undefined&&(!score||stems.length||quota.music<2))throw Error('Horizontal score requires two reserved music slots and no vertical stems');
@@ -108,7 +115,7 @@ export function createBudgetedAudioScene({context,destination=context?.destinati
  let mixer,world,events,music,ducker,closed=false;
  try{
   mixer=createSpatialMixer({context,destination,volume});
-  world=createVirtualAudioWorld({context,destination:mixer.bus('world'),maxVoices:quota.continuous,maxSources});
+  world=createVirtualAudioWorld({context,destination:mixer.bus('world'),maxVoices:quota.continuous,maxSources,maxAmbienceDecodedBytes});
   events=createSoundFamilyPlayer({context,destination:mixer.bus('events'),families:eventFamilies,fetcher,random,maxVoices:quota.events,maxBuffers,maxDecodedBytes:maxEventDecodedBytes});
   if(score||stems.length)ducker=createMusicDucker({context,destination:mixer.bus('music')});
   if(score)music=createScoreDirector({context,destination:ducker.input,graph:score.graph,buffers:score.buffers,bridgeBuffers:score.bridgeBuffers,layers:score.layers,intensity:score.intensity,maxVoices:quota.music,volume:score.volume,maxDecodedBytes:maxScoreDecodedBytes});
@@ -128,9 +135,9 @@ export function createBudgetedAudioScene({context,destination=context?.destinati
   destroy(){if(closed)return;closed=true;music?.destroy();ducker?.destroy();events.destroy();world.destroy();mixer.destroy();},
   get stats(){
    const continuous=world.stats.active,oneShots=events.stats.voices,musicVoices=score?(music?.state.voices??0):(music?.state.active?musicCount:0);
-   const eventDecodedBytes=events.stats.decodedBytes,ambienceDecodedBytes=world.stats.decodedBytes;
+   const eventDecodedBytes=events.stats.decodedBytes,ambienceDecodedBytes=world.stats.decodedBytes,externalAmbienceBytes=world.stats.externalSnapshotBytes,ambienceSnapshotAndActiveBytes=world.stats.snapshotAndActiveBytes;
    const musicDecodedBytes=closed?0:score?(music?.memory.reservedBytes??0):adaptiveBytes;
-   return {musicDucking:ducker?.state??{gain:1,until:null},continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending,eventDecodedBytes,scoreReservedBytes:score?musicDecodedBytes:0,musicDecodedBytes,ambienceDecodedBytes,totalAccountedDecodedBytes:eventDecodedBytes+ambienceDecodedBytes+musicDecodedBytes};
+   return {musicDucking:ducker?.state??{gain:1,until:null},continuous,oneShots,music:musicVoices,allocated:continuous+oneShots+musicVoices,quota,logical:world.stats.logical,pendingEvents:events.stats.pending,eventDecodedBytes,scoreReservedBytes:score?musicDecodedBytes:0,musicDecodedBytes,ambienceDecodedBytes,externalAmbienceBytes,ambienceSnapshotAndActiveBytes,totalAccountedDecodedBytes:eventDecodedBytes+ambienceSnapshotAndActiveBytes+musicDecodedBytes};
   }
  };
 }

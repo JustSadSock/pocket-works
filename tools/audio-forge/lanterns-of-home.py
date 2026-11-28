@@ -51,7 +51,7 @@ def score():
         else:merged.append(e);last[k]=e
     return merged
 
-def synth_part(events,part,font,seconds,expressive=True):
+def synth_part(events,part,font,seconds,expressive=True,meter=3):
     lib=C.CDLL(C.util.find_library('fluidsynth') or 'libfluidsynth.so.3');P=C.c_void_p;I=C.c_int;D=C.c_double
     def bind(n,ret,*args):f=getattr(lib,n);f.restype=ret;f.argtypes=args;return f
     settings=bind('new_fluid_settings',P)(); setn=bind('fluid_settings_setnum',I,P,C.c_char_p,D);seti=bind('fluid_settings_setint',I,P,C.c_char_p,I)
@@ -66,11 +66,11 @@ def synth_part(events,part,font,seconds,expressive=True):
     for i,e in enumerate(ev):
         t=e['beat']*BEAT;dur=e['duration']*BEAT;n=e['midi'];vel=e['velocity'];end=min(t+dur,seconds-TAIL)
         nxt=ev[i+1] if i+1<len(ev) else None
-        if expressive and sustain and part in ('cello','flute','viola') and nxt and nxt['midi']!=n and abs(nxt['beat']*BEAT-end)<.015:end+=.025
+        if expressive and sustain and part in ('cello','flute','viola','horn','reed') and nxt and nxt['midi']!=n and abs(nxt['beat']*BEAT-end)<.015:end+=.025
         schedule.extend([(round(t*SR),2,n,vel),(round(end*SR),0,n,0)])
     if expressive and sustain:
         for i in range(0,N,round(.045*SR)):
-            b=i/SR/BEAT; bar=b/3;phase=(bar%4)/4;section=next((j for j,(_,a,z) in enumerate(SECTIONS) if a<=bar<z),5)
+            b=i/SR/BEAT; bar=b/meter;phase=(bar%4)/4;section=next((j for j,(_,a,z) in enumerate(SECTIONS) if a<=bar<z),5)
             sec=[.65,.90,.86,.74,1,.56][section];value=round((76+35*math.sin(math.pi*phase))*sec);schedule.append((i,1,11,max(30,min(120,value))))
     schedule.sort();out=np.zeros((N,2),np.float32);pos=0
     def chunk(end):

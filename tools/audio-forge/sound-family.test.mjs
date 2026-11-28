@@ -115,3 +115,20 @@ test('failed post-decode eligibility retries identical reserved variant',async()
  assert.equal(requests.length,1);assert.equal(selected,requests[0]);assert.equal(player.stats.cacheHits,1);
  player.destroy();
 });
+
+test('cancelled in-flight decode is counted and cannot consume a variant',async()=>{
+ let release,entered;const waiting=new Promise(r=>{entered=r});
+ const {player,context,requests}=fixture();
+ context.decodeAudioData=async data=>{entered();return new Promise(r=>{release=()=>r({data,length:480,numberOfChannels:1})})};
+ const controller=new AbortController();let receipt;
+ const pending=player.play('steel',{signal:controller.signal,onStart:r=>{receipt=r}});
+ await waiting;controller.abort();player.stopAll();release();
+ assert.equal(await pending,false);assert.equal(receipt,undefined);
+ assert.equal(player.stats.decodes,1);assert.equal(player.stats.decodesAfterEpochChange,1);
+ assert.equal(player.stats.cancelledAfterLoad,1);assert.equal(player.stats.accepted,0);
+ assert.equal(await player.play('steel',{onStart:r=>{receipt=r}}),true);
+ assert.equal(receipt.url,requests[0]);assert.equal(requests.length,1);
+ assert.equal(player.stats.cachedDecodedBytes,1920);assert.equal(player.stats.activeDecodedBytes,1920);
+ assert.equal(player.stats.decodedBytes,1920);assert.ok(player.stats.peakDecodedObservedBytes>=1920);
+ player.destroy();assert.equal(player.stats.decodedBytes,0);
+});
