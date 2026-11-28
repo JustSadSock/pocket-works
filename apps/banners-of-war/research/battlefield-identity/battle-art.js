@@ -129,3 +129,20 @@ export function paintArt(s,layout,C){getScene(s,layout,C);let before=lastCam;mot
  previousDraw={at:now,bucket,mode};return {...r,policy,costs:{...costs},trials:{...trials},cadence:JSON.parse(JSON.stringify(learned)),terrainLevel:r.terrain.level,zoomHold:performance.now()<zoomUntil}}
 
 export function pendingArt(){return (terrainTiles?.queue.size||0)+(performance.now()<zoomUntil?1:0)}
+
+// Synchronous diagnostic only, never selected by game renderer. Restore all settings.
+export function profileArtSurface(){
+ if(!terrainTiles)throw Error('No prepared terrain');
+ const t=terrainTiles,F=scene.F,points=Array.from({length:12000},(_,i)=>({x:(i*97.13)%F.W,y:(i*57.37)%F.H})),old=t.style,rows=[];
+ function timed(label,fn){let start=performance.now(),sum=0;for(let p of points)sum+=fn(p);rows.push({label,ms:performance.now()-start,samples:points.length,checksum:sum})}
+ try{
+ for(let pass=0;pass<3;pass++)for(let [name,style,warp,material] of (pass%2?[['B','B',false,false],['noMaterial','B',false,true],['noWarp','B',true,false],['control','control',false,false]]:[['control','control',false,false],['noWarp','B',true,false],['noMaterial','B',false,true],['B','B',false,false]])){
+ t.style=style;t.profileSkipWarp=warp;t.profileSkipMaterial=material;
+ timed('pixel-'+name+'-'+pass,p=>t.pixel(p.x,p.y,2,'wide')[0]);
+ }
+ timed('water',p=>Number(t.water(p.x,p.y,F.sample(t.t,p.x,p.y)).water));
+ timed('texture',p=>t.tex('grass',p.x,p.y,2)[0]);
+ let props=t.props;try{for(let style of ['control','B','B','control']){t.style=style;t.props=new Map();let start=performance.now(),n=t.vegetation(cam,w,h).length,cold=performance.now()-start;start=performance.now();t.vegetation(cam,w,h);rows.push({label:'vegetation-'+style,coldMs:cold,warmMs:performance.now()-start,count:n})}}finally{t.props=props}
+ }finally{t.style=old;t.profileSkipWarp=false;t.profileSkipMaterial=false}
+ return rows
+}

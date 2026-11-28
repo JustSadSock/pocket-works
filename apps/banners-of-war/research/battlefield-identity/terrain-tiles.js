@@ -59,7 +59,7 @@ export class TerrainTiles{
  tex(kind,x,y,k){let metres=kind==='stone'?10:8,ls=this.textures[kind];let key=kind+':'+k,mip=this.mips.get(key);if(!mip){mip=ls.find(p=>p.n>=k*metres*1.3)||ls.at(-1);this.mips.set(key,mip)}const {n,a}=mip,sc=n/metres,px=x*sc,py=y*sc,ix=Math.floor(px),iy=Math.floor(py),fx=px-ix,fy=py-iy,xx=((ix%n)+n)%n,yy=((iy%n)+n)%n,i=(yy*n+xx)*4,j=(yy*n+(xx+1)%n)*4,l=(((yy+1)%n)*n+xx)*4,m=(((yy+1)%n)*n+(xx+1)%n)*4;return [mix(mix(a[i],a[j],fx),mix(a[l],a[m],fx),fy),mix(mix(a[i+1],a[j+1],fx),mix(a[l+1],a[m+1],fx),fy),mix(mix(a[i+2],a[j+2],fx),mix(a[l+2],a[m+2],fx),fy)]}
  point(x,y){return {u:-y,v:x*S-renderHeight(this.F,this.t,x,y)*T}}
  pixel(U,V,k,axis='tactical'){let F=this.F,t=this.t,y=axis==='wide'?V:-U,x=axis==='wide'?U:axis==='tall'?V:V/S;if(axis==='tactical')for(let i=0;i<3;i++)x=(V+renderHeight(F,t,x,y)*T)/S;if(x<0||y<0||x>F.W||y>F.H)return [44,50,45];let q=F.sample(t,x,y),r=this.water(x,y,q),mo=q.wet||0,can=q.canopy||0,shade=this.fields?sampleSurfaceField(this.fields,x,y,2):clamp((renderHeight(F,t,x+3,y-3)-renderHeight(F,t,x-3,y+3))*13,-52,52),patch=clamp(.25+.42*(noise(x,y,44,193)-.5)+.36*(noise(x,y,19,617)-.5)+mo*.23,0,1);
- let natural=this.style==='B',atlas=this.style==='A',wx=natural?x+13*(noise(x,y,43,842)-.5):x,wy=natural?y+13*(noise(x,y,37,843)-.5):y;
+ let natural=this.style==='B',atlas=this.style==='A',wx=natural&&!this.profileSkipWarp?x+13*(noise(x,y,43,842)-.5):x,wy=natural&&!this.profileSkipWarp?y+13*(noise(x,y,37,843)-.5):y;
  let grass=this.tex('grass',wx,wy,k),sparse=this.tex('sparse',wx+3,wy+7,k),stone=this.tex('stone',wx-9,wy+4,k),color=grass.map((v,z)=>mix(v,sparse[z],patch)),nx=this.fields?sampleSurfaceField(this.fields,x,y,0):0,ny=this.fields?sampleSurfaceField(this.fields,x,y,1):0,slope=Math.hypot(nx,ny),rock=smooth(.09,.31,slope)*(1-can)*(.28+.44*noise(x,y,13,522));color=color.map((v,z)=>mix(v,stone[z],Math.max(rock,smooth(.61,.92,patch)*(1-can)*.53)));let grain=(noise(x,y,.85,93)-.5)*Math.min(10,k*3.5)+(noise(x,y,14,179)-.5)*9;shade+=grain;
  const coverage=shoreCoverage(r.shore,k);
  if(coverage<1){let roadD=this.roadDist(x,y),edge=4.8+.6*Math.sin(x*.23+y*.29),road=1-smooth(2.2,edge,roadD),tracks=Math.max(0,1-Math.abs(roadD-1.8)/.65)*road,soil=this.tex('road',x,y,k);let shore=(r.shore===undefined?0:1-smooth(0,3.2,Math.max(0,r.shore))),mud=r.bank*(.18+.3*mo);color=color.map((v,z)=>mix(mix(v,soil[z],Math.max(mud,road)),stone[z]*.91,shore*.35*(1-rock)));shade-=tracks*17;let woodland=this.fields?sampleSurfaceField(this.fields,x,y,3):can,leaf=woodland*(.30+.15*noise(x,y,12,413));color=color.map((v,z)=>mix(v,soil[z]*.77,leaf));shade-=woodland*9}
@@ -75,7 +75,7 @@ export class TerrainTiles{
    color=color.map((v,i)=>mix(v,wash[i],.48*(1-coverage)*(1-can*.45)));
    shade=shade*(1+.65*(1-coverage))-line*105;
  }
- if(natural){
+ if(natural&&!this.profileSkipMaterial){
    let broad=noise(x,y,65,856),small=noise(x,y,9,857),bank=(1-smooth(0,7,Math.abs(r.shore)))*(1-coverage);
    let meadow=smooth(.30,.78,broad)*(1-can)*(1-coverage),leaf=smooth(.45,.85,can)*(1-coverage);
    color=color.map((v,i)=>mix(mix(mix(v,[132,151,90][i],meadow*.26),[97,104,67][i],leaf*.26),[111,102,78][i],bank*(.22+.24*small)));

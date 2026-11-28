@@ -1,4 +1,4 @@
-name: Banners of War Integrated Historical Battle
+name: Banners of War First Playable Historical Battle
 on:
   pull_request:
     paths:
@@ -19,45 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test apps/banners-of-war/research/vertical-slice/standalone.test.mjs
-  observer:
-    runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 60
-    env:
-      BOW_AUDIT_OUTPUT: quality-artifacts/integrated-observer
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: |
-          npm ci --legacy-peer-deps --no-audit --no-fund
-          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
-          node apps/banners-of-war/research/playable-foundation/browser.mjs
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: integrated-observer
-          path: quality-artifacts/integrated-observer
-          retention-days: 14
-  tactics:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    env:
-      BOW_AUDIT_OUTPUT: quality-artifacts/agincourt-tactics
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: node apps/banners-of-war/research/integrated-agincourt/tactics.mjs
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: agincourt-tactics
-          path: quality-artifacts/agincourt-tactics
-          retention-days: 14
+      - run: node --test apps/banners-of-war/research/vertical-slice/standalone.test.mjs apps/banners-of-war/research/integrated-agincourt/tactical-camera.test.mjs
   integrated:
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
@@ -102,77 +64,120 @@ jobs:
           name: integrated-agincourt-PNG-${{ matrix.browser }}-${{ matrix.side }}
           path: quality-artifacts/integrated-battle/*.png
           retention-days: 14
-  preserve:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: baseline
-            artifact: 15244642164
-          - label: candidate
-            artifact: 15244108584
-          - label: A
-            artifact: 15244876025
-          - label: B
-            artifact: 15244411870
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: 46097554811
-          artifact-ids: ${{ matrix.artifact }}
-          path: native
-      - run: |
-          mkdir -p compact
-          python3 - <<'PY'
-          from pathlib import Path
-          import shutil,hashlib,json
-          root=Path('native')
-          atlas=next(root.rglob('mixed-atlas.json'));src=atlas.parent
-          files=[]
-          for p in src.iterdir():
-              if p.is_file() and ((p.suffix=='.png' and not p.name.startswith('page-') and p.stem not in ('grass','sparse','road','stone','tree1','tree2','tree3','bush')) or p.name.startswith('performance-') or p.name in ('qa-gates.json','visual-evidence.json','strategic-composition.json')):
-                  shutil.copyfile(p,Path('compact')/p.name);files.append({'file':p.name,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
-          assert any(x['file'].endswith('.png') for x in files)
-          Path('compact/manifest.json').write_text(json.dumps(files,indent=2))
-          PY
+      - name: Select key original frames, no resizing
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/integrated-key
+          find quality-artifacts/integrated-battle -maxdepth 1 -type f \( -name '*-initial-candidate.png' -o -name '*-initial-schematic.png' -o -name '*-initial-tactical60.png' -o -name '*-close60.png' -o -name '*-event-*.png' -o -name '*-result.png' \) -exec cp {} quality-artifacts/integrated-key/ \;
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: original-diorama-${{ matrix.label }}-compact
-          path: compact
+          name: key-PNG-${{ matrix.browser }}-${{ matrix.side }}
+          path: quality-artifacts/integrated-key
           retention-days: 14
-  original-audit:
+  causal:
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/agincourt-causality
+      BOW_OLD_TRACES: /tmp/agincourt-old
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
           run-id: 46097554811
           artifact-ids: 15244635332
-          path: old-audit
-      - run: |
-          mkdir -p compact
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          src=next(Path('old-audit').rglob('summary.json')).parent
-          summary=json.loads((src/'summary.json').read_text())
-          assert len(summary)==24
-          traces=[]
-          for p in sorted(src.glob('*.json')):
-              if p.name in ('summary.json','catalog.json'):continue
-              a=json.loads(p.read_text())
-              if not isinstance(a,dict) or 'rounds' not in a:continue
-              traces.append({'file':p.name,'rounds':len(a['rounds']),'frames':len(a['frames']),'result':a['final']['result'],'time':a['final']['time'],'roundMetrics':[r['metrics'] for r in a['rounds']]})
-          assert len(traces)==24
-          Path('compact/summary.json').write_text(json.dumps(summary,indent=2))
-          Path('compact/trace-analysis.json').write_text(json.dumps(traces,indent=2))
-          PY
+          path: /tmp/agincourt-old/first
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46102400146
+          artifact-ids: 15246106575
+          path: /tmp/agincourt-old/second
+      - run: node apps/banners-of-war/research/integrated-agincourt/causality.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: original-playable-audit-analysis
-          path: compact
+          name: agincourt-causality
+          path: quality-artifacts/agincourt-causality
+          retention-days: 14
+  diagnosis:
+    runs-on: ubuntu-24.04
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/command-diagnosis
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46102400146
+          artifact-ids: 15246591481
+          path: /tmp/french-webkit
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46102400146
+          artifact-ids: 15246586412
+          path: /tmp/french-chromium
+      - run: |
+          mkdir -p "$BOW_AUDIT_OUTPUT"
+          node apps/banners-of-war/research/integrated-agincourt/failure-audit.mjs "$(dirname "$(find /tmp/french-webkit -name failures.json -print -quit)")" "$(dirname "$(find /tmp/french-chromium -name failures.json -print -quit)")"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: command-diagnosis
+          path: quality-artifacts/command-diagnosis
+          retention-days: 14
+  paired-performance:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    env:
+      BOW_PAIRED_PROFILE: '1'
+      BOW_RECOVERY: '1'
+      BOW_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/paired-candidate
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244642164
+          path: /tmp/paired-baseline
+      - run: |
+          echo "BOW_ART_OUTPUT=$(dirname "$(find /tmp/paired-candidate -name mixed-atlas.json -print -quit)")" >> "$GITHUB_ENV"
+          echo "BOW_PROFILE_BASELINE=$(dirname "$(find /tmp/paired-baseline -name mixed-atlas.json -print -quit)")" >> "$GITHUB_ENV"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+      - run: node apps/banners-of-war/research/battlefield-identity/capture.mjs
+      - name: Retain paired profiles and unmodified pixel-difference images
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/paired
+          find /tmp/paired-candidate -name 'paired-*.json' -o -name 'difference-*-candidate-*.png' -o -name 'difference-*-baseline-*.png' -o -name 'difference-*-A-*.png' -o -name 'difference-*-B-*.png' | while read -r f; do cp "$f" quality-artifacts/paired/; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paired-performance-${{ matrix.browser }}
+          path: quality-artifacts/paired
           retention-days: 14
