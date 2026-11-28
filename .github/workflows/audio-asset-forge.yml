@@ -1069,6 +1069,11 @@ jobs:
           "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-v4.py --self-test
           "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-v4.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-crown-v4
           test "$(find .audio-crown-v4 -maxdepth 1 -name '*.wav' | wc -l)" -eq 7
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-v4.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-crown-v4-repeat
+          printf '%s\n' \
+            '737966ed1565e44627d904f8cff3cf00b90b3cd2f8a40027db3573be13463110  .audio-victory-score/the-crown-endures.wav' \
+            'a10df438e1e3370ae97a7e2421c1989e47872ba057e68486a88104d117dda076  .audio-weight-of-crown/the-weight-of-a-crown.wav' \
+            '1639b38815de7914940c1b8ab0faea0d231f48a72869c108c750b005a739f49f  .audio-crown-coherent/crown-coherent-master.wav' | sha256sum --check
           "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
           import json,pathlib,hashlib,wave,numpy as np
           p=pathlib.Path('.audio-crown-v4');m=json.loads((p/'metrics.json').read_text());s=json.loads((p/'score.json').read_text())
@@ -1077,8 +1082,12 @@ jobs:
           assert m['activeRoles']['bass']['activeRms']>.4*m['activeRoles']['lead']['activeRms']
           assert m['activeRoles']['answer']['activeSeconds']>5 and m['monoLossDb']>-.5
           assert len(json.loads((p/'sources.json').read_text()))==m['sourceCount']
+          chords={'Em':{4,7,11},'F':{5,9,0},'C':{0,4,7},'Am':{9,0,4},'G':{7,11,2},'Dm':{2,5,9}}
+          assert all(e['midi']%12 in chords[s['harmony'][e['bar']]] for e in s['events'] if e['role'] in ('bass','harmony','answer','pluck'))
+          lead=[e for e in s['events'] if e['role']=='lead' and e['beat'] in (0,3)]
+          assert len(lead)==63 and sum(e['midi']%12 in chords[s['harmony'][e['bar']]] for e in lead)==60
           def read(e):
-              f=p/e['file'];assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              f=p/e['file'];assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']==hashlib.sha256((pathlib.Path('.audio-crown-v4-repeat')/e['file']).read_bytes()).hexdigest()
               with wave.open(str(f),'rb') as w:
                   assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,6072000)
                   return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
@@ -1191,6 +1200,7 @@ jobs:
           p=pathlib.Path('.audio-historical-slice');q=pathlib.Path('.audio-historical-repeat')
           m=json.loads((p/'manifest.json').read_text())
           assert m['sceneSeconds']==60 and m['peakVoices']==6 and m['dropped']>0 and m['cacheHits']>0 and m['pcmError']==0
+          assert m['musicSha256']==hashlib.sha256(pathlib.Path('.audio-crown-v4/crown-v4-master.wav').read_bytes()).hexdigest()
           assert len(m['variants'])==18 and len({x['sha256'] for x in m['variants']})==18
           for family in ('blade','shield','footstep'):
               a=[x for x in m['variants'] if x['family']==family];assert len(a)==6 and len({x['context'] for x in a})==2
