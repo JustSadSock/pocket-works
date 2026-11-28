@@ -7,7 +7,7 @@ const sleep=()=>new Promise(r=>setTimeout(r,0));
 // Only rendering uses this scalar fast path; historical and lab maps use sample.
 export function renderHeight(F,t,x,y){
  x=clamp(x,0,F.W);y=clamp(y,0,F.H);
- if(!t.height||t.lab||t.historical||!t.channel)return F.sample(t,x,y).h;
+ if(!t.height||t.lab||t.historical||t.hasRiver===false||!t.channel)return F.sample(t,x,y).h;
  let xx=clamp(x/t.cell,0,t.cols-1),yy=clamp(y/t.cell,0,t.rows-1),i=Math.min(t.cols-2,Math.floor(xx)),j=Math.min(t.rows-2,Math.floor(yy)),a=xx-i,b=yy-j,q=t.height,k=j*t.cols+i;
  let h=q[k]*(1-a)*(1-b)+q[k+1]*a*(1-b)+q[k+t.cols]*(1-a)*b+q[k+t.cols+1]*a*b;
  let ch=t.channel[j]+(t.channel[j+1]-t.channel[j])*(yy-j),f=clamp(Math.abs(x-ch)/33,0,1);
@@ -34,7 +34,7 @@ function maskAt(t,field,x,y){
 }
 export function shorelineField(F,t,x,y){
  if(t.lab)return Math.max((.48-maskAt(t,'waterMask',x,y))*t.cell,(maskAt(t,'crossingMask',x,y)-.48)*t.cell);
- if(t.historical&&!t.hasRiver)return Infinity;
+ if((t.hasRiver===false||t.historical&&!t.hasRiver))return Infinity;
  return Math.abs(x-F.riverX(t,y))-(t.height||t.historical?11:12);
 }
 export function shoreCoverage(shore,k){
@@ -52,7 +52,7 @@ export function tileBlitRect(sx,sy,dx,dy,dst,k,l,d){
 export class TerrainTiles{
  constructor(F,t,textures,trees,style='control'){this.style=style;this.mips=new Map();this.F=F;this.t=t;this.textures=textures;this.trees=trees;this.tiles=new Map();this.queue=new Map();this.bytes=0;this.busy=false;this.scheduled=false;this.warming=0;this.prepared=0;this.prepMs=0;this.dropped=0;this.evictions=0;this.pins=new Map();this.activeKey=null;this.epoch=0;this.fields=null;this.fieldPromise=null;this.backdrops=new Map();this.backdropPromises=new Map();this.motionUntil=0;this.props=new Map();this.stats={};this.road=t.road||[];this.roadBins=new Map();for(let i=1;i<this.road.length;i++){let a=this.road[i-1],b=this.road[i];if(Math.hypot(a.x-b.x,a.y-b.y)>40)continue;for(let x=Math.floor((Math.min(a.x,b.x)-8)/32);x<=Math.floor((Math.max(a.x,b.x)+8)/32);x++)for(let y=Math.floor((Math.min(a.y,b.y)-8)/32);y<=Math.floor((Math.max(a.y,b.y)+8)/32);y++){let k=x+':'+y,l=this.roadBins.get(k)||[];l.push([a,b]);this.roadBins.set(k,l)}}}
  roadDist(x,y){let d=Infinity;for(let [a,b] of this.roadBins.get(Math.floor(x/32)+':'+Math.floor(y/32))||[]){let dx=b.x-a.x,dy=b.y-a.y,f=clamp(((x-a.x)*dx+(y-a.y)*dy)/Math.max(.001,dx*dx+dy*dy),0,1);d=Math.min(d,Math.hypot(x-a.x-dx*f,y-a.y-dy*f))}return d}
- water(x,y,q){let F=this.F,t=this.t;if(t.lab){let shore=shorelineField(F,t,x,y);return {water:q.water,shore,shallow:1-smooth(1,5,-shore),bank:1-smooth(0,7,Math.max(0,shore))}}if(t.historical&&!t.hasRiver)return {water:false,shallow:0,bank:0,shore:Infinity};let dist=Math.abs(x-F.riverX(t,y)),along=Math.abs(y-t.ford),ford=1-smooth((t.fordWidth??42)*.55,t.fordWidth??42,along),edge=smooth(1,11,dist);
+ water(x,y,q){let F=this.F,t=this.t;if(t.lab){let shore=shorelineField(F,t,x,y);return {water:q.water,shore,shallow:1-smooth(1,5,-shore),bank:1-smooth(0,7,Math.max(0,shore))}}if((t.hasRiver===false||t.historical&&!t.hasRiver))return {water:false,shallow:0,bank:0,shore:Infinity};let dist=Math.abs(x-F.riverX(t,y)),along=Math.abs(y-t.ford),ford=1-smooth((t.fordWidth??42)*.55,t.fordWidth??42,along),edge=smooth(1,11,dist);
  // Shore irregularity only alters the material transition inside the physical shoreline band.
  let wriggle=Math.sin(y*.36)*.45+Math.sin(y*.91)*.22,wetEdge=1-smooth(9.2,11.8,dist+wriggle);
  let shore=dist-(t.height||t.historical?11:12);return {water:shore<0,shallow:clamp(ford*.82+smooth(3,11,dist)*.78,0,1),bank:1-smooth(11,21,dist),wetEdge,shore}}

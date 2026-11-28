@@ -1,4 +1,4 @@
-name: Banners of War Custom Warfare Foundation
+name: Banners of War Emergent Warfare and Army Identity
 on:
   pull_request:
     paths:
@@ -98,22 +98,12 @@ jobs:
           name: custom-${{ matrix.scenario }}-${{ matrix.campaign || 'battle' }}-key-PNG
           path: quality-artifacts/key
           retention-days: 14
-  bounded-final-recovery:
+  original-causality:
     runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.64.0-noble
-    timeout-minutes: 180
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - browser: chromium
-            profile: 15259586015
-          - browser: webkit
-            profile: 15259298049
+    timeout-minutes: 45
     env:
-      BOW_PAIRED_PROFILE: '1'
-      BOW_RECOVERY: '1'
-      BOW_BROWSER: ${{ matrix.browser }}
+      BOW_AUDIT_OUTPUT: quality-artifacts/identity-audit
+      BOW_ORIGINAL_TRACES: /tmp/old-custom
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -122,41 +112,83 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: 46134216631
-          artifact-ids: ${{ matrix.profile }}
-          path: /tmp/prior-profile
-      - name: Analyze original frame and composition metrics
+          run-id: 46139068464
+          artifact-ids: 15261027330
+          path: /tmp/old-custom
+      - run: node apps/banners-of-war/research/custom-warfare/identity-audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-causality-and-identity
+          path: quality-artifacts/identity-audit
+          retention-days: 14
+  update-debt:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46139068330
+          artifact-ids: 15261611186
+          path: /tmp/original-validation
+      - name: Validate and preserve exact old and new findings
         run: |
-          mkdir -p quality-artifacts/final-recovery
-          original="$(find /tmp/prior-profile -name 'paired-*.json' -print -quit)"
-          test -n "$original"
-          policy="$(node apps/banners-of-war/research/custom-warfare/analyze-profile.mjs "$original" quality-artifacts/final-recovery/causal-profile.json)"
-          echo "Original eligible policy: $policy"
-          # All three old cache/batch policies were slower. Last bounded iteration is
-          # direct native page sampling, justified by the 4930 sprite draw calls.
-          echo 'BOW_FINAL_RECOVERY=atlas' >> "$GITHUB_ENV"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          node scripts/validate-update-contract.mjs
+          mkdir -p quality-artifacts/validation-comparison
+          cp "$(find /tmp/original-validation -name updates.json -print -quit)" quality-artifacts/validation-comparison/previous-updates.json
+          cp quality-artifacts/validation-debt/updates.json quality-artifacts/validation-comparison/current-updates.json
+          node --input-type=module -e 'import fs from "node:fs";let old=JSON.parse(fs.readFileSync("quality-artifacts/validation-comparison/previous-updates.json")),next=JSON.parse(fs.readFileSync("quality-artifacts/validation-comparison/current-updates.json"));if(old.regressions.length!==1||!old.regressions[0].includes("apps/banners-of-war/sw.js cache name")||next.regressions.length)throw Error("Unexpected validation debt");console.log(JSON.stringify({old:old.regressions,oldLegacy:old.existing.length,currentLegacy:next.existing.length,currentRegressions:next.regressions,byApp:old.existing.reduce((a,s)=>{let k=s.split("/")[1];a[k]=(a[k]||0)+1;return a},{})}));'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-update-debt-comparison
+          path: quality-artifacts/validation-comparison
+          retention-days: 14
+  full-campaign-browser:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 90
+    env:
+      BOW_INTEGRATED_OUTPUT: quality-artifacts/campaign-browser
+      BOW_BROWSER: chromium
+      BOW_SIDE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
           run-id: 46097554811
           artifact-ids: 15244108584
-          path: /tmp/final-candidate
-      - name: Final bounded paired comparison
-        run: |
-          atlas="$(find /tmp/final-candidate -name mixed-atlas.json -print -quit)"
+          path: /tmp/campaign-candidate
+      - run: |
+          atlas="$(find /tmp/campaign-candidate -name mixed-atlas.json -print -quit)"
           test -n "$atlas"
-          export BOW_ART_OUTPUT="$(dirname "$atlas")"
+          echo "BOW_ART_OUTPUT=$(dirname "$atlas")" >> "$GITHUB_ENV"
           npm ci --legacy-peer-deps --no-audit --no-fund
           npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
-          node apps/banners-of-war/research/battlefield-identity/capture.mjs
-      - name: Preserve final measurement and pixel evidence
-        if: always()
-        run: |
-          mkdir -p quality-artifacts/final-recovery
-          find /tmp/final-candidate -name 'paired-*.json' -o -name 'final-recovery-summary-*.json' -o -name 'difference-*-candidate-*.png' -o -name 'difference-*-recovery-*.png' | while read -r f; do cp "$f" quality-artifacts/final-recovery/; done
+      - run: node apps/banners-of-war/research/custom-warfare/campaign-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: final-recovery-${{ matrix.browser }}
-          path: quality-artifacts/final-recovery
+          name: three-battle-campaign-original
+          path: quality-artifacts/campaign-browser
+          retention-days: 14
+      - name: Preserve original key PNGs
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/campaign-key
+          find quality-artifacts/campaign-browser -maxdepth 1 -name '*.png' -exec cp {} quality-artifacts/campaign-key/ \;
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: three-battle-campaign-key-PNG
+          path: quality-artifacts/campaign-key
           retention-days: 14
