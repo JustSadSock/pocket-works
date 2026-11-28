@@ -1,0 +1,35 @@
+{
+  "sourceManifestSha256": "3647dd4553231bae7475079b35f6bc3d059b87e21d56ed8ce3e3e2a3eba21fe9",
+  "files": {
+    "evening-standard-discrete.wav": {
+      "sha256": "c7690f923592fbe5685fce1a9c8df0273a3c96c6ad905935edd9f2abc8a16bd2",
+      "frames": 1152000,
+      "channels": 2
+    },
+    "evening-standard-morph.wav": {
+      "sha256": "52c29e0c2d416ebb99c2616b6688028329916eb9e1e8b7f6876649af862b3fd5",
+      "frames": 1152000,
+      "channels": 2
+    },
+    "evening-standard-strings.wav": {
+      "sha256": "f86a6e604ac82bfdae368bc2fe5c4965289b977d6f064cebd8200091bc1cd962",
+      "frames": 1152000,
+      "channels": 2
+    },
+    "evening-standard-woodwind.wav": {
+      "sha256": "4ce3e019e00bce1737116cdd5a002ad0285e5cb31079dbdbe2d772ce764459ca",
+      "frames": 1152000,
+      "channels": 2
+    },
+    "evening-standard-brass.wav": {
+      "sha256": "93edea32710148c10f7949bc3b5e9098da59e396c00e4dc01f14a5a796bdf360",
+      "frames": 1152000,
+      "channels": 2
+    },
+    "evening-standard-AB.wav": {
+      "sha256": "344efb7eb01143301d1228a2da56601dc7c795adb801de6230efe701df1602a1",
+      "frames": 2337600,
+      "channels": 2
+    }
+  }
+}

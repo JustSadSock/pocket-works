@@ -407,10 +407,13 @@ function compareApps(left, right) {
 function visibleApps() {
   const query = shelfState.query.trim();
   const view = deck?.getView() || 'library';
-  const pool = view === 'home' ? registry : (deck?.getVisibleList() || registry);
+  // The deck renders curated Home widgets separately. Do not construct the
+  // entire hidden library DOM until the user opens Library or Archive.
+  if (view === 'home') return [];
+  const pool = deck?.getVisibleList() || registry;
   return pool
-    .filter((app) => appMatchesQuery(app, query))
-    .filter((app) => view === 'archive' || appMatchesFilter(app))
+    .filter(app => appMatchesQuery(app, query))
+    .filter(app => view === 'archive' || appMatchesFilter(app))
     .sort(compareApps);
 }
 
@@ -440,7 +443,7 @@ function updateControlState(apps) {
   clearSearch.hidden = shelfState.query.length === 0;
   sortButton.dataset.sort = shelfState.sort;
   sortButton.textContent = SORT_LABELS[shelfState.sort];
-  count.textContent = String(apps.length);
+  count.textContent = String(deck?.getView() === 'home' ? registry.length : apps.length);
 
   resultSummary.textContent = shelfState.query ? `Найдено: ${apps.length}` : `Приложений: ${apps.length}`;
 }

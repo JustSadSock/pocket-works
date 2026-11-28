@@ -1,0 +1,22 @@
+import {renderRecipe} from './programmable.mjs';
+import {recipes,variant} from './recipes.mjs';
+import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join} from 'node:path';
+import assert from 'node:assert/strict';
+const out=process.argv[2]??'out',old=process.argv[3];mkdirSync(out,{recursive:true});mkdirSync(join(out,'variants'),{recursive:true});mkdirSync(join(out,'stems'),{recursive:true});
+const sha=b=>createHash('sha256').update(b).digest('hex');
+function wav(x){const b=Buffer.alloc(44+x.length*2);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(2,22);b.writeUInt32LE(48000,24);b.writeUInt32LE(192000,28);b.writeUInt16LE(4,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(x.length*2,40);for(let i=0;i<x.length;i++){assert(x[i]>=-32768&&x[i]<32768);b.writeInt16LE(x[i],44+i*2)}return b}
+const save=(file,x)=>{const b=wav(x);writeFileSync(join(out,file),b);return {file,sha256:sha(b)}};
+const ids=Object.keys(recipes),files=[],banks={},runtime={},start=performance.now();
+for(const id of ids){banks[id]=[];for(let i=0;i<3;i++){const q=variant(id,101+i*913),a=renderRecipe(q),b=renderRecipe(q);assert.deepEqual(a.pcm,b.pcm);const sum=new Int32Array(a.pcm.length);for(const [k,x] of Object.entries(a.stems)){for(let j=0;j<x.length;j++)sum[j]+=x[j];if(i===0)files.push(save('stems/'+id+'-'+k+'.wav',x))}assert.deepEqual(sum,a.pcm);const file='variants/'+id+'-'+(i+1)+'.wav';const r=save(file,a.pcm);files.push({...r,seed:q.seed,recipe:q,metrics:a.metrics});banks[id].push(a.pcm)}assert.equal(new Set(files.filter(f=>f.file.startsWith('variants/'+id+'-')).map(f=>f.sha256)).size,3)}
+for(const [family,contexts] of Object.entries({blade:{cross:'blade-cross',glance:'blade-glance',heavy:'blade-heavy'},shield:{wood:'shield-wood',metal:'shield-metal'},living:{breath:'breath',effort:'effort'},mechanism:{crystal:'crystal-latch'}})){runtime[family]={contexts:Object.fromEntries(Object.entries(contexts).map(([ctx,id])=>[ctx,{variants:[1,2,3].map(i=>'variants/'+id+'-'+i+'.wav')} ])),pitchCents:0,gainSpread:0}}
+// A single 42s reel; first five contexts, transfer test, living sound prototype. No old scene replay.
+const timeline=[],master=new Int32Array(42*48000*2);const groups=[['blade-cross',0],['blade-glance',6],['blade-heavy',12],['shield-wood',18],['shield-metal',24],['crystal-latch',30],['breath',36],['effort',39]];
+for(const [id,t] of groups){const count=t>=36?2:3;for(let i=0;i<count;i++){const at=t+.55+i*(t>=36?1.35:1.65),x=banks[id][i],k=Math.round(at*48000)*2;let p=0;for(const v of x)p=Math.max(p,Math.abs(v));const g=Math.min(3,23000/p);for(let j=0;j<x.length;j++)master[k+j]+=Math.round(x[j]*g);timeline.push({id,variant:i+1,at,gain:g})}}
+files.push(save('contact-audition.wav',master));
+const bad=structuredClone(recipes['blade-cross']);bad.layers[0].force=2;assert.throws(()=>renderRecipe(bad),/force/);bad.layers[0].force=.5;bad.layers[0].a='missing';assert.throws(()=>renderRecipe(bad),/material/);const invalid=structuredClone(recipes.breath);invalid.layers[0].envelope=[[0,0],[.4,1],[.3,0]];assert.throws(()=>renderRecipe(invalid),/curve/);
+const weak=structuredClone(recipes['blade-heavy']);weak.layers[0].force=.3;assert.notDeepEqual(renderRecipe(weak).pcm,banks['blade-heavy'][0]);
+const extension={custom:({n})=>Float64Array.from({length:n},(_,i)=>Math.sin(i*.04))};assert(renderRecipe({version:1,intent:'Agent extension test',duration:.1,seed:1,layers:[{id:'custom',type:'custom'}]},{extensions:extension}).metrics.peak>0);
+const sample=new Float32Array(4800).fill(.1);assert(renderRecipe({version:1,intent:'Qualified sample resolver test',duration:.1,seed:1,layers:[{id:'source',type:'sample',source:'test'}]},{samples:{test:sample}}).metrics.peak>0);
+const report={approval:'research-only',generatorVersion:1,seconds:42,files,timeline,runtime,wallMs:performance.now()-start,peakRssKiB:process.resourceUsage().maxRSS,sourcePolicy:'All audition sources original procedural; breath/effort not real human recordings. Sample and extension hooks accept trusted host-provided models only.',controls:['same seed exact PCM','distinct seed variants','exact integer stem reconstruction','invalid force/material/curve rejected','force changes PCM','custom generator and sample resolver']};writeFileSync(join(out,'manifest.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({variants:ids.length*3,files:files.length,wallMs:report.wallMs,peakRssKiB:report.peakRssKiB}));

@@ -1,0 +1,121 @@
+name: Sound Forge Programmable Synthesis
+on:
+  pull_request:
+    paths:
+      - 'tools/audio-forge/programmable.mjs'
+      - 'tools/audio-forge/recipes.mjs'
+      - 'tools/audio-forge/audition.mjs'
+      - 'tools/audio-forge/run_manifest.mjs'
+      - 'tools/audio-forge/browser-synthesis-stress.mjs'
+      - '.github/workflows/sound-forge-synthesis.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: sound-forge-synthesis-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate legacy foundation and render deterministic recipe family
+        run: |
+          node --test tools/audio-forge/foundation.test.mjs tools/audio-forge/sample-library.test.mjs tools/audio-forge/scaled-audio.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/virtual-audio.test.mjs
+          node tools/audio-forge/audition.mjs .synthesis
+          node tools/audio-forge/audition.mjs .synthesis-repeat
+          node --input-type=module - <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import assert from 'node:assert/strict';
+          const m=JSON.parse(readFileSync('.synthesis/manifest.json'));
+          assert.equal(m.files.length,67);assert.equal(m.files.filter(f=>f.file.startsWith('variants/')).length,33);
+          for(const f of m.files)for(const root of ['.synthesis','.synthesis-repeat'])assert.equal(createHash('sha256').update(readFileSync(root+'/'+f.file)).digest('hex'),f.sha256);
+          const recipe=m.files.find(f=>f.file==='variants/crystal-latch-1.wav').recipe;
+          writeFileSync('.synthesis/recipe-smoke.json',JSON.stringify({version:2,jobs:[{type:'recipe',name:'unanticipated-crystal-latch',output:'manifest-output.wav',recipe}]}));
+          JS
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends sox
+          node tools/audio-forge/run_manifest.mjs --manifest .synthesis/recipe-smoke.json --base .synthesis
+          test -s .synthesis/manifest-output.wav
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-expressive-strategy-46098724569
+          run-id: 46098724569
+          github-token: ${{ github.token }}
+          path: .synthesis-baseline
+      - name: Verify previous native originals and preserve approval boundaries
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('.synthesis-baseline');m=json.loads((p/'archive-sha256.json').read_text())
+          assert len(m)==82
+          for name,h in m.items():assert hashlib.sha256((p/name).read_bytes()).hexdigest()==h,name
+          assert m['music/the-dawn-beyond-the-pass.wav']=='cf8ba43ca7ba43e3cc516ddbeaaac9833778b32e441c57e5460a2e7390a2e222'
+          assert m['battle/battle-at-the-pass.wav']=='3341cd68e167a7fbbca60a40a73224249925233936606a5f0e71552e891edac5'
+          assert m['originals/rain-at-the-gate-loop.wav']=='e081d22b28b7b757cbbab98098231ab8192030cc9c408efe094fd8401b88c8fb'
+          pathlib.Path('.synthesis/baseline-receipt.json').write_text(json.dumps(m,indent=2)+'\n')
+          PY
+          mkdir -p .synthesis/reference-layers/layers
+          cp .synthesis-baseline/layers/{wind,leaves}.wav .synthesis/reference-layers/layers/
+          node --input-type=module - <<'JS'
+          import {readFileSync,writeFileSync,copyFileSync,mkdirSync} from 'node:fs';
+          const m=JSON.parse(readFileSync('.synthesis-baseline/source-manifest.json'));
+          const source=m.sources.find(e=>e.instrument==='bass-drum');
+          const file=source.path.split('/').at(-1);
+          mkdirSync('.synthesis/qualified',{recursive:true});
+          copyFileSync('.synthesis-baseline/originals/'+file,'.synthesis/qualified/'+file);
+          const samples=[{...source,path:'qualified/'+file}];
+          const recipe={version:1,intent:'Qualified recorded excitation and agent-defined modal layer',duration:1,seed:914,layers:[{id:'recorded',type:'sample',source:source.id,gain:.5,modes:[[440,.06,.8],[713,.04,.3]]},{id:'pulse',type:'impulse',width:.001,gain:.2}]};
+          writeFileSync('.synthesis/hybrid-smoke.json',JSON.stringify({version:2,samples,jobs:[{type:'recipe',name:'qualified-hybrid',output:'hybrid-smoke.wav',recipe}]}));
+          JS
+          node tools/audio-forge/run_manifest.mjs --manifest .synthesis/hybrid-smoke.json --base .synthesis
+          test -s .synthesis/hybrid-smoke.wav
+          python3 - <<'PY'
+          import pathlib,hashlib,json,wave
+          p=pathlib.Path('.synthesis')
+          for f in [p/'manifest-output.wav',p/'hybrid-smoke.wav']:
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getnchannels(),w.getframerate(),w.getsampwidth(),w.getnframes())==(2,48000,2,48000)
+          (p/'archive-sha256.json').write_text(json.dumps({str(f.relative_to(p)):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.rglob('*')) if f.is_file()},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-programmable-synthesis-${{ github.run_id }}
+          path: .synthesis/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+  browser:
+    needs: render
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/synthesis-browser" playwright@1.56.1
+          "$RUNNER_TEMP/synthesis-browser/node_modules/.bin/playwright" install --with-deps ${{ matrix.browser }}
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/synthesis-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-programmable-synthesis-${{ github.run_id }}
+          path: .synthesis
+      - run: node tools/audio-forge/browser-synthesis-stress.mjs ${{ matrix.browser }} .synthesis .synthesis-browser .synthesis/reference-layers
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-synthesis-stress-${{ matrix.browser }}-${{ github.run_id }}
+          path: .synthesis-browser/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30

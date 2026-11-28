@@ -178,3 +178,603 @@ Use Audio Forge when an actual asset is useful; do not render every possible run
 - no paid API keys are used;
 - app PRs should change only their own `apps/<slug>/**` files;
 - changes to the shared Audio Forge workflow/tools are platform work.
+
+## Universal Sound Forge 0.1 — Foundation & Expressivity
+
+Manifest v1 remains supported. Manifest v2 adds original procedural sound families and optional multi-instrument music tracks; it uses the same runner and output ledger. No external recordings, neural models or paid services are required. This is an incremental platform foundation, not a completed universal runtime.
+
+```json
+{
+  "version": 2,
+  "jobs": [],
+  "families": [
+    {
+      "id": "blade-impact",
+      "model": "sword",
+      "seed": 42,
+      "variants": 12,
+      "strength": 0.7,
+      "spread": 0.18,
+      "source": "original",
+      "format": "ogg",
+      "outputDir": "assets/audio/generated"
+    }
+  ]
+}
+```
+
+Supported models: sword, shield, glass, explosion, rain. Families produce 2–32 numbered stereo 48 kHz variants. The seed controls each variant's independent synthesis; strength changes peak level and metal resonance, spread changes strength between variants. Avoid per-variant peak normalization if preserving relative dynamics is important. Rain is a finite ambience clip, not yet a seamless loop. The explosion is rendered dry; use explicit post reverb or future runtime acoustics. All foundation models are authored synthesis, not verified recordings. External sample references are intentionally unsupported. Existing SoundFont rendering remains subject to its own instrument license.
+
+Music jobs may specify tracks instead of flat notes. Each melodic track has its own channel (automatically assigned unless explicit), program, notes, volume, pan, expression, modulation, humanizeBeats, humanizeVelocity and legato. Legato is a bounded overlap between adjacent different pitches in a monophonic track; repeated pitches do not overlap. It is not a true continuous pitch transition or a guarantee that every SoundFont implements legato naturally. Modulation is a static MIDI controller setting. The renderer does not yet implement dynamic expression curves, portamento, breath modelling or stems. The existing flat score format is unchanged.
+
+Run the foundation gate:
+```sh
+node --test tools/audio-forge/foundation.test.mjs
+node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
+```
+
+CI keeps the original three-asset smoke test and additionally generates fifteen foundation audition WAVs in an Actions artifact (including four paired performance comparisons). Unit tests check deterministic expansion and PCM, distinct variants, finite levels, manifest rejection, and expressive MIDI arrangement. Audition quality is a separate human gate. Do not deploy these smoke files as application assets.
+
+Next steps: shuffle-bag selection in shared runtime, verified sample provenance and hybrid layer support, additional crowd/mechanism models, instrument-specific articulation and parameterized adaptive stems. Existing games remain unchanged until audition and integration gates pass.
+
+### Sound family playback (opt-in)
+
+```js
+import { createSoundFamilyPlayer } from './shared/capabilities/sound-family.js';
+// Use the application's existing AudioContext and mixer destination.
+const player = createSoundFamilyPlayer({
+  context,
+  destination: masterGain,
+  maxVoices: 16,
+  maxBuffers: 32,
+  families: {
+    blade: {
+      variants: ['assets/audio/generated/blade-impact-01.ogg',
+                 'assets/audio/generated/blade-impact-02.ogg'],
+      gain: 0.7,
+      pitchCents: 35,
+      gainSpread: 0.1
+    }
+  }
+});
+await player.preload('blade'); // optional; a user gesture is still needed for playback
+await player.play('blade', { gain: 0.8, pan: -0.3, priority: 1 });
+// on app teardown: player.destroy();
+```
+
+Selection uses a shuffle bag: each variant is selected once per cycle and adjacent selections differ across cycle boundaries (except singleton families). Concurrent fetch completion can reorder audible playback. Playback-rate and gain jitter are bounded; decoded buffers use a count-bounded LRU cache, concurrent downloads are deduplicated, and voice stealing favors higher priority. The player does not own the context or master mixer. Disable/stop invalidates pending play calls; destroy also aborts pending downloads. Preload may evict earlier entries if the configured cache is smaller than the family. A false result indicates an unavailable, cancelled, or rejected voice. Existing tone feedback is not changed. No distance simulation, loop crossfade, voice virtualization or browser-device validation yet.
+
+Node tests use a mocked Web Audio context; real Chromium/WebKit interaction is a separate gate.
+
+### Expressive performance automation
+
+Music tracks can opt into a `performance` object. Existing scores do not change.
+
+```json
+{
+  "program": 42,
+  "humanizeBeats": 0,
+  "notes": [
+    {"note":"D4","beat":0,"duration":2,"velocity":78},
+    {"note":"F4","beat":2,"duration":2,"velocity":78}
+  ],
+  "performance": {
+    "curves": {
+      "expression": [{"beat":0,"value":65},{"beat":2,"value":110},{"beat":4,"value":55}],
+      "breath": [{"beat":0,"value":45},{"beat":2,"value":95},{"beat":4,"value":40}]
+    },
+    "vibrato": {"depthCents":22,"rateHz":5,"delayBeats":0.24},
+    "attackBend": {"cents":-28,"durationBeats":0.12}
+  }
+}
+```
+
+Curve points use increasing beats and values 0–127; supported controllers are expression (CC11), breath (CC2), and modulation (CC1). Linear interpolation emits up to 32 subdivisions per beat. Pitch gestures use a fixed two-semitone MIDI bend range, bounded vibrato (0–80 cents) and attack bend (-100 to +100 cents); the bend resets after the note. Pitch gestures require non-overlapping monophonic notes on an isolated channel. For these tracks use zero timing jitter or author explicit gaps; overlap legato and pitch gestures cannot be combined. Controller automation is channel-wide. Breath response depends on the SoundFont and is not a physical breath simulator. Attack bend is a small expressive scoop, not full note-to-note portamento. Use the four medieval/orchestral control/expressive audition files to judge the actual render; successful MIDI generation alone does not establish musical quality.
+
+### Hybrid Engine and local Pocket Sound Library (initial contract)
+
+A v2 manifest may contain a `samples` catalog, with paths relative to the manifest directory. Hybrid jobs use an original physics model and a catalog sample. The current policy permits only original, CC0-1.0 and public-domain declarations, requires explicit redistribution permission, creator, provenance, tags and SHA-256. External records additionally require a source URL and rights evidence. These are metadata gates, not independent legal verification: an agent must verify the actual source and its license before committing a file. No restricted audio belongs in the public repository.
+
+```json
+{
+  "version": 2,
+  "samples": [
+    {
+      "id": "impact-source",
+      "path": "sources/impact.wav",
+      "title": "Original impact",
+      "creator": "Pocket Works",
+      "license": "original",
+      "provenance": "Author-owned recording",
+      "redistribution": true,
+      "sha256": "REPLACE_WITH_ACTUAL_SHA256",
+      "tags": ["impact", "metal"]
+    }
+  ],
+  "jobs": [],
+  "families": [
+    {
+      "id": "blade",
+      "model": "sword",
+      "sampleId": "impact-source",
+      "sampleMix": 0.25,
+      "variants": 8,
+      "outputDir": "assets/audio/generated"
+    }
+  ]
+}
+```
+
+A hybrid job can also be declared directly with type hybrid, model, sampleId and sampleMix. SoX decodes local WAV/OGG/FLAC to stereo 48 kHz float PCM; samples are trimmed or zero-padded to the procedural clip duration. The sample is RMS-matched to the synthesis before mixing (0 = all synthesis, 1 = all sample), with short boundary fades and peak protection. Ratios are coefficients, not perceived loudness percentages. Catalog paths are confined by realpath and sample hashes are checked before rendering. Search supports case-insensitive terms across title, creator, ID and tags. This is an in-memory manifest catalog, not yet a persistent global database, semantic index, or asset vault. All variants of a hybrid family currently reuse the same source sample.
+
+CI generates an original synthetic explosion fixture and renders 0/25/50/75/100% sample ratios; it uploads the source, manifest and resulting WAVs separately from musical probes. This tests the pipeline, not the naturalness of field recordings. No external recording has been acquired or independently cleared yet.
+
+### Persistent Pocket Sound Library and field recording auditions
+
+Node 22's built-in SQLite/FTS5 provides a local vault with no service or database subscription. Use a directory outside the repository for ordinary production storage.
+
+```sh
+node tools/audio-forge/library-cli.mjs /path/to/vault import /path/to/source-manifest.json
+node tools/audio-forge/library-cli.mjs /path/to/vault search rain weather
+node tools/audio-forge/library-cli.mjs /path/to/vault resolve stockholm-rain
+node tools/audio-forge/library-cli.mjs /path/to/vault export /path/to/vault/manifest.json
+```
+
+Imports use the rights and SHA-256 checks above, content-addressed objects and an SQLite transaction for the index. Identical file bytes with the same extension share storage; source bytes are verified again on resolution. IDs are immutable. FTS searches token prefixes with AND semantics across title, creator and tags. Export preserves relative object paths and does not overwrite an existing manifest. The vault is not a remote service, and an interrupted import can leave an unindexed object; garbage collection is not yet implemented.
+
+The independent field-recording-audition CI job imports three specifically reviewed public-domain Wikimedia Commons recordings. Source records are pinned to the reviewed revision, exact download URL, byte count and published SHA-1; SHA-256 is computed after retrieval and checked on vault resolution. Sources: Fg2's Nikko festival explosion recordings (revisions 1237586287 and 1151334253) and Caesar's rain/thunder recording (revision 1129569613). The importer fails closed on unavailable or changed bytes. No credentials or external AI. The field recording archive includes originals, catalog, manifest and seven dry/hybrid render WAVs. A successful import does not imply artistic acceptance.
+
+The opt-in `compensateRms: true` field reduces the level dip when mixing independent sources, with a maximum 2x gain and peak ceiling; default mixing remains unchanged. New opt-in physical models `sword-v2`, `glass-v2`, `gear`, `chain` target metallic brightness, brittle fragments and distinct mechanisms. The previous models remain as controls. Foundation CI now renders 23 files. Real recording comparisons and new effects require human listening.
+
+### Spatial audio runtime (opt-in)
+
+`shared/capabilities/spatial-audio.js` exposes `spatialProfile` and `createSpatialMixer`. Use one existing AudioContext and route separate family players to named mixer buses:
+
+```js
+const mixer = createSpatialMixer({context, volume: 0.7});
+const player = createSoundFamilyPlayer({
+  context, destination: mixer.bus('combat'), families
+});
+await player.play('blade', {
+  gain: 0.8, priority: 2,
+  spatial: {
+    source: {x: 24, y: 15},
+    listener: {x: 10, y: 10},
+    heading: 0, referenceDistance: 5, maxDistance: 120,
+    occlusion: 0.5, zone: 'forest'
+  }
+});
+mixer.setBusVolume('combat', 0.6);
+// On teardown: player.destroy(); mixer.destroy();
+```
+
+Coordinates use consistent game-world units; heading is radians, zero points along +x and +y is right at that heading. Inverse-square-style attenuation, a soft range cutoff, zone-specific absorption and caller-supplied occlusion (0–1) determine level and lowpass. Zones open/forest/stone/interior specify one short early reflection, not full reverberation or ray tracing. Reflected tails occupy voice budget until cleanup; stopping a player also clears them. The mixer provides up to 16 independently adjustable buses and a compressor when supported, not a guaranteed brickwall limiter. Spatial state is sampled at play time; moving emitters, geometry-derived occlusion, Doppler, continuous loops and browser audio fidelity are future work. Existing non-spatial callers are unchanged. Unit tests mock the audio graph; real browser audio tests remain necessary.
+
+Hybrid jobs and families may specify `sampleStart` in seconds (0–3600) to cue a source without changing the archived original. SoX decodes with input headroom before RMS matching. In the verified Nikko recording, the main impact begins near 0.60 s; the new 0.59 s cue reduces the roughly 0.61 s peak delay to about 0.02 s. The field recording job preserves the seven previous comparisons and adds three aligned variants (25/75/100%); ten generated WAVs in total. Short recordings are zero-padded by the mixer. Do not interpret an original field recording as automatically suitable for an event without checking its timing and content.
+
+### Continuous audio: moving emitters, seamless loops and adaptive stems
+
+`shared/capabilities/continuous-audio.js` provides three opt-in APIs. It uses the application's AudioContext and optional mixer buses; it never closes the context.
+
+```js
+const ambience = makeSeamlessLoop(context, decodedRain, {crossfadeSeconds: 0.25});
+const emitter = createDynamicEmitter({
+  context, destination: mixer.bus('ambience'), buffer: ambience,
+  spatial: {source: {x: 0,y: 20}, listener: {x: 0,y: 0}, zone: 'forest'}
+});
+await emitter.start(); // call in a user gesture on mobile
+emitter.update({source: {x: 15,y: 20}, listener: {x: 1,y: 0}, occlusion: 0.4, zone: 'forest'});
+const music = createAdaptiveMusic({
+  context, destination: mixer.bus('music'),
+  stems: [
+    {id:'harmony', buffer:harmony, base:1, gain:0.85},
+    {id:'melody', buffer:melody, threshold:0.15, width:0.45, base:0.15},
+    {id:'pulse', buffer:pulse, threshold:0.45, width:0.45}
+  ]
+});
+await music.start();
+music.setIntensity(0.8, {fadeSeconds: 1.5});
+emitter.destroy();
+music.destroy();
+```
+
+Emitters smooth gain, stereo position, lowpass and early reflection without restarting the buffer. Game code supplies spatial state and owns the update cadence; there is no automatic geometry, Doppler or emitter virtualization yet. Each emitter has independent nodes; use a game-side limit for large crowds. Destroy releases nodes and cancels an outstanding unlock. Nonlooping dynamic sources terminate at source end (the last reflection is not preserved); ordinary family voices retain their existing reflection-tail handling.
+
+Loop preparation uses a raised-cosine overlap between beginning and end, shortening the clip by the overlap. The resulting seam joins originally adjacent samples rather than forcing silence. This is appropriate for continuous ambience; it does not guarantee an inaudible join for arbitrary tonal content. For rhythmically exact music, author stems at the intended length rather than independently trimming them. Mono/stereo buffers only; minimum duration must exceed twice the requested overlap.
+
+Music stems share exact sample rate and frame count and start on a single audio-clock timestamp; intensity ramps stem gains without retriggering. Up to eight stems, gain thresholds/widths and per-track base gain. No automatic score composition, bar-quantized transitions or state-specific tempo changes yet. The composer must prepare compatible stems.
+
+CI runs four new mock lifecycle regressions and a separate Chromium/WebKit real Web Audio matrix (offline loop render, spectral measurements of two stem mixes, live context unlock by a click, moving emitter, intensity update and restart). Browser job artifacts contain measured JSON. The continuous audition job generates an 8-second seamless rain loop, three original 16-second synchronized 120 BPM stems, and a 48-second offline preview that moves from calm to full intensity and back. The preview uses the same pure gain law; it is not a browser audio capture or an artistic approval.
+
+### Beat/bar-quantized adaptive transitions
+
+The default `setIntensity(value, {fadeSeconds})` remains immediate. Supply the score's BPM and meter at player creation, then optionally request a beat- or bar-aligned transition:
+
+```js
+const music = createAdaptiveMusic({context, stems, bpm:120, beatsPerBar:4});
+await music.start();
+music.setIntensity(0.9, {quantize:'bar', fadeSeconds:0.4});
+```
+
+The transport schedules the next grid boundary at least 30 ms ahead using the AudioContext clock. No JS timer is used for audio scheduling. The requested target is visible immediately in state.targets; state.transitionAt is the scheduled start time of the most recent transition, not a completion flag. A new request cancels prior scheduled automation, holds the computed current gain, and replaces the transition. The stems keep their original transport start time. Supply genuinely grid-aligned authored stems; the runtime does not stretch or retune arbitrary loops to match the declared BPM. The browser test also checks a real beat-quantized transition and the rendered battle frequency.
+
+The original Chromium and WebKit Web Audio checks passed at 256358b, but upload-artifact excluded the two hidden output directories. The upload steps now explicitly permit hidden files only in the generated audio and browser report paths. The corrected CI must pass again before acceptance.
+
+### Virtual audio world and reserved scene budget
+
+`shared/capabilities/virtual-audio.js` adds a bounded continuous-emitter pool and an optional integration facade. Example:
+
+```js
+const scene = createBudgetedAudioScene({
+  context, budget: {total:18, events:4, music:2},
+  families, stems, maxSources:4096
+});
+await scene.music?.start();
+// In the game update loop, supply a snapshot, not a node per soldier.
+await scene.world.reconcile({
+  listener: {x: cameraX,y: cameraY}, heading: cameraAngle,
+  sources: units.map(unit => ({
+    id: String(unit.id), buffer: marchLoop, position: unit.position,
+    priority: unit.isCommander ? 3 : 1, volume: 0.8,
+    referenceDistance: 8, maxDistance: 70, zone: 'open'
+  }))
+});
+await scene.events.play('impact', {priority:2});
+scene.music?.setIntensity(0.8, {quantize:'beat'});
+scene.destroy();
+```
+
+The continuous pool ranks estimated audible gain times priority, ignores sources below a configurable floor, and gives retained sources a 15% score bonus by default to reduce churn. Stable IDs break ties. It keeps retiring voices inside the physical budget while their gain fades (35 ms automation, 50 ms default retirement interval). The caller reconciles again to release elapsed retirements and activate new candidates; no background scheduler is installed. Use a regular cadence such as 10–20 Hz and await each reconciliation; overlapping requests return false rather than queueing stale snapshots. Newly audible loops start at an offset based on the shared audio-clock origin (or explicit per-source phaseOrigin) and use a 25 ms fade-in. Buffers are supplied by the caller and can be shared across thousands of logical emitters. This is virtualization, not buffer streaming, automatic geometry occlusion, or voice aggregation.
+
+The scene facade reserves independent fixed source quotas for continuous loops, one-shot events and music stems; unused slots are not lent between categories. The total applies only to source nodes owned by this facade, not other application audio graphs, reflection/filter nodes, or decoded memory bytes. The family cache remains count-bounded; the caller controls the continuous buffer inventory. A shared mixer supplies three independent buses. The default budget is 24 total (12 continuous, 8 events, 4 music). Scene stats expose allocations, pending events and logical count. Destroy all scene-owned nodes without closing the app's context.
+
+The browser integration test creates 512 logical units in two distant groups, reserves 18 total slots (12 continuous, 4 events, 2 music), switches listener position between groups, checks that retiring voices never exceed the cap, tests eight simultaneous decoded combat requests (four accepted), preserves the music transport, measures real army-bus RMS and update timings, and verifies teardown. Its sounds are simple original synthetic fixtures, not approved battlefield assets; it is a technical integration scenario, not an integrated game or performance claim for a physical mobile device. Five mock/logic regressions cover ranking, retention, timing, cancellation and quota constraints. Browser CI must confirm the expanded scenario.
+
+### Horizontal score director and musical identity auditions
+
+Vertical intensity mixing is retained for variation within a state, not treated as proof of emotional contrast. The new independent original scores share a transformed D–E–F/F#–A–G–E–D motif, but differ in orchestration, harmony, meter, rhythm and tempo:
+
+| State | Tempo / meter | Musical language |
+| --- | --- | --- |
+| peace | 76 BPM / 3/4 | D major, flute, harp, sparse cello |
+| tension | 104 BPM / 5/4 | minor/chromatic harmony, cello, pizzicato, low strings and timpani |
+| battle | 144 BPM / 4/4 | brass calls, string ostinato and accented timpani |
+| aftermath | 68 BPM / 4/4 | cello lament, harp, minor-to-major resolution |
+
+The CI authors MIDI via the existing Forge, renders through FluidSynth, prepares exact bar-length 48 kHz clips with short boundary fades and publishes a state graph, four clips and a sequential state-journey WAV. The journey is an offline storyboard with 0.3 s linear overlap, not a live game recording. State scores require human audition; boundary fades are not evidence of imperceptible musical loop joins. The state graph allows direct peace-to-battle for urgent events but requires aftermath when leaving battle. Independent state loops are the horizontal layer; a future composer can combine vertical stems and transition-specific bridges or stingers.
+
+```js
+const director = createScoreDirector({context, destination, graph, buffers});
+await director.start(); // user gesture for real-time AudioContext
+director.request('tension', {quantize:'bar', fadeSeconds:0.3});
+// Call regularly from the game update loop to finalize and process a queued request.
+director.update();
+director.destroy();
+```
+
+The transport validates the authored frame grid to within one sample, uses the current state's tempo/meter for beat/bar scheduling, and starts a new independent clip with a two-source maximum. Requests during a transition can queue one valid successor; they do not cancel an already scheduled crossfade. Playback and fades follow the audio clock, while `update()` commits completed transitions and releases graph resources. Reserve two source slots if using this standalone director alongside a budgeted scene; it is not yet wired into that facade. No game-specific adapter or authored transition bridge/stinger has been approved yet.
+
+Browser CI also tests actual replacement of a 220 Hz peace clip with a 440 Hz battle clip on different grids using measured spectrum, and reports 30 dense world updates each at 512, 1024 and 4096 logical sources (p50/p95/max, cap and failures). Timings measure host-side reconcile latency, not audio-thread CPU, physical-device performance or end-to-end latency. Dependency installation refreshes APT indexes and retries once after the observed stale ALSA package 404, without skipping Chromium or weakening assertions.
+
+### Authored musical bridges within the scene budget
+
+The score graph now supports an optional `bridges` map keyed by "from:to". Supply decoded bridge audio in the same format as the destination clip via `bridgeBuffers`. Each bridge is bounded to 15 seconds. The director prepares a composite buffer containing the one-shot bridge followed by the destination loop, and sets the source loop boundaries to exclude the bridge. The destination beat clock begins at the end of the bridge. No third source is required during the transition. The extra composite PCM allocation is temporary and not covered by the source-count quota; a future memory budget must account for this. Requests can still queue one successor and cannot interrupt an already scheduled bridge. The director's state.bridgeUntil is the associated bridge end timestamp, not a boolean playback status.
+
+```js
+const scene = createBudgetedAudioScene({
+  context, budget:{total:18,events:4,music:2}, families,
+  score:{graph,buffers,bridgeBuffers}
+});
+await scene.music.start();
+scene.music.request('tension',{quantize:'bar',fadeSeconds:0.3});
+// Game tick:
+scene.music.update();
+scene.destroy();
+```
+
+Horizontal score and vertical stems are mutually exclusive within this facade for now; two music slots are required for horizontal playback. The browser integration verifies the bridge tone before the destination, its absence after the destination loops, and the scene quota during transition. The CI produces four original bridge phrases (peace→tension, tension→battle, battle→aftermath, aftermath→peace) and a separate bridge-journey listening proof, retaining the original crossfade-only control. Neither the authored bridges nor the resulting music have received artistic approval. The proof is offline, while browser checks use test tones; real score playback in an actual game is still a separate integration milestone.
+
+At f3d09d8 both browsers passed 30 dense updates at each of 512/1024/4096 sources with zero activation failures and 12 continuous voices maximum. Chromium p95: 0.9/0.6/3.3 ms; WebKit p95: 1/1/2 ms. These are host-side timings on CI runners, not audio-thread profiling.
+
+### Retained PCM budgets and musical stingers
+
+The family player has a default `maxDecodedBytes` of 64 MiB. It counts unique retained decoded PCM buffers (four bytes per frame per channel), including buffers used by currently active voices and reflection tails even if removed from the cache. Ready inactive cache entries may be evicted to admit new audio. Oversized or currently unaffordable buffers are rejected. Stats expose decodedBytes and maxDecodedBytes. This is a retained-PCM accounting limit, not a process-memory limit: browser decoder scratch space, in-flight network buffers, transient decoded results, garbage collection and native audio graph memory are not bounded by it.
+
+The horizontal director accepts `maxDecodedBytes` (default 128 MiB). It checks unique state/bridge PCM plus a conservative reservation for two copies of the largest possible bridge+destination composite before allocating audio nodes. The reservation is an upper bound for the director's accounted live buffers, not an observed process RSS. The scene exposes maxEventDecodedBytes, maxScoreDecodedBytes, eventDecodedBytes and scoreReservedBytes. Caller-owned world buffers and vertical stems are not yet covered by this memory policy.
+
+```js
+const scene = createBudgetedAudioScene({
+  context, families, score,
+  budget:{total:18,events:4,music:2},
+  maxEventDecodedBytes:32*1024*1024,
+  maxScoreDecodedBytes:96*1024*1024,
+  stingers:{
+    victory:{url:'audio/victory.wav',gain:0.8,priority:8,cooldown:3}
+  }
+});
+await scene.playStinger('victory');
+```
+
+Stingers use the existing one-shot quota/cache, with no random detuning or gain jitter, and a per-ID cooldown measured on the audio clock. Concurrent duplicate requests are rejected. They do not restart the score. They are immediate event reactions after decode (preload through the family player if required); no harmonic transposition, bar scheduling, reserved stinger-only slot or automatic music ducking yet. The original score package now renders three additional authored stingers: victory, defeat and discovery. Artistic audition is required.
+
+At fdc77e1 the actual browser bridge checks passed in Chromium and WebKit: during bridge ~-35.61 dB; after destination loop ~-117.6 dB. Both 4096-source stress sweeps had zero activation failures and a 12 continuous-source cap. P95 3.4/2 ms respectively. The unrelated Validate Pocket Works WebKit landscape job failed to fetch an obsolete ALSA package (HTTP 404); the same APT index refresh and bounded dependency retry used by the Audio Forge workflow has been added to validate.yml without weakening test requirements.
+
+### Context-aware musical reactions and ducking
+
+Optional stinger configuration now includes `states` (allowed horizontal score state IDs), `duckGain` (0–1, default 1, no attenuation), and `duckHold` (minimum hold seconds). The scene exposes `preloadStinger(id)` and `playStinger(id)`. An allowlisted reaction is rejected during pending state transitions or a bridge, and admission is checked again after asynchronous decoding. This is an author-supplied compatibility rule, not automatic harmonic analysis. Reactions without an allowlist preserve the earlier behaviour.
+
+On successful playback only, a separate gain stage attenuates the music bus with a 35 ms attack, hold for the actual decoded playback duration (or configured minimum), and 180 ms release. Overlapping reactions conservatively preserve the strongest attenuation until the longest hold ends. User volume is unaffected; an interrupted/stolen reaction may retain its nominal duck envelope. No new source slot is required. `scene.stats.musicDucking` reports computed envelope gain and end time. Example:
+
+```js
+stingers: {
+  discovery: {url:'audio/discovery.wav', states:['peace'], duckGain:0.35, duckHold:0.4, cooldown:2}
+}
+```
+
+The browser fixture now checks a real spectrum recovery of more than 6 dB, preloading, cooldown and state rejection. Mock regression coverage includes overlap, release, asynchronous admission and invalid input. At 4141d1e the previous native browser checks passed with 8,820 bytes retained effects PCM and 1,632,000 bytes score reservation in each engine. The independent platform quality gate rejected the separated Playwright install commands, so validate.yml now retries the original required `npx playwright install --with-deps chromium webkit` command after refreshing APT; the validator is unchanged.
+
+### Unified horizontal and vertical adaptation
+
+The existing score director now accepts optional state-specific `layers` and initial `intensity`. Each layer must match its state's base buffer sample rate and frame count exactly; each can specify the existing stem gain law (base, threshold, width, gain). Source voices within one state start on the same audio-clock timestamp. A state transition crossfades the entire outgoing and incoming groups, not just the base. When a bridge is present, it is played in the base source while the extra layers have equal-length silent prefixes. All incoming sources loop only the destination portion.
+
+```js
+const scene = createBudgetedAudioScene({
+ context, families, budget:{total:20,events:4,music:4},
+ score:{graph,buffers,bridgeBuffers,
+   layers:{
+    peace:[{id:'cello',buffer:peaceDetail,threshold:0.1,width:0.8,gain:0.55}],
+    battle:[{id:'ostinato',buffer:battleDetail,threshold:0.1,width:0.8,gain:0.55}]
+   },intensity:0.2}
+});
+await scene.music.start();
+scene.music.setIntensity(0.85,{quantize:'beat',fadeSeconds:0.4});
+scene.music.request('battle',{quantize:'bar',fadeSeconds:0.3});
+scene.music.update();
+```
+
+The director checks the maximum sum of source counts for all allowed graph edges before allocating nodes; one base plus one detail per state requires four music slots during a transition. The scene passes its reserved music quota into the director. Optional layers are counted in unique base PCM and the conservative two-group bridge-composite reservation. The score transport keeps the global requested intensity, applies it to new states, and can update current and scheduled groups without restarting them. Each group uses its own musical grid for quantized gain changes. This is not dynamic composition synthesis or automatic arrangement selection.
+
+The score-state recipe also renders eight independently mixed base/detail WAVs (two per state) while preserving all previous control assets. The graph's `adaptive` entries describe these files; application code loads the base files into `buffers` instead of the original full mixes and maps each detail file to `layers`. The new adaptive-journey WAV is an offline storyboard using the actual layer gain law and the existing authored bridges, not a native browser recording. Independent normalization of the stem groups intentionally changes their balance relative to the original full mix; artistic approval is still needed. The current browser fixture uses distinct tones to verify the two state-specific layers, muting within the destination, silence during the bridge, and the four-slot music quota. Seven score regression scenarios were checked with mock nodes before native CI.
+
+At 2d5614b native ducking recovered 9.11866/9.11863 dB in Chromium/WebKit, consistent with the configured gain 0.35. Both browsers passed, including the 4096-source stress test. The prior Validate health failure is resolved; remaining platform matrix checks must complete separately.
+
+### Verified authored score packages
+
+`score-pack.js` loads the version-1 graph and metrics emitted by the Forge. It selects base/detail stems by default, or original full mixes with adaptive:false, plus authored bridge assets. It checks relative asset paths, frame counts, exact 48 kHz stereo PCM16 WAV headers and SHA-256 against the supplied trusted metrics. It converts PCM to AudioBuffers at the authored 48 kHz grid even when the device AudioContext runs at 44.1 kHz. This avoids a decodeAudioData resampling round-off at bar boundaries. Requires a secure context for Web Crypto (localhost or HTTPS). The manifest and metrics themselves must come from a trusted source; hashes are integrity checks, not signatures.
+
+```js
+const score = await loadForgeScore({
+  context, graph, metrics, baseUrl: new URL('audio/score/', location.href).href,
+  maxDecodedBytes: 128*1024*1024, signal
+});
+const scene = createBudgetedAudioScene({
+  context, budget:{total:18,events:4,music:4}, families, score
+});
+await scene.music.start();
+```
+
+The loader preflights unique source PCM and two worst-case bridge composite groups before any fetch, then downloads sequentially and verifies each payload. It accepts only the Forge canonical 44-byte header, not arbitrary WAV containers or compressed formats. It does not load stingers or the offline audition mixes. It bounds retained PCM estimates, not network/decoder transient allocations or overall browser process memory. On failed or cancelled load no usable partial score is returned; caller can retry. At 394004a the actual 12-file adaptive pack has 48,143,472 bytes base PCM and 81,086,640 bytes reserved including bridge composites. A local Node 22.16 check of the exact repository loader against that downloaded CI artifact passed all 12 checks, rejected a smaller memory quota before fetching and rejected deliberately corrupted audio. The context was mocked; actual browser playback is separately tested.
+
+The browser matrix now depends on the same-run platform-smoke output and downloads its generated score artifact. A second browser test loads the actual authored score into the budgeted scene, verifies memory parity, plays peace → tension → battle → aftermath → peace, measures output RMS and checks the four-voice cap and unchanged transport clocks while varying intensity. Previous synthetic spectral tests are retained. The authored test is a technical integration proof, not a recording, artistic approval or an integration into any game. At 394004a all four primary workflows passed, including 12/12 Validate jobs, both synthetic unified composer browser checks, and all 22 authored WAV hashes.
+
+### Banners of War adapter (research-only staging)
+
+The first game adapter is staged in `tools/audio-forge/adapters/banners-of-war.js`. It is not imported by any published app and does not include an audio asset pack. The original game contract was inspected at Banners PR #1355 HEAD 5cf0a72622621ac0dc0d5e1a88cbd9a0369e2616, `apps/banners-of-war/research/battlefield-identity/battle-audio.js`. The caller supplies the game's existing `audible(F,s,u)` and `soundEvents(F,s,cam,prior,dt)` exports, rather than reimplementing the simulation or event extraction. The game branch remains unchanged.
+
+```js
+const adapter = createBannersAudioAdapter({
+  context, destination, F, soundEvents, audible,
+  assets: approvedAssets // {approved:true,families,ambient,score,stingers}
+});
+await adapter.unlock(); // in a user gesture
+// Call update at a bounded cadence (e.g. 10–20 Hz):
+await adapter.update(snapshot,camera,{active:true,playing:true,speed:1});
+// Public result screen (not inferred from hidden units):
+await adapter.update(snapshot,camera,{active:true,playing:false,outcome:'victory'});
+adapter.configure({muted:false,fx:0.65,ambient:0.4,music:0.55});
+adapter.reset(); // on battle replacement/seek
+adapter.destroy();
+```
+
+Asset approval is an explicit caller assertion, not an automated art decision. No built-in URLs or unapproved assets are included. Families accept the seven legacy event names and optional exact variant keys such as step:2. The adapter preserves the legacy camera pan and speed-scaled gain/rate; family settings can disable extra pitch/gain jitter. Wind, water and forest loops use the original terrain-based level laws. It owns neither the context nor the application's settings persistence/capture destination. Caller must attach those and use one audio backend at a time.
+
+Only units admitted by the actual game visibility rule are considered for music and effects. The latest visible-ID set and update epoch are rechecked after asynchronous effect decoding to prevent stale sounds. One-shot requests do not block the game update on network/decode; overlapping update calls return false. Pausing resets event history, seek/discontinuity resets the score, inactive screens mute the buses and retire the ambience, while the score clock may continue. Music requests use the existing graph; visible nearby contacts drive battle, nearby visible opponents tension, six simulated seconds of aftermath follow contact loss, and only an explicit public result can request a victory/defeat reaction. A result reaction is attempted once when the aftermath state is settled, including on the stopped simulation's result screen; a result that never reaches aftermath does not force a stinger. This policy is a first candidate, not gameplay or artistic approval.
+
+Four mock regression scenarios passed, plus an isolated execution with the actual pinned game extractor. Native CI checks out only the pinned audio-contract source in a separate directory and tests actual event extraction, fog isolation, playback and teardown with synthetic technical fixtures. The full game and its published runtime are deliberately not changed.
+
+At Sound Forge HEAD 00a9246, both Chromium and WebKit passed the authored 12-file musical journey. The 44.1 kHz contexts retained the 48 kHz authored buffer grid, 81,086,640-byte reserved PCM and four-voice transition cap. Load times were 320.9 and 209 ms respectively on CI runners. All five requested state visits produced nonzero measured audio and preserved the transport while changing intensity. These are technical results, not human listening or game artistic approval.
+
+### Artistic laboratory: expressive performance and material library
+
+The next audition is separate from the established score package and the Banners adapter. `artistic-lab.mjs` authors three original compositions, each rendered with the same notes, programs, timing and seed as a control/expressive pair:
+- Moorland: 96 BPM, 3/4, eight bars, modal pipe/flute dialogue over a drone and plucked accompaniment.
+- Last Standard: 72 BPM, 3/4, eight bars, cello lament, chromatic harmony and answering horn.
+- Iron Horizon: 126 BPM, 4/4, sixteen bars, brass calls, changing ostinato, bass and timpani, with a contrasting second section.
+
+The expressive variants use instrument-specific note-level CC11 envelopes, vibrato and small attack bends on monophonic melody channels. They intentionally do not use overlapping pitch-bent notes or claim true sampled legato/portamento. A General MIDI SoundFont remains the source timbre; expressive automation does not make it a new acoustic instrument. The three matched controls remain unchanged. The catalog step additionally creates sequential RMS-matched A/B files (control first, 0.7 s silence, expressive second), attenuating the louder member rather than increasing either peak. RMS matching is not perceptual loudness matching.
+
+Four dry original material models (boot-earth, hoof-earth, armor-leather, shield-wood) each render six seeded variants. Heel/toe, paired hoof impacts, irregular armor/leather contact and damped wooden-core impact use distinct envelopes and spectra. All 24 were checked twice in an isolated JS execution for exact repeatability, finite PCM and nonzero energy; max sample peak 0.865782. The three expressive scores compiled 2,226 / 4,170 / 4,879 expression events with all notes within the intended grid. These are pre-render checks, not artistic ratings.
+
+`artistic-catalog.mjs` measures all 30 rendered files, rejects clipped/silent results, registers the 24 original procedural effects in a separate SQLite/FTS research vault, verifies every hash, and checks search results for earth and shield wood. Each entry carries original provenance, recipe seed/strength, taxonomy tags and research-only approval metadata. Music is not imported as an original sample into the library because it uses a SoundFont. No external recordings or new paid tools are added by this iteration. The separate CI artifact includes the manifest, generated files, comparison files, metrics and vault; no production asset approval or game changes result from generation.
+
+At 89e6825 the first Banners adapter native checks passed in Chromium and WebKit using the pinned game extractor and synthetic fixtures: one admitted step event, one continuous ambient source, hidden enemy excluded, and cleanup verified. The actual authored score journey also passed again. Full game integration and listening acceptance remain separate.
+
+### Original plucked instrument laboratory
+
+The next artistic candidate no longer relies exclusively on General MIDI. `plucked-instruments.mjs` implements two original, sample-free plucked-string profiles (lute and harp) with fractional-delay feedback, frequency-dependent lowpass phase compensation, seeded pluck-position excitation, velocity-dependent spectrum/amplitude, resonant body filters and damping/release. These are simplified physical models, not recordings or validated reconstructions of historical instruments. The note range is MIDI 36–84. They are dry and use no external data.
+
+The research-only string lab renders 18 standalone notes: two instruments, three A pitches (MIDI 45/57/69) and three velocities (0.3/0.6/0.9), with seed/provenance, SHA-256, taxonomy and original-synthesis license metadata in a separate SQLite/FTS library. These are sample candidates, not a complete multisampled instrument or a production-approved library. The library verifies all stored files and search counts. It does not combine the two research vaults.
+
+River Crossing is a new 12-bar, 92 BPM, 3/4 duet with 108 notes, a contrasting middle phrase and returning cadence. The original waveguide arrangement and a General MIDI guitar/harp proxy use matching pitch, note onset and duration instructions; render envelopes, synthesis dynamics and timbre differ. The control is trimmed/padded to the exact 48 kHz frame grid and the sequential A/B is RMS-matched by attenuation (GM first, 0.7 s gap, physical second). The GM nylon guitar is a proxy for lute, not an actual lute recording. No automatic musical or artistic acceptance is claimed.
+
+Pre-CI isolated JS checks exercised the three new regression scenarios (pitch, velocity/profile differentiation, exact arrangement grid) using the actual source, with a substitute hash in the test harness. Separate full arrangement rendering twice yielded 1,126,957 stereo frames, bit-identical Float32 PCM, peak 0.389875 and RMS 0.029095; the eight tuning probes (MIDI 45,57,69,81 for each profile, one seed/velocity) had a maximum absolute interpolated-autocorrelation error of 0.187 cents. These are narrow numerical tests, not subjective instrument realism. Native Node tests and the full artifact render run in CI.
+
+At 640fc42 all four main workflows passed, including 12/12 Validate jobs and both browser matrices. Artistic Laboratory artifact 15126407597 was downloaded and independently checked: 30 primary WAVs and three A/B WAVs matched all 33 recorded SHA-256 values; SQLite integrity check passed and all 24 effect vault object hashes matched. The prior controls remain preserved. No game branch, approved assets, production bundle or paid service has been changed.
+
+### Continuous wind instrument laboratory
+
+The new `wind-instruments.mjs` implements original flute and reed approximations using continuous oscillator phase, pressure-dependent harmonic spectra, filtered breath noise, note envelopes, delayed vibrato and smooth pitch transitions. Connected notes must be contiguous; no re-excitation or pressure reset occurs at their boundaries. Detached notes use attack/release. The default pitch transition lasts 45 ms. These are harmonic synthesis models, not acoustic bore/reed simulations or validated historical instruments.
+
+The separate research lab produces two matched 16-second melodies per instrument (detached/connected), two RMS-matched A/B files (detached first, 0.7 s gap), twelve standalone samples (two instruments, three pitches, two pressure levels), and Hill Path, a 16-second ensemble study combining connected wind and the original lute model. The original sample library is independent, with provenance, hashes, pressure and pitch tags; no production approval. The actual phrase and ensemble code was executed in an isolated JS harness: all seven compositions/comparisons had finite non-clipped samples (maximum peak 0.475); all twelve notes rendered within bounds. Three new wind regression scenarios and the three plucked tests passed with strict Object.is equality and a substitute hash in that harness. Native CI remains the acceptance gate.
+
+At 17ab9fa the native plucked test rejected a negative-zero endpoint using Node strict equality. fdc56d1 fixes the PCM endpoints, not the assertion. Audio Asset Forge at fdc56d1 passed with both browser matrices, and artifact 15128917048 was downloaded. All 21 distinct audited WAV hashes and all 18 vault hashes matched; SQLite integrity was ok. Local rendering of the same physical recipe matched all 19 physical WAVs byte-for-byte. The local GM comparison used TimGM6mb via libfluidsynth and differed from CI, so the original CI control is preferred. No clipping was observed. Other fdc56d1 checks cancelled by later pushes are not claimed as passed. No game integration or artistic acceptance has occurred.
+
+### Bowed instrument laboratory
+
+`bowed-instruments.mjs` adds original violin and cello approximations with continuous phase, bow pressure and position, a position-dependent harmonic comb, stable resonant body modes, filtered friction noise, delayed vibrato, and smooth pitch transitions. Detached notes release and reattack; legato sustains pressure and phase across contiguous notes; a bow-change articulation adds a brief pressure dip without resetting phase. Default pitch glide is 55 ms. This is a spectral/modal model inspired by bowed strings, not a full nonlinear stick-slip waveguide or a validated reconstruction of acoustic instruments.
+
+The independent research lab contains four 24-second solo performances, two RMS-matched detached/connected A/B comparisons (0.7 s gap), twelve standalone notes (three pitches per instrument, two pressures), and Winter Banner, an original 8-bar chamber study at 80 BPM combining violin, cello and original harp. It records hash, recipe and provenance metadata, and inserts the twelve original notes into a separate SQLite/FTS vault. No production approval or external recordings are included.
+
+All three new regression scenarios were executed successfully in an isolated JS harness using strict Object.is and a substitute hash. The continuous test phrase retained pressure of approximately 0.567 and 0.697 at the two boundaries; detached versions fell below 0.029. The actual authored lab recipe rendered all nineteen files' underlying PCM in the harness without clipping (maximum peak 0.76821, Winter Banner peak 0.50613). Native Node/CI verification remains required; subjective realism has not been judged.
+
+At 41282a0 Audio Asset Forge, Universal QA and AI Mobile QA passed. Both native browser runtime jobs passed again. Wind artifact 15132030256 was downloaded and independently verified: 19/19 audio SHA-256 and 12/12 vault object SHA-256 matched, SQLite integrity ok. Validate passed eleven jobs but the Lighthouse homepage performance score was 0.74 versus the 0.75 minimum (three runs 0.59, 0.75, 0.74). A targeted job retry was requested; no threshold or acceptance test was weakened. New research files do not establish a production performance regression or rule it out. No change to the game branch or production audio assets.
+
+### Orchestral laboratory
+
+The research-only brass module adds horn and trumpet spectral models with pressure-dependent harmonic balance, formant shaping, filtered breath noise, continuous phase, delayed vibrato, 35 ms slurs, and distinct tongued/accented attacks. These are simplified spectral approximations, not measured lip-reed/bore simulations. The percussion module adds timpani, war drum, snare and cymbal with distinct inharmonic resonances, decays, strike noise and velocity/seed parameters.
+
+March of the Vale is an original 16-bar 112 BPM composition in 4/4 with five aligned stereo stems (brass, strings, woodwind, plucked, percussion), one summed mix, two brass articulation pairs and two sequential RMS-matched A/B comparisons. It combines the original synth models; no General MIDI or external samples are used. Twenty-eight additional standalone samples (12 brass notes and 16 percussion strikes) are stored in an independent research-only SQLite vault. Native CI renders 40 audition WAVs, verifies vault hashes and exports metrics. In an isolated JS harness two new regression scenarios passed using strict Object.is and a substitute hash; the full 40-file PCM recipe rendered after correcting flute notes above the supported pitch range. Maximum amplitude 0.638114; ensemble peak 0.437983, RMS 0.087036; all five stems and mix 1,645,714 frames at 48 kHz. No artistic approval is claimed. These checks are not native Node CI.
+
+At e1175c2 the bowed laboratory artifact 15132806963 was downloaded: 19/19 recorded audio hashes, 12/12 vault hashes and SQLite integrity verified; no PCM clipping. Foundation and Chromium passed; WebKit and Validate were running at initial inspection. PR comparison with main showed 13 commits behind and 156 ahead; the listed changes on both sides were disjoint but GitHub initially reported mergeable:false. Do not overwrite or force merge the platform branch; recheck mergeability and reconcile separately if necessary. No game branch or production assets changed.
+
+### Ensemble acoustics and performance comparison
+
+The orchestral control recipe remains available. `orchestra-lab.mjs --expressive-ensemble` renders only the five stems and mix into a separate directory, adding seeded phrase pressure shaping, two independently synthesized string players with distinct bow positions and 12/18 ms offsets, bounded pluck onset/velocity variation, and percussion onset/velocity variation. Score pitch and total frame grid are unchanged. This is a candidate arrangement, not a measured human performance.
+
+`ensemble-room.mjs` operates on aligned stereo group stems offline. It uses group placement, distance gain and high-frequency attenuation, stereo mid/side width, six first-order image-source reflections, and an orthogonal four-line damped feedback delay network. The chamber and hall have nominal RT60 settings of 1.05 and 1.85 s; actual frequency-dependent decay is not a measured room RT60. Group distances are relative to a fixed listener. Direct paths are time-aligned to preserve the composition grid; relative reflection delays are calculated from path lengths. It is neither HRTF/binaural nor a measured impulse response. The returned direct and wet arrays sum to the mix within float precision. A common peak ceiling preserves this relationship.
+
+The room lab consumes the same-run baseline and expressive stems. Nine WAVs include control dry/chamber, expressive dry/chamber/hall, expressive chamber direct/wet, and two RMS-matched comparisons (control dry versus control chamber, and control chamber versus expressive chamber). Chamber takes include 2.5 s of tail; hall 3.5 s. The controls are padded, not time-stretched. Comparisons match RMS by attenuation; perceptual loudness and artistic acceptance are not inferred. The original orchestral WAVs remain separate.
+
+Three acoustic regression scenarios passed in an isolated JS harness with Object.is equality and a substitute hash. A negative-zero wet endpoint was detected and canonicalized before rechecking. The full expressive score and both room profiles also rendered successfully in the harness: dry 1,645,714 frames, peak 0.469079; chamber 1,765,714 frames, peak 0.290247, RMS 0.049571; hall 1,813,714 frames, peak 0.289904, RMS 0.051255. These are float-source pre-CI metrics; CI uses quantized WAV inputs and verifies the actual files. No game code or production sound bundle changed.
+
+At 486f6e0 both native audio browsers and the orchestral laboratory passed. Artifact 15133663368 was downloaded and independently verified: all 40 audio SHA-256 values, all 28 vault hashes and SQLite integrity matched. The five stems reconstruct the PCM16 master to within two integer sample units. Validate passed 11/12 jobs; homepage Lighthouse performance median 0.74 vs 0.75, TBT median 622 ms vs 600 ms. The published representative report identifies long tasks in app.js and shared/mobile-runtime.js, not Sound Forge. A targeted retry was requested without weakening thresholds or editing the shell. Root cause of the homepage performance fluctuation remains unproven.
+
+### Recorded timbre laboratory
+
+A separate, research-only pipeline selects eight actual recorded sustains from VS Chamber Orchestra Community Edition, revision 28092772094b2d9f1148d84cea97f4545b8c687d. The upstream LICENSE is CC0 1.0 Universal (blob 670154e3538863b2d9891fd5483160fbdfc89164); upstream README credits Sam Gossner and Simon Dalzell. Five flute non-vibrato and three violin arco vibrato files have individually verified upstream Git blob IDs in the acquisition script. Filenames do not establish sounding pitch, especially the flute octave labels. The expected zone mapping is explicitly checked against measured audio before an audition can be generated. Source bytes must match the pinned Git blob SHA-1; SHA-256 is calculated for the research vault. The source file payload was not accessible through the connector, and direct raw GitHub download in the local sandbox failed DNS resolution. The new dedicated native CI job will perform acquisition and verify actual audio; until then the selected files are candidates, not imported production samples.
+
+Three additional pinned Commons recordings are selected: Hemlock stream (Dirtslayer, PD-self, revision 1065354310), Howling wind (Tvabutzku1234, CC0, revision 1304325871), and Dull thud (Gregory Weir, PDsounds author dedication, revision 1214819134). The latter is a recorded cardboard impact, not a real footstep. Exact sizes and SHA-1 are checked before ingestion. Sources with ambiguous third-party upload licenses were excluded. The library retains source URLs, provenance and research-only approval metadata.
+
+The new offline renderer measures stable pitch using a downsampled cumulative mean normalized difference function and rejects a mismatching octave. It preserves recorded attacks after bounded silence trimming, selects the nearest zone (maximum five semitones in the audition), compensates measured tuning via playback rate, and uses a short release envelope. It does not invent sustain loops, velocity layers, true sampled legato or round-robin variation. Unsupported notes and insufficient source duration fail closed. Two isolated JS regression scenarios passed on synthetic tuning fixtures (including detuned and wrong-octave signals, coverage and deterministic exact-grid playback). The real recorded material has not yet passed these checks.
+
+The isolated CI job prepares eleven source records, ten audition WAVs, a SQLite research vault and metrics: synthetic vs recorded flute and violin (six files including RMS-matched A/B), three field/Foley excerpts, and River Meadow, a 14.4-second original sampled-flute/violin and synthesized-harp study. Network errors or unexpected pitch stop the job, not the independent synthetic browser prerequisites. No production or game integration; no paid services.
+
+At 98d135d the original ensemble artifact 15142250713 was downloaded: 9/9 WAV hashes matched, stereo PCM16 48 kHz, no clipping. Chamber direct+wet reconstructed the mix to one integer sample unit. A/B second starts at 37.485708 s. The previous Lighthouse issue remains unproven and shell files are deliberately unchanged.
+
+### Measured recorded sustain
+
+At 568e179 Recorded Timbre Laboratory passed and artifact 15141897964 was downloaded. All ten audition WAV SHA-256 values, eleven original source SHA-256 values, eight Git blob pins, three Commons SHA-1/size pins and eleven SQLite vault object hashes were independently checked. SQLite integrity was ok. Measured tuning errors for flute MIDI 60/69/72/81/84 were +2.07/+0.30/+1.44/+1.95/+3.13 cents and violin 67/69/72 were -6.63/+16.00/+2.75 cents. All were admitted; no audition clipped. River Meadow and the original finite recordings remain available.
+
+`recorded-sustain.mjs` adds an explicit offline sustain extension mode, with a search over recorded waveform windows, phase-offset alignment, correlation and RMS-ratio gates, and raised-cosine overlap. The source attack is retained; after the first pass the cursor wraps to the crossfade-adjusted loop start. The default finite-note mode of `renderRecordedPhrase` is unchanged; per-note sustain:true selects a qualified zone loop, with optional normalized time/pressure curve. Curves affect amplitude, not true dynamic-layer timbre. Loop intervals are intentionally short, and repeating a portion of vibrato may sound mechanical. This is not recorded legato, authentic release samples, or an automatically approved seamless musical sustain.
+
+A local Node 22.16 experiment used the exact downloaded original recordings, SoX decode and the recorded onset/tuning metadata. All eight passed the waveform selection thresholds. For 16-second test notes, observed correlations 0.950586–0.998381, RMS ratios 0.821442–0.997646, wraps 9–26, max peak 0.455927 and max adjacent-sample step 0.126180. The prototype used the same numerical algorithm before additional validation and wrap-step instrumentation; these results are not the new native CI artifact. All five isolated JS regression scenarios passed (three new and two preserved). The native job repeats preparation from verified source bytes, checks wrap steps, renders eight 16-second note auditions and six phrase/comparison WAVs, and publishes an independent fourteen-file package. A/B compares finite notes with looped notes plus pressure variation, not an isolated single-variable experiment. Native artifact and artistic acceptance are pending.
+
+At 568e179 all three main audio/QA workflows passed and eleven of twelve Validate jobs passed, including Lighthouse; the remaining WebKit mobile portrait job was cancelled by subsequent changes. No game code, production assets or paid tools changed.
+
+### Recorded articulation and velocity bank
+
+At bf4b3bc Audio Asset Forge passed, including both runtime browsers and Recorded Sustain Laboratory. Artifact 15142114691 was downloaded and independently checked: 14/14 WAV SHA-256 values, 48 kHz mono PCM16, exact frame counts, no clipping. All eight 16-second source-note renders passed, with correlations 0.950586–0.998381, 9–26 wraps and a maximum actual wrap step of 0.044405 (gate 0.15). The original archive and recordings remain unchanged. Universal QA and AI Mobile QA passed. Validate passed ten of twelve jobs including Lighthouse, and two mobile browser jobs were cancelled by subsequent changes.
+
+The new `recorded-articulations.mjs` bank selects a recorded articulation, nearest covered root, then nearest available recorded velocity label and independently rotating take. It supports an explicit locked velocity and fixed take for controlled comparisons. Unknown articulations, unavailable locked layers, duplicate source hashes and excessive pitch shifts fail closed. Choices retain the actual source SHA-256, recorded root, dynamic label and variant; reset restores deterministic rotation. Each selected sample uses the existing measured-pitch finite or explicitly qualified sustain renderer. Selection is discrete, not dynamic spectral morphing or authentic legato. Three new regression scenarios passed in an isolated JS harness using synthetic fixtures and strict equality, with no external audio substituted for actual source validation.
+
+Seven additional VSCO 2 CE CC0 files are individually pinned at the same upstream revision: three violin piano recordings (G4/A4/C5), four flute vibrato takes (A4/C5/C5/A5). The existing three forte violin and five non-vibrato flute recordings are reused by source hash. Only flute C5 vibrato currently has two verified distinct upstream blob identifiers; other zones are single-take. Layer anchors .35/.85 are selection parameters, not measured physical velocity values. No new source bytes have yet been fetched or pitch-verified in this iteration. Native CI checks Git blob IDs, actual decoded pitch, distinct SHA-256 and the 15-entry separate research vault before rendering. It publishes ten new auditions: three matched A/B comparisons (fixed forte vs discrete layers, fixed take vs round robin, non-vibrato vs vibrato), six corresponding performances and one articulation study. The new recordings are research-only; no production or game integration and no paid service.
+
+### Recorded legato and expanded instrument bank
+
+At c5451a4 Recorded Articulation Laboratory passed, including both native audio runtime browsers. Artifact 15145010318 was downloaded and independently checked: 10/10 audition SHA-256, 15/15 source vault SHA-256, SQLite integrity and exact 48 kHz grids; no clipping. The actual choices show 1,2,1,2,1,2,1,2 for flute C5 vibrato round-robin and both recorded violin velocity labels. All mobile browser quality jobs passed. Validate failed only the homepage Lighthouse performance median 0.73 (minimum 0.75) and TBT 654 ms (maximum 600 ms); targeted retry was requested but cancelled by subsequent branch updates. No performance thresholds or shell code changed.
+
+The new `recorded-legato.mjs` renders explicit contiguous same-articulation connections using the previous recorded note's continuing source cursor and a raised-cosine 55 ms crossfade into the next source at a 160 ms post-onset offset. Ordinary detached notes preserve attack and release. Missing coverage, noncontiguous links and insufficient source duration fail closed. This is a sample-to-sample approximation, not real recorded interval legato, and two different pitches overlap briefly. It is offline only. The two new synthetic-fixture regression scenarios passed in an isolated JS harness. A local Node 22.16 probe of the exact transition algorithm, using the original downloaded decoded samples, existing onset/tuning metadata and a simple exact-root selector, rendered six transitions each on flute and violin. Max boundary step 0.009719 and 0.029893 respectively, peaks 0.270887 and 0.355364, deterministic repeated Float32 output. These local A/B renders are not new CI artifacts or proof of subjective realism.
+
+The independent legato lab reuses all fifteen verified articulation vault objects and pins twelve additional VSCO 2 CE CC0 recordings from the upstream revision 28092772094b2d9f1148d84cea97f4545b8c687d: six cello-section vibrato sustains and six clarinet long sustains, three roots and two source velocity layers (v1/v3) each. All twelve exact upstream file paths and Git blob IDs were checked against the pinned directory listing. To handle the differing upstream octave conventions, each new sample is admitted only if its measured pitch agrees with exactly one of two explicitly reviewed octave candidates for that pitch class, and the two dynamic layers must agree on each of three roots per instrument. No automatic correction of arbitrary mislabeled pitch is permitted. Real new source bytes, tuning and layer coverage are pending CI. The 27-zone research vault preserves hashes, source URLs, license and recipes; original samples are not modified.
+
+The new artifact contains thirteen WAV auditions: detached/connected/A-B on four instruments and a nine-second staggered stereo quartet study. Each six-second phrase has six transitions; native lab checks boundary step <=0.15, finite PCM, file counts and source identity. A/B RMS matching uses attenuation, not perceived loudness. New instrument recordings and all legato candidates remain research-only. No production integration or Banners of War changes; no paid services.
+
+### Recorded dynamic-layer morph and six-instrument orchestra
+
+At cbaf3a4 all four main workflows passed, including 12/12 Validate jobs and Lighthouse. Recorded Legato artifact 15149610095 was downloaded: all thirteen audition WAV SHA-256 and 27 vault object SHA-256 values matched, SQLite integrity ok, 48 kHz PCM16 frame/channel counts matched, no clipping. All 24 connected transitions were present; maximum boundary steps for flute/violin/cello-section/clarinet were 0.009719/0.029893/0.014443/0.014017. Twelve newly acquired cello/clarinet source roots all matched the upper of the two reviewed octave candidates. These are numerical checks, not subjective artistic acceptance.
+
+`recorded-dynamics.mjs` mixes two independently recorded velocity layers at the same measured root, with per-note normalized pressure curves, pitch correction, short bounded reference-window phase alignment, and correlation-aware energy compensation capped at 1.35x. It retains a fixed-high control with identical pressure, gain and pitch correction. Unknown paired coverage, duplicate source hashes, insufficient duration, malformed envelopes and clipping fail closed. Only outer recorded layers and the first take per layer are used. This is time-varying PCM crossfading, not authentic dynamic transition recordings, phase-locked resynthesis, or simultaneous support for legato and sustained loops. The two new regression scenarios passed in an isolated JS harness after the compensation change. The 19-file authored lab recipe rendered on synthetic fixture zones before that change; this was not a render of the new brass audio.
+
+An independent numerical probe on nine actual downloaded violin/cello/clarinet pairs, using SoX decoding and previous measured pitch/attack metadata, found post-attack reference-window correlations 0.4281–0.9925. Before compensation, morph-to-control RMS ratios were 0.7319–0.9829 and maximum peak 0.35959. In particular, violin pairs can be poorly correlated; the bounded compensation addresses expected energy loss but not ongoing vibrato drift or interference. Real musical suitability still requires audition. The new source files were not locally acquired.
+
+Twelve additional CC0 VSCO 2 CE horn/trumpet sustain recordings (three roots and two v1/v3 layers per instrument) are pinned by exact paths and Git blob IDs from revision 28092772094b2d9f1148d84cea97f4545b8c687d. The 27 existing vault objects are reused and rechecked; the separate research vault is expected to contain 39 zones. Pitch is admitted only at one of two explicit octave candidates and layers must agree at three roots. The new lab renders five isolated fixed-high/morph/A-B sets and Dawn Procession, an original 19.2-second D-minor study for six recorded instruments with distinct harmonic parts and phrasing curves, dry control/morph/A-B plus chamber mix. Flute is a shared single-layer part; no artificial dynamic layer is invented for it. All 19 output files and twelve new source files are CI-gated. The recorded acquisition job timeout is increased from 12 to 20 minutes for the cumulative independent laboratories. No game code, production assets, acceptance thresholds or paid service changed; native results for this new HEAD remain pending.
+
+### Unified recorded performance and articulation expansion
+
+At 5f35858 Universal QA, AI Mobile QA, platform smoke, field audition and both audio runtime browsers passed. Recorded Dynamics failed during import of the pinned horn A2 v1 sample: measured pitch did not match either reviewed octave candidate. The rejected pair is replaced with the independently pinned C3 v1/v3 pair from the same VSCO 2 CE revision; pitch tolerance remains .75 semitone and three distinct paired roots are still required. This is a candidate source replacement, not a verified repair until native CI completes. The new failure evidence records candidate/measurement errors and uploads available original CC0 brass files and diagnostics on failure. No synthetic substitute is admitted.
+
+The same-run prior legato archive 15149074585 was independently downloaded: 13/13 audition hashes, 27/27 vault hashes and SQLite integrity matched. Nine local partial dynamics auditions were regenerated with a separate NumPy implementation of the numerical morph algorithm including bounded correlation compensation, using the downloaded verified recordings and measured tuning metadata. All nine rendered without clipping (maximum peak 0.378375). These are local research reconstructions, not native CI files. Dawn Procession and the 39-zone bank were not published at the failed HEAD.
+
+The new `recorded-performance.mjs` integrates qualified looping cursors, per-note pressure curves, continuous two-layer morph (or discrete comparison), bounded reference-window phase alignment, correlation compensation, explicit contiguous legato and independent per-layer round-robin selection. Each voice advances its own source position and may wrap its own loop; the previous voice continues through the 55 ms crossfade, while the new voice starts after its recorded attack. Every selected source ID, hash, layer, variant, wrap count and boundary step is recorded. Unsupported notes/attacks/loops fail closed. Pizzicato explicitly forbids morph, sustain and legato. This is a monophonic offline renderer, not authentic recorded interval transitions or phase-locked resynthesis. Independent loop phases can drift and audible interference remains possible.
+
+The independent performance laboratory reuses the 27 verified legato zones, so it can still run if brass acquisition fails. Eight new CC0 sample candidates are pinned at the existing upstream revision: two tremolo roots with two source velocity layers each and two pizzicato roots with two distinct forte takes each. Short decaying attacks use a separate early-window pitch analysis (the original sustain estimator is unchanged). Source identities and measured pitch are verified before admission. The 35-entry independent vault is not a claim of 47 combined verified sources; the 39-entry brass branch and 35-entry articulation branch share their 27-source base.
+
+On the downloaded real violin samples, a local numerical loop search found qualified loops in both layers of A4 and C5 (four out of four); G4 forte qualified but G4 piano did not. G4 piano remains usable as a finite recording and is excluded from the sustained comparison. The unified lab selects A4/C5. Three new regression scenarios passed in an isolated JS harness; the complete eight-file audition recipe also rendered on synthetic fixtures, with six active loop cursors across three connected notes, four wraps per cursor in the fixture, maximum peak 0.251691, and expected pizzicato rotation 1,2,1,2,1,2,1,2. No new real tremolo/pizzicato source bytes or native unified lab results have been verified. Native CI checks source and output counts, source pitch, library identities, wraps and connected boundaries. No game/production changes or paid service.
+
+### Unified ensemble and articulation admission recovery
+
+At e0d371b, Universal QA, AI Mobile QA and all twelve Validate jobs (including Lighthouse and four mobile browsers) passed. Both native audio runtime browsers passed. Recorded Dynamics Laboratory succeeded and artifact 15149963714 was downloaded: 19/19 audition hashes, 39/39 source object hashes, SQLite integrity, PCM16/48 kHz grids and no clipping verified. The replacement horn C3 pair passed at MIDI 60; all twelve brass recordings passed. Dawn Procession is available with six recorded instruments. Unified Recorded Performance failed at the first soft violin tremolo A4 source; no 35-zone artifact was published.
+
+Upstream SViolinTrem.sfz (blob 490f1bee2146468b66456889a664a0081d2350b8) and SViolinPizz.sfz (blob b1830d900cfe50aabc2a31d5fd0c821831c1002a) explicitly establish the expected pitch_keycenter of each candidate. The new modulated-note estimator measures independent energetic windows from 120 ms through 2.4 s, requires at least five estimates and 70% agreement within .45 semitone of their median, and retains the .75-semitone tuning limit. It does not condition pitch estimation on the desired root. Two additional reviewed pairs each for tremolo (E5/A5) and pizzicato (G4/E5) provide deterministic reserve candidates. A pair is admitted only if both original source hashes and measured pitch are accepted; the lab requires two complete pairs per articulation and eight admitted new sources. Rejection diagnostics and available CC0 candidate bytes are uploaded separately on failure. Rejected files never enter the vault. Native validation of these new candidates remains pending.
+
+A local Node 22.16 render used the exact recorded-performance source (Git blob 3f072be864adc858477f45fe3dc4bb3630bff9f6), the original 39-zone archive, verified source hashes, SoX and the native onset/tuning metadata. Five core unified auditions rendered: discrete, morph, detached and the two matched comparisons. The two connected note boundaries had maximum PCM step 0.008838; all six layer cursors wrapped 3–4 times per note; max peak 0.376784 and repeat render bit-identical. These are local outputs, not a successful CI articulation pack. All 39 sources were audited for qualified sustain: 38 passed, with only the quiet violin G4 rejected. Its corresponding forte remains usable but the root is excluded from paired-sustain selection.
+
+The new recorded-ensemble module mixes up to 16 separately rendered monophonic tracks into aligned group stems, using equal-power pan and one common peak ceiling and edge fade. The separate Evening Standard lab uses the 39-zone recorded Dynamics bank (no additional downloads): 33 usable qualified zones after excluding the incomplete paired root and unused flute articulations. Six instrument parts, 24 s, 76 notes, 60 dual-layer notes, 59 connected boundaries, 68 notes with loop wraps, 149 total wraps; maximum boundary step 0.010590. Actual local Node rendering used the identical repository mixer and lab Git blobs 421d9223eb82d015c54c55f4f98261b813463b90 and 769ad5d0128486de582c6b8b12f995cb4af3c4cf. All six WAVs were verified; peak 0.196789, 48 kHz stereo, additive group stems reconstruct the master within one PCM16 unit. The comparison starts its second part at 24.7 s. Two additional isolated JS regression scenarios passed. The ensemble CI step runs after successful Dynamics acquisition and independently of new articulation admission. It is still offline research; not true sampled interval legato, phase-locked dynamic resynthesis or a production audio adapter. No game code or paid service changed.
+
+### Recorded bow/breath phrasing and shared ensemble gestures
+
+`recorded-phrasing.mjs` adds score-domain phrase envelopes to the unified recorded renderer. A phrase has a stable ID, technique (`bowed` or `breath`), exact start/end frame boundaries, and a normalized curve whose multiplier is bounded to 0.55–1.25. Every phrase must cover at least two contiguous score notes; unknown references, duplicate IDs, overlapping gesture ranges, out-of-range curves and mismatched phrase boundaries fail closed. The envelope is evaluated on the absolute phrase timeline, so it does not restart at every note. It multiplies each note's pressure before recorded-layer morph selection and amplitude, retaining the existing per-note curve as a separate control.
+
+Repeated same-pitch notes can opt into an explicit reattack while remaining connected to the phrase. A `bow-change` uses a smooth, short pressure notch; a `breath` rearticulation uses a bounded soft-to-full attack. Both start the new recorded voice at its actual sample onset rather than skipping the transient, while the prior voice continues through the existing connected-note crossfade. Reattacks require the same pitch, same phrase, a contiguous connected note and the matching technique. They are amplitude envelopes over original recorded attacks, not synthetic bow friction, tongue noise, airflow or physical instrument simulation.
+
+`recorded-ensemble.mjs` accepts one shared gesture timeline and lets each participating string, woodwind or brass track declare its own bowed/breath technique. Every shared gesture must be performed by at least two tracks; each participant uses the same exact curve and frame boundaries while keeping its own notes, samples, panning, dynamics and reattack type. The render returns gesture receipts with participant IDs and technique evidence, alongside the unchanged group/individual stem reconstruction.
+
+The native performance lab now emits matched violin bow-phrase and flute breath-phrase comparisons plus a synchronized bowed-string/woodwind ensemble, individual player stems and a shared-gesture A/B. The A/B order is dry control first, 0.7 s silence, expressive phrase second; RMS matching attenuates the louder render and is not perceptual loudness matching. New phrase and reattack regression tests run in the foundation gate, and the recorded-performance CI job requires all thirteen new phrasing WAVs. This remains offline research-only; no production/game audio adapter or game branch is changed. Musical realism still requires listening review of the actual recorded auditions.
+
+
+### Natural recorded endings (research only)
+
+The pinned VSCO 2 CE tree has no separately labelled interval-transition or key-off release assets. The previous sustain decoder trims at 12 seconds, which removes several real violin endings. The independent release lab decodes the complete SHA-256-verified source and retains a measured, contiguous final segment only when its RMS decays and the original file ends quietly. This is an extracted recorded ending, not a separately recorded key-off sample. The opt-in `release:'recorded'` path continues the selected voice across a phase-search and raised-cosine bridge, then plays the original ending at the measured pitch with bounded gain. Both dynamic layers retain independent source provenance. Missing, mismatched, overlapping, truncated, or unqualified release sources fail closed. The existing default release envelope and golden-master score remain unchanged. Actual recorded interval transition coverage is zero; no synthetic legato is relabelled. Afterglow Quartet is an original 23-second D-minor four-instrument chamber study with separate player stems; five level-matched A/B pairs compare natural endings to legacy envelopes. Native CI and listening acceptance remain separate.
+
+
+### Dedicated upstream release assets
+
+VCSL (CC0-1.0), pinned commit c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e, supplies dedicated sustain/release assets for ocarina D4, E4, A4 and C5. The laboratory verifies the immutable Git blob of every WAV and the license, hashes original bytes with SHA-256, measures the sustain pitch, and qualifies each release decay. Dedicated assets retain a separate release hash linked to the matching sustain hash, pitch, instrument and articulation. The renderer rejects mismatched pairs. Dedicated distribution does not establish that a release was recorded in a separate session. Clay and Wind is an original 24-second monophonic ocarina study; the two A/B comparisons are RMS-matched. No independently recorded interval transitions are admitted, no production integration, and no legacy score changes.
+
+
+**VCSL octave admission correction.** The first native run rejected the upstream D4-labelled body at MIDI 74.019. Independent checks of four release WAVs found pitch classes in the octave D5/E5/A5/C6, so the pinned roots and the audition score now use those registers. Sustain admission still measures pitch without relaxing its tolerance; dedicated release PCM is independently measured in a high-energy window and rejects a mismatch beyond 0.75 semitone. The release pitch receipt records correlation and window location. Playback retains the body's rate to preserve the natural pitch drift of the ending. Failed admission publishes available source evidence without declaring successful coverage.
+
+
+### Historical Instrument Expansion and spatial extension
+
+Native run 45975026506, artifact 15186079137, qualified 17 VCSL sources and rendered the original 55-second Lantern Road with five stereo player/articulation stems. The six exact PCM16 WAV hashes are now pinned as a research regression reference, not an artistic approval. The new separate spatial laboratory verifies every original file and the source manifest, recovers centered mono performers from the independently panned stems, and combines the recorder articulations into one spatial player. Chamber and Hall are algorithmic rooms, not measured impulse responses. The level-matched dry/chamber/hall comparison uses the first 48 seconds as its RMS window. A separate searchable SQLite/FTS5 catalog imports 17 verified original CC0 objects, retaining their source revisions, blob hashes, pitch receipts and articulation tags. Existing unified library, approved audio and production gameplay remain unchanged; recorded interval coverage remains zero. Native execution of the extension is required before reporting spatial or catalog admission.
+
+
+### Historical Expansion II and balanced mix
+
+Native run 45996310868 passed all principal checks and qualified eleven additional CC0 original recordings (seven alto recorder, four tambourine), with a 28-object searchable library and eight Market at Dusk PCM16 auditions. Artifact 15197005007: all eleven new objects and all eight files were independently verified; the previous seventeen catalog rows remain exact. The historical mix lab pins all eight original WAV hashes and manifest, applies transparent fixed track trims (+3 dB alto staccato, +2 dB soprano, +10 dB tambourine) and shared peak headroom (-3 dBFS sample peak, bounded gain), emits five additive stems, a balanced master and RMS-matched A/B. No dynamics compression, no original asset replacement, no artistic acceptance or production approval. Local execution against the original artifact passed eight mix checks and produced a two-PCM16-unit reconstruction error. CI must independently render the new edition. Foundation test isolation retains all 27 files with per-file process and test timeouts; the previous cancellation was consistent with the 15-minute job timeout, but its root cause was not reproduced. A passed repeat is not proof that the original hang is fixed.
+
+
+### Historical pitch research
+
+Native balanced mix run 46001331537 passed all principal checks, including 27 isolated Foundation files (116 tests) and seven library tests. All seven balanced WAVs matched local rendering byte-for-byte, all eight Market at Dusk original hashes remained exact; the maximum independently measured stem sum error was two PCM16 units. The next research lab pins 18 CC0 originals across three psaltery articulations and three Renaissance organ registers. It requires at least three time windows corroborated by spectral fundamental/subharmonic evidence, tight inter-window pitch agreement, and one consistent octave mapping across three roots per group; ambiguous groups remain outside the expanded catalog. Six native-speed diagnostic reels retain explicit candidate admission receipts. Cloister Study is a separate original research audition using admitted sources only, when any qualify. The organ sources are room recordings; no new room simulation is applied. No prior PCM or production game changes. Native acquisition and group admission remain unverified until CI.
+
+
+### Psaltery harmonic-grid recovery
+
+Native Historical Pitch run 46006165411, artifact 15200408246: all 18 originals and seven auditions independently verified. Nine organ sources admitted, three registers, 37 catalog objects. The measured 4-foot register is an octave above the 8-foot register. The nine psaltery candidates were correctly quarantined by the original method. The separate harmonic-grid method analyzes significant spectral peaks and requires at least three distinct coprime harmonic orders, at least 80% of selected peak energy explained, a 0.12 margin over alternate roots, at least three corroborated windows and the unchanged 0.75-semitone pitch tolerance. It does not use the source label to estimate frequency. Local native SoX decoding of all nine candidates yielded a consistent +12 MIDI label offset, maximum deviation 0.067 semitones, six synthetic tests passed. New research-only 46-object SQLite library and a 42-second Cloister Procession with 86 events, all nine recovered psaltery roots used, six stereo WAVs and two PCM16-unit reconstruction error. Original Historical Pitch evidence and WAVs are immutable. Native CI must confirm the new method; no artistic approval, production integration, or recorded interval transitions. Python NumPy 2.2.6 is pinned in an isolated CI environment.
+
+
+### Historical consort — Pilgrims Crossing
+
+Native run 46011702461 admitted all nine psaltery recordings, 46 catalog objects, six Cloister Procession WAVs byte-identical to local. Independent comparison of five preceding same-run artifacts verified all 33 prior WAVs and five manifests unchanged. The new consort reads and verifies all 46 source objects, preserves original stereo channels including organ room recordings, applies bounded pitch shifts and full finite tails, and writes seven player stems and a master. Original 56-second audition with 270 events using 42 sources; local SoX/NumPy render passed five checks, -3 dBFS peak and three-PCM16-unit stem reconstruction. Local NumPy 2.3.5; native CI uses the already pinned 2.2.6 environment. No production integration, artistic acceptance, or recorded interval transitions. Prior masters remain unchanged; native acceptance pending.
+
+
+### Historical consort — Stereo Edition
+
+Native run 46016694404, artifact 15206556094, confirmed all eight Pilgrims Crossing WAVs byte-identical to local and all 39 preceding historical audition WAVs and six manifests unchanged. Independent PCM16 checks: 270 events, 42 used objects, 3-unit stem reconstruction, no clipping. The original mix has -2.22 dB left/right RMS imbalance; tambourine correlation -0.080 and 3.37 dB RMS mono-fold loss. The separate stereo lab pins the original manifest and all eight WAV identities, applies fixed relative trims (-2 dB harp, +1 dB soprano and organ, +3 dB frame drum, +5 dB tambourine), 0.6 side gain on tambourine only, bounded common channel balance and -3 dBFS sample-peak ceiling. Eight local checks passed; master L/R balance 0 dB, tambourine correlation +0.406 and mono loss 1.55 dB, master mono loss 1.34 dB, 3-unit PCM reconstruction. Ten outputs: master, seven stems, mono fold and RMS-matched AB. No limiter, compression, original replacement or production integration. Subjective balance choices are candidates for listening, not artistic approval. Native CI pending.
+
+
+### Historical expression and real interval research
+
+Native Stereo Edition run 46021282025, artifact 15208745686: ten WAVs match local byte-for-byte. Seven prior labs preserve all 47 previous WAVs and seven manifests. Master mono loss 1.34 dB; tambourine mono loss 1.55 dB, positive correlation +0.406. New note-level expression re-renders the same 270 score events using 42 verified sources, with instrument-dependent amplitude contours, bounded timing deviations and breath spacing. Four local checks and full local native-source render passed; 9 outputs, 3 PCM16 reconstruction error. This is shaped single-note playback, not sampled interval legato. A separate interval lab acquires six exact CC0 Hadzi-Fia vocal transition sources from Karoryfer Samples / sfzinstruments, pinned source revision, Git blobs, license and SFZ mapping. Preliminary direct PCM inspection found actual directed note changes an octave below upstream SFZ key labels; admission checks both endpoints and continuous energy, rejects ambiguous/wrong notes and never substitutes a synthetic transition. A separate Wikimedia public-domain soprano recorder phrase (Thparkth, original upload 2006, file history timestamp 2012-03-15) is a candidate-only acquisition, with explicit evidence and no automatic legato admission. The container could not fetch Commons media, so native acquisition, full six-source admission, interval reel and recorder analysis are pending CI. Recorded historical instrument interval coverage remains zero; voice interval inventory is separate. No prior asset replacement or production integration.

@@ -1,0 +1,126 @@
+name: Sound Forge Acoustic Reference
+on:
+  pull_request:
+    paths:
+      - 'tools/audio-forge/acoustic-corpus/**'
+      - 'tools/audio-forge/acoustic_resynthesis.py'
+      - 'tools/audio-forge/acoustic_documentary.py'
+      - 'tools/audio-forge/acoustic_authoring.py'
+      - 'tools/audio-forge/acoustic_authoring_lab.py'
+      - 'tools/audio-forge/acoustic-authoring.mjs'
+      - 'tools/audio-forge/acoustic-mixed-stems.mjs'
+      - 'tools/audio-forge/run_manifest.mjs'
+      - '.github/workflows/sound-forge-acoustic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: sound-forge-acoustic-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  reference-analysis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Isolated analysis tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+          pip install numpy==2.3.5 scipy==1.17.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-programmable-synthesis-46102891900
+          run-id: 46102891900
+          github-token: ${{ github.token }}
+          path: .acoustic-baseline
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-acoustic-reference-46134677742
+          run-id: 46134677742
+          github-token: ${{ github.token }}
+          path: .acoustic-previous
+      - name: Preserve exact rejected baseline and analyze separate reference events
+        run: |
+          python - <<'PY'
+          import pathlib,zipfile
+          p=pathlib.Path('.acoustic-baseline')
+          with zipfile.ZipFile('.acoustic-baseline.zip','w',compression=zipfile.ZIP_STORED) as z:
+              for f in sorted(p.rglob('*')):
+                  if f.is_file():z.write(f,f.relative_to(p))
+          PY
+          python tools/audio-forge/acoustic_resynthesis.py tools/audio-forge/acoustic-corpus .acoustic-baseline.zip .acoustic
+          python tools/audio-forge/acoustic_resynthesis.py tools/audio-forge/acoustic-corpus .acoustic-baseline.zip .acoustic-repeat
+          python tools/audio-forge/acoustic_documentary.py .acoustic/documentary
+          python tools/audio-forge/acoustic_resynthesis.py render .acoustic/models/metal.json .acoustic/portable-model-smoke.wav --seed 914 --gain .5 --size 1.1 --duration 1.2 --output-gain .5
+          cp tools/audio-forge/acoustic-corpus/*LICENSE.txt .acoustic/
+          cp tools/audio-forge/acoustic-corpus/sources.json .acoustic/
+          cp tools/audio-forge/acoustic_resynthesis.py tools/audio-forge/acoustic_documentary.py .acoustic/
+      - name: Portable acoustic package and mixed manifest authoring
+        run: |
+          python tools/audio-forge/acoustic_authoring_lab.py .acoustic
+          node tools/audio-forge/acoustic-mixed-stems.mjs .acoustic/authoring
+          cp tools/audio-forge/acoustic_authoring.py tools/audio-forge/acoustic_authoring_lab.py tools/audio-forge/acoustic-authoring.mjs tools/audio-forge/acoustic-mixed-stems.mjs .acoustic/authoring/
+      - name: Independent artifact checks
+        run: |
+          python - <<'PY'
+          import pathlib,hashlib,json,wave,numpy as np
+          p=pathlib.Path('.acoustic');q=pathlib.Path('.acoustic-repeat');sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          old=pathlib.Path('.acoustic-previous');ledger=json.loads((old/'archive-sha256.json').read_text())
+          assert len(ledger)==103
+          for name,h in ledger.items():assert sha(old/name)==h,name
+          (p/'previous-native-receipt.json').write_text(json.dumps(ledger,indent=2)+'\n')
+          m=json.loads((p/'report.json').read_text())
+          assert len(m['sources'])==10 and len(m['groups'])==5
+          for s in m['sources']:
+              assert s['license']=='CC0-1.0' and sha(p/'originals'/s['file'])==s['sha256']
+          for name in ('models','renders','controls'):
+              for f in (p/name).glob('*'):assert sha(f)==sha(q/name/f.name),f
+          def read(f):
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth())==(48000,1,2)
+                  a=np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+                  assert np.max(abs(a))<32768 and np.any(a),f
+                  return a
+          for g in m['groups']:
+              prefix=p/'renders'/g['group']
+              def file(k):return pathlib.Path(str(prefix)+'-'+k+'.wav')
+              for k,e in g['files'].items():assert sha(file(k))==e['sha256']
+              assert np.array_equal(read(file('resynthesis')),read(file('tonal'))+read(file('residual')))
+              assert abs(g['weakStrongEnergyRatio']-(1.25/.55)**2)<1e-9
+              assert g['train']!=g['holdout']
+              assert len(read(file('large-long')))==round(len(read(file('training-reference')))*1.2)
+              model=json.loads((p/'models'/(g['group']+'.json')).read_text());assert 'waveform' not in model and 'phase' not in model
+          for f in (p/'renders').glob('*.wav'):read(f)
+          read(p/'portable-model-smoke.wav')
+          s=p/'authoring';m2=json.loads((s/'mixed-stems.json').read_text());assert m2['exact']
+          def stereo(f):
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth())==(48000,2,2)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          for name,h in m2['files'].items():assert sha(s/name)==h,name
+          assert np.array_equal(stereo(s/'exact-master.wav'),sum(stereo(s/name) for name in m2['files'] if name!='exact-master.wav'))
+          for e in json.loads((p/'documentary/documentary-receipts.json').read_text()):
+              if e['status']=='acquired':
+                  assert sha(p/'documentary'/e['file'])==e['sha256']
+                  for name,h in e.get('files',{}).items():
+                      f=p/'documentary'/(e['kind']+'-'+name+'.wav');assert sha(f)==h;read(f)
+          (p/'archive-sha256.json').write_text(json.dumps({str(f.relative_to(p)):sha(f) for f in sorted(p.rglob('*')) if f.is_file()},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-acoustic-reference-${{ github.run_id }}
+          path: .acoustic/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,95 @@
+// Original state-specific scores. Same melodic identity, different musical syntax.
+import {mkdirSync,writeFileSync} from 'node:fs';
+import path from 'node:path';
+const root=path.resolve(process.argv[2]??'.audio-score-states');
+mkdirSync(root,{recursive:true});
+const note=(note,beat,duration,velocity)=>({note,beat,duration,velocity});
+const track=(program,notes,pan=64,volume=94)=>({program,notes,pan,volume,humanizeBeats:0,humanizeVelocity:3});
+function motif(pitches,rhythm,start,velocity){let t=start;return pitches.map((p,i)=>{const [step,hold]=rhythm[i];const n=note(p,t,hold,velocity+(i===3?6:0));t+=step;return n})}
+function chords(voicings,step,hold,velocity){return voicings.flatMap((ch,i)=>ch.map(p=>note(p,i*step,hold,velocity)))}
+function arp(voicings,step,pattern,velocity){return voicings.flatMap((ch,i)=>pattern.map(([idx,t,d],j)=>note(ch[idx%ch.length],i*step+t,d,velocity+(j%3===0?8:0))))}
+const states=[];
+function score(id,tempo,beatsPerBar,bars,tracks,description){
+ const duration=60/tempo*beatsPerBar*bars;
+ states.push({id,tempo,beatsPerBar,bars,duration,description,tracks});
+}
+// D major/modal: a wide pastoral melody, breathing room and plucked counterpoint.
+const peaceChords=[['D3','A3','F#4'],['G3','D4','B4'],['B2','F#3','D4'],['A2','E3','C#4'],['D3','A3','F#4'],['G3','B3','D4'],['A2','E3','G3'],['D3','A3','F#4']];
+score('peace',76,3,8,[
+ track(73,[...motif(['D5','E5','F#5','A5','G5','E5','D5'],[[1,.86],[.5,.42],[1.5,1.32],[2,1.65],[1,.88],[1,.85],[2,1.72]],0,76),...motif(['F#5','E5','D5','B4','D5','E5','D5'],[[1,.8],[1,.85],[2,1.72],[1,.8],[1,.85],[1,.88],[3,2.6]],12,70)],49,100),
+ track(46,arp(peaceChords,3,[[0,0,.9],[1,.75,.6],[2,1.5,.6],[1,2.25,.65]],65),82,91),
+ track(42,chords(peaceChords.map(c=>[c[0]]),3,2.8,48),62,72)
+],'Pastoral triple meter, D major, flute and harp');
+// D minor with altered dominant and Phrygian colour; sparse, asymmetrical pulse.
+const tensionChords=[['D2','A2','F3'],['Eb2','Bb2','G3'],['D2','Ab2','F3'],['A2','C#3','G3']];
+score('tension',104,5,4,[
+ track(42,[...motif(['D3','E3','F3','A3','G3','Eb3','D3'],[[1.5,1.35],[.5,.4],[1, .8],[2,1.8],[1,.8],[1,.8],[2,1.8]],0,76),...motif(['D3','Eb3','F3','Ab3','G3','C#3','D3'],[[1,.85],[.5,.4],[1.5,1.3],[2,1.8],[1,.85],[1,.8],[2,1.8]],10,83)],58,100),
+ track(45,arp(tensionChords,5,[[0,0,.3],[1,1.5,.25],[0,2,.3],[2,3.5,.25],[1,4,.25]],78),84,94),
+ track(48,chords(tensionChords,5,4.75,56),48,83),
+ track(47,tensionChords.flatMap((c,i)=>[note(c[0],i*5,.48,80),note(c[0],i*5+3,.45,66)]),64,85)
+],'Uneven 5/4, dissonance, low strings and anticipatory timpani');
+// Rhythmic diminution and stronger brass: battle motif is a call, not an added layer.
+const battleChords=[['D2','A2','F3'],['Bb2','F3','D4'],['G2','D3','Bb3'],['A2','E3','C#4'],['D2','A2','F3'],['C2','G2','E3'],['Bb2','F3','D4'],['A2','E3','C#4']];
+const calls=[];
+for(let bar=0;bar<8;bar+=2){
+ const p=bar===6?['D4','E4','F4','A4','G4','E4','D4']:bar===4?['F4','G4','A4','C5','Bb4','G4','A4']:['D4','E4','F4','A4','G4','E4','D4'];
+ calls.push(...motif(p,[[.5,.44],[.5,.44],[1,.9],[1.5,1.3],[.5,.43],[.5,.42],[2.5,2.2]],bar*4,104));
+}
+score('battle',144,4,8,[
+ track(60,calls,47,108),
+ track(61,calls.filter((_,i)=>i%7===0||i%7===3||i%7===6).map(n=>({...n,note:({D4:'D3',A4:'A3',F4:'F3',C5:'C4',Bb4:'Bb3'}[n.note]??'D3'),velocity:94})),80,101),
+ track(48,arp(battleChords,4,Array.from({length:8},(_,i)=>[i%3,i*.5,.41]),82),66,94),
+ track(42,battleChords.flatMap((c,i)=>[note(c[0],i*4,.85,95),note(c[1],i*4+1,.82,83),note(c[0],i*4+2,1.7,96)]),35,94),
+ track(47,battleChords.flatMap((c,i)=>[note('D2',i*4,.38,110),note('A2',i*4+1.5,.25,88),note('D2',i*4+2,.38,104),note('A2',i*4+3.5,.25,95)]),64,110)
+],'144 BPM march, motif in brass, string ostinato and accented timpani');
+// Aftermath suspends the conflict, resolves minor into the original mode.
+score('aftermath',68,4,4,[
+ track(42,motif(['D4','F4','E4','A3','G3','E3','D3'],[[2,1.8],[1,.9],[1,.9],[3,2.6],[2,1.8],[2,1.8],[4,3.5]],0,70),48,99),
+ track(48,chords([['D3','A3','F4'],['Bb2','F3','D4'],['A2','E3','C#4'],['D3','A3','F#4']],4,3.7,53),76,82),
+ track(46,[note('D4',0,1.5,46),note('A3',4,1.5,48),note('E4',8,1.5,48),note('F#4',12,1.5,52),note('D5',14,1.65,46)],83,80)
+],'Slow aftermath, cello lament, Picardy resolution');
+// Edge-specific musical bridges, each a complete short phrase.
+const bridges=[
+ {id:'peace-tension',edge:'peace:tension',tempo:96,beatsPerBar:4,bars:1,tracks:[
+  track(73,[note('A5',0,.65,70),note('G5',.75,.65,66),note('F#5',1.5,.42,59),note('F5',2,.8,65),note('E5',3,.65,57)]),
+  track(42,[note('D3',0,1.8,52),note('Eb3',2,1.8,73)],58),track(45,[note('A2',2,.3,68),note('D3',3,.32,78)],78)]},
+ {id:'tension-battle',edge:'tension:battle',tempo:120,beatsPerBar:4,bars:1,tracks:[
+  track(42,[note('D3',0,.4,78),note('F3',.5,.4,84),note('G3',1,.4,89),note('A3',1.5,.4,94),note('C#4',2,.85,100),note('A3',3,.7,102)]),
+  track(60,[note('D4',2,.4,94),note('F4',2.5,.4,101),note('A4',3,.85,108)],52),
+  track(47,[0,1,2,2.5,3,3.5].map((t,i)=>note('D2',t,.2,72+i*7)),64)]},
+ {id:'battle-aftermath',edge:'battle:aftermath',tempo:96,beatsPerBar:4,bars:1,tracks:[
+  track(60,[note('A4',0,.45,102),note('F4',.5,.45,94),note('D4',1,.85,80)]),
+  track(47,[note('D2',0,.45,100),note('D2',1,.6,72)]),
+  track(42,[note('D3',1.5,1.2,68),note('A3',3,.85,58)],48),
+  track(48,[note('D3',2,1.8,55),note('F3',2,1.8,55),note('A3',2,1.8,55)],78)]},
+ {id:'aftermath-peace',edge:'aftermath:peace',tempo:72,beatsPerBar:3,bars:1,tracks:[
+  track(42,[note('D3',0,1.4,55),note('A3',1.5,1.35,53)],47),
+  track(46,[note('D4',0,.7,54),note('A4',.75,.65,60),note('F#4',1.5,.65,64),note('E4',2.25,.6,60)],80),
+  track(73,[note('F#5',1.5,.65,60),note('E5',2.25,.6,64)],52)]}
+].map(s=>({...s,duration:60/s.tempo*s.beatsPerBar*s.bars}));
+const stingers=[
+ {id:'victory',tempo:120,beatsPerBar:4,bars:1,tracks:[track(60,[note('D4',0,.42,98),note('F#4',.5,.42,104),note('A4',1,.85,108),note('D5',2,1.7,103)]),track(48,[note('D3',2,1.7,76),note('F#3',2,1.7,76),note('A3',2,1.7,76)]),track(47,[note('D2',0,.35,88),note('D2',2,.65,96)])]},
+ {id:'defeat',tempo:80,beatsPerBar:4,bars:1,tracks:[track(42,[note('A3',0,.85,75),note('F3',1,.85,68),note('D3',2,1.7,57)]),track(48,[note('D3',0,3.6,48),note('Ab3',0,1.8,52),note('A3',2,1.6,47)])]},
+ {id:'discovery',tempo:108,beatsPerBar:3,bars:1,tracks:[track(46,[note('D4',0,.4,65),note('A4',.5,.4,73),note('E5',1,.4,77),note('F#5',1.5,1.2,83)]),track(73,[note('A5',1.5,1.1,68)],52)]}
+].map(s=>({...s,duration:60/s.tempo*s.beatsPerBar*s.bars}));
+const jobs=[...states,...bridges,...stingers].map(s=>({name:'score-'+s.id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks:s.tracks,output:'generated/'+s.id+'.wav',post:{normalizeDb:-3}}));
+// Partition each existing orchestration into a base and a state-specific detail stem.
+const partition={peace:[0,1],tension:[0,1],battle:[0,3],aftermath:[0,2]};
+const adaptive={};
+for(const s of states){
+ const baseIndices=partition[s.id];
+ const parts=[['base',s.tracks.filter((_,i)=>baseIndices.includes(i))],['detail',s.tracks.filter((_,i)=>!baseIndices.includes(i))]];
+ adaptive[s.id]={};
+ for(const [part,tracks] of parts){
+  const id='adaptive-'+s.id+'-'+part;
+  jobs.push({name:'score-'+id,type:'music',tempo:s.tempo,seed:42,synthGain:.5,tracks,output:'generated/'+id+'.wav',post:{normalizeDb:-6}});
+  adaptive[s.id][part]={id,duration:s.duration,file:'adaptive/'+s.id+'-'+part+'.wav'};
+ }
+ Object.assign(adaptive[s.id].detail,{threshold:.1,width:.8,gain:.55,base:0});
+}
+const graph={version:1,initial:'peace',states:Object.fromEntries(states.map(({tracks,...s})=>[s.id,{...s,file:'states/'+s.id+'.wav'}])),edges:{peace:['tension','battle'],tension:['peace','battle'],battle:['aftermath'],aftermath:['peace','tension','battle']}};
+graph.adaptive=adaptive;
+graph.bridges=Object.fromEntries(bridges.map(({tracks,edge,...s})=>[edge,{...s,file:'bridges/'+s.id+'.wav'}]));
+graph.stingers=Object.fromEntries(stingers.map(({tracks,...s})=>[s.id,{...s,file:'stingers/'+s.id+'.wav'}]));
+writeFileSync(path.join(root,'manifest.json'),JSON.stringify({version:2,jobs},null,2)+'\n');
+writeFileSync(path.join(root,'score-graph.json'),JSON.stringify(graph,null,2)+'\n');

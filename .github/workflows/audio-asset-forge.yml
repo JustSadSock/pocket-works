@@ -11,12 +11,26 @@ on:
     paths:
       - ".github/workflows/audio-asset-forge.yml"
       - "tools/audio-forge/**"
+      - "shared/capabilities/sound-family.js"
+      - "shared/capabilities/spatial-audio.js"
+      - "shared/capabilities/continuous-audio.js"
+      - "shared/capabilities/virtual-audio.js"
+      - "shared/capabilities/score-director.js"
+      - "shared/capabilities/music-ducking.js"
+      - "shared/capabilities/score-pack.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
   pull_request:
     paths:
       - ".github/workflows/audio-asset-forge.yml"
       - "tools/audio-forge/**"
+      - "shared/capabilities/sound-family.js"
+      - "shared/capabilities/spatial-audio.js"
+      - "shared/capabilities/continuous-audio.js"
+      - "shared/capabilities/virtual-audio.js"
+      - "shared/capabilities/score-director.js"
+      - "shared/capabilities/music-ducking.js"
+      - "shared/capabilities/score-pack.js"
       - "docs/AUDIO-FORGE.md"
       - "apps/*/audio-forge/**"
 
@@ -86,11 +100,1222 @@ jobs:
           done < .audio-forge-generated.txt
           test "$count" -eq 3
 
+      - name: Test Sound Forge foundation
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Isolate each test file; a stalled process must identify itself before the job timeout.
+          for suite in tools/audio-forge/foundation.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/expression.test.mjs tools/audio-forge/spatial-audio.test.mjs tools/audio-forge/continuous-audio.test.mjs tools/audio-forge/virtual-audio.test.mjs tools/audio-forge/score-director.test.mjs tools/audio-forge/music-ducking.test.mjs tools/audio-forge/score-pack.test.mjs tools/audio-forge/banners-adapter.test.mjs tools/audio-forge/plucked-instruments.test.mjs tools/audio-forge/wind-instruments.test.mjs tools/audio-forge/bowed-instruments.test.mjs tools/audio-forge/orchestral-instruments.test.mjs tools/audio-forge/ensemble-room.test.mjs tools/audio-forge/recorded-instruments.test.mjs tools/audio-forge/recorded-sustain.test.mjs tools/audio-forge/recorded-articulations.test.mjs tools/audio-forge/recorded-legato.test.mjs tools/audio-forge/recorded-dynamics.test.mjs tools/audio-forge/recorded-performance.test.mjs tools/audio-forge/recorded-expression.test.mjs tools/audio-forge/recorded-phrasing.test.mjs tools/audio-forge/recorded-release.test.mjs tools/audio-forge/recorded-transients.test.mjs tools/audio-forge/recorded-ensemble.test.mjs tools/audio-forge/merge-recorded-libraries.test.mjs; do
+            echo "::group::Foundation suite: $suite"
+            status=0
+            timeout --signal=TERM --kill-after=5s 90s node --test --test-timeout=60000 "$suite" || status=$?
+            echo "::endgroup::"
+            if (( status != 0 )); then
+              echo "::error file=$suite::Foundation suite exited $status (124/137 indicate a process timeout)"
+              exit "$status"
+            fi
+          done
+          rm -rf .audio-forge-foundation
+          mkdir -p .audio-forge-foundation
+          node tools/audio-forge/run_manifest.mjs --manifest tools/audio-forge/foundation-smoke.json --base .audio-forge-foundation
+          count=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            soxi "$file"
+            count=$((count + 1))
+          done < .audio-forge-generated.txt
+          test "$count" -eq 23
+
+      - name: Test sample library and hybrid engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tools/audio-forge/sample-library.test.mjs tools/audio-forge/persistent-library.test.mjs
+          rm -rf .audio-forge-hybrid
+          node tools/audio-forge/hybrid-smoke.mjs .audio-forge-hybrid
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-forge-hybrid/manifest.json --base .audio-forge-hybrid
+          count=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            soxi "$file"
+            count=$((count + 1))
+          done < .audio-forge-generated.txt
+          test "$count" -eq 5
+
+      - name: Upload hybrid audio
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-hybrid-${{ github.run_id }}
+          path: |
+            .audio-forge-hybrid/generated/
+            .audio-forge-hybrid/manifest.json
+            .audio-forge-hybrid/fixture.wav
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render continuous audio audition
+        run: node tools/audio-forge/runtime-audition.mjs .audio-runtime-audition
+
+      - name: Upload continuous audio audition
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-continuous-${{ github.run_id }}
+          path: .audio-runtime-audition/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload foundation audio
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-foundation-${{ github.run_id }}
+          path: .audio-forge-foundation/generated/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload smoke audio
         uses: actions/upload-artifact@v4
         with:
           name: audio-asset-forge-smoke-${{ github.run_id }}
           path: .audio-forge-smoke/generated/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render musical identity states
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/score-states.mjs .audio-score-states
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-score-states/manifest.json --base .audio-score-states
+          node tools/audio-forge/finalize-score.mjs .audio-score-states
+          test "$(find .audio-score-states/states -name '*.wav' | wc -l)" -eq 4
+          test -s .audio-score-states/state-journey.wav
+          test -s .audio-score-states/bridge-journey.wav
+          test -s .audio-score-states/adaptive-journey.wav
+          test "$(find .audio-score-states/adaptive -name '*.wav' | wc -l)" -eq 8
+          test "$(find .audio-score-states/bridges -name '*.wav' | wc -l)" -eq 4
+          test "$(find .audio-score-states/stingers -name '*.wav' | wc -l)" -eq 3
+
+      - name: Upload musical identity auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-score-states-${{ github.run_id }}
+          path: |
+            .audio-score-states/states/
+            .audio-score-states/state-journey.wav
+            .audio-score-states/bridges/
+            .audio-score-states/stingers/
+            .audio-score-states/bridge-journey.wav
+            .audio-score-states/adaptive/
+            .audio-score-states/adaptive-journey.wav
+            .audio-score-states/score-graph.json
+            .audio-score-states/score-metrics.json
+            .audio-score-states/manifest.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render expressive instrument and material auditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/artistic-lab.mjs .audio-artistic-lab
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-artistic-lab/manifest.json --base .audio-artistic-lab
+          node tools/audio-forge/artistic-catalog.mjs .audio-artistic-lab
+          test "$(find .audio-artistic-lab/generated/music -name '*.wav' | wc -l)" -eq 6
+          test "$(find .audio-artistic-lab/generated/effects -name '*.wav' | wc -l)" -eq 24
+
+      - name: Upload artistic auditions and research library
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-artistic-lab-${{ github.run_id }}
+          path: .audio-artistic-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render original plucked instrument laboratory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/string-lab.mjs .audio-string-lab
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-string-lab/manifest.json --base .audio-string-lab
+          node tools/audio-forge/finalize-string-lab.mjs .audio-string-lab
+          test "$(find .audio-string-lab/notes -name '*.wav' | wc -l)" -eq 18
+          test -s .audio-string-lab/river-crossing-AB.wav
+
+      - name: Upload original string instrument auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-string-lab-${{ github.run_id }}
+          path: .audio-string-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render continuous wind instrument laboratory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/wind-lab.mjs .audio-wind-lab
+          test "$(find .audio-wind-lab/notes -name '*.wav' | wc -l)" -eq 12
+          test -s .audio-wind-lab/flute-AB.wav
+          test -s .audio-wind-lab/reed-AB.wav
+          test -s .audio-wind-lab/hill-path.wav
+
+      - name: Upload continuous wind instrument auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-wind-lab-${{ github.run_id }}
+          path: .audio-wind-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render bowed instrument laboratory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/bowed-lab.mjs .audio-bowed-lab
+          test "$(find .audio-bowed-lab/notes -name '*.wav' | wc -l)" -eq 12
+          test -s .audio-bowed-lab/violin-AB.wav
+          test -s .audio-bowed-lab/cello-AB.wav
+          test -s .audio-bowed-lab/winter-banner.wav
+
+      - name: Upload bowed instrument auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-bowed-lab-${{ github.run_id }}
+          path: .audio-bowed-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render brass percussion and ensemble laboratory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/orchestra-lab.mjs .audio-orchestra-lab
+          test "$(find .audio-orchestra-lab/notes -name '*.wav' | wc -l)" -eq 28
+          test "$(find .audio-orchestra-lab/stems -name '*.wav' | wc -l)" -eq 5
+          test -s .audio-orchestra-lab/horn-AB.wav
+          test -s .audio-orchestra-lab/trumpet-AB.wav
+          test -s .audio-orchestra-lab/march-of-the-vale.wav
+
+      - name: Upload orchestral laboratory auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-orchestra-lab-${{ github.run_id }}
+          path: .audio-orchestra-lab/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Render matched expressive ensemble and room auditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/orchestra-lab.mjs .audio-orchestra-expressive --expressive-ensemble
+          node tools/audio-forge/ensemble-room-lab.mjs .audio-ensemble-room .audio-orchestra-lab .audio-orchestra-expressive
+          test "$(find .audio-ensemble-room -maxdepth 1 -name '*.wav' | wc -l)" -eq 9
+          test "$(find .audio-orchestra-expressive/stems -name '*.wav' | wc -l)" -eq 5
+
+      - name: Upload matched ensemble acoustics auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-ensemble-room-${{ github.run_id }}
+          path: .audio-ensemble-room/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  recorded-timbre-audition:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install audio decoder
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Microsoft’s preinstalled runner feed is unrelated to SoX and may
+          # return 403. Restrict package metadata refresh to Ubuntu’s signed feed.
+          sudo apt-get update -o Acquire::Retries=3 -o Dir::Etc::sourcelist="sources.list.d/ubuntu.sources" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0"
+          sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+      - name: Import pinned original recordings and render matched timbre studies
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-timbre-lab.mjs .audio-recorded-timbre
+          test "$(find .audio-recorded-timbre/sources -type f | wc -l)" -eq 11
+          test "$(find .audio-recorded-timbre/auditions -name '*.wav' | wc -l)" -eq 10
+          test -s .audio-recorded-timbre/auditions/river-meadow.wav
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recorded-timbre-${{ github.run_id }}
+          path: .audio-recorded-timbre/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Measure and render extended recorded sustains
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-sustain-lab.mjs .audio-recorded-timbre .audio-recorded-sustain
+          test "$(find .audio-recorded-sustain -name '*.wav' | wc -l)" -eq 14
+          test -s .audio-recorded-sustain/flute-sustain-AB.wav
+          test -s .audio-recorded-sustain/violin-sustain-AB.wav
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recorded-sustain-${{ github.run_id }}
+          path: .audio-recorded-sustain/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Import recorded dynamic layers and articulation takes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-articulation-lab.mjs .audio-recorded-articulations .audio-recorded-timbre
+          test "$(find .audio-recorded-articulations/sources -name '*.wav' | wc -l)" -eq 7
+          test "$(find .audio-recorded-articulations -maxdepth 1 -name '*.wav' | wc -l)" -eq 10
+          test -s .audio-recorded-articulations/violin-dynamics-AB.wav
+          test -s .audio-recorded-articulations/flute-round-robin-AB.wav
+          test -s .audio-recorded-articulations/flute-articulation-AB.wav
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recorded-articulations-${{ github.run_id }}
+          path: .audio-recorded-articulations/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Import expanded recorded bank and render connected phrases
+        id: recorded_legato
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-legato-lab.mjs .audio-recorded-legato .audio-recorded-articulations
+          test "$(find .audio-recorded-legato/sources -name '*.wav' | wc -l)" -eq 12
+          test "$(find .audio-recorded-legato -maxdepth 1 -name '*.wav' | wc -l)" -eq 13
+          test -s .audio-recorded-legato/recorded-quartet-study.wav
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recorded-legato-${{ github.run_id }}
+          path: .audio-recorded-legato/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Import brass layers and render continuous recorded dynamics
+        id: recorded_dynamics
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-dynamics-lab.mjs .audio-recorded-dynamics .audio-recorded-legato
+          test "$(find .audio-recorded-dynamics/sources -name '*.wav' | wc -l)" -eq 12
+          test "$(find .audio-recorded-dynamics -maxdepth 1 -name '*.wav' | wc -l)" -eq 19
+          test -s .audio-recorded-dynamics/dawn-procession-AB.wav
+          test -s .audio-recorded-dynamics/dawn-procession-chamber.wav
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-recorded-dynamics-${{ github.run_id }}
+          path: .audio-recorded-dynamics/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve recorded dynamics pitch rejection evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-dynamics-rejection-${{ github.run_id }}
+          path: |
+            .audio-recorded-dynamics/pitch-rejection.json
+            .audio-recorded-dynamics/sources/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Render unified six-instrument recorded ensemble
+        id: recorded_ensemble
+        if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-ensemble-lab.mjs .audio-recorded-ensemble .audio-recorded-dynamics
+          test "$(find .audio-recorded-ensemble -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+          test -s .audio-recorded-ensemble/evening-standard-AB.wav
+          test "$(find .audio-recorded-ensemble/expanded -maxdepth 1 -name '*.wav' | wc -l)" -eq 11
+          test "$(find .audio-recorded-ensemble -type f -name '*.wav' | wc -l)" -eq 17
+          test -s .audio-recorded-ensemble/expanded/evening-standard-room-ABC.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.recorded_ensemble.outcome == 'success' }}
+        with:
+          name: sound-forge-recorded-ensemble-${{ github.run_id }}
+          path: .audio-recorded-ensemble/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Import and render unified recorded performance
+        id: recorded_performance
+        if: ${{ !cancelled() && steps.recorded_legato.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-performance-lab.mjs .audio-recorded-performance .audio-recorded-legato
+          test "$(find .audio-recorded-performance/sources -name '*.wav' | wc -l)" -eq 8
+          test "$(find .audio-recorded-performance -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
+          test -s .audio-recorded-performance/violin-articulation-suite.wav
+          test "$(find .audio-recorded-performance/expression -maxdepth 1 -name '*.wav' | wc -l)" -eq 4
+          test -s .audio-recorded-performance/expression/flute-expression-AB.wav
+          test -s .audio-recorded-performance/expression/flute-expression-ornamented.wav
+          test "$(find .audio-recorded-performance/phrasing -maxdepth 1 -name '*.wav' | wc -l)" -eq 13
+          test -s .audio-recorded-performance/phrasing/violin-bow-phrase-AB.wav
+          test -s .audio-recorded-performance/phrasing/flute-breath-phrase-AB.wav
+          test -s .audio-recorded-performance/phrasing/ensemble-phrase-AB.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.recorded_performance.outcome == 'success' }}
+        with:
+          name: sound-forge-recorded-performance-${{ github.run_id }}
+          path: .audio-recorded-performance/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve unified articulation rejection evidence
+        if: ${{ !cancelled() && steps.recorded_performance.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-performance-rejection-${{ github.run_id }}
+          path: |
+            .audio-recorded-performance/articulation-admission.json
+            .audio-recorded-performance/candidates/
+            .audio-recorded-performance/sources/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Render natural recorded endings from complete verified samples
+        id: recorded_release
+        if: ${{ !cancelled() && steps.recorded_performance.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/recorded-release-lab.mjs .audio-recorded-release .audio-recorded-performance
+          test "$(find .audio-recorded-release -maxdepth 1 -name '*.wav' | wc -l)" -eq 19
+          test -s .audio-recorded-release/afterglow-quartet-AB.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.recorded_release.outcome == 'success' }}
+        with:
+          name: sound-forge-recorded-release-${{ github.run_id }}
+          path: .audio-recorded-release/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Import pinned VCSL dedicated release assets and render ocarina
+        id: dedicated_release
+        if: ${{ !cancelled() && steps.recorded_release.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/dedicated-release-lab.mjs .audio-dedicated-release
+          test "$(find .audio-dedicated-release/sources -name '*.wav' | wc -l)" -eq 8
+          test "$(find .audio-dedicated-release -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+          test -s .audio-dedicated-release/clay-and-wind-AB.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.dedicated_release.outcome == 'success' }}
+        with:
+          name: sound-forge-dedicated-release-${{ github.run_id }}
+          path: .audio-dedicated-release/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.dedicated_release.outcome == 'failure' }}
+        with:
+          name: sound-forge-dedicated-release-rejected-${{ github.run_id }}
+          path: .audio-dedicated-release/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Qualify historical instrument bank and render Lantern Road
+        id: historical_expansion
+        if: ${{ !cancelled() && steps.dedicated_release.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-expansion-lab.mjs --self-test
+          node tools/audio-forge/historical-expansion-lab.mjs .audio-historical-expansion .audio-dedicated-release
+          test "$(find .audio-historical-expansion/sources -name '*.wav' | wc -l)" -eq 17
+          test "$(find .audio-historical-expansion -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+          test -s .audio-historical-expansion/lantern-road.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-expansion-${{ github.run_id }}
+          path: .audio-historical-expansion/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-rejected-${{ github.run_id }}
+          path: .audio-historical-expansion/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve Lantern Road golden masters and render historical spatial ensemble
+        id: historical_spatial
+        if: ${{ !cancelled() && steps.historical_expansion.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-spatial-lab.mjs --self-test
+          node tools/audio-forge/historical-spatial-lab.mjs .audio-historical-expansion .audio-historical-spatial
+          test "$(find .audio-historical-spatial -maxdepth 1 -name '*.wav' | wc -l)" -eq 5
+          test "$(find .audio-historical-spatial/library/objects -name '*.wav' | wc -l)" -eq 17
+          test -s .audio-historical-spatial/library/catalog.sqlite
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_spatial.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-spatial-${{ github.run_id }}
+          path: .audio-historical-spatial/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_spatial.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-spatial-rejected-${{ github.run_id }}
+          path: .audio-historical-spatial/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Expand historical bank with alto recorder and tambourine
+        id: historical_expansion_ii
+        if: ${{ !cancelled() && steps.historical_spatial.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-expansion-ii.mjs .audio-historical-expansion-ii .audio-historical-expansion .audio-historical-spatial
+          test "$(find .audio-historical-expansion-ii/sources -name '*.wav' | wc -l)" -eq 11
+          test "$(find .audio-historical-expansion-ii/library/objects -name '*.wav' | wc -l)" -eq 28
+          test "$(find .audio-historical-expansion-ii -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
+          test -s .audio-historical-expansion-ii/market-at-dusk.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion_ii.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-expansion-ii-${{ github.run_id }}
+          path: .audio-historical-expansion-ii/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expansion_ii.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-ii-rejected-${{ github.run_id }}
+          path: .audio-historical-expansion-ii/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve Market at Dusk originals and render balanced comparison
+        id: historical_mix
+        if: ${{ !cancelled() && steps.historical_expansion_ii.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-mix-lab.mjs --self-test
+          node tools/audio-forge/historical-mix-lab.mjs .audio-historical-expansion-ii .audio-historical-mix
+          test "$(find .audio-historical-mix -maxdepth 1 -name '*.wav' | wc -l)" -eq 7
+          test -s .audio-historical-mix/market-at-dusk-mix-AB.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_mix.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-mix-${{ github.run_id }}
+          path: .audio-historical-mix/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Investigate psaltery and Renaissance organ pitch admission
+        id: historical_pitch
+        if: ${{ !cancelled() && steps.historical_mix.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/historical-pitch-lab.mjs --self-test
+          node tools/audio-forge/historical-pitch-lab.mjs .audio-historical-pitch .audio-historical-expansion-ii
+          test "$(find .audio-historical-pitch/sources -name '*.wav' | wc -l)" -eq 18
+          test "$(find .audio-historical-pitch -maxdepth 1 -name '*-native-probe.wav' | wc -l)" -eq 6
+          test -s .audio-historical-pitch/library/catalog.sqlite
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_pitch.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-pitch-${{ github.run_id }}
+          path: .audio-historical-pitch/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_pitch.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-pitch-rejected-${{ github.run_id }}
+          path: .audio-historical-pitch/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Recover psaltery harmonic roots and render Cloister Procession
+        id: psaltery_harmonics
+        if: ${{ !cancelled() && steps.historical_pitch.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/psaltery-harmonics"
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" -m pip install --disable-pip-version-check numpy==2.2.6
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/psaltery-harmonics.py .audio-historical-pitch .audio-psaltery-harmonics
+          test "$(find .audio-psaltery-harmonics/library/objects -name '*.wav' | wc -l)" -eq 46
+          test "$(find .audio-psaltery-harmonics -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' }}
+        with:
+          name: sound-forge-psaltery-harmonics-${{ github.run_id }}
+          path: .audio-psaltery-harmonics/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'failure' }}
+        with:
+          name: sound-forge-psaltery-harmonics-rejected-${{ github.run_id }}
+          path: .audio-psaltery-harmonics/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Render seven-player historical consort in native stereo
+        id: historical_consort
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-consort.py .audio-psaltery-harmonics .audio-historical-consort
+          test "$(find .audio-historical-consort -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
+          test -s .audio-historical-consort/pilgrims-crossing.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_consort.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-consort-${{ github.run_id }}
+          path: .audio-historical-consort/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve Pilgrims Crossing and qualify stereo balance
+        id: historical_consort_stereo
+        if: ${{ !cancelled() && steps.historical_consort.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-consort-stereo.py .audio-historical-consort .audio-historical-consort-stereo
+          test "$(find .audio-historical-consort-stereo -maxdepth 1 -name '*.wav' | wc -l)" -eq 10
+          test -s .audio-historical-consort-stereo/pilgrims-crossing-stereo-AB.wav
+          test -s .audio-historical-consort-stereo/pilgrims-crossing-mono.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_consort_stereo.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-consort-stereo-${{ github.run_id }}
+          path: .audio-historical-consort-stereo/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_consort_stereo.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-consort-stereo-rejected-${{ github.run_id }}
+          path: .audio-historical-consort-stereo/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Render note-level historical expression without replacing stereo masters
+        id: historical_expression
+        if: ${{ !cancelled() && steps.historical_consort_stereo.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-expression.py .audio-psaltery-harmonics .audio-historical-consort .audio-historical-consort-stereo .audio-historical-expression
+          test "$(find .audio-historical-expression -maxdepth 1 -name '*.wav' | wc -l)" -eq 9
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_expression.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-expression-${{ github.run_id }}
+          path: .audio-historical-expression/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - name: Qualify real recorded vocal intervals and investigate recorder phrase
+        id: historical_intervals
+        if: ${{ !cancelled() && steps.historical_expression.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical-intervals.py .audio-historical-intervals
+          test "$(find .audio-historical-intervals/sources -name 'voice-*.wav' | wc -l)" -eq 6
+          test -s .audio-historical-intervals/recorded-interval-reel.wav
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_intervals.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-intervals-${{ github.run_id }}
+          path: .audio-historical-intervals/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_intervals.outcome == 'failure' }}
+        with:
+          name: sound-forge-historical-intervals-rejected-${{ github.run_id }}
+          path: .audio-historical-intervals/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Acquire and qualify pinned CC0 low strings and orchestral percussion
+        id: foundation_expansion
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' && steps.recorded_dynamics.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/recorded-foundation-expansion.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/recorded-foundation-expansion.py .audio-foundation-expansion
+          test "$(find .audio-foundation-expansion/library/objects -name '*.wav' | wc -l)" -eq 24
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('.audio-foundation-expansion')
+          idx=json.loads((p/'library/index.json').read_text())
+          report=json.loads((p/'metrics.json').read_text())
+          assert idx['approval']=='research-only' and len(idx['entries'])==24
+          assert report['doubleBassZones']==14 and report['percussionZones']==10
+          assert report['doubleBassCoverage']==[28,30,33,37,40,44,47]
+          assert report['rights']['doubleBassLicense']=='CC0-1.0' and report['rights']['vcslLicense']=='CC0-1.0'
+          assert (p/'rights/double-bass-manifest.json').is_file() and (p/'rights/VCSL-LICENSE').is_file()
+          for e in idx['entries']:
+              f=p/'library'/e['path']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              assert e['license']=='CC0-1.0' and e['approval']=='research-only'
+          for e in report['receipts']:
+              if 'expectedMidi' in e: assert abs(e['expectedMidi']-e['measuredMidi'])<=.75
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.foundation_expansion.outcome == 'success' }}
+        with:
+          name: sound-forge-foundation-expansion-${{ github.run_id }}
+          path: .audio-foundation-expansion/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Render historical score-first composition The Last Pilgrim
+        id: historical_score
+        if: ${{ !cancelled() && steps.psaltery_harmonics.outcome == 'success' && steps.recorded_dynamics.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" -m pip install --disable-pip-version-check scipy==1.15.3
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical_score.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical_score.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-historical-score
+          test "$(find .audio-historical-score -maxdepth 1 -name '*.wav' | wc -l)" -eq 7
+          test -s .audio-historical-score/score.json
+          test -s .audio-historical-score/metrics.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-score-${{ github.run_id }}
+          path: .audio-historical-score/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Compare score-aware historical orchestration and dynamic arc
+        id: historical_score_review
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/historical_score_review.py .audio-historical-score .audio-historical-score-review
+          test "$(find .audio-historical-score-review -maxdepth 1 -name '*.wav' | wc -l)" -eq 3
+          test -s .audio-historical-score-review/review.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.historical_score_review.outcome == 'success' }}
+        with:
+          name: sound-forge-historical-score-review-${{ github.run_id }}
+          path: .audio-historical-score-review/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Qualify connected acoustic phrasing and recorded forte layers
+        id: phrase_performance
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' && steps.recorded_dynamics.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/phrase_performance.py .audio-recorded-dynamics .audio-historical-score .audio-phrase-performance
+          test "$(find .audio-phrase-performance -maxdepth 1 -name '*.wav' | wc -l)" -eq 3
+          test -s .audio-phrase-performance/metrics.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.phrase_performance.outcome == 'success' }}
+        with:
+          name: sound-forge-phrase-performance-${{ github.run_id }}
+          path: .audio-phrase-performance/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Render original compound-meter acoustic court dance
+        id: court_dance
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/court_dance.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/court_dance.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-court-dance
+          test "$(find .audio-court-dance -maxdepth 1 -name '*.wav' | wc -l)" -eq 8
+          test -s .audio-court-dance/score.json
+          test -s .audio-court-dance/metrics.json
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib,wave
+          import numpy as np
+          p=pathlib.Path('.audio-court-dance')
+          m=json.loads((p/'metrics.json').read_text())
+          assert len(m['receipts'])==489 and len({r['sha256'] for r in m['receipts']})==18
+          def read(e):
+              f=p/e['file']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,5904000)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          master=read(m['metrics'][0]); acc=np.zeros_like(master)
+          for e in m['metrics'][1:]: acc+=read(e)
+          assert np.max(np.abs(acc-master))<=4 and np.max(np.abs(master))<32767
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.court_dance.outcome == 'success' }}
+        with:
+          name: sound-forge-court-dance-${{ github.run_id }}
+          path: .audio-court-dance/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Render original recorded-instrument victory anthem
+        id: victory_score
+        if: ${{ !cancelled() && steps.historical_score.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/victory_score.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-victory-score
+          test "$(find .audio-victory-score -maxdepth 1 -name '*.wav' | wc -l)" -eq 6
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib,wave
+          import numpy as np
+          p=pathlib.Path('.audio-victory-score')
+          m=json.loads((p/'metrics.json').read_text())
+          assert m['score']['bars']==48 and len(m['receipts'])==1074
+          assert m['sourceCount']==32 and m['recordedIntervalCoverage']==0
+          def read(e):
+              f=p/e['file']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,5312000)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          master=read(m['metrics'][0]); acc=np.zeros_like(master)
+          for e in m['metrics'][1:]: acc+=read(e)
+          assert np.max(np.abs(acc-master))<=3 and np.max(np.abs(master))<32767
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.victory_score.outcome == 'success' }}
+        with:
+          name: sound-forge-victory-score-${{ github.run_id }}
+          path: .audio-victory-score/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Compose and qualify The Weight of a Crown from frozen direction
+        id: weight_of_crown
+        if: ${{ !cancelled() && steps.foundation_expansion.outcome == 'success' && steps.historical_score.outcome == 'success' && steps.victory_score.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/weight-of-crown.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/weight-of-crown.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-weight-of-crown
+          test "$(find .audio-weight-of-crown -maxdepth 1 -name '*.wav' | wc -l)" -eq 7
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib,wave
+          import numpy as np
+          p=pathlib.Path('.audio-weight-of-crown')
+          m=json.loads((p/'metrics.json').read_text())
+          s=m['score']
+          assert s['mode']=='E Phrygian' and s['directionBrief']=='the-weight-of-a-crown-v2' and s['totalTicks']==6336 and s['bars']==56
+          assert [x['meter'] for x in s['sections']]==[[5,4],[5,4],[3,4],[5,4],[5,4],[5,4]]
+          assert len(s['events'])>700 and m['sourceCount']>=15
+          assert m['approximateCrossfades']>100 and m['loopedSustainEvents']>0 and m['recordedIntervalCoverage']==0
+          assert m['roomProcessor']=='SoX algorithmic room reverb' and len(m['roomSettings'])==6
+          assert m['pcmReconstructionError']==0 and m['monoPeak']<1 and m['stereoWidth']>0
+          def read(e):
+              f=p/e['file']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,8073600)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          master=read(m['metrics'][0]);acc=np.zeros_like(master)
+          for e in m['metrics'][1:]:acc+=read(e)
+          assert np.max(np.abs(acc-master))==0 and np.max(np.abs(master))<32768
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.weight_of_crown.outcome == 'success' }}
+        with:
+          name: sound-forge-weight-of-a-crown-${{ github.run_id }}
+          path: .audio-weight-of-crown/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify melodic hierarchy and render Crown thematic reduction
+        id: crown_coherent
+        if: ${{ !cancelled() && steps.foundation_expansion.outcome == 'success' && steps.weight_of_crown.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-coherent.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-coherent.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-crown-coherent
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import hashlib,json,pathlib,wave
+          import numpy as np
+          p=pathlib.Path('.audio-crown-coherent')
+          m=json.loads((p/'metrics.json').read_text())
+          assert m['version']=='v3-thematic-reduction' and m['bars']==24 and m['seconds']==76.5
+          assert len(m['events'])==153 and len(m['metrics'])==7
+          assert m['recordedIntervalCoverage']==0
+          def read(e):
+              f=p/e['file']
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,3672000)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          master=read(m['metrics'][0]);acc=np.zeros_like(master)
+          for e in m['metrics'][1:]:acc+=read(e)
+          assert np.max(np.abs(acc-master))==0 and np.max(np.abs(master))<32768
+          rms={e['file']:e['rms'] for e in m['metrics']}
+          assert rms['crown-coherent-lead.wav']>2*rms['crown-coherent-bass.wav']
+          assert rms['crown-coherent-lead.wav']>3*rms['crown-coherent-harmony.wav']
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.crown_coherent.outcome == 'success' }}
+        with:
+          name: sound-forge-crown-coherent-${{ github.run_id }}
+          path: .audio-crown-coherent/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Render Crown v4 musical hierarchy with immutable previous versions
+        id: crown_v4
+        if: ${{ !cancelled() && steps.crown_coherent.outcome == 'success' && steps.foundation_expansion.outcome == 'success' }}
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-v4.py --self-test
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-v4.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-crown-v4
+          test "$(find .audio-crown-v4 -maxdepth 1 -name '*.wav' | wc -l)" -eq 7
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" tools/audio-forge/crown-v4.py .audio-recorded-dynamics .audio-psaltery-harmonics .audio-foundation-expansion .audio-crown-v4-repeat
+          printf '%s\n' \
+            '737966ed1565e44627d904f8cff3cf00b90b3cd2f8a40027db3573be13463110  .audio-victory-score/the-crown-endures.wav' \
+            'a10df438e1e3370ae97a7e2421c1989e47872ba057e68486a88104d117dda076  .audio-weight-of-crown/the-weight-of-a-crown.wav' \
+            '1639b38815de7914940c1b8ab0faea0d231f48a72869c108c750b005a739f49f  .audio-crown-coherent/crown-coherent-master.wav' | sha256sum --check
+          "$RUNNER_TEMP/psaltery-harmonics/bin/python" - <<'PY'
+          import json,pathlib,hashlib,wave,numpy as np
+          p=pathlib.Path('.audio-crown-v4');m=json.loads((p/'metrics.json').read_text());s=json.loads((p/'score.json').read_text())
+          assert m['version']=='v4-oath-and-price' and m['seconds']==126.5 and m['bars']==40 and len(s['events'])==298
+          assert m['recordedIntervalCoverage']==0 and m['pcmError']==0
+          assert m['activeRoles']['bass']['activeRms']>.4*m['activeRoles']['lead']['activeRms']
+          assert m['activeRoles']['answer']['activeSeconds']>5 and m['monoLossDb']>-.5
+          assert len(json.loads((p/'sources.json').read_text()))==m['sourceCount']
+          chords={'Em':{4,7,11},'F':{5,9,0},'C':{0,4,7},'Am':{9,0,4},'G':{7,11,2},'Dm':{2,5,9}}
+          assert all(e['midi']%12 in chords[s['harmony'][e['bar']]] for e in s['events'] if e['role'] in ('bass','harmony','answer','pluck'))
+          lead=[e for e in s['events'] if e['role']=='lead' and e['beat'] in (0,3)]
+          assert len(lead)==63 and sum(e['midi']%12 in chords[s['harmony'][e['bar']]] for e in lead)==60
+          def read(e):
+              f=p/e['file'];assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']==hashlib.sha256((pathlib.Path('.audio-crown-v4-repeat')/e['file']).read_bytes()).hexdigest()
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,6072000)
+                  return np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+          a=read(m['metrics'][0]);acc=np.zeros_like(a)
+          for e in m['metrics'][1:]:acc+=read(e)
+          assert np.max(np.abs(a-acc))==0 and np.max(np.abs(a))<32768
+          PY
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.crown_v4.outcome == 'success' }}
+        with:
+          name: sound-forge-crown-v4-${{ github.run_id }}
+          path: .audio-crown-v4/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Merge verified recorded instrument libraries
+        id: recorded_library_merge
+        if: ${{ !cancelled() && steps.recorded_dynamics.outcome == 'success' && steps.recorded_performance.outcome == 'success' && steps.recorded_ensemble.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/merge-recorded-libraries.mjs .audio-recorded-unified-library performance=.audio-recorded-performance/library articulations=.audio-recorded-articulations/library dynamics=.audio-recorded-dynamics/library
+          test "$(node -e "const x=require('./.audio-recorded-unified-library/index.json');process.stdout.write(String(x.entries.length))")" -eq 47
+          test -s .audio-recorded-unified-library/catalog.sqlite
+          test -s .audio-recorded-unified-library/merge-report.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.recorded_library_merge.outcome == 'success' }}
+        with:
+          name: sound-forge-unified-recorded-library-${{ github.run_id }}
+          path: .audio-recorded-unified-library/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  field-recording-audition:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install audio decoder
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+      - name: Import pinned recordings and render auditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/audio-forge/field-recordings.mjs .audio-forge-field
+          node tools/audio-forge/run_manifest.mjs --manifest .audio-forge-field/manifest.json --base .audio-forge-field
+          count=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            soxi "$file"
+            count=$((count + 1))
+          done < .audio-forge-generated.txt
+          test "$count" -eq 10
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-field-recordings-${{ github.run_id }}
+          path: |
+            .audio-forge-field/generated/
+            .audio-forge-field/objects/
+            .audio-forge-field/manifest.json
+            .audio-forge-field/catalog.sqlite
+          if-no-files-found: error
+          retention-days: 7
+
+  historical-soundscape:
+    needs: [recorded-timbre-audition, field-recording-audition]
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated audio tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends sox libsox-fmt-all
+          python3 -m venv "$RUNNER_TEMP/soundscape"
+          "$RUNNER_TEMP/soundscape/bin/pip" install numpy scipy
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-crown-v4-${{ github.run_id }}
+          path: .audio-crown-v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-foundation-expansion-${{ github.run_id }}
+          path: .audio-foundation-expansion
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-field-recordings-${{ github.run_id }}
+          path: .audio-forge-field
+      - name: Render and independently verify soundscape and deterministic repeat
+        shell: bash
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          for out in .audio-historical-slice .audio-historical-repeat; do
+            "$RUNNER_TEMP/soundscape/bin/python" tools/audio-forge/historical-soundscape.py .audio-forge-field .audio-foundation-expansion .audio-crown-v4/crown-v4-master.wav "$out"
+          done
+          "$RUNNER_TEMP/soundscape/bin/python" - <<'PY'
+          import pathlib,json,hashlib,wave,numpy as np
+          p=pathlib.Path('.audio-historical-slice');q=pathlib.Path('.audio-historical-repeat')
+          m=json.loads((p/'manifest.json').read_text())
+          assert m['sceneSeconds']==60 and m['peakVoices']==6 and m['dropped']>0 and m['cacheHits']>0 and m['pcmError']==0
+          assert m['musicSha256']==hashlib.sha256(pathlib.Path('.audio-crown-v4/crown-v4-master.wav').read_bytes()).hexdigest()
+          assert len(m['variants'])==18 and len({x['sha256'] for x in m['variants']})==18
+          for family in ('blade','shield','footstep'):
+              a=[x for x in m['variants'] if x['family']==family];assert len(a)==6 and len({x['context'] for x in a})==2
+          def read(e,sub=''):
+              f=p/sub/e['file'];assert hashlib.sha256(f.read_bytes()).hexdigest()==e['sha256']==hashlib.sha256((q/sub/e['file']).read_bytes()).hexdigest()
+              with wave.open(str(f),'rb') as w:
+                  assert (w.getframerate(),w.getnchannels(),w.getsampwidth(),w.getnframes())==(48000,2,2,e['frames'])
+                  x=np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+              assert np.max(np.abs(x))<32768 and np.any(x);return x
+          for e in m['variants']:read(e,'variants')
+          a=read(m['ambience']).reshape(-1,2);assert len(a)==1920000 and np.max(np.abs(a[0]-a[-1]))<=np.quantile(np.abs(np.diff(a,axis=0)),.99)+1
+          master=read(m['scene'][0]);acc=np.zeros_like(master)
+          for e in m['scene'][1:]:acc+=read(e)
+          assert len(master)==5760000 and np.max(np.abs(acc-master))==0
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-historical-slice-${{ github.run_id }}
+          path: .audio-historical-slice/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+  historical-slice-browser:
+    needs: historical-soundscape
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install isolated Playwright
+        run: |
+          npm install --prefix "$RUNNER_TEMP/historical-browser" playwright@1.56.1
+          "$RUNNER_TEMP/historical-browser/node_modules/.bin/playwright" install --with-deps ${{ matrix.browser }}
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/historical-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-crown-v4-${{ github.run_id }}
+          path: .audio-crown-v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-historical-slice-${{ github.run_id }}
+          path: .audio-historical-slice
+      - name: Verify real assets through existing Web Audio scene
+        run: node tools/audio-forge/browser-historical-slice.mjs ${{ matrix.browser }} .audio-crown-v4 .audio-historical-slice .audio-historical-browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-historical-browser-${{ matrix.browser }}-${{ github.run_id }}
+          path: .audio-historical-browser/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+  audio-runtime-browser:
+    needs: platform-smoke
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.app == '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install isolated Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/audio-browser" --no-save --no-package-lock playwright@1.55.0
+          browser_cli="$RUNNER_TEMP/audio-browser/node_modules/.bin/playwright"
+          # Refresh stale runner package indexes; retry dependency install once.
+          sudo apt-get update -o Acquire::Retries=3
+          if ! "$browser_cli" install-deps ${{ matrix.browser }}; then
+            sudo apt-get update -o Acquire::Retries=3
+            "$browser_cli" install-deps ${{ matrix.browser }}
+          fi
+          "$browser_cli" install ${{ matrix.browser }}
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/audio-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - name: Checkout pinned Banners audio contract for research-only test
+        uses: actions/checkout@v4
+        with:
+          ref: 5cf0a72622621ac0dc0d5e1a88cbd9a0369e2616
+          path: .audio-banners-contract
+          sparse-checkout: apps/banners-of-war/research/battlefield-identity/battle-audio.js
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Run real Web Audio checks
+        env:
+          BANNERS_AUDIO_CONTRACT: .audio-banners-contract/apps/banners-of-war/research/battlefield-identity/battle-audio.js
+        run: node tools/audio-forge/browser-runtime.mjs ${{ matrix.browser }} .audio-runtime-browser
+      - name: Download same-run authored score
+        uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-score-states-${{ github.run_id }}
+          path: .audio-authored-score
+      - name: Verify authored score in real Web Audio
+        run: node tools/audio-forge/browser-authored-score.mjs ${{ matrix.browser }} .audio-authored-score .audio-runtime-browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-runtime-${{ matrix.browser }}-${{ github.run_id }}
+          path: .audio-runtime-browser/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 

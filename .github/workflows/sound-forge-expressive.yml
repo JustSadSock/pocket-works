@@ -1,0 +1,133 @@
+name: Sound Forge Expressive Strategy
+on:
+  pull_request:
+    paths:
+      - 'tools/audio-forge/dawn-beyond-pass.py'
+      - 'tools/audio-forge/tactical-pass.py'
+      - 'tools/audio-forge/register-study.py'
+      - 'tools/audio-forge/scaled-audio.test.mjs'
+      - 'tools/audio-forge/browser-scaled-audio.mjs'
+      - 'shared/capabilities/scaled-audio.js'
+      - '.github/workflows/sound-forge-expressive.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: sound-forge-expressive-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libfluidsynth3 timgm6mb-soundfont sox libsox-fmt-all
+          pip install numpy==2.3.5 scipy==1.17.0
+          node --test tools/audio-forge/scaled-audio.test.mjs tools/audio-forge/sound-family.test.mjs tools/audio-forge/virtual-audio.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-recovery-46096987002
+          run-id: 46096987002
+          github-token: ${{ github.token }}
+          path: .expressive-input
+      - name: Restore pinned accepted masters and source receipts
+        run: |
+          python - <<'PY'
+          import hashlib,json,pathlib,zipfile
+          p=pathlib.Path('.expressive-input')
+          d=json.loads((p/'archive-sha256.json').read_text())
+          for name,h in d.items():
+              assert hashlib.sha256((p/name).read_bytes()).hexdigest()==h,name
+          assert d['music/lanterns-of-home.wav']=='fc4a8f292723fcee47fa3aa5ef0ced718d5db30ea2d328cad5c53b9284552834'
+          assert d['soundscape/tavern-in-the-rain.wav']=='a2c24dcb3fb2d3d788b24d55da9abdd87399d5d387fad3e8ad622f375f641554'
+          assert d['soundscape/originals/rain-at-the-gate-loop.wav']=='e081d22b28b7b757cbbab98098231ab8192030cc9c408efe094fd8401b88c8fb'
+          with zipfile.ZipFile('.expressive-input.zip','w',compression=zipfile.ZIP_STORED) as z:
+              for f in sorted(p.rglob('*')):
+                  if f.is_file():z.write(f,f.relative_to(p))
+          PY
+      - name: New martial score, tactical soundscape and targeted register controls
+        run: |
+          set -euo pipefail
+          sf=/usr/share/sounds/sf2/TimGM6mb.sf2
+          for out in .expressive .expressive-repeat; do
+            python tools/audio-forge/dawn-beyond-pass.py "$sf" .expressive-input.zip "$out/music"
+            python tools/audio-forge/tactical-pass.py .expressive-input.zip "$out/battle"
+          done
+          python tools/audio-forge/register-study.py "$sf" .expressive-input.zip .expressive/register
+          python tools/audio-forge/expressive-loop-repair.py .expressive-input/soundscape .expressive/runtime-repair
+          cp -a .expressive-input/rights .expressive/rights
+          cp -a .expressive-input/soundscape/originals .expressive/originals
+          cp -a .expressive-input/soundscape/variants .expressive/variants
+          cp -a .expressive-input/soundscape/layers .expressive/layers
+          cp .expressive-input/soundscape/manifest.json .expressive/source-manifest.json
+          cp .expressive-input/archive-sha256.json .expressive/previous-native-sha256.json
+          python - <<'PY'
+          import pathlib,hashlib,json,wave,numpy as np
+          p=pathlib.Path('.expressive');q=pathlib.Path('.expressive-repeat');sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          for sub,ledger,expected in [('music','metrics.json',109.6666666667),('battle','manifest.json',76)]:
+              d=json.loads((p/sub/ledger).read_text());assert d['pcmError']==0
+              a=None
+              for i,e in enumerate(d['files']):
+                  f=p/sub/e['file'];assert sha(f)==e['sha256']==sha(q/sub/e['file'])
+                  with wave.open(str(f),'rb') as w:
+                      assert (w.getframerate(),w.getnchannels(),w.getsampwidth())==(48000,2,2)
+                      assert abs(w.getnframes()/48000-expected)<.001
+                      x=np.frombuffer(w.readframes(w.getnframes()),'<i2').astype(np.int32)
+                      assert np.max(np.abs(x))<32768
+                  if i==0:master=x;a=np.zeros_like(x)
+                  else:a+=x
+              assert np.array_equal(master,a)
+          s=json.loads((p/'battle/manifest.json').read_text());assert s['music'] is False and len(s['groups'])==4
+          m=json.loads((p/'music/metrics.json').read_text());assert m['recordedIntervalCoverage']==0
+          (p/'archive-sha256.json').write_text(json.dumps({str(f.relative_to(p)):sha(f) for f in sorted(p.rglob('*')) if f.is_file()},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-expressive-strategy-${{ github.run_id }}
+          path: .expressive/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+  browser:
+    needs: render
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/expressive-browser" playwright@1.56.1
+          "$RUNNER_TEMP/expressive-browser/node_modules/.bin/playwright" install --with-deps ${{ matrix.browser }}
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/expressive-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: sound-forge-recovery-46096987002
+          run-id: 46096987002
+          github-token: ${{ github.token }}
+          path: .expressive-input
+      - run: node tools/audio-forge/browser-scaled-audio.mjs ${{ matrix.browser }} .expressive-input .expressive-browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sound-forge-scaled-runtime-${{ matrix.browser }}-${{ github.run_id }}
+          path: .expressive-browser/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
