@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {sameAuthorityIntent,authorityActions} from './network-authority.js';
+const fixture=()=>({id:'room',phase:'lobby',round:1,checksum:'scenario',side:0,nextSeq:3,accepted:[false,false],ready:[false,false],allied:{revision:5,seat:0,role:'captain',scope:[1,2],members:[{seat:0,role:'captain',self:true,ai:false,groups:[],accepted:false},{seat:1,role:'subordinate',self:false,ai:false,groups:['left'],accepted:false}]}});
+test('opposing lobby revision does not change own allocation intent',()=>{let a=fixture(),b=structuredClone(a);b.allied.revision++;b.accepted[1]=true;assert.equal(sameAuthorityIntent(a,b),true)});
+test('own team changes require another explicit confirmation',()=>{for(const change of [v=>v.allied.members[1].groups.push('right'),v=>v.allied.members[1].ai=true,v=>v.allied.members.pop(),v=>v.allied.role='subordinate',v=>v.allied.scope.pop(),v=>v.accepted[0]=true,v=>v.nextSeq++,v=>v.phase='planning',v=>v.round++,v=>v.id='another',v=>v.checksum='different']){let a=fixture(),b=structuredClone(a);change(b);assert.equal(sameAuthorityIntent(a,b),false)}});
+test('ordinary duel and missing snapshots never permit automatic rebinding',()=>{assert.equal(sameAuthorityIntent({},{}),false);assert.equal(sameAuthorityIntent(fixture(),null),false);assert.equal(authorityActions.has('ready'),false);assert.equal(authorityActions.has('draft'),false)});

@@ -1,0 +1,121 @@
+name: Banners of War Formation Art Reference
+on:
+  pull_request:
+    paths:
+      - 'apps/banners-of-war/research/formation-art/**'
+      - '.github/workflows/banners-formation-art.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: banners-formation-art-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  scope:
+    runs-on: ubuntu-24.04
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+      - id: scope
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Reuse immutable reference evidence for workshop-only commits.
+            // Dispatch and any ambiguous comparison retain full checks.
+            let full=true;
+            if(context.eventName==='pull_request' && context.payload.action==='synchronize' && context.payload.before && context.payload.after){
+              try{
+                const r=await github.rest.repos.compareCommits({owner:context.repo.owner,repo:context.repo.repo,base:context.payload.before,head:context.payload.after});
+                const files=r.data.files||[];
+                if(files.length>0&&files.length<300){
+                  full=files.some(f=>f.filename.startsWith('tools/art-forge/')||(f.filename.startsWith('apps/banners-of-war/')&&!f.filename.startsWith('apps/banners-of-war/research/battlefield-identity/workshop/')));
+                }
+              }catch(e){core.warning('Comparison unavailable: '+e.message)}
+            }
+            core.setOutput('full',String(full));
+  formation:
+    needs: scope
+    if: needs.scope.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/banners-formation-art
+      BLENDER_VERSION: '5.2.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Retrieve approved production source from prior reference
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45672121448
+          artifact-ids: 15050357382
+          path: /tmp/bow-source
+      - name: Retrieve previously validated surface textures
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45687063636
+          artifact-ids: 15056723437
+          path: /tmp/bow-terrain-baseline
+      - name: Prepare editor
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil xz-utils fonts-dejavu-core libgl1 libx11-6 libxi6 libxrender1
+          cd /tmp
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          verified=false
+          for base in "https://mirror.blender.org/release/Blender5.2" "https://download.blender.org/release/Blender5.2" "https://ftp.nluug.nl/pub/graphics/blender/release/Blender5.2"; do
+            rm -f "$archive" blender.sha256
+            if curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 -o blender.sha256 "$base/blender-${BLENDER_VERSION}.sha256" &&
+               curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$archive" "$base/$archive" &&
+               grep -E "[[:space:]]\\*?${archive}$" blender.sha256 | sha256sum --check --strict; then
+              verified=true
+              break
+            fi
+          done
+          test "$verified" = true
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Restore verified bake outputs for unchanged model inputs
+        id: bake-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.BOW_ART_OUTPUT }}
+          key: bow-formation-bake-15050357382-${{ hashFiles('apps/banners-of-war/research/formation-art/bake.py', 'apps/banners-of-war/research/formation-art/pack.py') }}
+      - name: Bake eight directions with common ground anchor
+        if: steps.bake-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$BOW_ART_OUTPUT"
+          source="$(find /tmp/bow-source -name spearman.blend -type f -print -quit)"
+          test -n "$source"
+          "$BLENDER" --background --disable-autoexec "$source" --python-exit-code 1 --python apps/banners-of-war/research/formation-art/bake.py
+          python3 apps/banners-of-war/research/formation-art/pack.py
+      - name: Retain completed validated bake independently from terrain
+        if: steps.bake-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.BOW_ART_OUTPUT }}
+          key: ${{ steps.bake-cache.outputs.cache-primary-key }}
+      - name: Prepare licensed natural materials through Art Forge
+        run: python3 apps/banners-of-war/research/formation-art/nature.py
+      - name: Capture physical battle and matched renderer measurements
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/formation-art/capture.mjs
+      - name: Retain independent evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banners-formation-art
+          path: quality-artifacts/banners-formation-art
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,210 @@
+name: Banners of War First Playable Historical Battle
+on:
+  pull_request:
+    paths:
+      - 'apps/banners-of-war/research/integrated-agincourt/**'
+      - '.github/workflows/banners-integrated-agincourt.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: banners-integrated-agincourt-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  profile-scope:
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+      - id: scope
+        env:
+          BEFORE: ${{ github.event.before }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          run=true
+          if [ "$ACTION" = synchronize ] && [ -n "$BEFORE" ] && [ "$(git rev-parse HEAD^)" = "$BEFORE" ]; then
+            changed="$(git diff --name-only "$BEFORE" HEAD)"
+            # Only a test/receipt/docs correction with no isolated renderer or engine changes.
+            # Previous paired matrix continues under its original HEAD; manual dispatch always runs.
+            if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -vE '^(apps/banners-of-war/research/integrated-agincourt/|apps/banners-of-war/DIRECTOR_STATE\.md$|\.github/workflows/banners-integrated-agincourt\.yml$)' | grep -q .; then
+              run=false
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+  standalone:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test apps/banners-of-war/research/vertical-slice/standalone.test.mjs apps/banners-of-war/research/integrated-agincourt/tactical-camera.test.mjs
+  integrated:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+        side: [0, 1]
+    env:
+      BOW_INTEGRATED_OUTPUT: quality-artifacts/integrated-battle
+      BOW_BROWSER: ${{ matrix.browser }}
+      BOW_SIDE: ${{ matrix.side }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/bow-candidate
+      - run: |
+          atlas="$(find /tmp/bow-candidate -name mixed-atlas.json -print -quit)"
+          test -n "$atlas"
+          echo "BOW_ART_OUTPUT=$(dirname "$atlas")" >> "$GITHUB_ENV"
+      - run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/integrated-agincourt/playtest.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integrated-agincourt-${{ matrix.browser }}-${{ matrix.side }}
+          path: quality-artifacts/integrated-battle
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integrated-agincourt-PNG-${{ matrix.browser }}-${{ matrix.side }}
+          path: quality-artifacts/integrated-battle/*.png
+          retention-days: 14
+      - name: Select key original frames, no resizing
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/integrated-key
+          find quality-artifacts/integrated-battle -maxdepth 1 -type f \( -name '*-initial-candidate.png' -o -name '*-initial-schematic.png' -o -name '*-initial-tactical60.png' -o -name '*-close60.png' -o -name '*-event-*.png' -o -name '*-result.png' \) -exec cp {} quality-artifacts/integrated-key/ \;
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: key-PNG-${{ matrix.browser }}-${{ matrix.side }}
+          path: quality-artifacts/integrated-key
+          retention-days: 14
+  causal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/agincourt-causality
+      BOW_OLD_TRACES: /tmp/agincourt-old
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244635332
+          path: /tmp/agincourt-old/first
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46102400146
+          artifact-ids: 15246106575
+          path: /tmp/agincourt-old/second
+      - run: node apps/banners-of-war/research/integrated-agincourt/causality.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agincourt-causality
+          path: quality-artifacts/agincourt-causality
+          retention-days: 14
+  diagnosis:
+    runs-on: ubuntu-24.04
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/command-diagnosis
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46102400146
+          artifact-ids: 15246591481
+          path: /tmp/french-webkit
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46102400146
+          artifact-ids: 15246586412
+          path: /tmp/french-chromium
+      - run: |
+          mkdir -p "$BOW_AUDIT_OUTPUT"
+          node apps/banners-of-war/research/integrated-agincourt/failure-audit.mjs "$(dirname "$(find /tmp/french-webkit -name failures.json -print -quit)")" "$(dirname "$(find /tmp/french-chromium -name failures.json -print -quit)")"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: command-diagnosis
+          path: quality-artifacts/command-diagnosis
+          retention-days: 14
+  paired-performance:
+    needs: profile-scope
+    # Director closed Bounded Performance Recovery; manual research only after separate approval.
+    if: github.event_name == 'workflow_dispatch' && needs.profile-scope.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    env:
+      BOW_PAIRED_PROFILE: '1'
+      BOW_RECOVERY: '1'
+      BOW_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/paired-candidate
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244642164
+          path: /tmp/paired-baseline
+      - run: |
+          echo "BOW_ART_OUTPUT=$(dirname "$(find /tmp/paired-candidate -name mixed-atlas.json -print -quit)")" >> "$GITHUB_ENV"
+          echo "BOW_PROFILE_BASELINE=$(dirname "$(find /tmp/paired-baseline -name mixed-atlas.json -print -quit)")" >> "$GITHUB_ENV"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+      - run: node apps/banners-of-war/research/battlefield-identity/capture.mjs
+      - name: Retain paired profiles and unmodified pixel-difference images
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/paired
+          find /tmp/paired-candidate -name 'paired-*.json' -o -name 'difference-*-candidate-*.png' -o -name 'difference-*-baseline-*.png' -o -name 'difference-*-A-*.png' -o -name 'difference-*-B-*.png' | while read -r f; do cp "$f" quality-artifacts/paired/; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paired-performance-${{ matrix.browser }}
+          path: quality-artifacts/paired
+          retention-days: 14

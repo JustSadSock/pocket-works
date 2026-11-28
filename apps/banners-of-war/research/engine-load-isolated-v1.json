@@ -1,0 +1,58 @@
+{
+  "protocol": "engine-load-isolated-v1",
+  "engine": "banners-engine-v1",
+  "execution": "Isolated V8, Date.now wall time; not Worker, no production metrics or SQLite",
+  "results": [
+    {
+      "n": 60,
+      "wallMs": 1749,
+      "frameCount": 31,
+      "rowBytes": 524020,
+      "stateBytes": 198289,
+      "privateFrameBytes": [
+        137360,
+        137918
+      ],
+      "publicViewUnitsBytes": [
+        10935,
+        10953
+      ],
+      "combatContact": 110,
+      "deterministicParity": true
+    },
+    {
+      "n": 100,
+      "wallMs": 3488,
+      "frameCount": 31,
+      "rowBytes": 870745,
+      "stateBytes": 244993,
+      "privateFrameBytes": [
+        230740,
+        231298
+      ],
+      "publicViewUnitsBytes": [
+        18395,
+        18413
+      ],
+      "combatContact": 110,
+      "deterministicParity": true
+    },
+    {
+      "n": 160,
+      "wallMs": 6232,
+      "frameCount": 31,
+      "rowBytes": 1367041,
+      "stateBytes": 315163,
+      "privateFrameBytes": [
+        358444,
+        361594
+      ],
+      "publicViewUnitsBytes": [
+        29585,
+        29603
+      ],
+      "combatContact": 110,
+      "deterministicParity": true
+    }
+  ]
+}

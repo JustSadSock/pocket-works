@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "slug": "banners-of-war",
+  "name": "Banners of War",
+  "shortName": "Banners",
+  "description": "Историческая WEGO-тактика: сетевые дуэли, командная иерархия и лаборатория сражений.",
+  "version": "0.8.0",
+  "releaseDate": "2026-11-24",
+  "releaseDateTime": "2026-11-24T13:25:00+02:00",
+  "changelog": [
+    "War Against Men: приватные дуэли через Pocket ID и авторитетная серверная симуляция.",
+    "Синхронные и асинхронные сроки, скрытые приказы, восстановление и повторы.",
+    "Battle Laboratory: пользовательские сценарии и исследовательская библиотека."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#a74831",
+  "backgroundColor": "#d8d5b8",
+  "themeColor": "#263b36",
+  "orientation": "any",
+  "cacheName": "banners-of-war-v0.8.0-war-against-men-rc10",
+  "storageNamespace": "pocket-works:banners-of-war",
+  "tags": [
+    "game",
+    "strategy",
+    "tactics",
+    "medieval",
+    "wego",
+    "offline"
+  ],
+  "order": 291
+}

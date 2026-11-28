@@ -1,0 +1,14 @@
+import {test,expect} from '@playwright/test';
+import {writeFile} from 'node:fs/promises';
+const url='/apps/banners-of-war/research/orthographic-art/';
+test('orthographic four-model art reference and engine geometry',async({page},info)=>{
+ test.skip(info.project.name!=='desktop-chromium','Desktop art reference only');test.setTimeout(360000);await page.setViewportSize({width:1440,height:900});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.waitForFunction(()=>!!(window as any).orthoQA,{},{timeout:180000});await page.evaluate(()=>document.body.classList.add('clean'));
+ const snap=async(n:string)=>page.screenshot({path:info.outputPath(n+'.png')});const atlas=await page.evaluate(()=>(window as any).orthoQA.atlas());expect(atlas.models).toEqual(['spear','horse','roman','elephant']);expect(atlas.frames).toBe(8);expect(atlas.prepared).toBeGreaterThan(1000);
+ await page.evaluate(()=>(window as any).orthoQA.board());await snap('01-four-models');await page.evaluate(()=>(window as any).orthoQA.board('angles'));await snap('02-camera-elevations');
+ const scenes:any[]=[];for(const id of ['infantry','charge','ford','zama']){let m=await page.evaluate(id=>(window as any).orthoQA.load(id),id);expect(m.measure.peakContact).toBeGreaterThan(0);if(id==='zama')expect(m.measure.count).toBe(158);let views=[];for(const [mode,close] of [['C',false],['C',true],['A',false]] as const){let v=await page.evaluate(([mode,close])=>(window as any).orthoQA.view(mode,close),[mode,close]);expect(v.sprites).toBeGreaterThan(0);views.push(v);await snap('ortho-'+id+'-'+(close?'close':mode==='A'?'overview':'tactical'))}scenes.push({...m,views})}
+ for(const type of ['spear','horse'])for(const state of atlas.states){let png=await page.evaluate(([type,state])=>(window as any).orthoQA.page(type,0,state),[type,state]);await writeFile(info.outputPath('atlas-'+type+'-'+state+'.png'),Buffer.from(png.split(',')[1],'base64'))}
+ await writeFile(info.outputPath('orthographic-art.json'),JSON.stringify({atlas,scenes,errors},null,2));expect(errors).toEqual([]);
+});
+test('orthographic articulated animation cycles',async({browser},info)=>{
+ test.skip(info.project.name!=='desktop-chromium','Dedicated animation video');test.setTimeout(180000);let context=await browser.newContext({viewport:{width:1280,height:720},recordVideo:{dir:info.outputPath('cycles'),size:{width:1280,height:720}}});let page=await context.newPage();try{await page.goto(url);await page.waitForFunction(()=>!!(window as any).orthoQA,{},{timeout:120000});await page.evaluate(()=>document.body.classList.add('clean'));for(const state of ['idle','walk','ready','attack','guard','retreat']){for(let round=0;round<2;round++)for(let frame=0;frame<8;frame++){await page.evaluate(([s,f])=>(window as any).orthoQA.board('cycles',s,f),[state,frame]);await page.waitForTimeout(105)}}}finally{await context.close()}
+});

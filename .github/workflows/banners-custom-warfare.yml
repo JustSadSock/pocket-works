@@ -1,0 +1,284 @@
+name: Banners of War Battle Rhythm and Commander Campaign
+on:
+  pull_request:
+    paths:
+      - 'apps/banners-of-war/**'
+      - '.github/workflows/banners-custom-warfare.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: banners-custom-warfare-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test apps/banners-of-war/custom-battle.test.mjs apps/banners-of-war/chronicles.test.mjs apps/banners-of-war/engine.test.mjs apps/banners-of-war/laboratory.test.mjs apps/banners-of-war/research/vertical-slice/standalone.test.mjs
+  tactical-and-campaign:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/custom-audit
+      BOW_DEEP_AUDIT: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node apps/banners-of-war/research/custom-warfare/audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-tactical-and-campaign
+          path: quality-artifacts/custom-audit
+          retention-days: 14
+  browser:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            scenario: equal
+          - browser: webkit
+            scenario: quality
+          - browser: chromium
+            scenario: mixed
+          - browser: webkit
+            scenario: defence
+          - browser: chromium
+            scenario: equal
+            campaign: '1'
+          - browser: chromium
+            scenario: equal
+            front: field
+    env:
+      BOW_INTEGRATED_OUTPUT: quality-artifacts/custom-browser
+      BOW_BROWSER: ${{ matrix.browser }}
+      BOW_CUSTOM_CASE: ${{ matrix.scenario }}
+      BOW_SIDE: '1'
+      BOW_CAMPAIGN_UI: ${{ matrix.campaign || '0' }}
+      BOW_FRONT: ${{ matrix.front || 'wide' }}
+      BOW_RHYTHM_NATIVE: ${{ matrix.scenario == 'equal' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/custom-candidate
+      - run: |
+          atlas="$(find /tmp/custom-candidate -name mixed-atlas.json -print -quit)"
+          test -n "$atlas"
+          echo "BOW_ART_OUTPUT=$(dirname "$atlas")" >> "$GITHUB_ENV"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+      - run: node apps/banners-of-war/research/integrated-agincourt/playtest.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-${{ matrix.scenario }}-${{ matrix.browser }}-${{ matrix.campaign || 'battle' }}-${{ matrix.front || 'wide' }}-original
+          path: quality-artifacts/custom-browser
+          retention-days: 14
+      - name: Keep selected original PNGs
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/key
+          find quality-artifacts/custom-browser -maxdepth 1 -type f \( -name '*-muster.png' -o -name '*-initial-candidate.png' -o -name '*-initial-schematic.png' -o -name '*-initial-tactical60.png' -o -name '*-close60.png' -o -name '*-event-*.png' -o -name '*-result.png' -o -name '*-failure.png' \) -exec cp {} quality-artifacts/key/ \;
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-${{ matrix.scenario }}-${{ matrix.campaign || 'battle' }}-${{ matrix.front || 'wide' }}-key-PNG
+          path: quality-artifacts/key
+          retention-days: 14
+  original-causality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/identity-audit
+      BOW_ORIGINAL_TRACES: /tmp/old-custom
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46139068464
+          artifact-ids: 15261027330
+          path: /tmp/old-custom
+      - run: node apps/banners-of-war/research/custom-warfare/identity-audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-causality-and-identity
+          path: quality-artifacts/identity-audit
+          retention-days: 14
+  update-debt:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46139068330
+          artifact-ids: 15261611186
+          path: /tmp/original-validation
+      - name: Validate and preserve exact old and new findings
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          node scripts/validate-update-contract.mjs
+          mkdir -p quality-artifacts/validation-comparison
+          cp "$(find /tmp/original-validation -name updates.json -print -quit)" quality-artifacts/validation-comparison/previous-updates.json
+          cp quality-artifacts/validation-debt/updates.json quality-artifacts/validation-comparison/current-updates.json
+          node --input-type=module -e 'import fs from "node:fs";let old=JSON.parse(fs.readFileSync("quality-artifacts/validation-comparison/previous-updates.json")),next=JSON.parse(fs.readFileSync("quality-artifacts/validation-comparison/current-updates.json"));let observed=old.regressions.length===1&&old.regressions[0].includes("apps/banners-of-war/sw.js cache name");let result={oldArchiveMatchesFailureLog:observed,oldRegressions:old.regressions,oldLegacy:old.existing.length,currentLegacy:next.existing.length,currentRegressions:next.regressions,oldOnly:old.existing.filter(s=>!next.existing.includes(s)),newOnly:next.existing.filter(s=>!old.existing.includes(s))};console.log(JSON.stringify(result));fs.writeFileSync("quality-artifacts/validation-comparison/comparison.json",JSON.stringify(result,null,2));for(let finding of next.existing)console.log("LEGACY "+finding);if(!observed)console.warn("Previous archived report differs from the platform-smoke failure log; raw reports retained");if(next.regressions.length)throw Error("New update contract regressions");'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-update-debt-comparison
+          path: quality-artifacts/validation-comparison
+          retention-days: 14
+  full-campaign-browser:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 90
+    env:
+      BOW_INTEGRATED_OUTPUT: quality-artifacts/campaign-browser
+      BOW_BROWSER: chromium
+      BOW_SIDE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/campaign-candidate
+      - run: |
+          atlas="$(find /tmp/campaign-candidate -name mixed-atlas.json -print -quit)"
+          test -n "$atlas"
+          echo "BOW_ART_OUTPUT=$(dirname "$atlas")" >> "$GITHUB_ENV"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+      - run: node apps/banners-of-war/research/custom-warfare/campaign-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: three-battle-campaign-original
+          path: quality-artifacts/campaign-browser
+          retention-days: 14
+      - name: Preserve original key PNGs
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/campaign-key
+          find quality-artifacts/campaign-browser -maxdepth 1 -name '*.png' -exec cp {} quality-artifacts/campaign-key/ \;
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: three-battle-campaign-key-PNG
+          path: quality-artifacts/campaign-key
+          retention-days: 14
+  rhythm-and-causality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/rhythm-audit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node apps/banners-of-war/research/custom-warfare/rhythm-audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rhythm-causal-tactics-army-campaign
+          path: quality-artifacts/rhythm-audit
+          retention-days: 14
+  five-operation-campaign:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        path: [conservative, offensive]
+    env:
+      BOW_INTEGRATED_OUTPUT: quality-artifacts/five-operations
+      BOW_BROWSER: chromium
+      BOW_SIDE: '1'
+      BOW_CAMPAIGN_PATH: ${{ matrix.path }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46097554811
+          artifact-ids: 15244108584
+          path: /tmp/campaign-candidate
+      - run: |
+          atlas="$(find /tmp/campaign-candidate -name mixed-atlas.json -print -quit)"
+          test -n "$atlas"
+          echo "BOW_ART_OUTPUT=$(dirname "$atlas")" >> "$GITHUB_ENV"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+      - run: node apps/banners-of-war/research/custom-warfare/five-campaign-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: five-operations-${{ matrix.path }}-original
+          path: quality-artifacts/five-operations
+          retention-days: 14
+      - name: Preserve original key PNGs
+        if: always()
+        run: |
+          mkdir -p quality-artifacts/five-key
+          find quality-artifacts/five-operations -maxdepth 1 -name '*.png' -exec cp {} quality-artifacts/five-key/ \;
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: five-operations-${{ matrix.path }}-key-PNG
+          path: quality-artifacts/five-key
+          retention-days: 14
+  native-rhythm-receipts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46150984985
+          artifact-ids: 15266156623,15265788373,15265952768,15265308530
+          path: /tmp/native-rhythm
+      - run: node apps/banners-of-war/research/custom-warfare/native-rhythm-receipts.mjs /tmp/native-rhythm quality-artifacts/native-rhythm
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-rhythm-and-matched-original-art
+          path: quality-artifacts/native-rhythm
+          retention-days: 14

@@ -1,3 +1,5 @@
+import {handleBanners} from './banners-room.mjs';
+export {BannersMatchRoom} from './banners-room.mjs';
 // Same-origin PocketNet and Pocket ID APIs. All remaining paths are static assets.
 export { PocketNetHub } from './hub.mjs';
 export { PocketIdentity } from '../pocket-id/hub.mjs';
@@ -137,6 +139,7 @@ export default {
       const social=env.POCKET_SOCIAL.get(env.POCKET_SOCIAL.idFromName('pocket-social-global-v1'));
       return social.fetch(new Request(request,{headers}));
     }
+    if (url.pathname.startsWith('/pocketnet/banners/')) return handleBanners(request,env);
     if (url.pathname.startsWith('/pocketnet/')) {
       // The edge worker, not the browser, vouches for account identity.
       // Never forward client-supplied x-pw-* headers to the room coordinator.

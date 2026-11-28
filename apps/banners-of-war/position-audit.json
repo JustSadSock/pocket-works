@@ -1,0 +1,62 @@
+{
+  "baseline": [
+    {
+      "seed": "Position audit 0",
+      "terrain": "valley",
+      "first": "hold",
+      "outcome": "draw",
+      "delta": 0.007783868135823879
+    },
+    {
+      "seed": "Position audit 1",
+      "terrain": "ridge",
+      "first": "hold",
+      "outcome": "win",
+      "delta": 0.18766728863560433
+    },
+    {
+      "seed": "Position audit 2",
+      "terrain": "marsh",
+      "first": "hold",
+      "outcome": "draw",
+      "delta": 0.04025266281292561
+    },
+    {
+      "seed": "Position audit 3",
+      "terrain": "plain",
+      "first": "hold",
+      "outcome": "draw",
+      "delta": 0.005995528949155893
+    }
+  ],
+  "modified": [
+    {
+      "seed": "Position audit 0",
+      "terrain": "valley",
+      "first": "hold",
+      "outcome": "draw",
+      "delta": 0.03995423620358285
+    },
+    {
+      "seed": "Position audit 1",
+      "terrain": "ridge",
+      "first": "hold",
+      "outcome": "win",
+      "delta": 0.21600038080260242
+    },
+    {
+      "seed": "Position audit 2",
+      "terrain": "marsh",
+      "first": "hold",
+      "outcome": "draw",
+      "delta": 0.04025266281292561
+    },
+    {
+      "seed": "Position audit 3",
+      "terrain": "plain",
+      "first": "hold",
+      "outcome": "draw",
+      "delta": 0.022135097418884864
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "audit": [
+    {
+      "id": "gaugamela",
+      "side": 0,
+      "scale": "compact",
+      "bounds": {
+        "width": 1800,
+        "height": 1200
+      },
+      "units": 44,
+      "counts": [
+        1928,
+        1888
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 0,
+      "scale": "historical",
+      "bounds": {
+        "width": 2040,
+        "height": 1400
+      },
+      "units": 86,
+      "counts": [
+        3808,
+        3728
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 0,
+      "scale": "expanded",
+      "bounds": {
+        "width": 2280,
+        "height": 1600
+      },
+      "units": 128,
+      "counts": [
+        5688,
+        5568
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 1,
+      "scale": "compact",
+      "bounds": {
+        "width": 1800,
+        "height": 1200
+      },
+      "units": 44,
+      "counts": [
+        1888,
+        1928
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 1,
+      "scale": "historical",
+      "bounds": {
+        "width": 2040,
+        "height": 1400
+      },
+      "units": 86,
+      "counts": [
+        3728,
+        3808
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 1,
+      "scale": "expanded",
+      "bounds": {
+        "width": 2280,
+        "height": 1600
+      },
+      "units": 128,
+      "counts": [
+        5568,
+        5688
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 0,
+      "scale": "compact",
+      "bounds": {
+        "width": 1600,
+        "height": 1200
+      },
+      "units": 45,
+      "counts": [
+        2268,
+        1748
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 0,
+      "scale": "historical",
+      "bounds": {
+        "width": 1840,
+        "height": 1400
+      },
+      "units": 88,
+      "counts": [
+        4488,
+        3448
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 0,
+      "scale": "expanded",
+      "bounds": {
+        "width": 2080,
+        "height": 1600
+      },
+      "units": 131,
+      "counts": [
+        6708,
+        5148
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 1,
+      "scale": "compact",
+      "bounds": {
+        "width": 1600,
+        "height": 1200
+      },
+      "units": 45,
+      "counts": [
+        1748,
+        2268
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 1,
+      "scale": "historical",
+      "bounds": {
+        "width": 1840,
+        "height": 1400
+      },
+      "units": 88,
+      "counts": [
+        3448,
+        4488
+      ],
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 1,
+      "scale": "expanded",
+      "bounds": {
+        "width": 2080,
+        "height": 1600
+      },
+      "units": 131,
+      "counts": [
+        5148,
+        6708
+      ],
+      "conflicts": []
+    }
+  ],
+  "samples": [
+    {
+      "id": "gaugamela",
+      "time": 30,
+      "units": 44,
+      "ms": 738,
+      "power": [
+        1780.87141,
+        1750.6784444750003
+      ],
+      "finite": true
+    },
+    {
+      "id": "cannae",
+      "time": 30,
+      "units": 45,
+      "ms": 771,
+      "power": [
+        2137.65288727407,
+        1613.0135887228118
+      ],
+      "finite": true
+    }
+  ]
+}

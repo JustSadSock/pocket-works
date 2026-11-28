@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {E} from './engine.js';
+import {personality,perceive,analyze,alternatives,route,objectivePressure} from './commander.js';
+import {reflect} from './doctrine-lab.mjs';
+const roster=['spear','sword','pike','archer','knight','lightHorse'];
+const make=(style='adaptive',arch='valley')=>{let s=E.create('Enemy Minds',roster,roster,style,arch);s.aiVersion=4;return s};
+const get=(s,side=1)=>{let o=E.command(s,side);return {orders:o,intent:o.intent}};
+test('new planning is deterministic and does not mutate battle or inspect pending enemy orders',()=>{let s=make(),prior=JSON.stringify(s),a=get(s);assert.deepEqual(a,get(s));assert.equal(JSON.stringify(s),prior);let q=E.snapshot(s);for(let u of q.units.filter(u=>u.side===0)){u.order={kind:'charge',target:100,path:[{x:1000,y:450}]};u.program=[{kind:'retreat',path:[],when:'time',seconds:4}]}assert.deepEqual(a,get(q))});
+test('unobserved enemy positions and statistics cannot change plans',()=>{let s=make('cautious','ridge');s.fog=true;E.refreshVisibility(s);let a=get(s);assert.equal(a.intent.observed,0);let q=E.snapshot(s);for(let u of q.units.filter(u=>u.side===0)){u.x=80;u.y=80;u.cohesion=1;u.n=1;u.fatigue=99}assert.deepEqual(a,get(q));assert.ok(Object.values(a.intent.roles).includes('scout'));assert.equal(Object.keys(a.intent.intel).length,0)});
+test('last known intel ages and expires without reading the actual enemy',()=>{let s=make();s.fog=true;s.vision=[[],[]];s.time=90;s.known=[{}, {0:{id:0,side:0,type:'spear',x:800,y:400,a:0,time:30}}];let p=perceive(E,s,1);assert.equal(p.enemy.length,1);assert.ok(p.enemy[0].confidence<1);s.time=230;assert.equal(perceive(E,s,1).enemy.length,0)});
+test('difficulty changes the number of considered alternatives but never modifies troops',()=>{let s=make(),base=JSON.stringify(s.units);for(let [level,count] of [['recruit',3],['captain',5],['commander',7],['grandmaster',9]]){s.difficulty=level;assert.equal(get(s).intent.alternatives.length,count);assert.equal(JSON.stringify(s.units),base)}});
+test('personality creates distinct decisions and procedural profiles are seeded',()=>{let s=make('aggressive'),a=get(s);s.style='cautious';let b=get(s);assert.ok(a.intent.posture!==b.intent.posture||a.intent.wing!==b.intent.wing);assert.deepEqual(personality('procedural','a'),personality('procedural','a'));assert.notDeepEqual(personality('procedural','a'),personality('procedural','b'))});
+test('autonomous deployment is inside own zone and collision free for standard roster',()=>{for(let map of ['plain','ridge','marsh','valley']){let s=make('maneuver',map);for(let side of [0,1]){E.deployAI(s,side);let u=s.units.filter(v=>v.side===side);assert.ok(u.every(v=>side?v.x>=840:v.x<=560));assert.ok(!u.some((v,i)=>u.slice(i+1).some(w=>E.overlap(v,w))))}}});
+test('staff orders only affect requested own units, can be prepared and remain normal editable orders',()=>{let s=make(),o=E.staff(s,[0,1,100],'cover',{x:450,y:350});assert.deepEqual(Object.keys(o),['0','1']);assert.ok(o[0].path.length&&o[1].path.length);assert.equal(o[0].group,o[1].group);E.prepare(s,o);assert.equal(s.units[0].order.kind,'move');assert.equal(s.units.find(u=>u.id===100).order.kind,'hold')});
+test('reserve responds to local crisis and new orders remain fixed within a WEGO round',()=>{let s=make('adaptive'),a=s.units.find(u=>u.id===100),b=s.units.find(u=>u.id===0);a.x=750;a.y=450;a.cohesion=10;a.morale=30;a.fatigue=90;b.x=690;b.y=450;let o=get(s);assert.ok(o.intent.crisis===100||o.intent.crisis!==null);assert.ok(o.intent.reserve!==null);E.prepare(s,o.orders);let prior=JSON.stringify(s.aiIntent);for(let i=0;i<20;i++)E.step(s);assert.equal(JSON.stringify(s.aiIntent),prior)});
+test('new round and JSON restored state resolve identically',()=>{let s=make('aggressive','ridge');s.fog=true;E.refreshVisibility(s);let a=E.resolve(s,{},true),b=E.resolve(JSON.parse(JSON.stringify(s)),{},true);assert.deepEqual(a,b);assert.equal(a.state.time,30);assert.ok(a.state.aiIntent[0].alternatives.length>0);assert.equal(a.frames[0].aiIntent[1].round,1)});
+
+test('canonical route cells produce mirrored full-battle outcomes on former rotation failures',()=>{for(let seed of ['Independent Minds 339','Independent Minds 57','Minds 40']){let s=E.create(seed,['spear','archer','knight','lightHorse','horseArcher'],['spear','spear','sword','crossbow','archer'],'adaptive','valley');s.fog=true;for(let u of s.units){let i=u.id%100;u.x=(u.side?760:640)+(u.type==='guard'?(u.side?60:-60):0);u.y=300+i*55}let t=reflect(s,{}).s;for(let [q,side] of [[s,0],[t,1]]){q.aiVersionBySide=side?[3,4]:[4,3];q.styleBySide=side?['adaptive','maneuver']:['maneuver','adaptive'];q.difficulty='commander';E.refreshVisibility(q)}for(let i=0;i<4;i++){s=E.resolve(s,{},true).state;t=E.resolve(t,{},true).state}assert.ok(Math.abs(E.power(s,0)/E.total(s,0)-E.power(t,1)/E.total(t,1))<.001);assert.ok(Math.abs(E.power(s,1)/E.total(s,1)-E.power(t,0)/E.total(t,0))<.001)}});
+
+test('forward model is bounded, deterministic and does not read hidden orders',()=>{let s=make('defensive','valley');s.difficulty='grandmaster';let a=get(s,0);assert.ok(a.intent.alternatives.every(v=>v.outcomes.every(o=>o.prediction.depth===3&&Number.isFinite(o.prediction.value))));assert.deepEqual(a,get(s,0));let q=E.snapshot(s);for(let u of q.units.filter(u=>u.side===1))u.order={kind:'charge',path:[{x:200,y:500}]};assert.deepEqual(a,get(q,0))});
+test('a held front braces rather than advancing into close contact',()=>{let s=make('cautious','valley');for(let u of s.units){u.x=u.side?745:695;u.y=340+(u.id%100)*45}let o=get(s,0);assert.equal(o.intent.posture,'hold');for(let u of s.units.filter(u=>u.side===0&&!E.types[u.type].horse&&!E.types[u.type].range&&o.intent.roles[u.id]==='line'))assert.equal(o.orders[u.id].kind,'brace');assert.ok(o.intent.alternatives.every(q=>Number.isFinite(q.position.value)))});
+
+// A territorial objective is not secured simply because no enemy has been reported.
+test('territorial pressure distinguishes core, periphery, stale reports and inactive objectives',()=>{
+ const unit=(x,y=600,more={})=>({type:'spear',x,y,n:120,cohesion:90,...more});
+ const goal={x:700,y:600,r:230,weight:1},p={objective:'zones',time:0,goals:[goal],own:[unit(645,480)]},b={home:{x:645,y:480},foes:[]};
+ assert.ok(objectivePressure(p,b).deficit>0);
+ assert.equal(objectivePressure({...p,own:[unit(700)]},b).deficit,0);
+ assert.ok(objectivePressure({...p,own:[unit(700)]},{...b,foes:[unit(700)]}).deficit>0);
+ assert.equal(objectivePressure({...p,own:[unit(700)]},{...b,foes:[unit(700,600,{confidence:.15})]}).deficit,0);
+ assert.equal(objectivePressure({...p,objective:'power'},b).deficit,0);
+ assert.equal(objectivePressure({...p,goals:[{...goal,activeAt:90}]},b).deficit,0);
+ assert.ok(objectivePressure({...p,own:[unit(700,600,{type:'guard'})]},b).deficit>0);
+ assert.ok(objectivePressure({...p,own:[unit(700,600,{n:1})]},b).deficit>0);
+});

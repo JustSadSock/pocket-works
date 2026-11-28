@@ -1,0 +1,182 @@
+[
+  {
+    "id": "lechfeld",
+    "scale": "compact",
+    "n": 23,
+    "counts": [
+      788,
+      768
+    ],
+    "over": []
+  },
+  {
+    "id": "lechfeld",
+    "scale": "historical",
+    "n": 44,
+    "counts": [
+      1528,
+      1488
+    ],
+    "over": []
+  },
+  {
+    "id": "lechfeld",
+    "scale": "expanded",
+    "n": 65,
+    "counts": [
+      2268,
+      2208
+    ],
+    "over": []
+  },
+  {
+    "id": "hastings",
+    "scale": "compact",
+    "n": 23,
+    "counts": [
+      1228,
+      1008
+    ],
+    "over": []
+  },
+  {
+    "id": "hastings",
+    "scale": "historical",
+    "n": 44,
+    "counts": [
+      2408,
+      1968
+    ],
+    "over": []
+  },
+  {
+    "id": "hastings",
+    "scale": "expanded",
+    "n": 65,
+    "counts": [
+      3588,
+      2928
+    ],
+    "over": []
+  },
+  {
+    "id": "bouvines",
+    "scale": "compact",
+    "n": 29,
+    "counts": [
+      1108,
+      1288
+    ],
+    "over": []
+  },
+  {
+    "id": "bouvines",
+    "scale": "historical",
+    "n": 56,
+    "counts": [
+      2168,
+      2528
+    ],
+    "over": []
+  },
+  {
+    "id": "bouvines",
+    "scale": "expanded",
+    "n": 83,
+    "counts": [
+      3228,
+      3768
+    ],
+    "over": []
+  },
+  {
+    "id": "bannockburn",
+    "scale": "compact",
+    "n": 31,
+    "counts": [
+      1148,
+      2008
+    ],
+    "over": []
+  },
+  {
+    "id": "bannockburn",
+    "scale": "historical",
+    "n": 60,
+    "counts": [
+      2248,
+      3968
+    ],
+    "over": []
+  },
+  {
+    "id": "bannockburn",
+    "scale": "expanded",
+    "n": 89,
+    "counts": [
+      3348,
+      5928
+    ],
+    "over": []
+  },
+  {
+    "id": "grunwald",
+    "scale": "compact",
+    "n": 33,
+    "counts": [
+      948,
+      1048
+    ],
+    "over": []
+  },
+  {
+    "id": "grunwald",
+    "scale": "historical",
+    "n": 64,
+    "counts": [
+      1848,
+      2048
+    ],
+    "over": []
+  },
+  {
+    "id": "grunwald",
+    "scale": "expanded",
+    "n": 95,
+    "counts": [
+      2748,
+      3048
+    ],
+    "over": []
+  },
+  {
+    "id": "agincourt",
+    "scale": "compact",
+    "n": 23,
+    "counts": [
+      728,
+      1228
+    ],
+    "over": []
+  },
+  {
+    "id": "agincourt",
+    "scale": "historical",
+    "n": 44,
+    "counts": [
+      1408,
+      2408
+    ],
+    "over": []
+  },
+  {
+    "id": "agincourt",
+    "scale": "expanded",
+    "n": 65,
+    "counts": [
+      2088,
+      3588
+    ],
+    "over": []
+  }
+]

@@ -1,0 +1,1412 @@
+[
+  {
+    "id": "hastings",
+    "variant": "autonomous",
+    "seconds": 900,
+    "result": "win",
+    "historicalWinner": 1,
+    "counts": [
+      1228,
+      1008
+    ],
+    "power": [
+      1195.3486140532204,
+      399.16882801204065
+    ],
+    "score": 0.852093535719457,
+    "loss": [
+      6.476960610438425,
+      21.340850076775837
+    ],
+    "wallMs": 10841,
+    "posture": [
+      [
+        1,
+        "hold",
+        "assault"
+      ],
+      [
+        2,
+        "hold",
+        "assault"
+      ],
+      [
+        3,
+        "hold",
+        "assault"
+      ],
+      [
+        4,
+        "hold",
+        "maneuver"
+      ],
+      [
+        5,
+        "hold",
+        "maneuver"
+      ],
+      [
+        6,
+        "hold",
+        "withdraw"
+      ],
+      [
+        7,
+        "hold",
+        "withdraw"
+      ],
+      [
+        8,
+        "hold",
+        "withdraw"
+      ],
+      [
+        9,
+        "hold",
+        "withdraw"
+      ],
+      [
+        10,
+        "hold",
+        "withdraw"
+      ],
+      [
+        11,
+        "hold",
+        "withdraw"
+      ],
+      [
+        12,
+        "hold",
+        "withdraw"
+      ],
+      [
+        13,
+        "hold",
+        "withdraw"
+      ],
+      [
+        14,
+        "hold",
+        "withdraw"
+      ],
+      [
+        15,
+        "hold",
+        "withdraw"
+      ],
+      [
+        16,
+        "hold",
+        "withdraw"
+      ],
+      [
+        17,
+        "hold",
+        "withdraw"
+      ],
+      [
+        18,
+        "hold",
+        "withdraw"
+      ],
+      [
+        19,
+        "hold",
+        "withdraw"
+      ],
+      [
+        20,
+        "hold",
+        "withdraw"
+      ],
+      [
+        21,
+        "hold",
+        "withdraw"
+      ],
+      [
+        22,
+        "hold",
+        "withdraw"
+      ],
+      [
+        23,
+        "hold",
+        "withdraw"
+      ],
+      [
+        24,
+        "hold",
+        "withdraw"
+      ],
+      [
+        25,
+        "hold",
+        "withdraw"
+      ],
+      [
+        26,
+        "hold",
+        "withdraw"
+      ],
+      [
+        27,
+        "hold",
+        "withdraw"
+      ],
+      [
+        28,
+        "hold",
+        "maneuver"
+      ],
+      [
+        29,
+        "hold",
+        "maneuver"
+      ],
+      [
+        30,
+        "hold",
+        "maneuver"
+      ]
+    ],
+    "samples": [
+      {
+        "seconds": 150,
+        "power": [
+          1189.1080706381601,
+          758.1022285786371
+        ],
+        "meanFatigue": 17.476006965426794,
+        "loss": 25.589362760617632,
+        "score": 0.7256852262341372
+      },
+      {
+        "seconds": 300,
+        "power": [
+          1195.3486140532204,
+          563.2899252630654
+        ],
+        "meanFatigue": 36.858546443178035,
+        "loss": 27.817810687214262,
+        "score": 0.7951070436184067
+      },
+      {
+        "seconds": 450,
+        "power": [
+          1195.3486140532204,
+          499.51092753342226
+        ],
+        "meanFatigue": 45.387295744152546,
+        "loss": 27.817810687214262,
+        "score": 0.8172525289411995
+      },
+      {
+        "seconds": 600,
+        "power": [
+          1195.3486140532204,
+          442.91357067902385
+        ],
+        "meanFatigue": 46.68632769742106,
+        "loss": 27.817810687214262,
+        "score": 0.8369043889600878
+      },
+      {
+        "seconds": 750,
+        "power": [
+          1195.3486140532204,
+          398.5171380120407
+        ],
+        "meanFatigue": 47.82608695652174,
+        "loss": 27.817810687214262,
+        "score": 0.852319816969457
+      },
+      {
+        "seconds": 900,
+        "power": [
+          1195.3486140532204,
+          399.16882801204065
+        ],
+        "meanFatigue": 47.82608695652174,
+        "loss": 27.817810687214262,
+        "score": 0.852093535719457
+      }
+    ]
+  },
+  {
+    "id": "hastings",
+    "variant": "dry-ground",
+    "seconds": 900,
+    "result": "win",
+    "historicalWinner": 1,
+    "counts": [
+      1228,
+      1008
+    ],
+    "power": [
+      1195.3486140532204,
+      399.16882801204065
+    ],
+    "score": 0.852093535719457,
+    "loss": [
+      6.476960610438425,
+      21.340850076775837
+    ],
+    "wallMs": 10851,
+    "posture": [
+      [
+        1,
+        "hold",
+        "assault"
+      ],
+      [
+        2,
+        "hold",
+        "assault"
+      ],
+      [
+        3,
+        "hold",
+        "assault"
+      ],
+      [
+        4,
+        "hold",
+        "maneuver"
+      ],
+      [
+        5,
+        "hold",
+        "maneuver"
+      ],
+      [
+        6,
+        "hold",
+        "withdraw"
+      ],
+      [
+        7,
+        "hold",
+        "withdraw"
+      ],
+      [
+        8,
+        "hold",
+        "withdraw"
+      ],
+      [
+        9,
+        "hold",
+        "withdraw"
+      ],
+      [
+        10,
+        "hold",
+        "withdraw"
+      ],
+      [
+        11,
+        "hold",
+        "withdraw"
+      ],
+      [
+        12,
+        "hold",
+        "withdraw"
+      ],
+      [
+        13,
+        "hold",
+        "withdraw"
+      ],
+      [
+        14,
+        "hold",
+        "withdraw"
+      ],
+      [
+        15,
+        "hold",
+        "withdraw"
+      ],
+      [
+        16,
+        "hold",
+        "withdraw"
+      ],
+      [
+        17,
+        "hold",
+        "withdraw"
+      ],
+      [
+        18,
+        "hold",
+        "withdraw"
+      ],
+      [
+        19,
+        "hold",
+        "withdraw"
+      ],
+      [
+        20,
+        "hold",
+        "withdraw"
+      ],
+      [
+        21,
+        "hold",
+        "withdraw"
+      ],
+      [
+        22,
+        "hold",
+        "withdraw"
+      ],
+      [
+        23,
+        "hold",
+        "withdraw"
+      ],
+      [
+        24,
+        "hold",
+        "withdraw"
+      ],
+      [
+        25,
+        "hold",
+        "withdraw"
+      ],
+      [
+        26,
+        "hold",
+        "withdraw"
+      ],
+      [
+        27,
+        "hold",
+        "withdraw"
+      ],
+      [
+        28,
+        "hold",
+        "maneuver"
+      ],
+      [
+        29,
+        "hold",
+        "maneuver"
+      ],
+      [
+        30,
+        "hold",
+        "maneuver"
+      ]
+    ],
+    "samples": [
+      {
+        "seconds": 150,
+        "power": [
+          1189.1080706381601,
+          758.1022285786371
+        ],
+        "meanFatigue": 17.476006965426794,
+        "loss": 25.589362760617632,
+        "score": 0.7256852262341372
+      },
+      {
+        "seconds": 300,
+        "power": [
+          1195.3486140532204,
+          563.2899252630654
+        ],
+        "meanFatigue": 36.858546443178035,
+        "loss": 27.817810687214262,
+        "score": 0.7951070436184067
+      },
+      {
+        "seconds": 450,
+        "power": [
+          1195.3486140532204,
+          499.51092753342226
+        ],
+        "meanFatigue": 45.387295744152546,
+        "loss": 27.817810687214262,
+        "score": 0.8172525289411995
+      },
+      {
+        "seconds": 600,
+        "power": [
+          1195.3486140532204,
+          442.91357067902385
+        ],
+        "meanFatigue": 46.68632769742106,
+        "loss": 27.817810687214262,
+        "score": 0.8369043889600878
+      },
+      {
+        "seconds": 750,
+        "power": [
+          1195.3486140532204,
+          398.5171380120407
+        ],
+        "meanFatigue": 47.82608695652174,
+        "loss": 27.817810687214262,
+        "score": 0.852319816969457
+      },
+      {
+        "seconds": 900,
+        "power": [
+          1195.3486140532204,
+          399.16882801204065
+        ],
+        "meanFatigue": 47.82608695652174,
+        "loss": 27.817810687214262,
+        "score": 0.852093535719457
+      }
+    ]
+  },
+  {
+    "id": "bannockburn",
+    "variant": "autonomous",
+    "seconds": 900,
+    "result": "loss",
+    "historicalWinner": 0,
+    "counts": [
+      1148,
+      2008
+    ],
+    "power": [
+      794.8431877262177,
+      315.25466616692665
+    ],
+    "score": -0.20160615491813277,
+    "loss": [
+      14.896051761677242,
+      18.50378501417231
+    ],
+    "wallMs": 13265,
+    "posture": [
+      [
+        1,
+        "withdraw",
+        "assault"
+      ],
+      [
+        2,
+        "withdraw",
+        "assault"
+      ],
+      [
+        3,
+        "withdraw",
+        "assault"
+      ],
+      [
+        4,
+        "withdraw",
+        "assault"
+      ],
+      [
+        5,
+        "withdraw",
+        "assault"
+      ],
+      [
+        6,
+        "withdraw",
+        "assault"
+      ],
+      [
+        7,
+        "withdraw",
+        "assault"
+      ],
+      [
+        8,
+        "withdraw",
+        "assault"
+      ],
+      [
+        9,
+        "withdraw",
+        "assault"
+      ],
+      [
+        10,
+        "withdraw",
+        "assault"
+      ],
+      [
+        11,
+        "withdraw",
+        "assault"
+      ],
+      [
+        12,
+        "withdraw",
+        "assault"
+      ],
+      [
+        13,
+        "withdraw",
+        "assault"
+      ],
+      [
+        14,
+        "withdraw",
+        "assault"
+      ],
+      [
+        15,
+        "withdraw",
+        "assault"
+      ],
+      [
+        16,
+        "withdraw",
+        "assault"
+      ],
+      [
+        17,
+        "assault",
+        "assault"
+      ],
+      [
+        18,
+        "assault",
+        "assault"
+      ],
+      [
+        19,
+        "assault",
+        "assault"
+      ],
+      [
+        20,
+        "assault",
+        "assault"
+      ],
+      [
+        21,
+        "assault",
+        "assault"
+      ],
+      [
+        22,
+        "assault",
+        "assault"
+      ],
+      [
+        23,
+        "assault",
+        "assault"
+      ],
+      [
+        24,
+        "assault",
+        "assault"
+      ],
+      [
+        25,
+        "assault",
+        "assault"
+      ],
+      [
+        26,
+        "assault",
+        "assault"
+      ],
+      [
+        27,
+        "assault",
+        "assault"
+      ],
+      [
+        28,
+        "assault",
+        "assault"
+      ],
+      [
+        29,
+        "assault",
+        "assault"
+      ],
+      [
+        30,
+        "assault",
+        "assault"
+      ]
+    ],
+    "samples": [
+      {
+        "seconds": 150,
+        "power": [
+          992.4125628570248,
+          1724.483747253664
+        ],
+        "meanFatigue": 32.67414721359845,
+        "loss": 21.115132625427833,
+        "score": -0.47705460220431695
+      },
+      {
+        "seconds": 300,
+        "power": [
+          942.5953307173197,
+          1605.918362870714
+        ],
+        "meanFatigue": 58.62882051138959,
+        "loss": 21.524872381460682,
+        "score": -0.46891571578559665
+      },
+      {
+        "seconds": 450,
+        "power": [
+          810.2570394261724,
+          1195.3812784176762
+        ],
+        "meanFatigue": 81.07712426936762,
+        "loss": 22.828424768220373,
+        "score": -0.42254550512105926
+      },
+      {
+        "seconds": 600,
+        "power": [
+          738.0723807689673,
+          934.1264638390146
+        ],
+        "meanFatigue": 88.81817039465123,
+        "loss": 29.214061733052233,
+        "score": -0.21958675956002352
+      },
+      {
+        "seconds": 750,
+        "power": [
+          708.282427901336,
+          744.0601389087838
+        ],
+        "meanFatigue": 86.88111815894328,
+        "loss": 29.710421230933946,
+        "score": -0.18386010340412245
+      },
+      {
+        "seconds": 900,
+        "power": [
+          794.8431877262177,
+          315.25466616692665
+        ],
+        "meanFatigue": 87.12344849604145,
+        "loss": 33.399836775849565,
+        "score": -0.20160615491813277
+      }
+    ]
+  },
+  {
+    "id": "bannockburn",
+    "variant": "dry-ground",
+    "seconds": 900,
+    "result": "loss",
+    "historicalWinner": 0,
+    "counts": [
+      1148,
+      2008
+    ],
+    "power": [
+      677.5771945321364,
+      423.23448478759724
+    ],
+    "score": -0.11468605655606168,
+    "loss": [
+      12.434245302751293,
+      21.201410780460208
+    ],
+    "wallMs": 13280,
+    "posture": [
+      [
+        1,
+        "withdraw",
+        "assault"
+      ],
+      [
+        2,
+        "withdraw",
+        "assault"
+      ],
+      [
+        3,
+        "withdraw",
+        "assault"
+      ],
+      [
+        4,
+        "withdraw",
+        "assault"
+      ],
+      [
+        5,
+        "withdraw",
+        "assault"
+      ],
+      [
+        6,
+        "withdraw",
+        "assault"
+      ],
+      [
+        7,
+        "withdraw",
+        "assault"
+      ],
+      [
+        8,
+        "withdraw",
+        "assault"
+      ],
+      [
+        9,
+        "withdraw",
+        "assault"
+      ],
+      [
+        10,
+        "withdraw",
+        "assault"
+      ],
+      [
+        11,
+        "withdraw",
+        "assault"
+      ],
+      [
+        12,
+        "withdraw",
+        "assault"
+      ],
+      [
+        13,
+        "withdraw",
+        "assault"
+      ],
+      [
+        14,
+        "withdraw",
+        "assault"
+      ],
+      [
+        15,
+        "withdraw",
+        "assault"
+      ],
+      [
+        16,
+        "withdraw",
+        "assault"
+      ],
+      [
+        17,
+        "withdraw",
+        "assault"
+      ],
+      [
+        18,
+        "withdraw",
+        "assault"
+      ],
+      [
+        19,
+        "assault",
+        "assault"
+      ],
+      [
+        20,
+        "assault",
+        "assault"
+      ],
+      [
+        21,
+        "assault",
+        "assault"
+      ],
+      [
+        22,
+        "assault",
+        "assault"
+      ],
+      [
+        23,
+        "assault",
+        "assault"
+      ],
+      [
+        24,
+        "assault",
+        "assault"
+      ],
+      [
+        25,
+        "assault",
+        "assault"
+      ],
+      [
+        26,
+        "assault",
+        "assault"
+      ],
+      [
+        27,
+        "assault",
+        "assault"
+      ],
+      [
+        28,
+        "assault",
+        "assault"
+      ],
+      [
+        29,
+        "assault",
+        "assault"
+      ],
+      [
+        30,
+        "assault",
+        "assault"
+      ]
+    ],
+    "samples": [
+      {
+        "seconds": 150,
+        "power": [
+          992.4125628570248,
+          1724.6695143186641
+        ],
+        "meanFatigue": 32.67377318547581,
+        "loss": 21.115132625427833,
+        "score": -0.47710270921318154
+      },
+      {
+        "seconds": 300,
+        "power": [
+          942.6846333467909,
+          1630.357995805713
+        ],
+        "meanFatigue": 58.324783415501905,
+        "loss": 21.524872381460682,
+        "score": -0.47520425372586017
+      },
+      {
+        "seconds": 450,
+        "power": [
+          807.0890844290569,
+          1283.9085774542918
+        ],
+        "meanFatigue": 81.17583567893743,
+        "loss": 23.693840926491674,
+        "score": -0.2789058634797352
+      },
+      {
+        "seconds": 600,
+        "power": [
+          689.3905332838858,
+          1012.1220048716683
+        ],
+        "meanFatigue": 89.1612903225806,
+        "loss": 32.63185817313783,
+        "score": -0.2618358190905754
+      },
+      {
+        "seconds": 750,
+        "power": [
+          636.9956323292931,
+          806.5435436268035
+        ],
+        "meanFatigue": 87.70967741935476,
+        "loss": 32.63185817313783,
+        "score": -0.23233125093289814
+      },
+      {
+        "seconds": 900,
+        "power": [
+          677.5771945321364,
+          423.23448478759724
+        ],
+        "meanFatigue": 87.03508064516129,
+        "loss": 33.6356560832115,
+        "score": -0.11468605655606168
+      }
+    ]
+  },
+  {
+    "id": "agincourt",
+    "variant": "autonomous",
+    "seconds": 900,
+    "result": "win",
+    "historicalWinner": 0,
+    "counts": [
+      728,
+      1228
+    ],
+    "power": [
+      614.808163278684,
+      626.1821132007954
+    ],
+    "score": 0.7005683890799167,
+    "loss": [
+      18.261994913296434,
+      70.0172799133525
+    ],
+    "wallMs": 8450,
+    "posture": [
+      [
+        1,
+        "hold",
+        "assault"
+      ],
+      [
+        2,
+        "hold",
+        "assault"
+      ],
+      [
+        3,
+        "hold",
+        "assault"
+      ],
+      [
+        4,
+        "hold",
+        "assault"
+      ],
+      [
+        5,
+        "hold",
+        "assault"
+      ],
+      [
+        6,
+        "hold",
+        "assault"
+      ],
+      [
+        7,
+        "hold",
+        "assault"
+      ],
+      [
+        8,
+        "hold",
+        "assault"
+      ],
+      [
+        9,
+        "hold",
+        "assault"
+      ],
+      [
+        10,
+        "hold",
+        "reinforce"
+      ],
+      [
+        11,
+        "hold",
+        "reinforce"
+      ],
+      [
+        12,
+        "hold",
+        "reinforce"
+      ],
+      [
+        13,
+        "hold",
+        "reinforce"
+      ],
+      [
+        14,
+        "hold",
+        "withdraw"
+      ],
+      [
+        15,
+        "hold",
+        "withdraw"
+      ],
+      [
+        16,
+        "hold",
+        "withdraw"
+      ],
+      [
+        17,
+        "hold",
+        "withdraw"
+      ],
+      [
+        18,
+        "hold",
+        "withdraw"
+      ],
+      [
+        19,
+        "hold",
+        "withdraw"
+      ],
+      [
+        20,
+        "hold",
+        "withdraw"
+      ],
+      [
+        21,
+        "hold",
+        "withdraw"
+      ],
+      [
+        22,
+        "hold",
+        "withdraw"
+      ],
+      [
+        23,
+        "hold",
+        "withdraw"
+      ],
+      [
+        24,
+        "hold",
+        "withdraw"
+      ],
+      [
+        25,
+        "hold",
+        "withdraw"
+      ],
+      [
+        26,
+        "hold",
+        "withdraw"
+      ],
+      [
+        27,
+        "hold",
+        "withdraw"
+      ],
+      [
+        28,
+        "hold",
+        "assault"
+      ],
+      [
+        29,
+        "hold",
+        "assault"
+      ],
+      [
+        30,
+        "hold",
+        "assault"
+      ]
+    ],
+    "samples": [
+      {
+        "seconds": 150,
+        "power": [
+          605.7785885477815,
+          1074.40453
+        ],
+        "meanFatigue": 38.61021859882275,
+        "loss": 37.61912182971193,
+        "score": 0.5307360355481799
+      },
+      {
+        "seconds": 300,
+        "power": [
+          584.2347341856089,
+          888.7686201357351
+        ],
+        "meanFatigue": 59.79739672752041,
+        "loss": 87.05561985364017,
+        "score": 0.5854452810727045
+      },
+      {
+        "seconds": 450,
+        "power": [
+          614.808163278684,
+          827.2010372979883
+        ],
+        "meanFatigue": 52.270064740518414,
+        "loss": 88.27927482664893,
+        "score": 0.6269051025622158
+      },
+      {
+        "seconds": 600,
+        "power": [
+          614.808163278684,
+          699.3082704672296
+        ],
+        "meanFatigue": 52.66798852047632,
+        "loss": 88.27927482664893,
+        "score": 0.6737713444790248
+      },
+      {
+        "seconds": 750,
+        "power": [
+          614.808163278684,
+          626.6994853415446
+        ],
+        "meanFatigue": 52.17391304347826,
+        "loss": 88.27927482664893,
+        "score": 0.7003787983117269
+      },
+      {
+        "seconds": 900,
+        "power": [
+          614.808163278684,
+          626.1821132007954
+        ],
+        "meanFatigue": 52.14619565217391,
+        "loss": 88.27927482664893,
+        "score": 0.7005683890799167
+      }
+    ]
+  },
+  {
+    "id": "agincourt",
+    "variant": "dry-ground",
+    "seconds": 900,
+    "result": "win",
+    "historicalWinner": 0,
+    "counts": [
+      728,
+      1228
+    ],
+    "power": [
+      585.3603039007488,
+      328.5317452810542
+    ],
+    "score": 0.7914395606425624,
+    "loss": [
+      37.61212829338504,
+      182.7596298585447
+    ],
+    "wallMs": 8689,
+    "posture": [
+      [
+        1,
+        "hold",
+        "assault"
+      ],
+      [
+        2,
+        "hold",
+        "assault"
+      ],
+      [
+        3,
+        "hold",
+        "assault"
+      ],
+      [
+        4,
+        "hold",
+        "assault"
+      ],
+      [
+        5,
+        "hold",
+        "assault"
+      ],
+      [
+        6,
+        "hold",
+        "assault"
+      ],
+      [
+        7,
+        "hold",
+        "assault"
+      ],
+      [
+        8,
+        "hold",
+        "assault"
+      ],
+      [
+        9,
+        "hold",
+        "assault"
+      ],
+      [
+        10,
+        "hold",
+        "assault"
+      ],
+      [
+        11,
+        "hold",
+        "assault"
+      ],
+      [
+        12,
+        "hold",
+        "assault"
+      ],
+      [
+        13,
+        "hold",
+        "assault"
+      ],
+      [
+        14,
+        "hold",
+        "assault"
+      ],
+      [
+        15,
+        "hold",
+        "assault"
+      ],
+      [
+        16,
+        "hold",
+        "reinforce"
+      ],
+      [
+        17,
+        "hold",
+        "reinforce"
+      ],
+      [
+        18,
+        "hold",
+        "assault"
+      ],
+      [
+        19,
+        "hold",
+        "assault"
+      ],
+      [
+        20,
+        "hold",
+        "assault"
+      ],
+      [
+        21,
+        "hold",
+        "assault"
+      ],
+      [
+        22,
+        "hold",
+        "assault"
+      ],
+      [
+        23,
+        "hold",
+        "assault"
+      ],
+      [
+        24,
+        "hold",
+        "assault"
+      ],
+      [
+        25,
+        "hold",
+        "assault"
+      ],
+      [
+        26,
+        "hold",
+        "assault"
+      ],
+      [
+        27,
+        "hold",
+        "assault"
+      ],
+      [
+        28,
+        "hold",
+        "assault"
+      ],
+      [
+        29,
+        "hold",
+        "assault"
+      ],
+      [
+        30,
+        "hold",
+        "assault"
+      ]
+    ],
+    "samples": [
+      {
+        "seconds": 150,
+        "power": [
+          620.5226100512045,
+          1111.498076755881
+        ],
+        "meanFatigue": 23.761563868314216,
+        "loss": 24.339502274058162,
+        "score": 0.5262568730190575
+      },
+      {
+        "seconds": 300,
+        "power": [
+          590.797333941946,
+          638.6666495126012
+        ],
+        "meanFatigue": 36.109973800041544,
+        "loss": 195.18795099255624,
+        "score": 0.6811515780550784
+      },
+      {
+        "seconds": 450,
+        "power": [
+          585.3603039007488,
+          366.71355700458156
+        ],
+        "meanFatigue": 50.423126528079116,
+        "loss": 220.37175815192978,
+        "score": 0.7774478543920841
+      },
+      {
+        "seconds": 600,
+        "power": [
+          585.3603039007488,
+          333.20069217223534
+        ],
+        "meanFatigue": 54.43005648404402,
+        "loss": 220.37175815192978,
+        "score": 0.7897286273355334
+      },
+      {
+        "seconds": 750,
+        "power": [
+          585.3603039007488,
+          345.3404617657601
+        ],
+        "meanFatigue": 56.19587488676649,
+        "loss": 220.37175815192978,
+        "score": 0.7852800146994698
+      },
+      {
+        "seconds": 900,
+        "power": [
+          585.3603039007488,
+          328.5317452810542
+        ],
+        "meanFatigue": 56.52173913043478,
+        "loss": 220.37175815192978,
+        "score": 0.7914395606425624
+      }
+    ]
+  }
+]

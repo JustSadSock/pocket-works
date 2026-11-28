@@ -1,0 +1,203 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "files": [
+        "engine.test.mjs",
+        "doctrine.test.mjs",
+        "breaking.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#start",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#start"
+        },
+        {
+          "action": "visible",
+          "selector": "#map"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#confirm"
+        },
+        {
+          "action": "click",
+          "selector": "#confirm"
+        },
+        {
+          "action": "click",
+          "selector": "#confirm"
+        },
+        {
+          "action": "visible",
+          "selector": "#playback"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#skip"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/journey.spec.ts",
+        "qa/overhaul.spec.ts"
+      ]
+    },
+    {
+      "id": "living",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/living.spec.ts"
+      ]
+    },
+    {
+      "id": "performance",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/performance.spec.ts"
+      ]
+    },
+    {
+      "id": "commander",
+      "kind": "node-test",
+      "files": [
+        "commander.test.mjs",
+        "allied-command.test.mjs",
+        "allied-room.test.mjs",
+        "network-authority.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "minds",
+      "kind": "playwright",
+      "files": [
+        "qa/minds.spec.ts"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "chronicles",
+      "kind": "node-test",
+      "files": [
+        "chronicles.test.mjs",
+        "laboratory.test.mjs",
+        "control-lab.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "chronicles-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/chronicles.spec.ts",
+        "qa/laboratory.spec.ts"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "completion-lab",
+      "kind": "node",
+      "entry": "completion-runner.mjs",
+      "args": [
+        "{seed}",
+        "8",
+        "{output}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "controlled-battles",
+      "kind": "node",
+      "entry": "control-lab-batch.mjs",
+      "args": [
+        "{output}"
+      ],
+      "tier": "deep"
+    },
+    {
+      "id": "vertical-slice-core",
+      "kind": "node-test",
+      "files": [
+        "research/vertical-slice/slice-core.test.mjs",
+        "research/vertical-slice/standalone.test.mjs",
+        "research/vertical-slice/slice-evidence.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "vertical-slice-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/vertical-slice.spec.ts"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "art-reference",
+      "kind": "playwright",
+      "files": [
+        "qa/art-reference.spec.ts",
+        "qa/orthographic-art.spec.ts"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "renderer-diagnostic",
+      "kind": "playwright",
+      "files": [
+        "qa/renderer-diagnostic.spec.ts"
+      ],
+      "tier": "deep"
+    },
+    {
+      "id": "orthographic-performance",
+      "kind": "playwright",
+      "files": [
+        "qa/orthographic-performance.spec.ts"
+      ],
+      "tier": "smoke"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "runtime": "V8 isolated JavaScript; not real-device FPS; 16 warm-up steps, 120 measured, single trial per size; current geography vs legacy terrain; pre-render simulation only",
+  "measures": [
+    {
+      "version": "0.2.1",
+      "count": 26,
+      "roundMs": 164,
+      "stepMean": 1.3666666666666667,
+      "stepP95": 2,
+      "serializedStateBytes": 16461
+    },
+    {
+      "version": "0.2.1",
+      "count": 40,
+      "roundMs": 298,
+      "stepMean": 2.4833333333333334,
+      "stepP95": 4,
+      "serializedStateBytes": 24066
+    },
+    {
+      "version": "0.2.1",
+      "count": 60,
+      "roundMs": 737,
+      "stepMean": 6.141666666666667,
+      "stepP95": 8,
+      "serializedStateBytes": 33786
+    },
+    {
+      "version": "0.2.1",
+      "count": 100,
+      "roundMs": 1681,
+      "stepMean": 14.008333333333333,
+      "stepP95": 19,
+      "serializedStateBytes": 52158
+    },
+    {
+      "version": "0.3.0",
+      "count": 26,
+      "roundMs": 366,
+      "stepMean": 3.05,
+      "stepP95": 4,
+      "serializedStateBytes": 195154
+    },
+    {
+      "version": "0.3.0",
+      "count": 40,
+      "roundMs": 653,
+      "stepMean": 5.441666666666666,
+      "stepP95": 6,
+      "serializedStateBytes": 207598
+    },
+    {
+      "version": "0.3.0",
+      "count": 60,
+      "roundMs": 1468,
+      "stepMean": 12.233333333333333,
+      "stepP95": 19,
+      "serializedStateBytes": 223765
+    },
+    {
+      "version": "0.3.0",
+      "count": 100,
+      "roundMs": 3004,
+      "stepMean": 25.033333333333335,
+      "stepP95": 37,
+      "serializedStateBytes": 255532
+    }
+  ]
+}

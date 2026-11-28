@@ -1,0 +1,6057 @@
+{
+  "engine": "8379882b16b2375093cb80386b2b58996e7e5a22",
+  "planner": "764169d7b22d70aa77b449756a0e8be0138e1bc7",
+  "summary": {
+    "battles": 24,
+    "win": 5,
+    "loss": 5,
+    "draw": 14,
+    "meanDelta": 0.03123387386426719,
+    "meanPlanMs": 20.416666666666668,
+    "postures": [
+      "hold",
+      "assault",
+      "maneuver"
+    ],
+    "profiles": [
+      {
+        "profile": "methodical",
+        "n": 4,
+        "meanDelta": 0.16356464423101935,
+        "wins": 2,
+        "postures": [
+          "hold",
+          "assault"
+        ]
+      },
+      {
+        "profile": "aggressive",
+        "n": 4,
+        "meanDelta": 0.01761317552046207,
+        "wins": 0,
+        "postures": [
+          "assault",
+          "maneuver"
+        ]
+      },
+      {
+        "profile": "defensive",
+        "n": 4,
+        "meanDelta": -0.04344864196638909,
+        "wins": 0,
+        "postures": [
+          "hold",
+          "maneuver"
+        ]
+      },
+      {
+        "profile": "maneuver",
+        "n": 4,
+        "meanDelta": 0.0961578375609338,
+        "wins": 3,
+        "postures": [
+          "maneuver",
+          "assault"
+        ]
+      },
+      {
+        "profile": "cautious",
+        "n": 4,
+        "meanDelta": -0.001432794303527718,
+        "wins": 0,
+        "postures": [
+          "hold"
+        ]
+      },
+      {
+        "profile": "adaptive",
+        "n": 4,
+        "meanDelta": -0.04505097785689527,
+        "wins": 0,
+        "postures": [
+          "assault",
+          "maneuver",
+          "hold"
+        ]
+      }
+    ]
+  },
+  "runs": [
+    {
+      "seed": "Minds 31",
+      "arch": "plain",
+      "profile": "methodical",
+      "difficulty": "recruit",
+      "fog": true,
+      "objective": "territory",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "loss",
+      "time": 120,
+      "own": {
+        "power": 0.939296175674971,
+        "loss": 15.295182627728565,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 120000
+      },
+      "enemy": {
+        "power": 0.9307981836337275,
+        "loss": 26.68626072109123,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 160000
+      },
+      "delta": 0.008497992041243574,
+      "changes": 0,
+      "orderChanges": 1,
+      "reserveRound": null,
+      "meanCohesion": 95.62708333333323,
+      "contactWidth": 0,
+      "planMs": 19,
+      "physicsMs": 746,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.995235448417751
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.05494998495552139
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.5875914173566584
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9914865415697564
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.8236372817130638
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -1.45133515764714
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9846404042116133
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.5829390627539497
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -1.2002309473157573
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9872426872239273
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.36791857903568376
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -1.005133883967529
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 31",
+      "arch": "plain",
+      "profile": "methodical",
+      "difficulty": "recruit",
+      "fog": true,
+      "objective": "territory",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "loss",
+      "time": 120,
+      "own": {
+        "power": 0.939296175674971,
+        "loss": 15.295182627728565,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 120000
+      },
+      "enemy": {
+        "power": 0.9307981836337275,
+        "loss": 26.68626072109123,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 160000
+      },
+      "delta": 0.008497992041243574,
+      "changes": 0,
+      "orderChanges": 1,
+      "reserveRound": null,
+      "meanCohesion": 95.62708333333323,
+      "contactWidth": 0,
+      "planMs": 18,
+      "physicsMs": 751,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.995235448417751
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.05494998495552139
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.5875914173566584
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9914865415697564
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.8236372817130638
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -1.45133515764714
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9846404042116133
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.5829390627539497
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -1.2002309473157569
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9872426872239277
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.36791857903568453
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -1.0051338839675295
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 32",
+      "arch": "valley",
+      "profile": "aggressive",
+      "difficulty": "captain",
+      "fog": false,
+      "objective": "power",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.8361761286704135,
+        "loss": 31.04664414808883,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 19,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.8105101286829115,
+        "loss": 48.918911806607994,
+        "routs": 0,
+        "crowding": 7.649999999999998,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 80000
+      },
+      "delta": 0.025665999987501964,
+      "changes": 1,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 98.04798050864204,
+      "contactWidth": 3.995727068979818,
+      "planMs": 17,
+      "physicsMs": 778,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.5378180666249515
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.049063940356159
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.6082129545465715
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.4827959326560385
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.5716666666666667
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.560981496415918
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.4895141995604209
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.9489887007029094
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.843437102513495
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": -0.054964164174526986
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.5896661761636333
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.8139416569057876
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.1860388370692228
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0670832032401831
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.3869149271900951
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.0993884070896294
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.8280185955803439
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.25763275555629
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.042670449628995
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.5429664527875773
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 32",
+      "arch": "valley",
+      "profile": "aggressive",
+      "difficulty": "captain",
+      "fog": false,
+      "objective": "power",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.8361761286704129,
+        "loss": 31.04664414808886,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 19,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.8105101286829116,
+        "loss": 48.918911806607994,
+        "routs": 0,
+        "crowding": 7.649999999999998,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 80000
+      },
+      "delta": 0.025665999987501298,
+      "changes": 1,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 98.04798050864204,
+      "contactWidth": 3.995727068979704,
+      "planMs": 22,
+      "physicsMs": 788,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.5378180666249515
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.049063940356159
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.6082129545465715
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.4827959326560385
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.5716666666666667
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.560981496415918
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.4895141995604217
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.948988700702909
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.843437102513495
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": -0.054964164174526764
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.5896661761636324
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.8139416569057885
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.1860388370692212
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0670832032401847
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.38691492719009646
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.09938840708963
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.8280185955803439
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.2576327555562905
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.0426704496290002
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.5429664527875774
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 33",
+      "arch": "ridge",
+      "profile": "defensive",
+      "difficulty": "commander",
+      "fog": false,
+      "objective": "power",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.9418713041915631,
+        "loss": 10.198985187627947,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 130000
+      },
+      "enemy": {
+        "power": 0.9323019755824085,
+        "loss": 11.430319219710306,
+        "routs": 0,
+        "crowding": 76.07499999999975,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 150000
+      },
+      "delta": 0.009569328609154604,
+      "changes": 0,
+      "orderChanges": 1,
+      "reserveRound": null,
+      "meanCohesion": 94.40104166666657,
+      "contactWidth": 0,
+      "planMs": 14,
+      "physicsMs": 652,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.6570252178517713
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.961929841347709
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.8833072653621716
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.5734683579737303
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7540579710144928
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.6933913043478261
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.6304341706460547
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.8305967561660257
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.374337245335646
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.0830377845266341
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.7000000059881477
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.03810824948970437
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.3461126037011145
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1823649496938227
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.8119079321575082
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.5311692481408428
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.3369931645384892
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.8966823829737494
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.24992742452721695
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.14591537607390115
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.9574564547163302
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.817054286626232
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.7462357499934338
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.5691935264718524
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.143537923880166
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.470688741526931
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.09738928766536331
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.7437140119410226
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 33",
+      "arch": "ridge",
+      "profile": "defensive",
+      "difficulty": "commander",
+      "fog": false,
+      "objective": "power",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.9418713041915631,
+        "loss": 10.198985187627954,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 130000
+      },
+      "enemy": {
+        "power": 0.9323019755824085,
+        "loss": 11.430319219710327,
+        "routs": 0,
+        "crowding": 76.07499999999975,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 150000
+      },
+      "delta": 0.009569328609154604,
+      "changes": 0,
+      "orderChanges": 1,
+      "reserveRound": null,
+      "meanCohesion": 94.40104166666657,
+      "contactWidth": 0,
+      "planMs": 14,
+      "physicsMs": 661,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.6570252178517713
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.961929841347709
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.8833072653621716
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.5734683579737303
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7540579710144928
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.6933913043478261
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.6304341706460547
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.8305967561660257
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.3743372453356482
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.0830377845266346
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.7000000059881479
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.03810824948970337
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.34611260370111363
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.182364949693822
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.8119079321575082
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.5311692481408459
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.3369931645384892
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.8966823829737494
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.24992742452721695
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.1459153760739011
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.9574564547163302
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.817054286626233
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.7462357499934338
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.5691935264718497
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.143537923880166
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.47068874152693213
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.09738928766536242
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.7437140119410233
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 34",
+      "arch": "marsh",
+      "profile": "maneuver",
+      "difficulty": "grandmaster",
+      "fog": true,
+      "objective": "power",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "win",
+      "time": 120,
+      "own": {
+        "power": 0.889084022306279,
+        "loss": 11.664679954650936,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 150000
+      },
+      "enemy": {
+        "power": 0.7062302326622848,
+        "loss": 62.196883397781505,
+        "routs": 1,
+        "crowding": 0,
+        "isolation": 72.25,
+        "wait": 0,
+        "territory": 100000
+      },
+      "delta": 0.18285378964399424,
+      "changes": 2,
+      "orderChanges": 4,
+      "reserveRound": null,
+      "meanCohesion": 94.73503112619176,
+      "contactWidth": 14.14228306458643,
+      "planMs": 43,
+      "physicsMs": 740,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 3.362536224390545
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 2.362189210557563
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.334158582643341
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.3211692365068535
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.2740833333333332
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.9424499849555216
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.6329166666666667
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.4067500000000001
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.10792265774212531
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.5879307333032011
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.2051746523198186
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.645726664403347
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.5697260069328121
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.3497579556053374
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.21612353979601506
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.40428033034431665
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.6692438501578033
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1180532361772022
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.308691265051715
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.6374710393985958
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.5708151146831875
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.5268060200667606
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.43276194314996963
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.23446387323365736
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.3776659233275364
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.6456462245912145
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.0763161361444566
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.8710039157748413
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.427047378149521
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.9030466476440462
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.0498090875577613
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.846418579609308
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.7905949387831948
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.5129655457657643
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.29533161358012094
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.6776700893908111
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 34",
+      "arch": "marsh",
+      "profile": "maneuver",
+      "difficulty": "grandmaster",
+      "fog": true,
+      "objective": "power",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "win",
+      "time": 120,
+      "own": {
+        "power": 0.8909905851721025,
+        "loss": 11.664722301565043,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 150000
+      },
+      "enemy": {
+        "power": 0.7057452053681844,
+        "loss": 62.19695341344611,
+        "routs": 1,
+        "crowding": 0,
+        "isolation": 72.25,
+        "wait": 0,
+        "territory": 110000
+      },
+      "delta": 0.1852453798039181,
+      "changes": 2,
+      "orderChanges": 4,
+      "reserveRound": null,
+      "meanCohesion": 94.78243236010262,
+      "contactWidth": 14.142860615630283,
+      "planMs": 38,
+      "physicsMs": 777,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 3.362536224390545
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 2.362189210557563
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.334158582643341
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.3211692365068535
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.2740833333333332
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.9424499849555216
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.6329166666666667
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.4067500000000001
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.10792265774212531
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.5876599101067554
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.2030177702982345
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.6457266644033479
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.5697260069328116
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.34975795560533873
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.21609108771944352
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.4057140919150198
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.6687302176122448
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1180532361772026
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.3098129217794474
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.6375754278286838
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.5708423932080262
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.5255564174923901
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.4327938865300054
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.23523200014446854
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.37801432896723375
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.644145044869495
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.0762843239062487
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.8699521093096974
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.4288576581516206
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.9033356996095065
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.0498398343284356
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.8466174601679468
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.7906335182497419
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.5140170642882058
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.2931138933413553
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.6776312060804917
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 35",
+      "arch": "plain",
+      "profile": "cautious",
+      "difficulty": "recruit",
+      "fog": false,
+      "objective": "territory",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.9268730283586563,
+        "loss": 26.698539301164516,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 150000
+      },
+      "enemy": {
+        "power": 0.944663631744391,
+        "loss": 26.763069895809622,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 130000
+      },
+      "delta": -0.017790603385734793,
+      "changes": 0,
+      "orderChanges": 1,
+      "reserveRound": null,
+      "meanCohesion": 99.88328750758103,
+      "contactWidth": 0,
+      "planMs": 11,
+      "physicsMs": 611,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.050761162759435
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.18794979665183537
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -2.142181933375049
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.044402395859591
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.7062134635419328
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -3.031871413206453
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 1,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.0373876875759294
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.4518596618763215
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -2.774867281664712
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.038505694519264
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.2310794589471909
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -2.544481863150879
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 35",
+      "arch": "plain",
+      "profile": "cautious",
+      "difficulty": "recruit",
+      "fog": false,
+      "objective": "territory",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.9268730283586563,
+        "loss": 26.698539301164516,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 150000
+      },
+      "enemy": {
+        "power": 0.944663631744391,
+        "loss": 26.763069895809622,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 130000
+      },
+      "delta": -0.017790603385734793,
+      "changes": 0,
+      "orderChanges": 1,
+      "reserveRound": null,
+      "meanCohesion": 99.88328750758103,
+      "contactWidth": 0,
+      "planMs": 11,
+      "physicsMs": 630,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.050761162759435
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.18794979665183537
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -2.142181933375049
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.044402395859591
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.7062134635419328
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -3.031871413206453
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 101,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.0373876875759294
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.45185966187632126
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -2.774867281664712
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.038505694519264
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.2310794589471909
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -2.544481863150879
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 36",
+      "arch": "valley",
+      "profile": "adaptive",
+      "difficulty": "captain",
+      "fog": false,
+      "objective": "power",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.7181150319362865,
+        "loss": 47.35176327069904,
+        "routs": 0,
+        "crowding": 72.24999999999979,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 180000
+      },
+      "enemy": {
+        "power": 0.7140424794151629,
+        "loss": 24.264931604839262,
+        "routs": 0,
+        "crowding": 341.7000000000031,
+        "isolation": 17,
+        "wait": 0,
+        "territory": 110000
+      },
+      "delta": 0.004072552521123596,
+      "changes": 0,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 88.098776587792,
+      "contactWidth": 0,
+      "planMs": 17,
+      "physicsMs": 686,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.4483689532547515
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.197368387280842
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.9610301567607531
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7466666666666667
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.7095211294392019
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.485327785900941
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.7040039020376776
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.48757132770144673
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.3712810175612834
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.21289590722392304
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.52245181762195
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.9231440461731728
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.7299563174197048
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7238263479096079
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.4401484936051951
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.5342695646965177
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.1461357317166456
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.1314230992518841
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.9677647798769646
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.6614719110982434
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 36",
+      "arch": "valley",
+      "profile": "adaptive",
+      "difficulty": "captain",
+      "fog": false,
+      "objective": "power",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.7336164868792378,
+        "loss": 42.717146940107426,
+        "routs": 0,
+        "crowding": 70.97499999999978,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 200000
+      },
+      "enemy": {
+        "power": 0.713701119037484,
+        "loss": 24.26586327824829,
+        "routs": 0,
+        "crowding": 343.40000000000316,
+        "isolation": 12,
+        "wait": 0,
+        "territory": 110000
+      },
+      "delta": 0.01991536784175374,
+      "changes": 0,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 88.67632221701643,
+      "contactWidth": 0,
+      "planMs": 17,
+      "physicsMs": 690,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.4483689532547515
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.1973683872808425
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.9610301567607531
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7466666666666667
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.7095211294392019
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.4754716183712895
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.7040039020376794
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.48741279658070014
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.37128101756128384
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.20156428101314083
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.5051888903791775
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.9231541148565194
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.7280470271371537
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7270758895471474
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.41832140443077054
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.5096621237707666
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.1461437044791554
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.1394078478401424
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.957386050188143
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.6308245232462393
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 37",
+      "arch": "ridge",
+      "profile": "methodical",
+      "difficulty": "commander",
+      "fog": true,
+      "objective": "power",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "win",
+      "time": 120,
+      "own": {
+        "power": 0.8352024561781067,
+        "loss": 23.457784197556066,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 8.25,
+        "wait": 0,
+        "territory": 130000
+      },
+      "enemy": {
+        "power": 0.5192159775605801,
+        "loss": 86.26848746637907,
+        "routs": 1,
+        "crowding": 0,
+        "isolation": 48,
+        "wait": 0,
+        "territory": 80000
+      },
+      "delta": 0.3159864786175266,
+      "changes": 0,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 90.05494454336046,
+      "contactWidth": 32.98276901148665,
+      "planMs": 18,
+      "physicsMs": 786,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.6069738000346456
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.4863514417818484
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 2.39498787513343
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.2245152023468258
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.6236827476776972
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7290579710144927
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.6483913043478262
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.570121661710195
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.719132836467446
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.446412078510121
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.4176209660304204
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0226990418500703
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": -0.015894000339801595
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1525884689170107
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.6170390769590473
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.942123933443177
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.7094416660672795
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.6640755975358452
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0799860828989387
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.5117086079375727
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.7932898533331465
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.5893255848799903
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.893453800956883
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.890544667784916
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.6426750095334004
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.3386223499351826
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.1303683278785974
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.38813887025443694
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 37",
+      "arch": "ridge",
+      "profile": "methodical",
+      "difficulty": "commander",
+      "fog": true,
+      "objective": "power",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "win",
+      "time": 120,
+      "own": {
+        "power": 0.8420244307753764,
+        "loss": 23.58734929380968,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 4,
+        "wait": 0,
+        "territory": 130000
+      },
+      "enemy": {
+        "power": 0.5207483165513127,
+        "loss": 85.68340895374004,
+        "routs": 1,
+        "crowding": 0,
+        "isolation": 41,
+        "wait": 0,
+        "territory": 90000
+      },
+      "delta": 0.32127611422406366,
+      "changes": 0,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 90.10343762899748,
+      "contactWidth": 32.40691893489736,
+      "planMs": 17,
+      "physicsMs": 744,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.6069738000346456
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.4863514417818484
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 2.39498787513343
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.2245152023468258
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.6236827476776972
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7290579710144927
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.6483913043478262
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.5668458347429035
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.7210513508203
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.4427573869134536
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.4147611194345453
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0226990418500703
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": -0.011800146596536054
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.150746234732541
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.609966348544398
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.9422208132935044
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.7029694872990788
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.6607182800812637
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.07998608289894
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.5117086079375753
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.7932898533331464
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.592297406001663
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.8967567314858584
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.8857217979548424
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.6400084720676653
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.3456853320677982
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.132322060250294
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.38813887025443694
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 38",
+      "arch": "marsh",
+      "profile": "aggressive",
+      "difficulty": "grandmaster",
+      "fog": false,
+      "objective": "power",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.8679570842365336,
+        "loss": 45.32462643236401,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.8583967331831112,
+        "loss": 47.06039694905486,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 130000
+      },
+      "delta": 0.009560351053422456,
+      "changes": 0,
+      "orderChanges": 2,
+      "reserveRound": null,
+      "meanCohesion": 94.22819418907912,
+      "contactWidth": 2.378011677127489,
+      "planMs": 11,
+      "physicsMs": 625,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.3625680666249513
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.5066960506459823
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.428445898484517
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.3214166666666665
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.1952039802641827
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.5079166666666668
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.19575000000000004
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.33974067202256575
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.6795502033481648
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.395131737714248
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.8318780312499359
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.7703033785286013
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.6544175625157109
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.5417415385162525
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": -0.1529256992283463
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -1.0126495654035448
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -1.3291621029311989
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.4723807041509558
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.443181018631382
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.071794518529931
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9888092054576563
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.8744040736612935
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.8056853995459099
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.18732621111532666
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.7881653407422863
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -1.0784661978157637
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1979191020151323
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.5078391785988474
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.3355945544092376
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.2069448893096972
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.0943909174093274
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.0810769950411299
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7435448339396185
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.5560872741278017
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.8261001290125634
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.8337427934384642
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 38",
+      "arch": "marsh",
+      "profile": "aggressive",
+      "difficulty": "grandmaster",
+      "fog": false,
+      "objective": "power",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.8679570842365336,
+        "loss": 45.32462643236407,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.858396733183111,
+        "loss": 47.06039694905486,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 130000
+      },
+      "delta": 0.009560351053422567,
+      "changes": 0,
+      "orderChanges": 2,
+      "reserveRound": null,
+      "meanCohesion": 94.22819418907912,
+      "contactWidth": 2.3780116771274606,
+      "planMs": 12,
+      "physicsMs": 677,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.3625680666249513
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.5066960506459823
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.428445898484517
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.3214166666666665
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.1952039802641827
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.5079166666666668
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.19575000000000004
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.33974067202256575
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.6795502033481648
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.395131737714248
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.8318780312499379
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.7703033785286002
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.6544175625157111
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.5417415385162554
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": -0.15292569922834742
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -1.0126495654035426
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -1.3291621029311962
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.4723807041509556
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.443181018631382
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.0717945185299282
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9888092054576574
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.8744040736612935
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.8056853995459077
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.1873262111153282
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.7881653407422888
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -1.0784661978157657
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1979191020151323
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "assault",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.5078391785988483
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.3355945544092347
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.206944889309698
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.0943909174093274
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.0810769950411288
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.7435448339396162
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": -0.5560872741278046
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.8261001290125649
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": -0.8337427934384656
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 39",
+      "arch": "plain",
+      "profile": "defensive",
+      "difficulty": "recruit",
+      "fog": false,
+      "objective": "territory",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.5916255048155237,
+        "loss": 59.47076077810907,
+        "routs": 0,
+        "crowding": 164.0499999999999,
+        "isolation": 18,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.6880921173574563,
+        "loss": 25.01684928711387,
+        "routs": 0,
+        "crowding": 167.87499999999991,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 120000
+      },
+      "delta": -0.09646661254193267,
+      "changes": 1,
+      "orderChanges": 7,
+      "reserveRound": null,
+      "meanCohesion": 73.18459844765799,
+      "contactWidth": 20.06837148589355,
+      "planMs": 12,
+      "physicsMs": 873,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.113742047970867
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.9030206976716242
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.6783689532547503
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.0917462613468016
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0608562832523658
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.8267606012197093
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": 3,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.1747345032866443
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.9190543747390199
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.9376183395673579
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "withdraw",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": 3,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.907434759929127
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.3479729585568776
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.8076973482436587
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "withdraw",
+            "3": "withdraw",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 39",
+      "arch": "plain",
+      "profile": "defensive",
+      "difficulty": "recruit",
+      "fog": false,
+      "objective": "territory",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.5916255048155235,
+        "loss": 59.47076077810921,
+        "routs": 0,
+        "crowding": 164.0499999999999,
+        "isolation": 18,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.6880921173574563,
+        "loss": 25.01684928711387,
+        "routs": 0,
+        "crowding": 167.87499999999991,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 120000
+      },
+      "delta": -0.0964666125419329,
+      "changes": 1,
+      "orderChanges": 7,
+      "reserveRound": null,
+      "meanCohesion": 73.18459844765798,
+      "contactWidth": 20.06837148589358,
+      "planMs": 12,
+      "physicsMs": 847,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.113742047970867
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.9030206976716242
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.6783689532547503
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.0917462613468047
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0608562832523658
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.8267606012197095
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": 103,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.1747345032866434
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.9190543747390225
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.9376183395673587
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "withdraw",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": 103,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.907434759929127
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.3479729585568794
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.8076973482436596
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "withdraw",
+            "103": "withdraw",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 40",
+      "arch": "valley",
+      "profile": "maneuver",
+      "difficulty": "captain",
+      "fog": true,
+      "objective": "power",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "loss",
+      "time": 120,
+      "own": {
+        "power": 0.6826236207523897,
+        "loss": 23.728979301104587,
+        "routs": 0,
+        "crowding": 145.34999999999985,
+        "isolation": 1.25,
+        "wait": 0,
+        "territory": 130000
+      },
+      "enemy": {
+        "power": 0.7685448372815671,
+        "loss": 46.5793764442553,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 67,
+        "wait": 0,
+        "territory": 200000
+      },
+      "delta": -0.08592121652917739,
+      "changes": 0,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 85.53943386235972,
+      "contactWidth": 4.417736965073132,
+      "planMs": 32,
+      "physicsMs": 798,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 3.9420493822852816
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 3.2302131428502587
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.162408582643341
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.3415349926583071
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.6966666666666667
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 3.972203130484974
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.5337716224333002
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.45589779767098
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.6996903719007979
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.06488184356076176
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 3.998419680192451
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.773166836735767
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.658995965945394
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9444077173161727
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.5462897098435464
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": 2,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 3.5715582282258844
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.722821982754746
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.0450247237203345
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.0215633367502528
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.2743399109265392
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "line",
+            "2": "reserve",
+            "3": "missiles",
+            "4": "wing",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 40",
+      "arch": "valley",
+      "profile": "maneuver",
+      "difficulty": "captain",
+      "fog": true,
+      "objective": "power",
+      "roster": 0,
+      "opponent": 0,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "win",
+      "time": 120,
+      "own": {
+        "power": 0.7332545244294199,
+        "loss": 21.94190278498013,
+        "routs": 0,
+        "crowding": 145.34999999999985,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.6308011271044196,
+        "loss": 52.90331134754622,
+        "routs": 1,
+        "crowding": 0,
+        "isolation": 118,
+        "wait": 0,
+        "territory": 190000
+      },
+      "delta": 0.10245339732500025,
+      "changes": 0,
+      "orderChanges": 3,
+      "reserveRound": null,
+      "meanCohesion": 86.12747588672329,
+      "contactWidth": 6.826463087003616,
+      "planMs": 34,
+      "physicsMs": 830,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 3.9420493822852816
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 3.2302131428502587
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 3.162408582643341
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.3415349926583071
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.6966666666666667
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 3.97870628098769
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.5360406752402556
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.461063992737749
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.6996903719007976
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.0036712826484870398
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 3.998417883630189
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.7862052140780693
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 2.6761105160190004
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 0.9444080892495255
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.45843132690869526
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": 102,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 3.571706432096848
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.0479746382263386
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.0215633367502528
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.0118550951983754
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.31278794639840546
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "line",
+            "102": "reserve",
+            "103": "missiles",
+            "104": "wing",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 41",
+      "arch": "ridge",
+      "profile": "cautious",
+      "difficulty": "commander",
+      "fog": false,
+      "objective": "power",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.924279129397927,
+        "loss": 13.49802290698294,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.9093541146192476,
+        "loss": 30.173751711931914,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 120000
+      },
+      "delta": 0.014925014778679357,
+      "changes": 0,
+      "orderChanges": 2,
+      "reserveRound": null,
+      "meanCohesion": 92.89999999999988,
+      "contactWidth": 0,
+      "planMs": 10,
+      "physicsMs": 612,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.766197727465377
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.4983659998527266
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.3575150140431393
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.417269197655486
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.312883284016255
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.8290579710144927
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.8283913043478262
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.9235547700725903
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.7717467864395846
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.5494101134745046
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.5038564893158355
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.36565850033376246
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.010659273869433772
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.05529818424036
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 0,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.9309158169529126
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.067787716605183
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.8028263663235555
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 0.7696206285737364
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.6313182495875009
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.19654367026699315
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.8501038751979443
+            }
+          ],
+          "roles": {
+            "0": "reserve",
+            "1": "line",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 1,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.7987565512153685
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.206202460479571
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.935798421827837
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.0336030136332515
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.9319379443906277
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.3142302667198783
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.6710838204037947
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "reserve",
+            "2": "line",
+            "3": "missiles",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 41",
+      "arch": "ridge",
+      "profile": "cautious",
+      "difficulty": "commander",
+      "fog": false,
+      "objective": "power",
+      "roster": 1,
+      "opponent": 1,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "draw",
+      "time": 120,
+      "own": {
+        "power": 0.924279129397927,
+        "loss": 13.49802290698294,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 140000
+      },
+      "enemy": {
+        "power": 0.9093541146192476,
+        "loss": 30.173751711931914,
+        "routs": 0,
+        "crowding": 0,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 120000
+      },
+      "delta": 0.014925014778679357,
+      "changes": 0,
+      "orderChanges": 2,
+      "reserveRound": null,
+      "meanCohesion": 92.89999999999988,
+      "contactWidth": 0,
+      "planMs": 12,
+      "physicsMs": 630,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.766197727465377
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.4983659998527266
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.3575150140431393
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.417269197655486
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 1.312883284016255
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.8290579710144927
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.8283913043478262
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.923554770072592
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 1.7717467864395842
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.5494101134745037
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.5038564893158355
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.3656585003337618
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.010659273869436103
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.0552981842403606
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 100,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.9309158169529135
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.0677877166051823
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.8028263663235546
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 0.7696206285737364
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.6313182495875007
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.19654367026699415
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.8501038751979445
+            }
+          ],
+          "roles": {
+            "100": "reserve",
+            "101": "line",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": 101,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.7987565512153685
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.206202460479571
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 1.9357984218278375
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.0336030136332515
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": 0.9319379443906277
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.31423026671987864
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.6710838204037946
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "reserve",
+            "102": "line",
+            "103": "missiles",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 42",
+      "arch": "marsh",
+      "profile": "adaptive",
+      "difficulty": "grandmaster",
+      "fog": false,
+      "objective": "power",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": false,
+      "matched": true,
+      "variant": "compare",
+      "side": 0,
+      "outcome": "loss",
+      "time": 120,
+      "own": {
+        "power": 0.5627646405264335,
+        "loss": 49.58896521003737,
+        "routs": 0,
+        "crowding": 276.67500000000166,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 160000
+      },
+      "enemy": {
+        "power": 0.6648485060880742,
+        "loss": 24.673344481028096,
+        "routs": 0,
+        "crowding": 236.72500000000122,
+        "isolation": 11.5,
+        "wait": 0,
+        "territory": 160000
+      },
+      "delta": -0.10208386556164073,
+      "changes": 1,
+      "orderChanges": 6,
+      "reserveRound": null,
+      "meanCohesion": 74.26454977910122,
+      "contactWidth": 10.654163760901312,
+      "planMs": 42,
+      "physicsMs": 842,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.4894920479708667
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.118668488442715
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.6796531405824269
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.3491666666666666
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.6829166666666666
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.6232669988660164
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.28850000000000015
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.293046917706151
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.37913104674524906
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.4544829837242954
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.638621755541461
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.1512634625246316
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.8133654165269358
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.42225603096214026
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.11490635350822398
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.8177625834794215
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.9248868660606768
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1466953548923575
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "maneuver",
+          "wing": 1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.385994700211038
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.8536838606723036
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.3209427581530686
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.0387857755570136
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.001231904701689
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.36310468678052704
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.6259561230071802
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.7472907134769557
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.7574823867355726
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "wing",
+            "4": "missiles",
+            "5": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": 3,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.9715103010062625
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 2.4038490682167715
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.9959048620337723
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": 1.513049131516444
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.255662460960548
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 0.5904460472826768
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.1918035326320396
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": -0.4236719825924478
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.5551855236057756
+            }
+          ],
+          "roles": {
+            "0": "line",
+            "1": "missiles",
+            "2": "wing",
+            "3": "withdraw",
+            "4": "missiles",
+            "5": "command"
+          }
+        }
+      ]
+    },
+    {
+      "seed": "Minds 42",
+      "arch": "marsh",
+      "profile": "adaptive",
+      "difficulty": "grandmaster",
+      "fog": false,
+      "objective": "power",
+      "roster": 2,
+      "opponent": 2,
+      "seconds": 120,
+      "mirror": true,
+      "matched": true,
+      "variant": "compare",
+      "side": 1,
+      "outcome": "loss",
+      "time": 120,
+      "own": {
+        "power": 0.562747289394262,
+        "loss": 49.59975123429879,
+        "routs": 0,
+        "crowding": 276.67500000000166,
+        "isolation": 0,
+        "wait": 0,
+        "territory": 160000
+      },
+      "enemy": {
+        "power": 0.6648552556230797,
+        "loss": 24.672742092423604,
+        "routs": 0,
+        "crowding": 236.72500000000122,
+        "isolation": 11.25,
+        "wait": 0,
+        "territory": 160000
+      },
+      "delta": -0.10210796622881768,
+      "changes": 1,
+      "orderChanges": 6,
+      "reserveRound": null,
+      "meanCohesion": 74.26499956321558,
+      "contactWidth": 10.6490577137333,
+      "planMs": 37,
+      "physicsMs": 771,
+      "trace": [
+        {
+          "round": 1,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.4894920479708667
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.118668488442715
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.6796531405824269
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.3491666666666666
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.6829166666666666
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.6232669988660164
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": 0.28850000000000015
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.293046917706151
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.37913104674524906
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 2,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.4627009039465215
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.638621755541462
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.1561163908880303
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 0.8133654165269338
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 0.4222560309621396
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.1119537458633828
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.8204691404871929
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.9208376938116106
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -1.1466953548923602
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 3,
+          "posture": "maneuver",
+          "wing": -1,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": null,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.3920292958280593
+            },
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 1.8536734362287468
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.3249214204565603
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.0387816720105565
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.0012271085748699
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.36063485916460664
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.6281940414494831
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.7437683296982529
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.7574878555798605
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "wing",
+            "104": "missiles",
+            "105": "command"
+          }
+        },
+        {
+          "round": 4,
+          "posture": "hold",
+          "wing": 0,
+          "reserve": null,
+          "committed": false,
+          "reservePurpose": "held",
+          "crisis": 103,
+          "observed": 6,
+          "stale": 0,
+          "alternatives": [
+            {
+              "posture": "hold",
+              "wing": 0,
+              "score": 2.9715079157606747
+            },
+            {
+              "posture": "maneuver",
+              "wing": -1,
+              "score": 2.408907817319806
+            },
+            {
+              "posture": "reinforce",
+              "wing": 0,
+              "score": 1.9958080677243797
+            },
+            {
+              "posture": "assault",
+              "wing": -1,
+              "score": 1.5162164895881087
+            },
+            {
+              "posture": "screen",
+              "wing": 0,
+              "score": 1.255665487172664
+            },
+            {
+              "posture": "maneuver",
+              "wing": 1,
+              "score": 0.5894051199927334
+            },
+            {
+              "posture": "withdraw",
+              "wing": 0,
+              "score": -0.1918435751586437
+            },
+            {
+              "posture": "assault",
+              "wing": 1,
+              "score": -0.4248010195297195
+            },
+            {
+              "posture": "assault",
+              "wing": 0,
+              "score": -0.5522275860582341
+            }
+          ],
+          "roles": {
+            "100": "line",
+            "101": "missiles",
+            "102": "wing",
+            "103": "withdraw",
+            "104": "missiles",
+            "105": "command"
+          }
+        }
+      ]
+    }
+  ]
+}

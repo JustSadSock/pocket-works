@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "banners-of-war",
+  "direction": {
+    "premise": "A living medieval topographic battle atlas: connected shaded relief, muted forest and water marks, and actual formation sectors becoming legible individual warriors as the commander zooms in.",
+    "composition": "Continuous world canvas, narrow inset status, collapsible order sheet on the side or bottom only when needed; the same map shifts from field overview through tactical ranks to focused individual warriors.",
+    "shapeLanguage": "Thin rectangular regiment footprints, individual ranks, forked heraldic pennants, dashed future routes and an unrounded ruled command ledger.",
+    "surfaceAndMaterial": "Procedural shaded height contours, tree canopies with cast shadows, roads, wetland textures and muted field parcels, distinct from the plain abstract 0.2 map.",
+    "paletteLogic": "Muted greens encode the landscape, blue and russet identify opposing armies, and ivory supports text; pressure and route lines use the side colors.",
+    "typography": "A restrained Georgia heading recalls a printed field atlas; compact system labels keep numerical orders and status legible.",
+    "signature": "A regiment's tactical blocks dissolve into the living rows of its physical sectors at higher scale; contact pressure and local cohesion are visible without a permanent diagnostic dashboard.",
+    "distinction": "Compared with Doctrina's political atlas and Chernye Znamena's hex campaign, this map resolves continuous oriented footprints, timed multi-step paths and animated rank movement."
+  },
+  "architecture": {
+    "spatialLayout": "full-bleed-world",
+    "controlLocation": "contextual",
+    "navigation": "scene-zoom",
+    "chromeTopology": "layered-panels",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Select a field regiment, draw its projected movement path, queue subsequent orders, and confirm a fixed-duration WEGO turn.",
+    "physicalFeedback": "Route strokes reveal end footprints and conditional stages. The focus command zooms into the same physical formation geometry; actual sector contact, movement, loss and bend alter its visible ranks.",
+    "spatialRationale": "The canvas fills the battle workspace beneath controls. A fitted safe rectangle keeps orders visible; folding the inset command sheet restores additional battlefield space.",
+    "comparisons": [
+      {
+        "slug": "echolot",
+        "spatialDifference": "Continuous rectangular terrain with a zoomable battlefield and contextual command sheet, rather than a fixed circular sonar instrument and detached directional console.",
+        "interactionDifference": "Multi-regiment plans, delegated objectives and simultaneous thirty-second battle execution instead of single-vessel step movement and oxygen-consuming sonar pulses."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "The battlefield is continuous beneath a foldable inset command sheet instead of a split laboratory with a permanent measurement journal.",
+        "interactionDifference": "Draw a regiment's commanded trajectory and resolve both armies together rather than intervene in autonomous historical geography."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "The map extends beneath floating controls and the command sheet folds away; there is no permanent chronological strip dividing the screen.",
+        "interactionDifference": "The user writes and revises numbered tactical orders and locks simultaneous turns rather than scrubbing a documented timeline."
+      },
+      {
+        "slug": "doctrina",
+        "spatialDifference": "A rotated battlefield and contextual command ledger replace the political atlas and strategic menu.",
+        "interactionDifference": "Players draw continuous regiment paths and review a simultaneous timed resolution rather than choose administrative actions."
+      },
+      {
+        "slug": "chernye-znamena",
+        "spatialDifference": "The free-coordinate continuous field replaces a campaign layout divided into hexagons and economic panels.",
+        "interactionDifference": "Players chain physical maneuvers across time rather than issue a turn action to a grid cell."
+      },
+      {
+        "slug": "press",
+        "spatialDifference": "The central surface is a zoomable topographic battlefield rather than a permanent file processing instrument.",
+        "interactionDifference": "Direct selection of a spatial regiment leads to a drawn path with a later simultaneous opposing response."
+      },
+      {
+        "slug": "kaskad-patterns",
+        "spatialDifference": "The map holds two colored armies and a contextual ledger rather than adjacent mathematical specimens.",
+        "interactionDifference": "An ordered unit trajectory is resolved by a timed tactical engine instead of editing discrete automaton rules."
+      },
+      {
+        "slug": "pereves",
+        "spatialDifference": "Pereves uses a suspended sculpture and a discrete weight tray in an open exhibition. Banners is a continuous physical battlefield with an explicitly separate planning overlay.",
+        "interactionDifference": "Pereves places masses in fixed lever slots and shows equilibrium; Banners selects regiments, draws world-coordinate paths and evaluates a simultaneous turn without teleported units."
+      },
+      {
+        "slug": "petlya-17",
+        "spatialDifference": "Petlya-17 uses a low Babylon.js cockpit with a central road horizon, peripheral speed and lap instruments. Banners of War uses a top-down spatial map, local army framing, minimap and collapsible command ledger rather than a driver's perspective.",
+        "interactionDifference": "Petlya-17 continuously controls one car through steering, braking and throttle. Banners of War draws multi-regiment plans, edits geometric footprints and executes simultaneous fixed-duration orders."
+      },
+      {
+        "slug": "flickyard",
+        "spatialDifference": "FLICKYARD has a stable horizontal mechanical target range with a separate drill rail; Banners has a camera-scaled geographic field and foldable contextual order ledger.",
+        "interactionDifference": "FLICKYARD measures direct reticle acquisition and timed individual shots; Banners composes multi-regiment orders, resolves both sides simultaneously and replays continuous physical formations."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Canvas directly represents continuous terrain, rank geometry and world-coordinate orders; DOM provides accessible command and report controls.",
+    "focalAsset": "A procedural relief atlas and vector regiment markings are rendered by the app, with a distinct crossed-banner SVG install icon."
+  },
+  "motion": {
+    "character": "Precise command strokes contrasted with physical acceleration, blocked formations and deliberate simulated turn playback.",
+    "action": "Drawing a regiment's movement route and confirming both armies' locked orders for a thirty-second resolution.",
+    "anticipation": "The chosen movement command activates route drawing and a dotted endpoint footprint previews the intended direction.",
+    "response": "The route follows the finger immediately and subsequent stages receive visible numbered dashed trajectories.",
+    "followThrough": "During replay the regiments move through time and retain new formation, casualties, morale and positions for the next turn.",
+    "interruption": "Pointer cancellation abandons the draft route; playback can pause, scrub or finish without altering the deterministic outcome.",
+    "reducedMotion": "Playback can be paused and scrubbed or skipped to the settled state; the route and battle ledger remain readable without animation."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#start"
+    },
+    "expectedChange": "The muster page is replaced by an interactive deployment map with separate blue and red armies, visible command tools and a deployment zone.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  },
+  "review": {
+    "baselineRun": 45306566752,
+    "finalVisualRun": 45307237101,
+    "observations": "Inspected actual final Chromium desktop/mobile and WebKit mobile strategic, tactical, warrior-focus and visibility captures after the 6.4 CSS px/m focus and folded idle dock changes. All three scales render the same battlefield geometry; mobile controls remain inside viewport. Individual ranks are readable, though terrain sampling and soldier silhouettes remain schematic. Hosted visual, journey and performance jobs passed. Visual direction is signed off for this experimental build; overall release is NOT signed off: separate WebKit offline navigation still fails with an internal browser error.",
+    "enemyMindsRun": 45371749114,
+    "enemyMindsObservations": "Inspected actual mobile Chromium setup, staff delegation dialog and observer decision chronicle. The staff task and score table are readable; the setup and chronicle need vertical scrolling, and the decision explanation still mixes English diagnostic terms. No final WebKit offline or full-browser sign-off claimed."
+  }
+}

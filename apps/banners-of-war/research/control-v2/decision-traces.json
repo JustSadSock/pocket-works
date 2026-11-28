@@ -1,0 +1,5722 @@
+{
+  "engineCommit": "8ce73ccc09880eefe53b1e69028c5cb0c2fe6f7d",
+  "protocol": "v2-instrumented-trace",
+  "results": [
+    {
+      "trace": [
+        {
+          "time": 30,
+          "score": -0.0010785937500000437,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 1.2948626142031987,
+              "positions": [
+                [
+                  0,
+                  659,
+                  438,
+                  1,
+                  88,
+                  "advance"
+                ],
+                [
+                  1,
+                  660,
+                  484,
+                  1,
+                  88,
+                  "advance"
+                ],
+                [
+                  2,
+                  661,
+                  532,
+                  1,
+                  90,
+                  "advance"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  94,
+                  "hold"
+                ],
+                [
+                  4,
+                  678,
+                  620,
+                  2,
+                  90,
+                  "advance"
+                ],
+                [
+                  5,
+                  661,
+                  663,
+                  1,
+                  90,
+                  "advance"
+                ],
+                [
+                  6,
+                  659,
+                  709,
+                  1,
+                  88,
+                  "advance"
+                ],
+                [
+                  7,
+                  660,
+                  757,
+                  1,
+                  88,
+                  "advance"
+                ]
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.4413393657246514,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  90,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  93,
+                  "hold"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  94,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  92,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "time": 60,
+          "score": -0.0008781076025208533,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 1.1838572108499017,
+              "positions": [
+                [
+                  0,
+                  681,
+                  438,
+                  3,
+                  88,
+                  "advance"
+                ],
+                [
+                  1,
+                  681,
+                  484,
+                  3,
+                  95,
+                  "advance"
+                ],
+                [
+                  2,
+                  682,
+                  532,
+                  3,
+                  100,
+                  "advance"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  100,
+                  "hold"
+                ],
+                [
+                  4,
+                  712,
+                  615,
+                  5,
+                  100,
+                  "advance"
+                ],
+                [
+                  5,
+                  683,
+                  655,
+                  3,
+                  100,
+                  "advance"
+                ],
+                [
+                  6,
+                  681,
+                  701,
+                  3,
+                  96,
+                  "advance"
+                ],
+                [
+                  7,
+                  682,
+                  749,
+                  3,
+                  88,
+                  "advance"
+                ]
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.4705934511412253,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  96,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  100,
+                  "hold"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "time": 90,
+          "score": -0.002286225051007307,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 1.1073463792911422,
+              "positions": [
+                [
+                  0,
+                  724,
+                  438,
+                  6,
+                  87,
+                  "attack"
+                ],
+                [
+                  1,
+                  725,
+                  485,
+                  6,
+                  94,
+                  "attack"
+                ],
+                [
+                  2,
+                  725,
+                  532,
+                  6,
+                  100,
+                  "attack"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  100,
+                  "hold"
+                ],
+                [
+                  4,
+                  744,
+                  611,
+                  8,
+                  98,
+                  "advance"
+                ],
+                [
+                  5,
+                  723,
+                  637,
+                  6,
+                  100,
+                  "attack"
+                ],
+                [
+                  6,
+                  720,
+                  683,
+                  6,
+                  100,
+                  "attack"
+                ],
+                [
+                  7,
+                  722,
+                  732,
+                  6,
+                  86,
+                  "attack"
+                ]
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.528328209463953,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  87,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  99,
+                  "hold"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  100,
+                  "brace"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  87,
+                  "brace"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "time": 120,
+          "score": -0.01548190055379699,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 1.0020400589939051,
+              "positions": [
+                [
+                  0,
+                  748,
+                  438,
+                  10,
+                  69,
+                  "attack"
+                ],
+                [
+                  1,
+                  749,
+                  485,
+                  10,
+                  76,
+                  "attack"
+                ],
+                [
+                  2,
+                  747,
+                  532,
+                  10,
+                  89,
+                  "attack"
+                ],
+                [
+                  3,
+                  654,
+                  576,
+                  0,
+                  100,
+                  "hold"
+                ],
+                [
+                  4,
+                  758,
+                  605,
+                  12,
+                  56,
+                  "attack"
+                ],
+                [
+                  5,
+                  747,
+                  628,
+                  10,
+                  99,
+                  "attack"
+                ],
+                [
+                  6,
+                  746,
+                  671,
+                  10,
+                  92,
+                  "attack"
+                ],
+                [
+                  7,
+                  748,
+                  720,
+                  10,
+                  67,
+                  "attack"
+                ]
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.528073304472005,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "line",
+                "104": "reserve",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "hold ordered line; avoid abandoning frontage",
+                "104": "preserve uncommitted force",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  86,
+                  "brace"
+                ],
+                [
+                  101,
+                  758,
+                  716,
+                  2,
+                  93,
+                  "brace"
+                ],
+                [
+                  102,
+                  756,
+                  667,
+                  2,
+                  91,
+                  "brace"
+                ],
+                [
+                  103,
+                  764,
+                  622,
+                  6,
+                  61,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  100,
+                  "hold"
+                ],
+                [
+                  105,
+                  757,
+                  532,
+                  2,
+                  92,
+                  "brace"
+                ],
+                [
+                  106,
+                  758,
+                  486,
+                  2,
+                  92,
+                  "brace"
+                ],
+                [
+                  107,
+                  757,
+                  438,
+                  2,
+                  69,
+                  "brace"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "time": 150,
+          "score": -0.034292304919423554,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 0.8903619136836991,
+              "positions": [
+                [
+                  0,
+                  756,
+                  438,
+                  14,
+                  43,
+                  "attack"
+                ],
+                [
+                  1,
+                  756,
+                  486,
+                  14,
+                  58,
+                  "attack"
+                ],
+                [
+                  2,
+                  755,
+                  532,
+                  14,
+                  73,
+                  "attack"
+                ],
+                [
+                  3,
+                  702,
+                  582,
+                  4,
+                  100,
+                  "move"
+                ],
+                [
+                  4,
+                  774,
+                  593,
+                  15,
+                  18,
+                  "attack"
+                ],
+                [
+                  5,
+                  763,
+                  623,
+                  14,
+                  92,
+                  "attack"
+                ],
+                [
+                  6,
+                  754,
+                  668,
+                  14,
+                  75,
+                  "attack"
+                ],
+                [
+                  7,
+                  755,
+                  717,
+                  14,
+                  34,
+                  "attack"
+                ]
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.4708830601809666,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "line",
+                "104": "reserve",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "hold ordered line; avoid abandoning frontage",
+                "104": "preserve uncommitted force",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  86,
+                  "brace"
+                ],
+                [
+                  101,
+                  762,
+                  714,
+                  5,
+                  83,
+                  "brace"
+                ],
+                [
+                  102,
+                  761,
+                  665,
+                  5,
+                  77,
+                  "brace"
+                ],
+                [
+                  103,
+                  782,
+                  617,
+                  10,
+                  12,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  100,
+                  "hold"
+                ],
+                [
+                  105,
+                  762,
+                  532,
+                  5,
+                  86,
+                  "brace"
+                ],
+                [
+                  106,
+                  764,
+                  486,
+                  5,
+                  85,
+                  "brace"
+                ],
+                [
+                  107,
+                  763,
+                  438,
+                  5,
+                  48,
+                  "brace"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "time": 180,
+          "score": -0.00986238294392504,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 0.7412763733354043,
+              "positions": [
+                [
+                  0,
+                  762,
+                  446,
+                  16,
+                  30,
+                  "attack"
+                ],
+                [
+                  1,
+                  759,
+                  492,
+                  16,
+                  55,
+                  "attack"
+                ],
+                [
+                  2,
+                  752,
+                  535,
+                  16,
+                  61,
+                  "attack"
+                ],
+                [
+                  3,
+                  711,
+                  624,
+                  7,
+                  99,
+                  "move"
+                ],
+                [
+                  4,
+                  758,
+                  594,
+                  17,
+                  0,
+                  "attack"
+                ],
+                [
+                  5,
+                  800,
+                  608,
+                  17,
+                  80,
+                  "attack"
+                ],
+                [
+                  6,
+                  768,
+                  647,
+                  17,
+                  69,
+                  "attack"
+                ],
+                [
+                  7,
+                  731,
+                  711,
+                  15,
+                  0,
+                  "retreat"
+                ]
+              ]
+            },
+            {
+              "posture": "assault",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.6037255309586842,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "104": "reserve",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "engage assigned frontage",
+                "101": "engage assigned frontage",
+                "102": "engage assigned frontage",
+                "104": "preserve uncommitted force",
+                "105": "engage assigned frontage",
+                "106": "engage assigned frontage",
+                "107": "engage assigned frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  744,
+                  726,
+                  4,
+                  85,
+                  "attack"
+                ],
+                [
+                  101,
+                  763,
+                  689,
+                  8,
+                  62,
+                  "attack"
+                ],
+                [
+                  102,
+                  777,
+                  635,
+                  8,
+                  47,
+                  "attack"
+                ],
+                [
+                  103,
+                  822,
+                  621,
+                  15,
+                  42,
+                  "brace"
+                ],
+                [
+                  104,
+                  755,
+                  577,
+                  3,
+                  97,
+                  "hold"
+                ],
+                [
+                  105,
+                  759,
+                  548,
+                  9,
+                  53,
+                  "attack"
+                ],
+                [
+                  106,
+                  763,
+                  504,
+                  8,
+                  28,
+                  "attack"
+                ],
+                [
+                  107,
+                  773,
+                  452,
+                  8,
+                  0,
+                  "attack"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "time": 210,
+          "score": 0.010581977486331023,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 0.8504387219509695,
+              "positions": [
+                [
+                  0,
+                  744,
+                  433,
+                  18,
+                  29,
+                  "retreat"
+                ],
+                [
+                  1,
+                  757,
+                  509,
+                  19,
+                  63,
+                  "attack"
+                ],
+                [
+                  2,
+                  740,
+                  540,
+                  18,
+                  47,
+                  "attack"
+                ],
+                [
+                  3,
+                  718,
+                  588,
+                  10,
+                  93,
+                  "move"
+                ],
+                [
+                  4,
+                  737,
+                  608,
+                  19,
+                  0,
+                  "attack"
+                ],
+                [
+                  5,
+                  800,
+                  608,
+                  17,
+                  76,
+                  "brace"
+                ],
+                [
+                  6,
+                  768,
+                  649,
+                  17,
+                  56,
+                  "brace"
+                ],
+                [
+                  7,
+                  681,
+                  709,
+                  19,
+                  21,
+                  "retreat"
+                ]
+              ]
+            },
+            {
+              "posture": "reinforce",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.3929513644090892,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "withdraw",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "engage assigned frontage",
+                "101": "engage assigned frontage",
+                "102": "reinforce crisis #106",
+                "104": "engage assigned frontage",
+                "105": "engage assigned frontage",
+                "106": "local loss of combat readiness",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  687,
+                  7,
+                  88,
+                  "attack"
+                ],
+                [
+                  101,
+                  745,
+                  657,
+                  11,
+                  61,
+                  "attack"
+                ],
+                [
+                  102,
+                  776,
+                  628,
+                  8,
+                  41,
+                  "move"
+                ],
+                [
+                  103,
+                  864,
+                  625,
+                  19,
+                  71,
+                  "brace"
+                ],
+                [
+                  104,
+                  738,
+                  584,
+                  7,
+                  52,
+                  "attack"
+                ],
+                [
+                  105,
+                  754,
+                  545,
+                  11,
+                  40,
+                  "attack"
+                ],
+                [
+                  106,
+                  784,
+                  517,
+                  11,
+                  3,
+                  "retreat"
+                ],
+                [
+                  107,
+                  821,
+                  452,
+                  12,
+                  0,
+                  "attack"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "time": 240,
+          "score": 0.5709769128238404,
+          "intents": [
+            {
+              "posture": "maneuver",
+              "ratio": 1.1252607216892287,
+              "positions": [
+                [
+                  0,
+                  740,
+                  463,
+                  20,
+                  29,
+                  "advance"
+                ],
+                [
+                  1,
+                  757,
+                  507,
+                  19,
+                  71,
+                  "brace"
+                ],
+                [
+                  2,
+                  722,
+                  526,
+                  20,
+                  53,
+                  "retreat"
+                ],
+                [
+                  3,
+                  734,
+                  596,
+                  14,
+                  73,
+                  "attack"
+                ],
+                [
+                  4,
+                  696,
+                  614,
+                  23,
+                  25,
+                  "attack"
+                ],
+                [
+                  5,
+                  783,
+                  576,
+                  19,
+                  67,
+                  "move"
+                ],
+                [
+                  6,
+                  772,
+                  644,
+                  20,
+                  29,
+                  "brace"
+                ],
+                [
+                  7,
+                  631,
+                  709,
+                  23,
+                  51,
+                  "retreat"
+                ]
+              ]
+            },
+            {
+              "posture": "reinforce",
+              "objective": {
+                "deficit": 1,
+                "target": {
+                  "name": "Common objective",
+                  "x": 700,
+                  "y": 600,
+                  "r": 230,
+                  "weight": 1,
+                  "activeAt": 0,
+                  "own": 201.24178988279897,
+                  "hostile": 201.95340466876655,
+                  "secure": false
+                }
+              },
+              "ratio": 1.0343917116527166,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "reserve",
+                "104": "line",
+                "105": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "engage assigned frontage",
+                "101": "engage assigned frontage",
+                "102": "reinforce crisis #105",
+                "104": "engage assigned frontage",
+                "105": "engage assigned frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  765,
+                  658,
+                  11,
+                  96,
+                  "attack"
+                ],
+                [
+                  101,
+                  754,
+                  639,
+                  14,
+                  40,
+                  "attack"
+                ],
+                [
+                  102,
+                  765,
+                  612,
+                  10,
+                  47,
+                  "move"
+                ],
+                [
+                  103,
+                  913,
+                  625,
+                  23,
+                  100,
+                  "brace"
+                ],
+                [
+                  104,
+                  752,
+                  566,
+                  11,
+                  23,
+                  "attack"
+                ],
+                [
+                  105,
+                  756,
+                  517,
+                  14,
+                  28,
+                  "attack"
+                ],
+                [
+                  106,
+                  833,
+                  517,
+                  14,
+                  25,
+                  "retreat"
+                ],
+                [
+                  107,
+                  870,
+                  452,
+                  16,
+                  1,
+                  "attack"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "factor": "legacy-modern",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": false,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 3,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.3,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 0.5709769128238404,
+      "result": "reference",
+      "reason": "time-limit",
+      "policyBScore": -0.5709769128238404,
+      "contact": 1263.5,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.35937908666775253,
+        "loss": 157.5212149910885,
+        "fatigue": 18.56047274496423,
+        "strain": 21.964060228726282,
+        "morale": 54.206601320348426,
+        "cohesion": 49.927006396452065,
+        "contacts": 646,
+        "routs": 2,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 0
+      },
+      "challenger": {
+        "power": 0.26614836300623945,
+        "loss": 150.4559125480538,
+        "fatigue": 12.709111748239799,
+        "strain": 20.635805145135013,
+        "morale": 47.76496900020666,
+        "cohesion": 54.879076459382844,
+        "contacts": 617.5,
+        "routs": 4,
+        "blocked": 30,
+        "failed": 0,
+        "issued": 0
+      },
+      "physics": 2
+    },
+    {
+      "trace": [
+        {
+          "time": 30,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "sent"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "sent"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 60,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 90,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 120,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "complete"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "complete"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 150,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "sent"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "sent"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "sent"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 180,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 210,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 240,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "hold",
+                  "status": "complete"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "brace"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "brace"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-0",
+                  "task": "hold",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "hold",
+                  "status": "complete"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "hold",
+                  "status": "complete"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "factor": "historical-control",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": true,
+      "terrain": "plain",
+      "opening": false,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.3,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 0,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": 0,
+      "contact": 0,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "challenger": {
+        "power": 0.9257142857142857,
+        "loss": 0,
+        "fatigue": 0,
+        "strain": 0,
+        "morale": 89.33333333333333,
+        "cohesion": 100,
+        "contacts": 0,
+        "routs": 0,
+        "blocked": 0,
+        "failed": 0,
+        "issued": 6
+      },
+      "physics": 2
+    },
+    {
+      "trace": [
+        {
+          "time": 30,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  1,
+                  644,
+                  483,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  3,
+                  643,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "sent"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "sent"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "sent"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  101,
+                  756,
+                  717,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  103,
+                  757,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "sent"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "sent"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "sent"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 60,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  644,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  1,
+                  649,
+                  483,
+                  0,
+                  88,
+                  "advance"
+                ],
+                [
+                  2,
+                  646,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  3,
+                  657,
+                  578,
+                  1,
+                  88,
+                  "advance"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  756,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  101,
+                  751,
+                  717,
+                  0,
+                  88,
+                  "advance"
+                ],
+                [
+                  102,
+                  754,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  103,
+                  743,
+                  622,
+                  1,
+                  88,
+                  "advance"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 90,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  671,
+                  438,
+                  2,
+                  88,
+                  "advance"
+                ],
+                [
+                  1,
+                  683,
+                  483,
+                  3,
+                  88,
+                  "advance"
+                ],
+                [
+                  2,
+                  651,
+                  532,
+                  0,
+                  88,
+                  "advance"
+                ],
+                [
+                  3,
+                  691,
+                  578,
+                  3,
+                  87,
+                  "advance"
+                ],
+                [
+                  4,
+                  643,
+                  622,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  5,
+                  646,
+                  668,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  645,
+                  762,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  729,
+                  762,
+                  2,
+                  88,
+                  "advance"
+                ],
+                [
+                  101,
+                  717,
+                  717,
+                  3,
+                  88,
+                  "advance"
+                ],
+                [
+                  102,
+                  749,
+                  668,
+                  0,
+                  88,
+                  "advance"
+                ],
+                [
+                  103,
+                  709,
+                  622,
+                  3,
+                  87,
+                  "advance"
+                ],
+                [
+                  104,
+                  757,
+                  578,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  105,
+                  754,
+                  532,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  755,
+                  438,
+                  0,
+                  88,
+                  "hold"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 120,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  688,
+                  439,
+                  4,
+                  88,
+                  "advance"
+                ],
+                [
+                  1,
+                  699,
+                  483,
+                  4,
+                  86,
+                  "advance"
+                ],
+                [
+                  2,
+                  675,
+                  532,
+                  2,
+                  88,
+                  "advance"
+                ],
+                [
+                  3,
+                  699,
+                  578,
+                  5,
+                  84,
+                  "advance"
+                ],
+                [
+                  4,
+                  655,
+                  623,
+                  1,
+                  88,
+                  "advance"
+                ],
+                [
+                  5,
+                  669,
+                  668,
+                  2,
+                  87,
+                  "advance"
+                ],
+                [
+                  6,
+                  644,
+                  714,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  7,
+                  668,
+                  763,
+                  2,
+                  86,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  712,
+                  761,
+                  4,
+                  88,
+                  "advance"
+                ],
+                [
+                  101,
+                  701,
+                  717,
+                  4,
+                  86,
+                  "advance"
+                ],
+                [
+                  102,
+                  725,
+                  668,
+                  2,
+                  88,
+                  "advance"
+                ],
+                [
+                  103,
+                  701,
+                  622,
+                  5,
+                  84,
+                  "advance"
+                ],
+                [
+                  104,
+                  745,
+                  577,
+                  1,
+                  88,
+                  "advance"
+                ],
+                [
+                  105,
+                  731,
+                  532,
+                  2,
+                  87,
+                  "advance"
+                ],
+                [
+                  106,
+                  756,
+                  486,
+                  0,
+                  88,
+                  "hold"
+                ],
+                [
+                  107,
+                  732,
+                  437,
+                  2,
+                  86,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 150,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "reserve",
+                "4": "line",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "preserve uncommitted force",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  693,
+                  442,
+                  5,
+                  85,
+                  "advance"
+                ],
+                [
+                  1,
+                  705,
+                  483,
+                  6,
+                  83,
+                  "advance"
+                ],
+                [
+                  2,
+                  681,
+                  535,
+                  4,
+                  87,
+                  "advance"
+                ],
+                [
+                  3,
+                  705,
+                  581,
+                  6,
+                  77,
+                  "advance"
+                ],
+                [
+                  4,
+                  661,
+                  627,
+                  2,
+                  87,
+                  "advance"
+                ],
+                [
+                  5,
+                  680,
+                  671,
+                  3,
+                  83,
+                  "advance"
+                ],
+                [
+                  6,
+                  656,
+                  711,
+                  1,
+                  87,
+                  "advance"
+                ],
+                [
+                  7,
+                  673,
+                  766,
+                  3,
+                  81,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5164091243561437,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "reserve",
+                "104": "line",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "preserve uncommitted force",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  707,
+                  758,
+                  5,
+                  85,
+                  "advance"
+                ],
+                [
+                  101,
+                  695,
+                  717,
+                  6,
+                  83,
+                  "advance"
+                ],
+                [
+                  102,
+                  719,
+                  665,
+                  4,
+                  87,
+                  "advance"
+                ],
+                [
+                  103,
+                  695,
+                  619,
+                  6,
+                  77,
+                  "advance"
+                ],
+                [
+                  104,
+                  739,
+                  573,
+                  2,
+                  87,
+                  "advance"
+                ],
+                [
+                  105,
+                  720,
+                  529,
+                  3,
+                  83,
+                  "advance"
+                ],
+                [
+                  106,
+                  744,
+                  489,
+                  1,
+                  87,
+                  "advance"
+                ],
+                [
+                  107,
+                  727,
+                  434,
+                  3,
+                  81,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 180,
+          "score": 0,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5123082628962294,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "line",
+                "4": "reserve",
+                "5": "line",
+                "6": "line",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "hold ordered line; avoid abandoning frontage",
+                "4": "preserve uncommitted force",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "hold ordered line; avoid abandoning frontage",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  696,
+                  437,
+                  6,
+                  77,
+                  "advance"
+                ],
+                [
+                  1,
+                  708,
+                  481,
+                  6,
+                  75,
+                  "advance"
+                ],
+                [
+                  2,
+                  686,
+                  538,
+                  5,
+                  84,
+                  "advance"
+                ],
+                [
+                  3,
+                  709,
+                  585,
+                  7,
+                  67,
+                  "advance"
+                ],
+                [
+                  4,
+                  665,
+                  629,
+                  3,
+                  86,
+                  "advance"
+                ],
+                [
+                  5,
+                  685,
+                  674,
+                  4,
+                  78,
+                  "advance"
+                ],
+                [
+                  6,
+                  663,
+                  716,
+                  2,
+                  85,
+                  "advance"
+                ],
+                [
+                  7,
+                  678,
+                  769,
+                  4,
+                  71,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5123082628962294,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "line",
+                "104": "reserve",
+                "105": "line",
+                "106": "line",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "hold ordered line; avoid abandoning frontage",
+                "104": "preserve uncommitted force",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "hold ordered line; avoid abandoning frontage",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  704,
+                  763,
+                  6,
+                  77,
+                  "advance"
+                ],
+                [
+                  101,
+                  692,
+                  719,
+                  6,
+                  75,
+                  "advance"
+                ],
+                [
+                  102,
+                  714,
+                  662,
+                  5,
+                  84,
+                  "advance"
+                ],
+                [
+                  103,
+                  691,
+                  615,
+                  7,
+                  67,
+                  "advance"
+                ],
+                [
+                  104,
+                  735,
+                  571,
+                  3,
+                  86,
+                  "advance"
+                ],
+                [
+                  105,
+                  715,
+                  526,
+                  4,
+                  78,
+                  "advance"
+                ],
+                [
+                  106,
+                  737,
+                  484,
+                  2,
+                  85,
+                  "advance"
+                ],
+                [
+                  107,
+                  722,
+                  431,
+                  4,
+                  71,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 210,
+          "score": -2.5376526277146434e-17,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5002730259875086,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "line",
+                "4": "line",
+                "5": "line",
+                "6": "reserve",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "hold ordered line; avoid abandoning frontage",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "preserve uncommitted force",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  696,
+                  437,
+                  6,
+                  74,
+                  "advance"
+                ],
+                [
+                  1,
+                  710,
+                  480,
+                  7,
+                  67,
+                  "advance"
+                ],
+                [
+                  2,
+                  690,
+                  540,
+                  5,
+                  79,
+                  "advance"
+                ],
+                [
+                  3,
+                  713,
+                  588,
+                  10,
+                  41,
+                  "advance"
+                ],
+                [
+                  4,
+                  671,
+                  630,
+                  5,
+                  78,
+                  "advance"
+                ],
+                [
+                  5,
+                  690,
+                  677,
+                  6,
+                  73,
+                  "advance"
+                ],
+                [
+                  6,
+                  667,
+                  720,
+                  3,
+                  81,
+                  "advance"
+                ],
+                [
+                  7,
+                  682,
+                  774,
+                  6,
+                  60,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5002730259875086,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "line",
+                "104": "line",
+                "105": "line",
+                "106": "reserve",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "hold ordered line; avoid abandoning frontage",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "preserve uncommitted force",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  704,
+                  763,
+                  6,
+                  74,
+                  "advance"
+                ],
+                [
+                  101,
+                  690,
+                  720,
+                  7,
+                  67,
+                  "advance"
+                ],
+                [
+                  102,
+                  710,
+                  660,
+                  5,
+                  79,
+                  "advance"
+                ],
+                [
+                  103,
+                  687,
+                  612,
+                  10,
+                  41,
+                  "advance"
+                ],
+                [
+                  104,
+                  729,
+                  570,
+                  5,
+                  78,
+                  "advance"
+                ],
+                [
+                  105,
+                  710,
+                  523,
+                  6,
+                  73,
+                  "advance"
+                ],
+                [
+                  106,
+                  733,
+                  480,
+                  3,
+                  81,
+                  "advance"
+                ],
+                [
+                  107,
+                  718,
+                  426,
+                  6,
+                  60,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "time": 240,
+          "score": 2.5376526277146434e-17,
+          "intents": [
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5092307106196419,
+              "roles": {
+                "0": "line",
+                "1": "line",
+                "2": "line",
+                "3": "line",
+                "4": "line",
+                "5": "line",
+                "6": "reserve",
+                "7": "line",
+                "8": "command"
+              },
+              "reasons": {
+                "0": "hold ordered line; avoid abandoning frontage",
+                "1": "hold ordered line; avoid abandoning frontage",
+                "2": "hold ordered line; avoid abandoning frontage",
+                "3": "hold ordered line; avoid abandoning frontage",
+                "4": "hold ordered line; avoid abandoning frontage",
+                "5": "hold ordered line; avoid abandoning frontage",
+                "6": "preserve uncommitted force",
+                "7": "hold ordered line; avoid abandoning frontage",
+                "8": "maintain command support"
+              },
+              "positions": [
+                [
+                  0,
+                  697,
+                  437,
+                  6,
+                  67,
+                  "advance"
+                ],
+                [
+                  1,
+                  710,
+                  480,
+                  7,
+                  63,
+                  "advance"
+                ],
+                [
+                  2,
+                  690,
+                  540,
+                  7,
+                  65,
+                  "advance"
+                ],
+                [
+                  3,
+                  705,
+                  594,
+                  12,
+                  4,
+                  "brace"
+                ],
+                [
+                  4,
+                  676,
+                  630,
+                  7,
+                  65,
+                  "advance"
+                ],
+                [
+                  5,
+                  696,
+                  681,
+                  8,
+                  53,
+                  "advance"
+                ],
+                [
+                  6,
+                  667,
+                  720,
+                  2,
+                  79,
+                  "advance"
+                ],
+                [
+                  7,
+                  686,
+                  778,
+                  7,
+                  42,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g0-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g0-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            },
+            {
+              "posture": "hold",
+              "objective": {
+                "deficit": 0,
+                "target": null
+              },
+              "ratio": 1.5092307106196419,
+              "roles": {
+                "100": "line",
+                "101": "line",
+                "102": "line",
+                "103": "line",
+                "104": "line",
+                "105": "line",
+                "106": "reserve",
+                "107": "line",
+                "108": "command"
+              },
+              "reasons": {
+                "100": "hold ordered line; avoid abandoning frontage",
+                "101": "hold ordered line; avoid abandoning frontage",
+                "102": "hold ordered line; avoid abandoning frontage",
+                "103": "hold ordered line; avoid abandoning frontage",
+                "104": "hold ordered line; avoid abandoning frontage",
+                "105": "hold ordered line; avoid abandoning frontage",
+                "106": "preserve uncommitted force",
+                "107": "hold ordered line; avoid abandoning frontage",
+                "108": "maintain command support"
+              },
+              "positions": [
+                [
+                  100,
+                  703,
+                  763,
+                  6,
+                  67,
+                  "advance"
+                ],
+                [
+                  101,
+                  690,
+                  720,
+                  7,
+                  63,
+                  "advance"
+                ],
+                [
+                  102,
+                  710,
+                  660,
+                  7,
+                  65,
+                  "advance"
+                ],
+                [
+                  103,
+                  695,
+                  606,
+                  12,
+                  4,
+                  "brace"
+                ],
+                [
+                  104,
+                  724,
+                  570,
+                  7,
+                  65,
+                  "advance"
+                ],
+                [
+                  105,
+                  704,
+                  519,
+                  8,
+                  53,
+                  "advance"
+                ],
+                [
+                  106,
+                  733,
+                  480,
+                  2,
+                  79,
+                  "advance"
+                ],
+                [
+                  107,
+                  714,
+                  422,
+                  7,
+                  42,
+                  "advance"
+                ]
+              ],
+              "packets": [
+                {
+                  "group": "g1-0",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-1",
+                  "task": "advance",
+                  "status": "executing"
+                },
+                {
+                  "group": "g1-2",
+                  "task": "advance",
+                  "status": "executing"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "factor": "historical-contact-control",
+      "seed": 11,
+      "mirror": false,
+      "swapPolicies": false,
+      "seconds": 240,
+      "historical": true,
+      "terrain": "plain",
+      "opening": true,
+      "referenceSide": 0,
+      "challengerSide": 1,
+      "referencePolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "challengerPolicy": {
+        "version": 4,
+        "style": "adaptive"
+      },
+      "initialReference": 1008,
+      "initialChallenger": 1008,
+      "ratioActual": 1,
+      "initialPositions": [
+        [
+          0,
+          644,
+          438.1,
+          120
+        ],
+        [
+          1,
+          644.4,
+          483.3,
+          120
+        ],
+        [
+          2,
+          645.9,
+          532.4,
+          120
+        ],
+        [
+          3,
+          643.3,
+          577.9,
+          120
+        ],
+        [
+          4,
+          643.4,
+          621.9,
+          120
+        ],
+        [
+          5,
+          646.2,
+          668.1,
+          120
+        ],
+        [
+          6,
+          644.4,
+          714.4,
+          120
+        ],
+        [
+          7,
+          645.1,
+          761.6,
+          120
+        ],
+        [
+          8,
+          460,
+          600,
+          48
+        ],
+        [
+          100,
+          756,
+          761.9,
+          120
+        ],
+        [
+          101,
+          755.6,
+          716.7,
+          120
+        ],
+        [
+          102,
+          754.1,
+          667.6,
+          120
+        ],
+        [
+          103,
+          756.7,
+          622.1,
+          120
+        ],
+        [
+          104,
+          756.6,
+          578.1,
+          120
+        ],
+        [
+          105,
+          753.8,
+          531.9,
+          120
+        ],
+        [
+          106,
+          755.6,
+          485.6,
+          120
+        ],
+        [
+          107,
+          754.9,
+          438.4,
+          120
+        ],
+        [
+          108,
+          940,
+          600,
+          48
+        ]
+      ],
+      "initialScore": 0,
+      "score": 2.5376526277146434e-17,
+      "result": "draw",
+      "reason": "time-limit",
+      "policyBScore": -2.5376526277146434e-17,
+      "contact": 168.5,
+      "rounds": 8,
+      "time": 240,
+      "reference": {
+        "power": 0.651300683515856,
+        "loss": 10.005884750329571,
+        "fatigue": 6.211903010316098,
+        "strain": 2.651959742203549,
+        "morale": 59.74161016958343,
+        "cohesion": 89.63224807531498,
+        "contacts": 84.25,
+        "routs": 1,
+        "blocked": 246.5,
+        "failed": 0,
+        "issued": 3
+      },
+      "challenger": {
+        "power": 0.6513006835158559,
+        "loss": 10.005884750329486,
+        "fatigue": 6.211903010316098,
+        "strain": 2.6519597422035477,
+        "morale": 59.74161016958343,
+        "cohesion": 89.63224807531498,
+        "contacts": 84.25,
+        "routs": 1,
+        "blocked": 246.5,
+        "failed": 0,
+        "issued": 3
+      },
+      "physics": 2
+    }
+  ]
+}

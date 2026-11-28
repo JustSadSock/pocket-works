@@ -1,0 +1,121 @@
+name: Banners of War Living Diorama and Playable Foundation
+on:
+  pull_request:
+    paths:
+      - 'apps/banners-of-war/research/playable-foundation/**'
+      - 'apps/banners-of-war/DIRECTOR_STATE.md'
+      - '.github/workflows/banners-playable-foundation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: banners-playable-foundation-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/banners-playable-audit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          node --test apps/banners-of-war/chronicles.test.mjs
+          node apps/banners-of-war/research/playable-foundation/audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: banners-playable-audit
+          path: quality-artifacts/banners-playable-audit
+          if-no-files-found: error
+          retention-days: 14
+  browser:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 60
+    env:
+      BOW_AUDIT_OUTPUT: quality-artifacts/banners-playable-browser
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/playable-foundation/browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: banners-playable-browser
+          path: quality-artifacts/banners-playable-browser
+          if-no-files-found: error
+          retention-days: 14
+  diorama:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: baseline
+            artifact: 15242986820
+          - variant: candidate
+            artifact: 15243591518
+          - variant: A
+            artifact: 15243591518
+          - variant: B
+            artifact: 15243591518
+    env:
+      BOW_ART_OUTPUT: ${{ github.workspace }}/quality-artifacts/diorama-${{ matrix.variant }}
+      BOW_DIORAMA: ${{ matrix.variant }}
+      BOW_RECOVERY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 46093958497
+          artifact-ids: ${{ matrix.artifact }}
+          path: /tmp/bow-native
+      - name: Restore exact source resources and native renders
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ffmpeg python3-pil
+          python3 - <<'PY'
+          import os,shutil,json,hashlib
+          from pathlib import Path
+          root=Path('/tmp/bow-native');out=Path(os.environ['BOW_ART_OUTPUT']);out.mkdir(parents=True,exist_ok=True)
+          matches=list(root.rglob('mixed-atlas.json'));assert len(matches)==1,matches
+          src=matches[0].parent
+          for p in src.iterdir():
+              if p.is_file() and (p.name.startswith('page-') or p.name in ('formation-atlas.json','mixed-atlas.json','terrain-provenance.json','horse-provenance.json','horse-forge-index.json') or p.stem in ('grass','sparse','road','stone','tree1','tree2','tree3','bush')):
+                  shutil.copyfile(p,out/p.name)
+          for kind in ('spear','sword','archer','knight','lightHorse'):
+              shutil.copytree(src/kind,out/kind)
+          (out/'source-sha256.json').write_text(json.dumps({str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.is_file()},indent=2))
+          PY
+      - name: Full matched gameplay, native cameras and original performance gate
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node apps/banners-of-war/research/battlefield-identity/physical.test.mjs
+          node apps/banners-of-war/research/battlefield-identity/composition.test.mjs
+          node apps/banners-of-war/research/battlefield-identity/living.test.mjs
+          node apps/banners-of-war/research/battlefield-identity/capture.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: banners-diorama-${{ matrix.variant }}
+          path: quality-artifacts/diorama-${{ matrix.variant }}
+          if-no-files-found: error
+          retention-days: 14

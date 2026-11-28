@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "product": "banners-of-war",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "emergent-kingdoms",
+      "evidence": "apps/emergent-kingdoms/visual-direction.json; architecture and composition reviewed; screenshots not available for comparison",
+      "lesson": "Avoid copying the geographic simulation station with a permanent measurement journal; tactical orders need a collapsible inset command sheet and direct route gestures."
+    },
+    {
+      "slug": "palimpsest-atlas",
+      "evidence": "apps/palimpsest-atlas/visual-direction.json; architecture and composition reviewed; screenshots not available for comparison",
+      "lesson": "A permanent timeline beneath an inset map serves documented history but duplicates the earlier Banners layout; keep the world continuous beneath contextual controls."
+    },
+    {
+      "slug": "pereves",
+      "evidence": "apps/pereves/visual-direction.json and README.md reviewed 2026-11-25",
+      "lesson": "Maintain a single dominant physical scene, but distinguish temporary tactical drafts from committed physical changes; do not transplant the sculpture's discrete placement interaction."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://linesofbattle.wiki.gg/wiki/Formations",
+      "inspectedAt": "2026-11-24",
+      "observation": "Formation silhouettes and movement frontage provide an immediate spatial representation of military posture.",
+      "principle": "Represent the geometry of the actual command instead of hiding all information behind troop statistics.",
+      "application": "Show the intended footprint at each planned endpoint and preserve the echelon of each regiment during a group turn.",
+      "avoid": "Do not reproduce the Napoleonic formation modifiers or copy another game's sprites or graphical style."
+    },
+    {
+      "url": "https://linesofbattle.wiki.gg/wiki/Orders",
+      "inspectedAt": "2026-11-24",
+      "observation": "Planned orders are drawn over the map and both sides act during the same resolved time interval.",
+      "principle": "The planned route and the executed movement must be visually distinct while remaining spatially connected.",
+      "application": "Use dashed numbered paths, projected footprints, and deterministic playback for individual and grouped orders.",
+      "avoid": "Do not reproduce the exact arrow art or assume the reference rules fit a medieval battlefield."
+    },
+    {
+      "url": "https://www.usgs.gov/ngp-standards-and-specifications/us-topo-cartographic-specifications-map-symbol-guide",
+      "inspectedAt": "2026-11-24",
+      "observation": "The map guide treats contours, water courses and woodland tint as different geographic layers.",
+      "principle": "Terrain marks should convey the physical cause of movement constraints and remain subordinate to unit marks.",
+      "application": "Render procedural contours and wooded clusters below high-contrast heraldic pennants and command strokes.",
+      "avoid": "Do not reproduce USGS source map imagery, real topography or modern official surveying symbol sets verbatim."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "field-sheet",
+      "medium": "Procedural Canvas ink atlas with small geometric rank marks and authored vector pennants.",
+      "composition": "Continuous battlefield under inset status and collapsible command sheet; portrait rotates the map by ninety degrees.",
+      "interaction": "Tap a regiment and draw its route directly in the landscape; reveal or fold the command sheet when needed.",
+      "motion": "A dashed route appears immediately, followed by measured acceleration and physical contact during replay.",
+      "rationale": "The map communicates geometry, terrain and timing without covering most of the phone with a permanent dossier."
+    },
+    {
+      "id": "miniatures",
+      "medium": "Low polygon 3D soldiers and terrain with physically lit materials and authored skeletal movement.",
+      "composition": "Perspective view of the front line with a camera orbit and a row of selected regiment portraits.",
+      "interaction": "Select a miniature regiment in perspective and place a destination marker using camera-relative ray casting.",
+      "motion": "Continuous walk and weapon animation with camera-driven changes in silhouette and depth perception.",
+      "rationale": "More expressive combat depiction but costly and visually ambiguous when drawing exact paths on a small display."
+    },
+    {
+      "id": "staff-chart",
+      "medium": "Crisp SVG military diagram using block symbols and explicit annotated contact and morale tracks.",
+      "composition": "Two-column staff document with an order-of-battle ledger beside a schematic network of tactical lanes.",
+      "interaction": "Edit a table of chained commands and reorder stages rather than draw gestures over terrain.",
+      "motion": "Discrete state transitions, animated order lines and static small multiples of the tactical front.",
+      "rationale": "Excellent for formal order programming but weak for direct movement through continuous terrain and frontage."
+    }
+  ],
+  "selection": {
+    "concept": "field-sheet",
+    "reason": "Direct map drawing and readable planned footprints are the central interaction; continuous battlefield and collapsible controls preserve that precision on a phone.",
+    "rejected": [
+      {
+        "concept": "miniatures",
+        "reason": "Perspective foreshortening complicates exact frontage and group route drawing and substantially increases the asset and device performance burden."
+      },
+      {
+        "concept": "staff-chart",
+        "reason": "A document-first workflow hides the spatial relationships needed for encirclement, flank exposure and independent regiment movement."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas",
+      "availability": "available",
+      "reason": "The implemented browser Canvas renderer supports procedural contours, soldier ranks, future route overlays and deterministic map playback."
+    },
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "Existing product-specific vector icon can be rendered directly by browsers without downloading font or raster art assets."
+    },
+    {
+      "id": "playwright",
+      "availability": "available",
+      "reason": "Universal QA captured actual Chromium and WebKit mobile and desktop frames in run 45300337365; final build still requires separate sign-off."
+    },
+    {
+      "id": "blender",
+      "availability": "unverified",
+      "reason": "No Blender workflow was exercised because this release changes top-down map interaction rather than authored 3D subjects.",
+      "fallback": "Keep the lightweight Canvas rank representation, which is adequate for the explicitly selected diagrammatic map medium."
+    }
+  ],
+  "assets": [
+    {
+      "id": "survey-field",
+      "tool": "canvas",
+      "source": "engine.js",
+      "output": "app.js",
+      "role": "Procedural terrain geometry is consumed by the runtime Canvas atlas renderer, with hill contours, rivers, woodland and ford.",
+      "acceptance": "The battlefield is readable without overlays and planned paths are distinguishable from terrain marks at phone and desktop scale.",
+      "integration": "Terrain geometry is defined in the engine; the app draws and caches the raster field in memory. No external file request is required.",
+      "provenance": "Original procedural implementation in this repository, inspired by cartographic principles rather than imported visual assets.",
+      "maxBytes": 150000
+    },
+    {
+      "id": "heraldic-marker",
+      "tool": "svg",
+      "source": "app.js",
+      "output": "icons/icon.svg",
+      "role": "Forked banner silhouettes identify regiment and app identity at small dimensions; the install icon is an authored vector.",
+      "acceptance": "Two crossing standards in the install icon and high-contrast unit pennants remain recognizable at launcher and map sizes.",
+      "integration": "Canvas draws individual rank marks and flags; the existing SVG is declared in the manifest and cached by the service worker.",
+      "provenance": "Original app-owned SVG icon and procedural Canvas flags; no external graphic or type asset copied.",
+      "maxBytes": 10000
+    },
+    {
+      "id": "living-landscape",
+      "tool": "canvas",
+      "source": "engine.js",
+      "output": "app.js",
+      "role": "Connected heightfield terrain, directional shaded relief, roads, forest canopy and sector-based miniature armies.",
+      "acceptance": "Four terrain archetypes, same deterministic geometry at all three camera scales, actual physical strips represented in rank positions.",
+      "integration": "Runtime terrain generator and cached Canvas rendering, with an app-local module worker for the physics.",
+      "provenance": "Original procedural assets and code; no third-party artwork.",
+      "maxBytes": 200000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Command sheet can cover the enemy front on small screens; verify fitted battlefield bounds after opening and closing.",
+      "Dense ranks and labels may overlap; check path planning and replay at both browser engines.",
+      "Layout readbacks during render may harm frame time; cache geometry and inspect measured performance.",
+      "Detailed focus exposes raster sampling and troop readability; inspect close warrior screenshot after increasing zoom.",
+      "Offline WebKit navigation requires a complete activated versioned cache including the module worker."
+    ],
+    "comparisons": [
+      "Compare mobile before/after frame for map coverage and control legibility.",
+      "Compare desktop after selecting a regiment and after executing the same order chain."
+    ]
+  }
+}

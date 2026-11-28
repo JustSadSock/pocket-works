@@ -1,0 +1,398 @@
+[
+  {
+    "id": "lechfeld",
+    "side": 0,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 23,
+    "over": false
+  },
+  {
+    "id": "lechfeld",
+    "side": 0,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 44,
+    "over": false
+  },
+  {
+    "id": "lechfeld",
+    "side": 0,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 65,
+    "over": false
+  },
+  {
+    "id": "lechfeld",
+    "side": 1,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 23,
+    "over": false
+  },
+  {
+    "id": "lechfeld",
+    "side": 1,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 44,
+    "over": false
+  },
+  {
+    "id": "lechfeld",
+    "side": 1,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 65,
+    "over": false
+  },
+  {
+    "id": "hastings",
+    "side": 0,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 23,
+    "over": false
+  },
+  {
+    "id": "hastings",
+    "side": 0,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 44,
+    "over": false
+  },
+  {
+    "id": "hastings",
+    "side": 0,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 65,
+    "over": false
+  },
+  {
+    "id": "hastings",
+    "side": 1,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 23,
+    "over": false
+  },
+  {
+    "id": "hastings",
+    "side": 1,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 44,
+    "over": false
+  },
+  {
+    "id": "hastings",
+    "side": 1,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 65,
+    "over": false
+  },
+  {
+    "id": "bouvines",
+    "side": 0,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 29,
+    "over": false
+  },
+  {
+    "id": "bouvines",
+    "side": 0,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 56,
+    "over": false
+  },
+  {
+    "id": "bouvines",
+    "side": 0,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 83,
+    "over": false
+  },
+  {
+    "id": "bouvines",
+    "side": 1,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 29,
+    "over": false
+  },
+  {
+    "id": "bouvines",
+    "side": 1,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 56,
+    "over": false
+  },
+  {
+    "id": "bouvines",
+    "side": 1,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 83,
+    "over": false
+  },
+  {
+    "id": "bannockburn",
+    "side": 0,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 31,
+    "over": false
+  },
+  {
+    "id": "bannockburn",
+    "side": 0,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 60,
+    "over": false
+  },
+  {
+    "id": "bannockburn",
+    "side": 0,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 89,
+    "over": false
+  },
+  {
+    "id": "bannockburn",
+    "side": 1,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 31,
+    "over": false
+  },
+  {
+    "id": "bannockburn",
+    "side": 1,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 60,
+    "over": false
+  },
+  {
+    "id": "bannockburn",
+    "side": 1,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 89,
+    "over": false
+  },
+  {
+    "id": "grunwald",
+    "side": 0,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 33,
+    "over": false
+  },
+  {
+    "id": "grunwald",
+    "side": 0,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 64,
+    "over": false
+  },
+  {
+    "id": "grunwald",
+    "side": 0,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 95,
+    "over": false
+  },
+  {
+    "id": "grunwald",
+    "side": 1,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 33,
+    "over": false
+  },
+  {
+    "id": "grunwald",
+    "side": 1,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 64,
+    "over": false
+  },
+  {
+    "id": "grunwald",
+    "side": 1,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 95,
+    "over": false
+  },
+  {
+    "id": "agincourt",
+    "side": 0,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 23,
+    "over": false
+  },
+  {
+    "id": "agincourt",
+    "side": 0,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 44,
+    "over": false
+  },
+  {
+    "id": "agincourt",
+    "side": 0,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 65,
+    "over": false
+  },
+  {
+    "id": "agincourt",
+    "side": 1,
+    "scale": "compact",
+    "bounds": {
+      "width": 1400,
+      "height": 900
+    },
+    "units": 23,
+    "over": false
+  },
+  {
+    "id": "agincourt",
+    "side": 1,
+    "scale": "historical",
+    "bounds": {
+      "width": 1640,
+      "height": 1100
+    },
+    "units": 44,
+    "over": false
+  },
+  {
+    "id": "agincourt",
+    "side": 1,
+    "scale": "expanded",
+    "bounds": {
+      "width": 1880,
+      "height": 1300
+    },
+    "units": 65,
+    "over": false
+  }
+]

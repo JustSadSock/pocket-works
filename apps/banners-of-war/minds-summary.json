@@ -1,0 +1,383 @@
+{
+  "n": 1008,
+  "win": 358,
+  "loss": 159,
+  "draw": 491,
+  "delta": 0.04232842711837111,
+  "planRound": 4.395337301587301,
+  "physicsRound": 188.34151785714286,
+  "meanCohesion": 90.41209165678542,
+  "meanContactWidth": 5.190839453974662,
+  "meanOrderChanges": 3.876984126984127,
+  "meanChanges": 0.15674603174603174,
+  "meanCrowding": 37.378497023809544,
+  "oldCrowding": 76.56408730158763,
+  "meanIsolation": 18.12673611111111,
+  "oldIsolation": 20.473958333333332,
+  "reserveUse": 167,
+  "meanReserveRound": 3.682634730538922,
+  "mirror": {
+    "pairs": 504,
+    "mean": 0.010128126604457277,
+    "max": 0.24106961223680273,
+    "underPointOne": 344
+  },
+  "profiles": [
+    {
+      "key": "methodical",
+      "n": 168,
+      "win": 65,
+      "loss": 26,
+      "draw": 77,
+      "meanDelta": 0.0620851955213814,
+      "planPerRound": 4.416666666666667,
+      "changes": 0.14285714285714285,
+      "orders": 4.0773809523809526,
+      "reserveUse": 19,
+      "postures": [
+        "hold",
+        "assault",
+        "maneuver",
+        "reinforce"
+      ]
+    },
+    {
+      "key": "aggressive",
+      "n": 168,
+      "win": 77,
+      "loss": 39,
+      "draw": 52,
+      "meanDelta": 0.04702218189926855,
+      "planPerRound": 4.410714285714286,
+      "changes": 0.125,
+      "orders": 4.357142857142857,
+      "reserveUse": 52,
+      "postures": [
+        "assault",
+        "maneuver",
+        "hold"
+      ]
+    },
+    {
+      "key": "defensive",
+      "n": 168,
+      "win": 19,
+      "loss": 27,
+      "draw": 122,
+      "meanDelta": -0.004178047692701038,
+      "planPerRound": 3.5833333333333335,
+      "changes": 0.08333333333333333,
+      "orders": 2.6488095238095237,
+      "reserveUse": 9,
+      "postures": [
+        "hold",
+        "maneuver",
+        "assault",
+        "screen",
+        "reinforce"
+      ]
+    },
+    {
+      "key": "maneuver",
+      "n": 168,
+      "win": 56,
+      "loss": 24,
+      "draw": 88,
+      "meanDelta": 0.03491497098341578,
+      "planPerRound": 5.0625,
+      "changes": 0.11904761904761904,
+      "orders": 4.130952380952381,
+      "reserveUse": 39,
+      "postures": [
+        "maneuver",
+        "assault",
+        "hold",
+        "reinforce"
+      ]
+    },
+    {
+      "key": "cautious",
+      "n": 168,
+      "win": 66,
+      "loss": 20,
+      "draw": 82,
+      "meanDelta": 0.06421544601434148,
+      "planPerRound": 4.241071428571429,
+      "changes": 0.15476190476190477,
+      "orders": 3.5892857142857144,
+      "reserveUse": 11,
+      "postures": [
+        "hold",
+        "maneuver",
+        "screen",
+        "reinforce",
+        "assault"
+      ]
+    },
+    {
+      "key": "adaptive",
+      "n": 168,
+      "win": 75,
+      "loss": 23,
+      "draw": 70,
+      "meanDelta": 0.04991081598452076,
+      "planPerRound": 4.657738095238095,
+      "changes": 0.31547619047619047,
+      "orders": 4.458333333333333,
+      "reserveUse": 37,
+      "postures": [
+        "assault",
+        "maneuver",
+        "hold",
+        "reinforce",
+        "screen"
+      ]
+    }
+  ],
+  "difficulty": [
+    {
+      "key": "recruit",
+      "n": 252,
+      "win": 90,
+      "loss": 48,
+      "draw": 114,
+      "meanDelta": 0.04262215459044914,
+      "planPerRound": 3.1607142857142856,
+      "changes": 0.12698412698412698,
+      "orders": 3.7063492063492065,
+      "reserveUse": 34,
+      "postures": [
+        "hold",
+        "maneuver",
+        "assault"
+      ]
+    },
+    {
+      "key": "captain",
+      "n": 252,
+      "win": 85,
+      "loss": 36,
+      "draw": 131,
+      "meanDelta": 0.03790698446595135,
+      "planPerRound": 4.784722222222222,
+      "changes": 0.11904761904761904,
+      "orders": 3.9246031746031744,
+      "reserveUse": 40,
+      "postures": [
+        "assault",
+        "maneuver",
+        "hold"
+      ]
+    },
+    {
+      "key": "commander",
+      "n": 252,
+      "win": 97,
+      "loss": 39,
+      "draw": 116,
+      "meanDelta": 0.04773686659349015,
+      "planPerRound": 4.970238095238095,
+      "changes": 0.19444444444444445,
+      "orders": 3.9603174603174605,
+      "reserveUse": 49,
+      "postures": [
+        "hold",
+        "assault",
+        "maneuver",
+        "reinforce"
+      ]
+    },
+    {
+      "key": "grandmaster",
+      "n": 252,
+      "win": 86,
+      "loss": 36,
+      "draw": 130,
+      "meanDelta": 0.04104770282359396,
+      "planPerRound": 4.665674603174603,
+      "changes": 0.1865079365079365,
+      "orders": 3.9166666666666665,
+      "reserveUse": 44,
+      "postures": [
+        "maneuver",
+        "assault",
+        "hold",
+        "screen",
+        "reinforce"
+      ]
+    }
+  ],
+  "terrain": [
+    {
+      "key": "plain",
+      "n": 252,
+      "win": 91,
+      "loss": 37,
+      "draw": 124,
+      "meanDelta": 0.04269257768812424,
+      "planPerRound": 3.798611111111111,
+      "changes": 0.10317460317460317,
+      "orders": 4.341269841269841,
+      "reserveUse": 39,
+      "postures": [
+        "hold",
+        "maneuver",
+        "assault"
+      ]
+    },
+    {
+      "key": "valley",
+      "n": 252,
+      "win": 85,
+      "loss": 45,
+      "draw": 122,
+      "meanDelta": 0.02917565142526461,
+      "planPerRound": 4.8313492063492065,
+      "changes": 0.1626984126984127,
+      "orders": 3.742063492063492,
+      "reserveUse": 59,
+      "postures": [
+        "assault",
+        "maneuver",
+        "hold",
+        "reinforce",
+        "screen"
+      ]
+    },
+    {
+      "key": "ridge",
+      "n": 252,
+      "win": 99,
+      "loss": 48,
+      "draw": 105,
+      "meanDelta": 0.057519225360062265,
+      "planPerRound": 4.118055555555555,
+      "changes": 0.17857142857142858,
+      "orders": 4.738095238095238,
+      "reserveUse": 47,
+      "postures": [
+        "hold",
+        "assault",
+        "maneuver",
+        "reinforce"
+      ]
+    },
+    {
+      "key": "marsh",
+      "n": 252,
+      "win": 83,
+      "loss": 29,
+      "draw": 140,
+      "meanDelta": 0.03992625400003356,
+      "planPerRound": 4.833333333333333,
+      "changes": 0.18253968253968253,
+      "orders": 2.6865079365079363,
+      "reserveUse": 22,
+      "postures": [
+        "maneuver",
+        "assault",
+        "hold",
+        "reinforce",
+        "screen"
+      ]
+    }
+  ],
+  "fog": [
+    {
+      "key": true,
+      "n": 472,
+      "win": 161,
+      "loss": 102,
+      "draw": 209,
+      "meanDelta": 0.031064377975999695,
+      "planPerRound": 4.977224576271187,
+      "changes": 0.1504237288135593,
+      "orders": 4.22457627118644,
+      "reserveUse": 87,
+      "postures": [
+        "hold",
+        "maneuver",
+        "assault",
+        "reinforce",
+        "screen"
+      ]
+    },
+    {
+      "key": false,
+      "n": 536,
+      "win": 197,
+      "loss": 57,
+      "draw": 282,
+      "meanDelta": 0.052247515169116195,
+      "planPerRound": 3.8829291044776117,
+      "changes": 0.1623134328358209,
+      "orders": 3.5708955223880596,
+      "reserveUse": 80,
+      "postures": [
+        "assault",
+        "maneuver",
+        "hold",
+        "reinforce"
+      ]
+    }
+  ],
+  "objective": [
+    {
+      "key": "territory",
+      "n": 432,
+      "win": 145,
+      "loss": 102,
+      "draw": 185,
+      "meanDelta": 0.03649046010116572,
+      "planPerRound": 4.442708333333333,
+      "changes": 0.1388888888888889,
+      "orders": 3.9722222222222223,
+      "reserveUse": 75,
+      "postures": [
+        "hold",
+        "maneuver",
+        "assault",
+        "screen",
+        "reinforce"
+      ]
+    },
+    {
+      "key": "power",
+      "n": 576,
+      "win": 213,
+      "loss": 57,
+      "draw": 306,
+      "meanDelta": 0.046706902381275235,
+      "planPerRound": 4.359809027777778,
+      "changes": 0.1701388888888889,
+      "orders": 3.8055555555555554,
+      "reserveUse": 92,
+      "postures": [
+        "assault",
+        "maneuver",
+        "hold",
+        "reinforce"
+      ]
+    }
+  ],
+  "postureCounts": {
+    "hold": 1248,
+    "assault": 1014,
+    "maneuver": 1736,
+    "reinforce": 14,
+    "screen": 20
+  },
+  "sources": [
+    "minds-results-00.json",
+    "minds-results-01.json",
+    "minds-results-02.json",
+    "minds-results-03.json",
+    "minds-results-04-07.json",
+    "minds-results-08-11.json",
+    "minds-results-12-17.json",
+    "minds-results-18-23.json",
+    "minds-results-24-29.json",
+    "minds-results-30-35.json",
+    "minds-results-36-41.json"
+  ]
+}

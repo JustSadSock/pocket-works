@@ -1,0 +1,15 @@
+# War Against Men — preliminary capacity evidence
+
+The successful 41a5445 real Worker browser and restart run recorded 51 ms wall time, 113799 bytes for one full replay, 31 frames. This is local Wrangler evidence only.
+
+Additional isolated V8 engine measurements are in engine-load-isolated-v1.json. Each fixture has a flat 1880 × 1300 m battlefield, two symmetric spear armies and 30 seconds of simulated time. Counts include HQ. Orders are identical for the server round implementation and direct local stepping, and complete serialized states matched in all three cases. No Durable Object, network, CPU accounting or memory instrumentation was available in the isolate. All figures are measured wall clock and serialized JSON only.
+
+Keep MAX_REGIMENTS=60. 100/160 are research-only; row size, visibility, long fights, simultaneous rooms, memory and production limits still require validation. The existing real Worker test now creates three independent 60-unit rooms and concurrently seals/finishes each, checks the unique orders and complete round exports, and logs response sizes and round wall time. It does not report CPU or heap from the remote Worker.
+
+Cloudflare rate reference: https://developers.cloudflare.com/durable-objects/platform/pricing/ . Example: Workers Paid base $5/month (shared subscription, not an incremental match cost). Assumptions: 20 rounds, 45 minutes, two live clients polling every 2.5 s, ~2200 external requests, ~4400 Durable Object requests including identity, 128 MiB continuously active room, 337.5 GB-s per match as a deliberately conservative room-duration scenario, 20 x 0.524 MB replay data for a dense 60-unit match (10.48 MB per match). Actual active duration depends on eligibility for hibernation and request handling; actual storage includes SQLite and state overhead. DO Paid included 1m requests, 400k GB-s and 5 GB-month. 10 / 100 / 1000 such matches: about 44k / 440k / 4.4m DO requests, 3375 / 33750 / 337500 room GB-s, 0.105 / 1.048 / 10.48 GB added replay data. At 1000, request overage ~$0.51 and storage overage ~$1.10/month if all new data retained for a full month and allowances otherwise unused; account-wide identity/Worker CPU/storage and prior retained matches not included. Not a production bill. Multiple months of retained matches accumulate.
+
+## Real Worker parallel rooms
+PocketNet Edge 45499591664 passed on 74448ee: three concurrent independent 60-unit rooms, 506–545 ms room calculation, approximately 367 KB exported replay, 12 KB client view, ~1.99 seconds total. Local Wrangler, not production. Keep cap 60.
+
+## Four-player historical replay storage probe
+An isolated V8 60-unit Historical Command 2v2 round on ca65046 took 2812 ms wall time, stored a 490013-byte common row and four personal rows of 137878, 138747, 137878 and 138747 bytes. Client views: 19652, 17988, 19894 and 18203 bytes. 31 frames per replay, personal feeds differed, no row exceeded 1.9 MB. This first round had no contact (messenger delay); it is a storage/scope probe, not dense combat or production performance evidence. See allied-personal-replay-load-v1.json. Keep limit 60.

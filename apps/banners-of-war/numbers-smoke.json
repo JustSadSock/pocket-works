@@ -1,0 +1,1262 @@
+[
+  {
+    "ratio": 1.5,
+    "policy": "uncoordinated",
+    "seed": 11,
+    "mirror": false,
+    "physics": 2,
+    "ratioActual": 1.4761904761904763,
+    "result": "win",
+    "score": 0.13032631653225857,
+    "small": {
+      "power": 0.9184699999999999,
+      "loss": 0,
+      "fatigue": 24.821497152194446,
+      "strain": 0,
+      "morale": 89.33333333333333,
+      "cohesion": 98.66666666666661,
+      "contacts": 0,
+      "routs": 0,
+      "blocked": 0,
+      "failed": 0,
+      "issued": 0
+    },
+    "big": {
+      "power": 0.7881436834677413,
+      "loss": 0,
+      "fatigue": 27.8576036768835,
+      "strain": 0,
+      "morale": 92.61538461538461,
+      "cohesion": 70.9173076923076,
+      "contacts": 0,
+      "routs": 0,
+      "blocked": 0,
+      "failed": 0,
+      "issued": 0
+    },
+    "time": 360,
+    "reason": "time-limit",
+    "issued": 96,
+    "initial": [
+      [
+        0,
+        558.9613241981715,
+        39.10523330140859,
+        120
+      ],
+      [
+        1,
+        559.4052990227938,
+        78.30018769111484,
+        120
+      ],
+      [
+        2,
+        560.8608248252422,
+        121.3865081006661,
+        120
+      ],
+      [
+        3,
+        558.3405331410468,
+        160.8708727536723,
+        120
+      ],
+      [
+        4,
+        558.4145782794803,
+        198.85492390114814,
+        120
+      ],
+      [
+        5,
+        561.1508304998279,
+        239.08199786301702,
+        120
+      ],
+      [
+        6,
+        559.4372103009373,
+        279.4204395422712,
+        120
+      ],
+      [
+        7,
+        560.0733708553016,
+        320.56719281803817,
+        120
+      ],
+      [
+        8,
+        44.569716868922114,
+        599.9155144738033,
+        48
+      ],
+      [
+        100,
+        840.6737793982029,
+        1159.597065567039,
+        120
+      ],
+      [
+        101,
+        838.5072474051267,
+        1120.9312903964892,
+        120
+      ],
+      [
+        102,
+        841.0914880819619,
+        1078.1438994733617,
+        120
+      ],
+      [
+        103,
+        839.2151692267507,
+        1038.501429152675,
+        120
+      ],
+      [
+        104,
+        840.304628200829,
+        998.2002568310127,
+        120
+      ],
+      [
+        105,
+        839.4459132496268,
+        961.6961068669334,
+        120
+      ],
+      [
+        106,
+        841.2269542180002,
+        920.9139886302873,
+        120
+      ],
+      [
+        107,
+        841.8691009413451,
+        878.1886643366888,
+        120
+      ],
+      [
+        108,
+        839.4492988437414,
+        841.1021505733952,
+        120
+      ],
+      [
+        109,
+        838.1274525243789,
+        798.8574136728421,
+        120
+      ],
+      [
+        110,
+        841.4380593635142,
+        758.7063253400847,
+        120
+      ],
+      [
+        111,
+        839.1309764292091,
+        721.4851011903957,
+        120
+      ],
+      [
+        112,
+        1356.0032152161002,
+        601.7518511032686,
+        48
+      ]
+    ],
+    "timeline": [
+      {
+        "time": 0,
+        "result": null,
+        "reason": null,
+        "score": 0.0011981566820274958,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.9245161290322582,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 30,
+        "result": null,
+        "reason": null,
+        "score": 0.0011981566820274958,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 2.206690861681939,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.9245161290322582,
+            "loss": 0,
+            "fatigue": 2.4461195039361994,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 60,
+        "result": null,
+        "reason": null,
+        "score": 0.0338733905529961,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 4.388302267919989,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.8918408951612896,
+            "loss": 0,
+            "fatigue": 5.190044777352226,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 93.85384615384599,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 90,
+        "result": null,
+        "reason": null,
+        "score": 0.06640143289170652,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 6.534058481280972,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.8593128528225792,
+            "loss": 0,
+            "fatigue": 7.880614667244019,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 87.72884615384586,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 120,
+        "result": null,
+        "reason": null,
+        "score": 0.08678977764977092,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 8.645130939363733,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.8389245080645148,
+            "loss": 0,
+            "fatigue": 10.40113103252766,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 83.88076923076898,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 150,
+        "result": null,
+        "reason": null,
+        "score": 0.12577519700460937,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 10.722643900604547,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.7999390887096763,
+            "loss": 0,
+            "fatigue": 13.059955768053102,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 76.53461538461518,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 180,
+        "result": null,
+        "reason": null,
+        "score": 0.14482408208525444,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 12.767676857330244,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.7808902036290313,
+            "loss": 0,
+            "fatigue": 15.495076793748066,
+            "strain": 0,
+            "morale": 89.21384615384616,
+            "cohesion": 72.57884615384596,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 210,
+        "result": null,
+        "reason": null,
+        "score": 0.14829145708525393,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 14.781266803427453,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.7774228286290318,
+            "loss": 0,
+            "fatigue": 17.76478195179563,
+            "strain": 0,
+            "morale": 89.84615384615384,
+            "cohesion": 71.10961538461528,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 240,
+        "result": null,
+        "reason": null,
+        "score": 0.14829145708525393,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 16.764410366777245,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.7774228286290318,
+            "loss": 0,
+            "fatigue": 20.022862938405485,
+            "strain": 0,
+            "morale": 89.84615384615384,
+            "cohesion": 71.10961538461528,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 270,
+        "result": null,
+        "reason": null,
+        "score": 0.14829145708525393,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 18.7180658158032,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.7774228286290318,
+            "loss": 0,
+            "fatigue": 22.14692742730326,
+            "strain": 0,
+            "morale": 89.84615384615384,
+            "cohesion": 71.10961538461528,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 300,
+        "result": null,
+        "reason": null,
+        "score": 0.14938651958525395,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 20.643154948750965,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.7763277661290318,
+            "loss": 0,
+            "fatigue": 24.269184321494222,
+            "strain": 0,
+            "morale": 89.95115384615384,
+            "cohesion": 70.83653846153837,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 330,
+        "result": null,
+        "reason": null,
+        "score": 0.13760244700460866,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 22.54056487365012,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.788111838709677,
+            "loss": 0,
+            "fatigue": 26.21067796530464,
+            "strain": 0,
+            "morale": 92.60500000000003,
+            "cohesion": 70.9173076923076,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 360,
+        "result": "win",
+        "reason": "time-limit",
+        "score": 0.13032631653225857,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9184699999999999,
+            "loss": 0,
+            "fatigue": 24.821497152194446,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 98.66666666666661,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.7881436834677413,
+            "loss": 0,
+            "fatigue": 27.8576036768835,
+            "strain": 0,
+            "morale": 92.61538461538461,
+            "cohesion": 70.9173076923076,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "ratio": 1.5,
+    "policy": "hierarchy",
+    "seed": 11,
+    "mirror": false,
+    "physics": 2,
+    "ratioActual": 1.4761904761904763,
+    "result": "win",
+    "score": 0.13757060224654438,
+    "small": {
+      "power": 0.9257142857142857,
+      "loss": 0,
+      "fatigue": 10.90374856391023,
+      "strain": 0,
+      "morale": 89.33333333333333,
+      "cohesion": 100,
+      "contacts": 0,
+      "routs": 0,
+      "blocked": 0,
+      "failed": 0,
+      "issued": 6
+    },
+    "big": {
+      "power": 0.7881436834677413,
+      "loss": 0,
+      "fatigue": 27.8576036768835,
+      "strain": 0,
+      "morale": 92.61538461538461,
+      "cohesion": 70.9173076923076,
+      "contacts": 0,
+      "routs": 0,
+      "blocked": 0,
+      "failed": 0,
+      "issued": 0
+    },
+    "time": 360,
+    "reason": "time-limit",
+    "issued": 6,
+    "initial": [
+      [
+        0,
+        558.9613241981715,
+        39.10523330140859,
+        120
+      ],
+      [
+        1,
+        559.4052990227938,
+        78.30018769111484,
+        120
+      ],
+      [
+        2,
+        560.8608248252422,
+        121.3865081006661,
+        120
+      ],
+      [
+        3,
+        558.3405331410468,
+        160.8708727536723,
+        120
+      ],
+      [
+        4,
+        558.4145782794803,
+        198.85492390114814,
+        120
+      ],
+      [
+        5,
+        561.1508304998279,
+        239.08199786301702,
+        120
+      ],
+      [
+        6,
+        559.4372103009373,
+        279.4204395422712,
+        120
+      ],
+      [
+        7,
+        560.0733708553016,
+        320.56719281803817,
+        120
+      ],
+      [
+        8,
+        44.569716868922114,
+        599.9155144738033,
+        48
+      ],
+      [
+        100,
+        840.6737793982029,
+        1159.597065567039,
+        120
+      ],
+      [
+        101,
+        838.5072474051267,
+        1120.9312903964892,
+        120
+      ],
+      [
+        102,
+        841.0914880819619,
+        1078.1438994733617,
+        120
+      ],
+      [
+        103,
+        839.2151692267507,
+        1038.501429152675,
+        120
+      ],
+      [
+        104,
+        840.304628200829,
+        998.2002568310127,
+        120
+      ],
+      [
+        105,
+        839.4459132496268,
+        961.6961068669334,
+        120
+      ],
+      [
+        106,
+        841.2269542180002,
+        920.9139886302873,
+        120
+      ],
+      [
+        107,
+        841.8691009413451,
+        878.1886643366888,
+        120
+      ],
+      [
+        108,
+        839.4492988437414,
+        841.1021505733952,
+        120
+      ],
+      [
+        109,
+        838.1274525243789,
+        798.8574136728421,
+        120
+      ],
+      [
+        110,
+        841.4380593635142,
+        758.7063253400847,
+        120
+      ],
+      [
+        111,
+        839.1309764292091,
+        721.4851011903957,
+        120
+      ],
+      [
+        112,
+        1356.0032152161002,
+        601.7518511032686,
+        48
+      ]
+    ],
+    "timeline": [
+      {
+        "time": 0,
+        "result": null,
+        "reason": null,
+        "score": 0.0011981566820274958,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          },
+          {
+            "power": 0.9245161290322582,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 30,
+        "result": null,
+        "reason": null,
+        "score": 0.0011981566820274958,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 3
+          },
+          {
+            "power": 0.9245161290322582,
+            "loss": 0,
+            "fatigue": 2.4461195039361994,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 60,
+        "result": null,
+        "reason": null,
+        "score": 0.0338733905529961,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 3
+          },
+          {
+            "power": 0.8918408951612896,
+            "loss": 0,
+            "fatigue": 5.190044777352226,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 93.85384615384599,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 90,
+        "result": null,
+        "reason": null,
+        "score": 0.06640143289170652,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 3
+          },
+          {
+            "power": 0.8593128528225792,
+            "loss": 0,
+            "fatigue": 7.880614667244019,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 87.72884615384586,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 120,
+        "result": null,
+        "reason": null,
+        "score": 0.08678977764977092,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 3
+          },
+          {
+            "power": 0.8389245080645148,
+            "loss": 0,
+            "fatigue": 10.40113103252766,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 83.88076923076898,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 150,
+        "result": null,
+        "reason": null,
+        "score": 0.12577519700460937,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.7999390887096763,
+            "loss": 0,
+            "fatigue": 13.059955768053102,
+            "strain": 0,
+            "morale": 88.92307692307692,
+            "cohesion": 76.53461538461518,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 180,
+        "result": null,
+        "reason": null,
+        "score": 0.14482408208525444,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 0.14559687277990382,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.7808902036290313,
+            "loss": 0,
+            "fatigue": 15.495076793748066,
+            "strain": 0,
+            "morale": 89.21384615384616,
+            "cohesion": 72.57884615384596,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 210,
+        "result": null,
+        "reason": null,
+        "score": 0.14829145708525393,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 1.1481076073975922,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.7774228286290318,
+            "loss": 0,
+            "fatigue": 17.76478195179563,
+            "strain": 0,
+            "morale": 89.84615384615384,
+            "cohesion": 71.10961538461528,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 240,
+        "result": null,
+        "reason": null,
+        "score": 0.14829145708525393,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 2.637868810514381,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.7774228286290318,
+            "loss": 0,
+            "fatigue": 20.022862938405485,
+            "strain": 0,
+            "morale": 89.84615384615384,
+            "cohesion": 71.10961538461528,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 270,
+        "result": null,
+        "reason": null,
+        "score": 0.14829145708525393,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 4.577988869118774,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.7774228286290318,
+            "loss": 0,
+            "fatigue": 22.14692742730326,
+            "strain": 0,
+            "morale": 89.84615384615384,
+            "cohesion": 71.10961538461528,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 300,
+        "result": null,
+        "reason": null,
+        "score": 0.14938651958525395,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 6.720791667481005,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.7763277661290318,
+            "loss": 0,
+            "fatigue": 24.269184321494222,
+            "strain": 0,
+            "morale": 89.95115384615384,
+            "cohesion": 70.83653846153837,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 330,
+        "result": null,
+        "reason": null,
+        "score": 0.13760244700460866,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 8.829004693126267,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.788111838709677,
+            "loss": 0,
+            "fatigue": 26.21067796530464,
+            "strain": 0,
+            "morale": 92.60500000000003,
+            "cohesion": 70.9173076923076,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      },
+      {
+        "time": 360,
+        "result": "win",
+        "reason": "time-limit",
+        "score": 0.13757060224654438,
+        "zones": [],
+        "sides": [
+          {
+            "power": 0.9257142857142857,
+            "loss": 0,
+            "fatigue": 10.90374856391023,
+            "strain": 0,
+            "morale": 89.33333333333333,
+            "cohesion": 100,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 6
+          },
+          {
+            "power": 0.7881436834677413,
+            "loss": 0,
+            "fatigue": 27.8576036768835,
+            "strain": 0,
+            "morale": 92.61538461538461,
+            "cohesion": 70.9173076923076,
+            "contacts": 0,
+            "routs": 0,
+            "blocked": 0,
+            "failed": 0,
+            "issued": 0
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,1583 @@
+[
+  {
+    "kind": "procedural",
+    "seed": "Minds 31",
+    "arch": "plain",
+    "profile": "methodical",
+    "difficulty": "recruit",
+    "fog": true,
+    "objective": "territory",
+    "roster": 0,
+    "opponent": 0,
+    "seconds": 120,
+    "mirror": false,
+    "matched": true,
+    "variant": "compare",
+    "side": 0,
+    "outcome": "loss",
+    "time": 120,
+    "own": {
+      "power": 0.939296175674971,
+      "loss": 15.295182627728565,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 120000
+    },
+    "enemy": {
+      "power": 0.9307981836337275,
+      "loss": 26.68626072109123,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 160000
+    },
+    "delta": 0.008497992041243574,
+    "changes": 0,
+    "orderChanges": 1,
+    "reserveRound": null,
+    "meanCohesion": 95.62708333333323,
+    "contactWidth": 0,
+    "planMs": 24,
+    "physicsMs": 771,
+    "trace": [
+      {
+        "round": 1,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 2,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 3,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 4,
+        "posture": "hold",
+        "wing": 0
+      }
+    ]
+  },
+  {
+    "kind": "procedural",
+    "seed": "Minds 31",
+    "arch": "plain",
+    "profile": "methodical",
+    "difficulty": "recruit",
+    "fog": true,
+    "objective": "territory",
+    "roster": 0,
+    "opponent": 0,
+    "seconds": 120,
+    "mirror": true,
+    "matched": true,
+    "variant": "compare",
+    "side": 1,
+    "outcome": "loss",
+    "time": 120,
+    "own": {
+      "power": 0.939296175674971,
+      "loss": 15.295182627728565,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 120000
+    },
+    "enemy": {
+      "power": 0.9307981836337275,
+      "loss": 26.68626072109123,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 160000
+    },
+    "delta": 0.008497992041243574,
+    "changes": 0,
+    "orderChanges": 1,
+    "reserveRound": null,
+    "meanCohesion": 95.62708333333323,
+    "contactWidth": 0,
+    "planMs": 17,
+    "physicsMs": 698,
+    "trace": [
+      {
+        "round": 1,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 2,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 3,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 4,
+        "posture": "hold",
+        "wing": 0
+      }
+    ]
+  },
+  {
+    "kind": "procedural",
+    "seed": "Completion independent 0",
+    "arch": "valley",
+    "profile": "defensive",
+    "difficulty": "commander",
+    "opponentProfile": "adaptive",
+    "opponentDifficulty": "commander",
+    "fog": true,
+    "objective": "power",
+    "roster": 0,
+    "opponent": 1,
+    "seconds": 120,
+    "mirror": false,
+    "matched": false,
+    "depth": 1,
+    "opponentDepth": 2,
+    "variant": "new",
+    "experiment": "depth",
+    "side": 0,
+    "outcome": "draw",
+    "time": 120,
+    "own": {
+      "power": 0.9551457683146952,
+      "loss": 18.172009563669405,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 150000
+    },
+    "enemy": {
+      "power": 0.9342124316142677,
+      "loss": 20.038266164989125,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 140000
+    },
+    "delta": 0.02093333670042752,
+    "changes": 0,
+    "orderChanges": 4,
+    "reserveRound": null,
+    "meanCohesion": 99.2013177366645,
+    "contactWidth": 0,
+    "planMs": 120,
+    "physicsMs": 721,
+    "trace": [
+      {
+        "round": 1,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 2,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 3,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 4,
+        "posture": "hold",
+        "wing": 0
+      }
+    ]
+  },
+  {
+    "kind": "procedural",
+    "seed": "Completion independent 0",
+    "arch": "valley",
+    "profile": "defensive",
+    "difficulty": "commander",
+    "opponentProfile": "adaptive",
+    "opponentDifficulty": "commander",
+    "fog": true,
+    "objective": "power",
+    "roster": 0,
+    "opponent": 1,
+    "seconds": 120,
+    "mirror": false,
+    "matched": false,
+    "depth": 2,
+    "opponentDepth": 2,
+    "variant": "new",
+    "experiment": "depth",
+    "side": 0,
+    "outcome": "draw",
+    "time": 120,
+    "own": {
+      "power": 0.9551457683146952,
+      "loss": 18.172009563669405,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 150000
+    },
+    "enemy": {
+      "power": 0.9342124316142677,
+      "loss": 20.038266164989125,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 140000
+    },
+    "delta": 0.02093333670042752,
+    "changes": 0,
+    "orderChanges": 4,
+    "reserveRound": null,
+    "meanCohesion": 99.2013177366645,
+    "contactWidth": 0,
+    "planMs": 136,
+    "physicsMs": 697,
+    "trace": [
+      {
+        "round": 1,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 2,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 3,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 4,
+        "posture": "hold",
+        "wing": 0
+      }
+    ]
+  },
+  {
+    "kind": "procedural",
+    "seed": "Completion independent 0",
+    "arch": "valley",
+    "profile": "defensive",
+    "difficulty": "commander",
+    "opponentProfile": "adaptive",
+    "opponentDifficulty": "commander",
+    "fog": true,
+    "objective": "power",
+    "roster": 0,
+    "opponent": 1,
+    "seconds": 120,
+    "mirror": false,
+    "matched": false,
+    "depth": 3,
+    "opponentDepth": 2,
+    "variant": "new",
+    "experiment": "depth",
+    "side": 0,
+    "outcome": "draw",
+    "time": 120,
+    "own": {
+      "power": 0.9551457683146952,
+      "loss": 18.172009563669405,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 150000
+    },
+    "enemy": {
+      "power": 0.9342124316142677,
+      "loss": 20.038266164989125,
+      "routs": 0,
+      "crowding": 0,
+      "isolation": 0,
+      "wait": 0,
+      "territory": 140000
+    },
+    "delta": 0.02093333670042752,
+    "changes": 0,
+    "orderChanges": 4,
+    "reserveRound": null,
+    "meanCohesion": 99.2013177366645,
+    "contactWidth": 0,
+    "planMs": 171,
+    "physicsMs": 781,
+    "trace": [
+      {
+        "round": 1,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 2,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 3,
+        "posture": "hold",
+        "wing": 0
+      },
+      {
+        "round": 4,
+        "posture": "hold",
+        "wing": 0
+      }
+    ]
+  },
+  {
+    "kind": "historical",
+    "id": "lechfeld",
+    "series": "B",
+    "seed": 99,
+    "repeat": 9,
+    "seconds": 120,
+    "initial": [
+      788,
+      768
+    ],
+    "terrain": "lechfeld",
+    "ground": 1,
+    "final": {
+      "time": 120,
+      "power": [
+        0.7195067032155025,
+        0.5555786243347645
+      ],
+      "loss": [
+        28.333817421625064,
+        85.95023917746227
+      ],
+      "cohesion": [
+        65.76909160547963,
+        51.71510214114595
+      ],
+      "fatigue": [
+        43.293036036427864,
+        33.64049177043501
+      ],
+      "ammo": 169,
+      "contacts": 12,
+      "routs": 2,
+      "crowding": 565.2500000000005,
+      "missileLoss": 19.408923824627465,
+      "cavalryPower": 516.6956603001066,
+      "zones": [
+        -1
+      ],
+      "score": -0.3016431526715572
+    },
+    "result": "loss",
+    "plannerMs": 252,
+    "physicsMs": 1904,
+    "trajectory": [
+      {
+        "time": 30,
+        "power": [
+          0.9668264068064166,
+          0.8843161476855467
+        ],
+        "loss": [
+          0.22280247592668445,
+          0
+        ],
+        "cohesion": [
+          99.78220191334258,
+          94.04038461538448
+        ],
+        "fatigue": [
+          4.320112367308129,
+          6.533642455775373
+        ],
+        "ammo": 228,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 75.22500000000004,
+        "missileLoss": 0.22280247592668395,
+        "cavalryPower": 1068.1675011044254,
+        "zones": [
+          1
+        ],
+        "score": 0.449506155472522,
+        "postures": [
+          "assault",
+          "maneuver"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 60,
+        "power": [
+          0.895138468311277,
+          0.776736717290293
+        ],
+        "loss": [
+          8.918672319013822,
+          27.589848196721945
+        ],
+        "cohesion": [
+          92.42278523277346,
+          82.42954871004973
+        ],
+        "fatigue": [
+          11.093505650363484,
+          13.213266338874984
+        ],
+        "ammo": 203,
+        "contacts": 6,
+        "routs": 0,
+        "crowding": 159.7999999999998,
+        "missileLoss": 7.2932647200330365,
+        "cavalryPower": 913.2010968115314,
+        "zones": [
+          -1
+        ],
+        "score": -0.32895894938740966,
+        "postures": [
+          "assault",
+          "maneuver"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 90,
+        "power": [
+          0.8246961536693356,
+          0.6400207875745069
+        ],
+        "loss": [
+          15.196690718075864,
+          58.731033463552265
+        ],
+        "cohesion": [
+          81.8794557656533,
+          63.94667079839052
+        ],
+        "fatigue": [
+          26.789505650363555,
+          22.962231607825217
+        ],
+        "ammo": 192,
+        "contacts": 4,
+        "routs": 1,
+        "crowding": 331.0749999999992,
+        "missileLoss": 9.845671493076289,
+        "cavalryPower": 698.3961409962213,
+        "zones": [
+          -1
+        ],
+        "score": -0.2891947803431028,
+        "postures": [
+          "assault",
+          "maneuver"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 120,
+        "power": [
+          0.7195067032155025,
+          0.5555786243347645
+        ],
+        "loss": [
+          28.333817421625064,
+          85.95023917746227
+        ],
+        "cohesion": [
+          65.76909160547963,
+          51.71510214114595
+        ],
+        "fatigue": [
+          43.293036036427864,
+          33.64049177043501
+        ],
+        "ammo": 169,
+        "contacts": 12,
+        "routs": 2,
+        "crowding": 565.2500000000005,
+        "missileLoss": 19.408923824627465,
+        "cavalryPower": 516.6956603001066,
+        "zones": [
+          -1
+        ],
+        "score": -0.3016431526715572,
+        "postures": [
+          "assault",
+          "maneuver"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "historical",
+    "id": "hastings",
+    "series": "B",
+    "seed": 99,
+    "repeat": 9,
+    "seconds": 120,
+    "initial": [
+      1228,
+      1008
+    ],
+    "terrain": "hastings",
+    "ground": 1,
+    "final": {
+      "time": 120,
+      "power": [
+        0.970962165914868,
+        0.8311570885791502
+      ],
+      "loss": [
+        1.1784790682438455,
+        0.8445018368084476
+      ],
+      "cohesion": [
+        99.27464685199897,
+        79.16410333512509
+      ],
+      "fatigue": [
+        0.08590909090909096,
+        23.287801139918113
+      ],
+      "ammo": 66,
+      "contacts": 2,
+      "routs": 0,
+      "crowding": 255.84999999999923,
+      "missileLoss": 0,
+      "cavalryPower": 256.1570691361951,
+      "zones": [
+        1
+      ],
+      "score": 0.6989317770675012
+    },
+    "result": "win",
+    "plannerMs": 198,
+    "physicsMs": 1378,
+    "trajectory": [
+      {
+        "time": 30,
+        "power": [
+          0.9441724666734539,
+          0.9227481782738094
+        ],
+        "loss": [
+          0,
+          0
+        ],
+        "cohesion": [
+          98.61818181818177,
+          99.09666666666662
+        ],
+        "fatigue": [
+          1.335820346690794,
+          5.214513919699981
+        ],
+        "ammo": 66,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 25.925000000000008,
+        "missileLoss": 0,
+        "cavalryPower": 328.8014999999998,
+        "zones": [
+          1
+        ],
+        "score": 0.6574985009398756,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 60,
+        "power": [
+          0.9806058631921839,
+          0.9049189707142853
+        ],
+        "loss": [
+          0,
+          0
+        ],
+        "cohesion": [
+          100,
+          91.80229166666645
+        ],
+        "fatigue": [
+          0,
+          11.771340621822496
+        ],
+        "ammo": 66,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 113.47499999999987,
+        "missileLoss": 0,
+        "cavalryPower": 304.83569999999924,
+        "zones": [
+          1
+        ],
+        "score": 0.6764904123672646,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 90,
+        "power": [
+          0.9847557003257329,
+          0.8634570386904746
+        ],
+        "loss": [
+          0,
+          0
+        ],
+        "cohesion": [
+          100,
+          84.14479166666639
+        ],
+        "fatigue": [
+          0,
+          17.415632569332654
+        ],
+        "ammo": 66,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 206.97499999999926,
+        "missileLoss": 0,
+        "cavalryPower": 277.70249999999896,
+        "zones": [
+          1
+        ],
+        "score": 0.6924545315723404,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 120,
+        "power": [
+          0.970962165914868,
+          0.8311570885791502
+        ],
+        "loss": [
+          1.1784790682438455,
+          0.8445018368084476
+        ],
+        "cohesion": [
+          99.27464685199897,
+          79.16410333512509
+        ],
+        "fatigue": [
+          0.08590909090909096,
+          23.287801139918113
+        ],
+        "ammo": 66,
+        "contacts": 2,
+        "routs": 0,
+        "crowding": 255.84999999999923,
+        "missileLoss": 0,
+        "cavalryPower": 256.1570691361951,
+        "zones": [
+          1
+        ],
+        "score": 0.6989317770675012,
+        "postures": [
+          "hold",
+          "maneuver"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "historical",
+    "id": "bouvines",
+    "series": "B",
+    "seed": 99,
+    "repeat": 9,
+    "seconds": 120,
+    "initial": [
+      1108,
+      1288
+    ],
+    "terrain": "bouvines",
+    "ground": 1,
+    "final": {
+      "time": 120,
+      "power": [
+        0.7283702544140918,
+        0.8099489282207915
+      ],
+      "loss": [
+        62.17226592523891,
+        63.01375312852649
+      ],
+      "cohesion": [
+        60.32289523090322,
+        81.97106423198206
+      ],
+      "fatigue": [
+        39.5801115517732,
+        30.82297546686583
+      ],
+      "ammo": 78,
+      "contacts": 6,
+      "routs": 2,
+      "crowding": 423.2999999999999,
+      "missileLoss": 1.1106060718806938,
+      "cavalryPower": 432.6760369834084,
+      "zones": [
+        -1,
+        -1,
+        1
+      ],
+      "score": -0.26986827059368484
+    },
+    "result": "loss",
+    "plannerMs": 328,
+    "physicsMs": 1896,
+    "trajectory": [
+      {
+        "time": 30,
+        "power": [
+          0.9621227906063858,
+          0.9517991673835409
+        ],
+        "loss": [
+          0,
+          0
+        ],
+        "cohesion": [
+          96.23214285714275,
+          98.49166666666662
+        ],
+        "fatigue": [
+          5.735336319320514,
+          5.289649056667442
+        ],
+        "ammo": 80,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 65.02499999999998,
+        "missileLoss": 0,
+        "cavalryPower": 856.6424999999995,
+        "zones": [
+          0,
+          -1,
+          1
+        ],
+        "score": 0.005677992772564733,
+        "postures": [
+          "assault",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 60,
+        "power": [
+          0.9019627562710785,
+          0.9092597639668619
+        ],
+        "loss": [
+          20.01560275220345,
+          25.05831805331225
+        ],
+        "cohesion": [
+          88.54339174992272,
+          94.71985232638912
+        ],
+        "fatigue": [
+          13.803652595153315,
+          11.184903416734544
+        ],
+        "ammo": 80,
+        "contacts": 6,
+        "routs": 0,
+        "crowding": 130.04999999999964,
+        "missileLoss": 0,
+        "cavalryPower": 744.4485413331925,
+        "zones": [
+          -1,
+          -1,
+          1
+        ],
+        "score": -0.2290133542326809,
+        "postures": [
+          "assault",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 90,
+        "power": [
+          0.8047032066838791,
+          0.8581012525366777
+        ],
+        "loss": [
+          46.282718214801015,
+          49.87507670597691
+        ],
+        "cohesion": [
+          74.1870231600989,
+          87.65618523645712
+        ],
+        "fatigue": [
+          27.853304535299532,
+          22.69826816170664
+        ],
+        "ammo": 80,
+        "contacts": 6,
+        "routs": 2,
+        "crowding": 229.49999999999977,
+        "missileLoss": 0,
+        "cavalryPower": 564.3357697757281,
+        "zones": [
+          -1,
+          -1,
+          1
+        ],
+        "score": -0.25436892521903925,
+        "postures": [
+          "maneuver",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          true
+        ]
+      },
+      {
+        "time": 120,
+        "power": [
+          0.7283702544140918,
+          0.8099489282207915
+        ],
+        "loss": [
+          62.17226592523891,
+          63.01375312852649
+        ],
+        "cohesion": [
+          60.32289523090322,
+          81.97106423198206
+        ],
+        "fatigue": [
+          39.5801115517732,
+          30.82297546686583
+        ],
+        "ammo": 78,
+        "contacts": 6,
+        "routs": 2,
+        "crowding": 423.2999999999999,
+        "missileLoss": 1.1106060718806938,
+        "cavalryPower": 432.6760369834084,
+        "zones": [
+          -1,
+          -1,
+          1
+        ],
+        "score": -0.26986827059368484,
+        "postures": [
+          "maneuver",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "historical",
+    "id": "bannockburn",
+    "series": "B",
+    "seed": 99,
+    "repeat": 9,
+    "seconds": 120,
+    "initial": [
+      1148,
+      2008
+    ],
+    "terrain": "bannockburn",
+    "ground": 1,
+    "final": {
+      "time": 120,
+      "power": [
+        0.8892788878390777,
+        0.8544728004509266
+      ],
+      "loss": [
+        31.7276867819037,
+        62.26539154976931
+      ],
+      "cohesion": [
+        98.6629902918483,
+        83.84600980454917
+      ],
+      "fatigue": [
+        1.8964735092033662,
+        28.105171298278265
+      ],
+      "ammo": 78,
+      "contacts": 4,
+      "routs": 1,
+      "crowding": 168.72499999999945,
+      "missileLoss": 1.7609604659182256,
+      "cavalryPower": 171.69707352312128,
+      "zones": [
+        1,
+        -1
+      ],
+      "score": 0.1620991654418386
+    },
+    "result": "win",
+    "plannerMs": 307,
+    "physicsMs": 1713,
+    "trajectory": [
+      {
+        "time": 30,
+        "power": [
+          0.9596182926829273,
+          0.9238206509150902
+        ],
+        "loss": [
+          0,
+          0
+        ],
+        "cohesion": [
+          99.39999999999996,
+          99.73125
+        ],
+        "fatigue": [
+          1.0558790184130027,
+          5.1999288154483
+        ],
+        "ammo": 88,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 11.474999999999998,
+        "missileLoss": 0,
+        "cavalryPower": 333.066,
+        "zones": [
+          1,
+          -1
+        ],
+        "score": 0.1626147737192753,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 60,
+        "power": [
+          0.9665940766550524,
+          0.9376266214381717
+        ],
+        "loss": [
+          0,
+          0
+        ],
+        "cohesion": [
+          100,
+          97.83863482979912
+        ],
+        "fatigue": [
+          0.9818181818181806,
+          10.75102298519809
+        ],
+        "ammo": 88,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 48.02499999999999,
+        "missileLoss": 0,
+        "cavalryPower": 325.4896179575899,
+        "zones": [
+          1,
+          -1
+        ],
+        "score": 0.15906307671277797,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 90,
+        "power": [
+          0.9188300902074469,
+          0.8940385914539635
+        ],
+        "loss": [
+          20.412145453500173,
+          31.445170958958556
+        ],
+        "cohesion": [
+          98.89438598701153,
+          91.0205864737865
+        ],
+        "fatigue": [
+          2.097837145566993,
+          19.363221114841622
+        ],
+        "ammo": 82,
+        "contacts": 4,
+        "routs": 0,
+        "crowding": 125.7999999999997,
+        "missileLoss": 0.4676582356927985,
+        "cavalryPower": 241.87001212083135,
+        "zones": [
+          1,
+          -1
+        ],
+        "score": 0.1568915793518114,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 120,
+        "power": [
+          0.8892788878390777,
+          0.8544728004509266
+        ],
+        "loss": [
+          31.7276867819037,
+          62.26539154976931
+        ],
+        "cohesion": [
+          98.6629902918483,
+          83.84600980454917
+        ],
+        "fatigue": [
+          1.8964735092033662,
+          28.105171298278265
+        ],
+        "ammo": 78,
+        "contacts": 4,
+        "routs": 1,
+        "crowding": 168.72499999999945,
+        "missileLoss": 1.7609604659182256,
+        "cavalryPower": 171.69707352312128,
+        "zones": [
+          1,
+          -1
+        ],
+        "score": 0.1620991654418386,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "historical",
+    "id": "grunwald",
+    "series": "B",
+    "seed": 99,
+    "repeat": 9,
+    "seconds": 120,
+    "initial": [
+      948,
+      1048
+    ],
+    "terrain": "grunwald",
+    "ground": 1,
+    "final": {
+      "time": 120,
+      "power": [
+        0.41381818295038375,
+        0.5069790918095888
+      ],
+      "loss": [
+        159.67538573069413,
+        86.5369187980133
+      ],
+      "cohesion": [
+        39.853308865103735,
+        45.15734538913183
+      ],
+      "fatigue": [
+        58.729241977130386,
+        53.70117397002391
+      ],
+      "ammo": 60,
+      "contacts": 12,
+      "routs": 8,
+      "crowding": 1208.7000000000023,
+      "missileLoss": 5.547852136771038,
+      "cavalryPower": 614.2877555996545,
+      "zones": [
+        -1,
+        1
+      ],
+      "score": -0.06055459075848327
+    },
+    "result": "draw",
+    "plannerMs": 340,
+    "physicsMs": 3850,
+    "trajectory": [
+      {
+        "time": 30,
+        "power": [
+          0.9322973427848099,
+          0.9472741455152669
+        ],
+        "loss": [
+          0,
+          0
+        ],
+        "cohesion": [
+          97.50156249999995,
+          96.66911764705873
+        ],
+        "fatigue": [
+          5.622541797023191,
+          6.159032492002156
+        ],
+        "ammo": 88,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 91.80000000000003,
+        "missileLoss": 0,
+        "cavalryPower": 1779.187499999998,
+        "zones": [
+          0,
+          -1
+        ],
+        "score": -0.18473492177479703,
+        "postures": [
+          "assault",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 60,
+        "power": [
+          0.7920690060768366,
+          0.8247846119905806
+        ],
+        "loss": [
+          44.76120296513537,
+          21.38706364652417
+        ],
+        "cohesion": [
+          87.59949958550266,
+          81.10243986232206
+        ],
+        "fatigue": [
+          15.241500247537507,
+          16.684462157497492
+        ],
+        "ammo": 87,
+        "contacts": 14,
+        "routs": 0,
+        "crowding": 330.6499999999993,
+        "missileLoss": 0.13759882287414824,
+        "cavalryPower": 1483.6839205530875,
+        "zones": [
+          -1,
+          1
+        ],
+        "score": -0.021265143843933604,
+        "postures": [
+          "assault",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 90,
+        "power": [
+          0.5833886186544384,
+          0.6129998144854757
+        ],
+        "loss": [
+          124.68387215257712,
+          69.785521866231
+        ],
+        "cohesion": [
+          67.97685390568591,
+          53.707463275209854
+        ],
+        "fatigue": [
+          39.21426197325593,
+          39.7442213311362
+        ],
+        "ammo": 75,
+        "contacts": 24,
+        "routs": 3,
+        "crowding": 724.1999999999997,
+        "missileLoss": 2.397542837475451,
+        "cavalryPower": 941.1252714980151,
+        "zones": [
+          -1,
+          1
+        ],
+        "score": -0.019247277290174263,
+        "postures": [
+          "maneuver",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 120,
+        "power": [
+          0.41381818295038375,
+          0.5069790918095888
+        ],
+        "loss": [
+          159.67538573069413,
+          86.5369187980133
+        ],
+        "cohesion": [
+          39.853308865103735,
+          45.15734538913183
+        ],
+        "fatigue": [
+          58.729241977130386,
+          53.70117397002391
+        ],
+        "ammo": 60,
+        "contacts": 12,
+        "routs": 8,
+        "crowding": 1208.7000000000023,
+        "missileLoss": 5.547852136771038,
+        "cavalryPower": 614.2877555996545,
+        "zones": [
+          -1,
+          1
+        ],
+        "score": -0.06055459075848327,
+        "postures": [
+          "maneuver",
+          "reinforce"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "historical",
+    "id": "agincourt",
+    "series": "B",
+    "seed": 99,
+    "repeat": 9,
+    "seconds": 120,
+    "initial": [
+      728,
+      1228
+    ],
+    "terrain": "agincourt",
+    "ground": 1,
+    "final": {
+      "time": 120,
+      "power": [
+        0.8027423974165707,
+        0.9193100993996506
+      ],
+      "loss": [
+        25.76601116452293,
+        13.331878159469397
+      ],
+      "cohesion": [
+        89.5915882505849,
+        93.18942434595631
+      ],
+      "fatigue": [
+        17.946584864861666,
+        46.6244638324773
+      ],
+      "ammo": 137,
+      "contacts": 0,
+      "routs": 0,
+      "crowding": 21.250000000000007,
+      "missileLoss": 12.457258742224042,
+      "cavalryPower": 155.61707895142413,
+      "zones": [
+        1
+      ],
+      "score": 0.4975445341076141
+    },
+    "result": "win",
+    "plannerMs": 247,
+    "physicsMs": 1168,
+    "trajectory": [
+      {
+        "time": 30,
+        "power": [
+          0.9057142857142856,
+          0.9535365935198675
+        ],
+        "loss": [
+          0,
+          0.4061362721851083
+        ],
+        "cohesion": [
+          100,
+          99.4219894503382
+        ],
+        "fatigue": [
+          3.7377729554448416,
+          9.584147139527174
+        ],
+        "ammo": 179,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 0,
+        "missileLoss": 0.4061362721851074,
+        "cavalryPower": 212.81904159064695,
+        "zones": [
+          1
+        ],
+        "score": 0.5284799614874882,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 60,
+        "power": [
+          0.8964405218270357,
+          0.9359929423638984
+        ],
+        "loss": [
+          1.618906753613146,
+          10.22470709839191
+        ],
+        "cohesion": [
+          98.88426808955553,
+          96.30438544764887
+        ],
+        "fatigue": [
+          8.114091634225662,
+          20.097600044951456
+        ],
+        "ammo": 143,
+        "contacts": 2,
+        "routs": 0,
+        "crowding": 5.524999999999999,
+        "missileLoss": 10.098404187603691,
+        "cavalryPower": 180.0814313224842,
+        "zones": [
+          1
+        ],
+        "score": 0.5322014107584119,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 90,
+        "power": [
+          0.8351836554641175,
+          0.9250704663406634
+        ],
+        "loss": [
+          14.157436934415898,
+          12.962633980866052
+        ],
+        "cohesion": [
+          93.02101919063313,
+          94.43794703100113
+        ],
+        "fatigue": [
+          12.771695975972687,
+          34.213554643220895
+        ],
+        "ammo": 137,
+        "contacts": 2,
+        "routs": 0,
+        "crowding": 21.250000000000007,
+        "missileLoss": 12.457258742224042,
+        "cavalryPower": 164.79664869040047,
+        "zones": [
+          1
+        ],
+        "score": 0.5095509351055544,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      },
+      {
+        "time": 120,
+        "power": [
+          0.8027423974165707,
+          0.9193100993996506
+        ],
+        "loss": [
+          25.76601116452293,
+          13.331878159469397
+        ],
+        "cohesion": [
+          89.5915882505849,
+          93.18942434595631
+        ],
+        "fatigue": [
+          17.946584864861666,
+          46.6244638324773
+        ],
+        "ammo": 137,
+        "contacts": 0,
+        "routs": 0,
+        "crowding": 21.250000000000007,
+        "missileLoss": 12.457258742224042,
+        "cavalryPower": 155.61707895142413,
+        "zones": [
+          1
+        ],
+        "score": 0.4975445341076141,
+        "postures": [
+          "hold",
+          "assault"
+        ],
+        "reserve": [
+          false,
+          false
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "performance",
+    "units": 26,
+    "seconds": 10,
+    "plannerMs": 63,
+    "physicsMs": 114,
+    "snapshotChars": 191594
+  },
+  {
+    "kind": "performance",
+    "units": 40,
+    "seconds": 10,
+    "plannerMs": 180,
+    "physicsMs": 160,
+    "snapshotChars": 207123
+  },
+  {
+    "kind": "performance",
+    "units": 60,
+    "seconds": 10,
+    "plannerMs": 240,
+    "physicsMs": 288,
+    "snapshotChars": 228880
+  },
+  {
+    "kind": "performance",
+    "units": 100,
+    "seconds": 10,
+    "plannerMs": 377,
+    "physicsMs": 576,
+    "snapshotChars": 258242
+  },
+  {
+    "kind": "performance",
+    "units": 150,
+    "seconds": 10,
+    "plannerMs": 894,
+    "physicsMs": 1145,
+    "snapshotChars": 314762
+  }
+]

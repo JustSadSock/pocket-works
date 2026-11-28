@@ -1,0 +1,606 @@
+{
+  "audit": [
+    {
+      "id": "leuctra",
+      "side": 0,
+      "scale": "compact",
+      "units": 34,
+      "counts": [
+        2588,
+        2116
+      ],
+      "bounds": {
+        "width": 1400,
+        "height": 1000
+      },
+      "conflicts": []
+    },
+    {
+      "id": "leuctra",
+      "side": 0,
+      "scale": "historical",
+      "units": 66,
+      "counts": [
+        5128,
+        4184
+      ],
+      "bounds": {
+        "width": 1640,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "leuctra",
+      "side": 0,
+      "scale": "expanded",
+      "units": 98,
+      "counts": [
+        7668,
+        6252
+      ],
+      "bounds": {
+        "width": 1880,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "leuctra",
+      "side": 1,
+      "scale": "compact",
+      "units": 34,
+      "counts": [
+        2116,
+        2588
+      ],
+      "bounds": {
+        "width": 1400,
+        "height": 1000
+      },
+      "conflicts": []
+    },
+    {
+      "id": "leuctra",
+      "side": 1,
+      "scale": "historical",
+      "units": 66,
+      "counts": [
+        4184,
+        5128
+      ],
+      "bounds": {
+        "width": 1640,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "leuctra",
+      "side": 1,
+      "scale": "expanded",
+      "units": 98,
+      "counts": [
+        6252,
+        7668
+      ],
+      "bounds": {
+        "width": 1880,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "issus",
+      "side": 0,
+      "scale": "compact",
+      "units": 35,
+      "counts": [
+        1468,
+        1668
+      ],
+      "bounds": {
+        "width": 1500,
+        "height": 900
+      },
+      "conflicts": []
+    },
+    {
+      "id": "issus",
+      "side": 0,
+      "scale": "historical",
+      "units": 68,
+      "counts": [
+        2888,
+        3288
+      ],
+      "bounds": {
+        "width": 1740,
+        "height": 1100
+      },
+      "conflicts": []
+    },
+    {
+      "id": "issus",
+      "side": 0,
+      "scale": "expanded",
+      "units": 101,
+      "counts": [
+        4308,
+        4908
+      ],
+      "bounds": {
+        "width": 1980,
+        "height": 1300
+      },
+      "conflicts": []
+    },
+    {
+      "id": "issus",
+      "side": 1,
+      "scale": "compact",
+      "units": 35,
+      "counts": [
+        1668,
+        1468
+      ],
+      "bounds": {
+        "width": 1500,
+        "height": 900
+      },
+      "conflicts": []
+    },
+    {
+      "id": "issus",
+      "side": 1,
+      "scale": "historical",
+      "units": 68,
+      "counts": [
+        3288,
+        2888
+      ],
+      "bounds": {
+        "width": 1740,
+        "height": 1100
+      },
+      "conflicts": []
+    },
+    {
+      "id": "issus",
+      "side": 1,
+      "scale": "expanded",
+      "units": 101,
+      "counts": [
+        4908,
+        4308
+      ],
+      "bounds": {
+        "width": 1980,
+        "height": 1300
+      },
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 0,
+      "scale": "compact",
+      "units": 46,
+      "counts": [
+        1928,
+        1920
+      ],
+      "bounds": {
+        "width": 1800,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 0,
+      "scale": "historical",
+      "units": 90,
+      "counts": [
+        3808,
+        3792
+      ],
+      "bounds": {
+        "width": 2040,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 0,
+      "scale": "expanded",
+      "units": 134,
+      "counts": [
+        5688,
+        5664
+      ],
+      "bounds": {
+        "width": 2280,
+        "height": 1600
+      },
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 1,
+      "scale": "compact",
+      "units": 46,
+      "counts": [
+        1920,
+        1928
+      ],
+      "bounds": {
+        "width": 1800,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 1,
+      "scale": "historical",
+      "units": 90,
+      "counts": [
+        3792,
+        3808
+      ],
+      "bounds": {
+        "width": 2040,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "gaugamela",
+      "side": 1,
+      "scale": "expanded",
+      "units": 134,
+      "counts": [
+        5664,
+        5688
+      ],
+      "bounds": {
+        "width": 2280,
+        "height": 1600
+      },
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 0,
+      "scale": "compact",
+      "units": 45,
+      "counts": [
+        2268,
+        1748
+      ],
+      "bounds": {
+        "width": 1600,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 0,
+      "scale": "historical",
+      "units": 88,
+      "counts": [
+        4488,
+        3448
+      ],
+      "bounds": {
+        "width": 1840,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 0,
+      "scale": "expanded",
+      "units": 131,
+      "counts": [
+        6708,
+        5148
+      ],
+      "bounds": {
+        "width": 2080,
+        "height": 1600
+      },
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 1,
+      "scale": "compact",
+      "units": 45,
+      "counts": [
+        1748,
+        2268
+      ],
+      "bounds": {
+        "width": 1600,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 1,
+      "scale": "historical",
+      "units": 88,
+      "counts": [
+        3448,
+        4488
+      ],
+      "bounds": {
+        "width": 1840,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "cannae",
+      "side": 1,
+      "scale": "expanded",
+      "units": 131,
+      "counts": [
+        5148,
+        6708
+      ],
+      "bounds": {
+        "width": 2080,
+        "height": 1600
+      },
+      "conflicts": []
+    },
+    {
+      "id": "zama",
+      "side": 0,
+      "scale": "compact",
+      "units": 54,
+      "counts": [
+        2388,
+        2204
+      ],
+      "bounds": {
+        "width": 1800,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "zama",
+      "side": 0,
+      "scale": "historical",
+      "units": 106,
+      "counts": [
+        4728,
+        4360
+      ],
+      "bounds": {
+        "width": 2040,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "zama",
+      "side": 0,
+      "scale": "expanded",
+      "units": 158,
+      "counts": [
+        7068,
+        6516
+      ],
+      "bounds": {
+        "width": 2280,
+        "height": 1600
+      },
+      "conflicts": []
+    },
+    {
+      "id": "zama",
+      "side": 1,
+      "scale": "compact",
+      "units": 54,
+      "counts": [
+        2204,
+        2388
+      ],
+      "bounds": {
+        "width": 1800,
+        "height": 1200
+      },
+      "conflicts": []
+    },
+    {
+      "id": "zama",
+      "side": 1,
+      "scale": "historical",
+      "units": 106,
+      "counts": [
+        4360,
+        4728
+      ],
+      "bounds": {
+        "width": 2040,
+        "height": 1400
+      },
+      "conflicts": []
+    },
+    {
+      "id": "zama",
+      "side": 1,
+      "scale": "expanded",
+      "units": 158,
+      "counts": [
+        6516,
+        7068
+      ],
+      "bounds": {
+        "width": 2280,
+        "height": 1600
+      },
+      "conflicts": []
+    },
+    {
+      "id": "pydna",
+      "side": 0,
+      "scale": "compact",
+      "units": 41,
+      "counts": [
+        1928,
+        2728
+      ],
+      "bounds": {
+        "width": 1600,
+        "height": 1100
+      },
+      "conflicts": []
+    },
+    {
+      "id": "pydna",
+      "side": 0,
+      "scale": "historical",
+      "units": 80,
+      "counts": [
+        3808,
+        5408
+      ],
+      "bounds": {
+        "width": 1840,
+        "height": 1300
+      },
+      "conflicts": []
+    },
+    {
+      "id": "pydna",
+      "side": 0,
+      "scale": "expanded",
+      "units": 119,
+      "counts": [
+        5688,
+        8088
+      ],
+      "bounds": {
+        "width": 2080,
+        "height": 1500
+      },
+      "conflicts": []
+    },
+    {
+      "id": "pydna",
+      "side": 1,
+      "scale": "compact",
+      "units": 41,
+      "counts": [
+        2728,
+        1928
+      ],
+      "bounds": {
+        "width": 1600,
+        "height": 1100
+      },
+      "conflicts": []
+    },
+    {
+      "id": "pydna",
+      "side": 1,
+      "scale": "historical",
+      "units": 80,
+      "counts": [
+        5408,
+        3808
+      ],
+      "bounds": {
+        "width": 1840,
+        "height": 1300
+      },
+      "conflicts": []
+    },
+    {
+      "id": "pydna",
+      "side": 1,
+      "scale": "expanded",
+      "units": 119,
+      "counts": [
+        8088,
+        5688
+      ],
+      "bounds": {
+        "width": 2080,
+        "height": 1500
+      },
+      "conflicts": []
+    }
+  ],
+  "checks": [
+    {
+      "id": "leuctra",
+      "units": 34,
+      "elapsed": 517,
+      "finite": true,
+      "power": [
+        2376.840157627761,
+        1933.5165666158384
+      ]
+    },
+    {
+      "id": "issus",
+      "units": 35,
+      "elapsed": 604,
+      "finite": true,
+      "power": [
+        1381.3738396100002,
+        1546.8706275000002
+      ]
+    },
+    {
+      "id": "gaugamela",
+      "units": 46,
+      "elapsed": 766,
+      "finite": true,
+      "power": [
+        1780.87141,
+        1781.4102957415278
+      ]
+    },
+    {
+      "id": "cannae",
+      "units": 45,
+      "elapsed": 853,
+      "finite": true,
+      "power": [
+        2137.65288727407,
+        1613.0135887228118
+      ]
+    },
+    {
+      "id": "zama",
+      "units": 54,
+      "elapsed": 989,
+      "finite": true,
+      "power": [
+        2220.460107749999,
+        2073.1587863999994
+      ]
+    },
+    {
+      "id": "pydna",
+      "units": 41,
+      "elapsed": 710,
+      "finite": true,
+      "power": [
+        1821.775152277501,
+        2566.2236438
+      ]
+    }
+  ]
+}
