@@ -5,6 +5,7 @@ import {poseFrom,deform,quat,qmul,rotate,animation,rootOffset} from './core.mjs'
 import {glb} from './glb.mjs';
 import {raster,commonBounds} from './material-study.mjs';
 import {normals} from './hybrid-human.mjs';
+import {writeDemonstrator} from './demonstrator-v21.mjs';
 export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSupport,sourceMarks,actual,solveLeg,relaxed,groundY,stride,first,scale,skin,out}){
  const J=n=>m.joints.find(j=>j.name===n),add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((n,x,i)=>n+x*b[i],0),clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(...sub(a,b)),unit=a=>mul(a,1/(Math.hypot(...a)||1)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],inv=q=>[-q[0],-q[1],-q[2],q[3]],angle=(a,b)=>2*Math.acos(clamp(Math.abs(dot(a,b)),0,1))*180/Math.PI;
  const slerp=(a,b,t)=>{let d=dot(a,b);if(d<0){b=mul(b,-1);d=-d}d=clamp(d,-1,1);if(d>.9995)return unit(add(mul(a,1-t),mul(b,t)));const th=Math.acos(d);return unit(add(mul(a,Math.sin((1-t)*th)/Math.sin(th)),mul(b,Math.sin(t*th)/Math.sin(th))))};
@@ -255,6 +256,8 @@ export function continuousStudy({m,ref,native,baseline,author,vertical,sourceSup
   const bin=glb(c);write('v15-walk-'+count+'.glb',bin);json('v15-walk-'+count+'-spec.json',{spec:c.spec,sampledWalk:c.sampledWalk});reports[count]=audit(bin,c);models[count]=c;
  }
  const accepted=reports.cyclic49;
+ // Separate experimental character output; do not modify the accepted gait or its gate.
+ writeDemonstrator(models.cyclic49,skin,out);
  const noRegression=r=>r.gate&&['drift','vertical','penetration'].every(k=>r.max[k]<=accepted.max[k]+1e-6)&&r.loop.maxJointDegrees<=accepted.loop.maxJointDegrees+1e-6;
  const velocityImproved=r=>r.velocity.rootMmPerSecond<accepted.velocity.rootMmPerSecond&&r.velocity.maxJointVectorDegreesPerSecond<accepted.velocity.maxJointVectorDegreesPerSecond;
  const ranked=['velocity49quarter','velocity49half','velocity49'].filter(k=>noRegression(reports[k])&&velocityImproved(reports[k])).sort((a,b)=>reports[a].velocity.rootMmPerSecond+reports[a].velocity.maxJointVectorDegreesPerSecond-reports[b].velocity.rootMmPerSecond-reports[b].velocity.maxJointVectorDegreesPerSecond);

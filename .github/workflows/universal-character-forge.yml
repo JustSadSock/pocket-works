@@ -511,6 +511,20 @@ jobs:
               fi
             done
           done
+      - name: Encode integrated character three-cycle research evidence
+        if: ${{ !cancelled() && env.BLENDER != '' }}
+        run: |
+          test -f "$CHARACTER_EVIDENCE/v21-demonstrator/manifest.json"
+          for view in front side; do
+            ffmpeg -hide_banner -loglevel error -y -framerate 18.461538 -i "$CHARACTER_EVIDENCE/v21-demonstrator/walk-$view/%02d.png" -frames:v 73 -c:v libx264 -pix_fmt yuv420p "$CHARACTER_EVIDENCE/v21-demonstrator/walk-$view.mp4"
+          done
+      - name: Upload integrated research character
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-forge-demonstrator-v21
+          path: quality-artifacts/character-bridge/v21-demonstrator
+          retention-days: 14
       - name: Upload continuous motion evidence immediately
         if: always()
         uses: actions/upload-artifact@v4
@@ -596,4 +610,29 @@ jobs:
         with:
           name: character-forge-studio
           path: quality-artifacts/character-studio
+          retention-days: 14
+  studio-demonstrator:
+    needs: art-forge-bridge
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned local browser test
+        run: npm install --no-save --legacy-peer-deps --no-package-lock --no-audit --no-fund playwright@1.64.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: character-forge-demonstrator-v21
+          path: quality-artifacts/studio-demo
+      - name: Exercise integrated character and exact GLB downloads
+        run: CHARACTER_DEMO_DIR="$PWD/quality-artifacts/studio-demo" node tools/character-forge/studio-demonstrator-test.mjs quality-artifacts/character-studio-demo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: character-forge-studio-demonstrator-v21
+          path: quality-artifacts/character-studio-demo
           retention-days: 14
