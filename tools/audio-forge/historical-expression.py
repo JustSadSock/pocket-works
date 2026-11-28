@@ -3,7 +3,6 @@ import hashlib, importlib.util, json, pathlib, sys, wave
 import numpy as np
 SR=48000
 sha=lambda b:hashlib.sha256(b).hexdigest()
-REF='eb61977b3752038a99ea1bda3d938b2af7ffd2c635645068fd75b693a919a038'
 CAT='bed9488a1507e2eff128430a3eee54fbbfd3610a2b29165f54fa7d0bb9e8dff0'
 PLAYERS=('alto-recorder','recorder','folk-harp','frame-drum','tambourine','psaltery','renaissance-organ')
 
@@ -29,9 +28,10 @@ def main(catalog,original,stereo,root):
     catalog,original,stereo,root=map(lambda p:pathlib.Path(p).resolve(),(catalog,original,stereo,root))
     if any(root==p or p in root.parents or root in p.parents for p in (catalog,original,stereo)):raise ValueError('unsafe output')
     root.mkdir(parents=True,exist_ok=True)
-    raw=(stereo/'metrics.json').read_bytes()
-    if sha(raw)!=REF:raise ValueError('stereo reference mismatch')
+    raw=(stereo/'metrics.json').read_bytes();stereo_metrics_hash=sha(raw)
     sm=json.loads(raw)
+    if sm.get('approval')!='research-only' or not sm.get('sourceHashes') or not sm.get('metrics') or set(sm.get('trims',{}))!=set(PLAYERS):raise ValueError('stereo receipt structure')
+    if sm.get('pcmError',999)>4 or sm.get('originalPcmError',999)>4:raise ValueError('stereo PCM receipt')
     for m in sm['metrics']:
         if sha((stereo/m['file']).read_bytes())!=m['sha256']:raise ValueError('stereo audition changed')
     oldraw=(original/'metrics.json').read_bytes(); old=json.loads(oldraw)
@@ -78,7 +78,7 @@ def main(catalog,original,stereo,root):
     with wave.open(str(stereo/'pilgrims-crossing-stereo.wav'),'rb') as w:ref=np.frombuffer(w.readframes(w.getnframes()),'<i2').reshape(-1,2).astype(float)/32767
     n=48*SR; a,b=[np.sqrt(np.mean(x[:n]**2)) for x in (ref,mix)];target=min(a,b)
     write('pilgrims-crossing-expression-AB',np.concatenate((ref*target/a,np.zeros((SR,2)),mix*target/b)))
-    (root/'metrics.json').write_text(json.dumps(dict(approval='research-only',reference=REF,events=events,sourceCount=len(cache),pcmError=error,masterGain=float(gain),recordedIntervalCoverage=0,metrics=metrics),indent=2)+'\n')
+    (root/'metrics.json').write_text(json.dumps(dict(approval='research-only',reference=stereo_metrics_hash,events=events,sourceCount=len(cache),pcmError=error,masterGain=float(gain),recordedIntervalCoverage=0,metrics=metrics),indent=2)+'\n')
     print('Events',len(events),'sources',len(cache),'PCM error',error)
 if __name__=='__main__':
     self_test()
