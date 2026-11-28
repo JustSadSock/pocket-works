@@ -116,3 +116,10 @@ The contact matrix separates the virtual capped volume from the original open ou
 ## Production Foundation P0 — Civilian Pack 01
 
 See tools/character-forge/DIRECTOR_STATE.md. Independent, capability-scoped research staging; six discrete role/morph combinations. Existing fitted tailoring and Cyclic49 algorithm reused with per-model contact solving; no dynamic cloth cache or experimental hand correctives. Artistic acceptance and publication remain closed. Previous Advanced Research gates remain unchanged.
+
+
+### Measured handoff — v0.21 and P0
+
+Research run 46092337386: all A-F isolated contact candidates reject. Max stretch 3.074 / 3.347 / 2.910 / 3.434 / 3.006 / 3.124; P95 1.267 / 1.315 / 1.242 / 1.199 / 1.203 / 1.243. C-area and C-combined retain a 0.324 minimum area on Base, but Young Woman has new strict intersections. Grip and dynamic Remesh remain closed. Artifact 15242327586 and original hand artifact 15242320311 indexed with their SHA-256.
+
+P0 first build e3288e1 / run 46093794304 emitted six GLBs (27,816–28,958 triangles, 163 joints, 2.204–2.286 MB) with byte-identical repeat exports. All Native foot and idle gates pass. Artistic review rejects the Artisan lower garment; corrected measured height is implemented at 7769baf. Merchant is not approved; Base independent clothing and attachment checks reject. Base Chromium and WebKit imported playback shows 5.055 mm maximum deviation, above 0.5 mm. Do not mistake original Blender/Art Forge success or deterministic outputs for production admission. No owner attestation. The corrected revision has not completed qualification. The batch/Studio pack runs are required for the new revision; prior candidates are preserved for diagnosis only.

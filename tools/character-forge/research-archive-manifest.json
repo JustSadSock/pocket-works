@@ -101,6 +101,22 @@
       "run": 46092337386,
       "artifacts": [
         {
+          "id": 15242920710,
+          "name": "character-forge-roundtrip",
+          "sha256": "31f516720f3547efb777f460a14408b2b18f399a5e64eacdd648f9d0a5738cf1",
+          "sizeBytes": 173080651,
+          "expiresAt": "2026-12-12T01:39:48Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15242920710"
+        },
+        {
+          "id": 15242327586,
+          "name": "character-forge-cloth-v21-contact",
+          "sha256": "688c20f172fcf40b35981f1f753fb529584ba9d1422430b8def52cf27aab6ed1",
+          "sizeBytes": 58277897,
+          "expiresAt": "2026-12-12T01:34:45Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15242327586"
+        },
+        {
           "id": 15242320311,
           "name": "character-forge-hand-v17",
           "sha256": "bba76bd1f1c938741470ef5cfb570ada2644618c42b0b618fbf08664759b3cfa",
@@ -141,6 +157,14 @@
           "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241771888"
         },
         {
+          "id": 15241574729,
+          "name": "character-forge-motion-v17",
+          "sha256": "0208004dc7b6f21fbd1aa4724190a1bf7e559e334fffad798ac9e037b6a6cdef",
+          "sizeBytes": 2370113,
+          "expiresAt": "2027-02-26T01:17:19Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241574729"
+        },
+        {
           "id": 15241333221,
           "name": "character-forge-studio",
           "sha256": "4ace3bf737f9e236bdaa9a6a88f3d55a8c9b984d485522465fc393ab78c6dc0c",
@@ -173,6 +197,116 @@
           "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46092337386/artifacts/15241169058"
         }
       ]
+    },
+    {
+      "head": "e3288e1eb17539b0c9ce9fda2ae41849c0643ae9",
+      "run": 46093794304,
+      "artifacts": [
+        {
+          "id": 15243075076,
+          "name": "p0-qualification-merchant-tall-heavy",
+          "sha256": "5aa560084a429056f2b13793c0585eca36e026e6e1a84fd409a5b63703503cdf",
+          "sizeBytes": 7845961,
+          "expiresAt": "2026-12-28T01:38:49Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15243075076"
+        },
+        {
+          "id": 15242990507,
+          "name": "p0-qualification-artisan-base",
+          "sha256": "03708779ffff02d169aaae4ede495ab1bc90b9cb23faca04e6f91264e6ae2c22",
+          "sizeBytes": 7374353,
+          "expiresAt": "2026-12-28T01:39:05Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242990507"
+        },
+        {
+          "id": 15242506021,
+          "name": "p0-qualification-artisan-tall-heavy",
+          "sha256": "ab0a34aade403ec5a3d3505db50626080ec0175c012284d88397341429920176",
+          "sizeBytes": 7322895,
+          "expiresAt": "2026-12-28T01:39:32Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242506021"
+        },
+        {
+          "id": 15242490922,
+          "name": "p0-qualification-artisan-short-light",
+          "sha256": "4117069df32cc01ec994ad525ad0313fc91fb4278191a01041629ebc4d67c438",
+          "sizeBytes": 7433137,
+          "expiresAt": "2026-12-28T01:39:35Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242490922"
+        },
+        {
+          "id": 15242460857,
+          "name": "p0-candidate-artisan-base",
+          "sha256": "86b1a6d5cfa4a8f8284675a22b8f6aa2e9a2857d416ef210f31f7810c7fac12e",
+          "sizeBytes": 5040786,
+          "expiresAt": "2026-12-28T01:37:49Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242460857"
+        },
+        {
+          "id": 15242451542,
+          "name": "p0-candidate-merchant-base",
+          "sha256": "2f2c59887d401c447d13b30d16e0bb244044c8f016bce71efd73d6d6a7ec4136",
+          "sizeBytes": 5474924,
+          "expiresAt": "2026-12-28T01:37:53Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242451542"
+        },
+        {
+          "id": 15242401918,
+          "name": "p0-candidate-artisan-short-light",
+          "sha256": "da93ae08cd4c36eaab1c4a430f483f302ea674f7bf7dd179978dd32e9534a996",
+          "sizeBytes": 5088718,
+          "expiresAt": "2026-12-28T01:38:14Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242401918"
+        },
+        {
+          "id": 15242386477,
+          "name": "p0-candidate-merchant-short-light",
+          "sha256": "862058c273d9b5f8ad02e0c69e082b03495ea6bcd72122a24ebfa0a3d8688ae3",
+          "sizeBytes": 5526636,
+          "expiresAt": "2026-12-28T01:37:46Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242386477"
+        },
+        {
+          "id": 15242353096,
+          "name": "p0-qualification-merchant-base",
+          "sha256": "f9a200be4ddb357f5f209bf088449c5d1fe30a55be6ed89147bff06b0e6a7426",
+          "sizeBytes": 7908218,
+          "expiresAt": "2026-12-28T01:39:30Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242353096"
+        },
+        {
+          "id": 15242253104,
+          "name": "p0-candidate-merchant-tall-heavy",
+          "sha256": "2fbfdd9289ce31c0511e8ec04d0485f31385017271916344f27eeb58ad99ca5d",
+          "sizeBytes": 5434129,
+          "expiresAt": "2026-12-28T01:37:44Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242253104"
+        },
+        {
+          "id": 15242099984,
+          "name": "p0-candidate-artisan-tall-heavy",
+          "sha256": "28ee7cbdeec088e0f1def068ba20f0efcfd8feb10fc3695d2ed4c35008bace6f",
+          "sizeBytes": 5005870,
+          "expiresAt": "2026-12-28T01:37:38Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15242099984"
+        },
+        {
+          "id": 15241584717,
+          "name": "p0-qualification-merchant-short-light",
+          "sha256": "716a7985d9fb40959c727f8edefc8bb0e83410dfa761cfc533a891c058be8952",
+          "sizeBytes": 7973367,
+          "expiresAt": "2026-12-28T01:38:50Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15241584717"
+        },
+        {
+          "id": 15241434747,
+          "name": "p0-source",
+          "sha256": "26960ef72abce4551c86b14f7c73470892b13f7775582273908c283d7df3cc58",
+          "sizeBytes": 16503545,
+          "expiresAt": "2026-12-28T01:35:51Z",
+          "downloadUrl": "https://github.com/JustSadSock/pocket-works/actions/runs/46093794304/artifacts/15241434747"
+        }
+      ]
     }
   ],
   "source": {
@@ -199,7 +333,8 @@
   },
   "configurations": {
     "v20_1": "24/48/96 FPS, time_scale 1, same physical duration; all failed",
-    "v21": "isolated A-F matrix, original raw JSON configuration in artifacts; incomplete at snapshot"
+    "v21": "A-F isolated 24 FPS contact matrix completed, artifact 15242327586, all six rejected. No full dynamic or grip admission.",
+    "p0": "First six candidates generated twice; canonical and byte identity, Native contact and idle passed; independent admission rejected, superseded by corrected tailoring head 7769baf. No acceptance."
   },
   "retention": "Existing Research 14 days; P0 30 days; durable archive storage not configured."
 }
